@@ -1,0 +1,27 @@
+[project]
+name = "neorisk"
+version = "0.0.0"
+description = "neorisk monorepo workspace root (not published)"
+requires-python = ">=3.12"
+dependencies = []
+
+[tool.uv]
+package = false
+default-groups = ["dev"]
+
+# Every directory under libs/ and apps/ with a pyproject.toml is a workspace member.
+[tool.uv.workspace]
+members = ["libs/*", "apps/*"]
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+    "ruff>=0.6",
+]
+
+[tool.ruff]
+line-length = 100
+src = ["libs/*/src", "apps/*/src"]
+
+[tool.pytest.ini_options]
+testpaths = ["libs", "apps"]

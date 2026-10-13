@@ -1,0 +1,18 @@
+[project]
+name = "hello"
+version = "0.1.0"
+description = "Example neorisk application"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = ["neorisk-core"]
+
+[project.scripts]
+hello = "hello:main"
+
+[build-system]
+requires = ["uv_build>=0.11.26,<0.12.0"]
+build-backend = "uv_build"
+
+# Resolve neorisk-core from the local workspace instead of PyPI.
+[tool.uv.sources]
+neorisk-core = { workspace = true }
