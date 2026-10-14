@@ -59,3 +59,37 @@ def test_best_f1_threshold_prefers_separating_point():
     t = best_f1_threshold(y, p)
     assert 0.4 < t <= 0.8
     assert best_f1_threshold(np.zeros(5, dtype=int), np.linspace(0, 1, 5)) == 0.5
+
+
+def test_top_k_ties_use_expected_value_regardless_of_row_order():
+    pos_last = np.array([0] * 950 + [1] * 50)
+    for y in (pos_last, pos_last[::-1].copy()):
+        m = compute_metrics(y, np.full(1000, 0.3))
+        assert m["precision_top_1pct"] == pytest.approx(0.05)
+        assert m["precision_top_0_5pct"] == pytest.approx(0.05)
+        assert m["lift_top_1pct"] == pytest.approx(1.0)
+
+
+def test_top_k_large_tied_block_at_cutoff_and_permutation_invariant():
+    rng = np.random.default_rng(3)
+    n = 2000
+    p = np.concatenate([np.full(5, 0.99), np.full(1000, 0.5), np.full(995, 0.1)])
+    y = (rng.random(n) < 0.1).astype(int)
+    y[:5] = 1
+    m = compute_metrics(y, p)
+    base_tied = y[5:1005].mean()
+    k = 20
+    assert m["precision_top_1pct"] == pytest.approx((5 + (k - 5) * base_tied) / k)
+    perm = rng.permutation(n)
+    m2 = compute_metrics(y[perm], p[perm])
+    for key in ("precision_top_0_5pct", "precision_top_1pct", "lift_top_1pct"):
+        assert m2[key] == pytest.approx(m[key])
+
+
+def test_binary_scores_give_finite_log_loss_and_two_calibration_bins():
+    y = np.array([0, 0, 0, 1, 1, 0, 1, 0])
+    p = y.astype(float)
+    m = compute_metrics(y, p)
+    assert math.isfinite(m["log_loss"])
+    assert len(m["calibration"]) == 2
+    assert sum(b["count"] for b in m["calibration"]) == len(y)

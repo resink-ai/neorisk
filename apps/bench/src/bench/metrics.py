@@ -36,18 +36,29 @@ def _recall_at_precision(prec, rec, floor):
 
 
 def _precision_top(y, p, frac):
-    k = max(1, math.ceil(frac * len(y)))
-    idx = np.argsort(-p, kind="stable")[:k]
-    return float(y[idx].mean())
+    """Precision in the top-k rows; ties at the cutoff use the expected share of positives."""
+    k = min(len(y), max(1, math.ceil(frac * len(y))))
+    thr = np.sort(p)[::-1][k - 1]
+    above = p > thr
+    tied = p == thr
+    n_above = int(above.sum())
+    pos = float(y[above].sum()) + (k - n_above) * float(y[tied].mean())
+    return pos / k
 
 
 def _calibration(y, p, bins=10):
-    edges = np.unique(np.quantile(p, np.linspace(0, 1, bins + 1)))
-    if len(edges) < 3:
-        return [{"mean_pred": float(p.mean()), "frac_pos": float(y.mean()), "count": len(y)}]
-    which = np.clip(np.searchsorted(edges[1:-1], p, side="right"), 0, len(edges) - 2)
+    """Return between 1 and `bins` calibration bins (quantile bins; one per distinct value
+    when there are at most `bins` distinct scores)."""
+    uniq, inv = np.unique(p, return_inverse=True)
+    if len(uniq) <= bins:
+        which = inv.ravel()
+        n_bins = len(uniq)
+    else:
+        edges = np.unique(np.quantile(p, np.linspace(0, 1, bins + 1)))
+        which = np.clip(np.searchsorted(edges[1:-1], p, side="right"), 0, len(edges) - 2)
+        n_bins = len(edges) - 1
     out = []
-    for b in range(len(edges) - 1):
+    for b in range(n_bins):
         m = which == b
         if m.any():
             out.append(
