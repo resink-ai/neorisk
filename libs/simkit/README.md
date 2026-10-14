@@ -38,6 +38,11 @@ spec = EntitySpec(
     ),
 )
 users = build_entities(spec, np.datetime64("2026-01-01"), np.datetime64("2026-07-01"), rng)
-events = pl.DataFrame({"user_idx": [0, 1], "event_time": [np.datetime64("2026-05-01", "us")] * 2})
+events = pl.DataFrame(
+    {
+        "user_idx": [0, 1],
+        "event_time": np.array(["2026-05-01", "2026-05-01"], dtype="datetime64[us]"),
+    }
+)
 events = attach_asof(events, users, idx_col="user_idx")  # adds user_country, user_address
 ```
