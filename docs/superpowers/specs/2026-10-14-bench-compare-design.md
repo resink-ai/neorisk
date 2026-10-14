@@ -86,7 +86,7 @@ all positives kept up to the cap) so cost is bounded.
 |---|---|
 | Random Forest, XGBoost | `TreeExplainer` |
 | Logistic Regression | `LinearExplainer` |
-| ANN small/large | sampled permutation/kernel explainer, 100 background rows, <= 1,000 explained rows |
+| ANN small/large | `KernelExplainer`, k-means background (10 centroids of a <= 2,000-row train sample), `nsamples=1000`, `l1_reg=False`, <= 1,000 explained rows |
 
 Outputs per model: mean |SHAP| importance per feature, and per-feature SHAP value
 distribution (quantiles + a downsampled point set for the strip/beeswarm plot).
@@ -109,8 +109,10 @@ Single HTML, inline SVG, light/dark friendly, no external assets. Sections:
 ## 8. Error handling
 
 - Reuse `load_events` guards (label required, `golden_columns` required, no golden leakage).
-- `bench compare` fails fast if the dataset has fewer than N positives in train (default 50)
-  or if a split is single-class (reports NaN rows but still renders).
+- `bench compare` warns on stderr (and in the report's run details) if the training split has
+  fewer than N positives (default 50); it does not abort, so that degenerate data still
+  renders. A single-class training split makes every model fail with a recorded error, and
+  the report still renders.
 - A model that fails to train is reported in the report as failed with its error; the
   remaining models still run.
 - `shap` explanation failures degrade to "SHAP unavailable" for that model only.

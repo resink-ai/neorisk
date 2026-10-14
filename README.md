@@ -39,8 +39,10 @@ labels' ground truth; `meta.json` records seed, config and achieved bad rate.
 `bench compare` trains Logistic Regression, Random Forest, XGBoost and two MLPs (`32-16` and
 `256-128-64`) on observable point-in-time features built from `events.parquet` only (it never
 reads `golden.parquet`), then reports ROC/PR curves, metrics, calibration and per-model SHAP.
-On 500k events it runs in minutes; SHAP for the ANNs is the slowest stage (tune with
-`--ann-shap-rows`). See [`apps/bench/README.md`](apps/bench/README.md) for the feature list and
+On 500k events it runs in a few minutes; the slowest stage is exact TreeSHAP on the Random
+Forest (tune with `--shap-rows`; ANN KernelSHAP is a few seconds, tune with `--ann-shap-rows`).
+The report ranks models on ranking metrics; log loss/Brier/calibration are flagged as not
+comparable between class-weighted and unweighted models. See [`apps/bench/README.md`](apps/bench/README.md) for the feature list and
 how to read the report. `data/` and `reports/` are git-ignored.
 
 Note: `--oracle` trains XGBoost on the raw numeric columns plus all golden columns except

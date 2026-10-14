@@ -28,7 +28,7 @@ best-F1 threshold shown as the operating point; every headline metric is on test
 |---|---|---|
 | `logreg` | Logistic Regression | standardized inputs, `class_weight="balanced"` |
 | `rf` | Random Forest | 300 trees, depth 12, `min_samples_leaf=20`, balanced subsample |
-| `xgb` | XGBoost | hist, depth 6, lr 0.1, up to 500 rounds, early stopping on valid PR-AUC |
+| `xgb` | XGBoost | hist, depth 6, lr 0.1, up to 500 rounds, early stopping on valid PR-AUC; the "rounds/epochs" column shows best iteration + 1 |
 | `ann_small` | MLP `(32, 16)` | standardized inputs, early stopping on valid AUC (patience 5) |
 | `ann_large` | MLP `(256, 128, 64)` | `alpha=1e-4`, same early stopping |
 
@@ -46,7 +46,8 @@ All engineered features are strictly point-in-time over `[t - w, t)` with `w` in
 - `obs_inv_bonus_{count,sum,mean,max}_30d`: the inviter's activity as of the invite that brought
   the user in;
 - `obs_amt_ratio_30d`: amount relative to the user's 30-day mean;
-- the raw numeric event columns (minus near-unique identifier-like ints such as `user_zip`).
+- the raw numeric event columns (minus near-unique identifier-like ints: `user_street`,
+  `user_zip`, `device_ip` and `product_launch_day`, a near-unique product proxy).
 
 ### Runtime
 
@@ -55,7 +56,19 @@ wall clock. Features 0.4 s; training 41 s in total (LR 0.7 s, RF 10 s, XGBoost 0
 7 s, ANN large 22 s); SHAP is the slowest stage, dominated by exact TreeSHAP on the Random
 Forest (~140 s for 5,000 rows; KernelSHAP on the ANNs takes a few seconds at 1,000 rows). The
 report's run-details section records the per-stage and per-model seconds. Lower `--shap-rows`
-(or `--ann-shap-rows` for the ANNs) to trade SHAP precision for time.
+to cut the RF TreeSHAP cost (`--ann-shap-rows` only affects the ANNs). "Predict test s" times
+the test split only.
+
+### Reproducibility
+
+Runs are seeded and deterministic except for these known, cosmetic effects:
+
+- Random Forest `n_jobs=-1`: tree-building order can change the last decimals of the mean
+  predicted probability (and, rarely, a metric's last digit) between runs.
+- ANN KernelSHAP (`nsamples=1000`, k-means background) is seeded through the global NumPy
+  state; on a 30k-event dataset two same-seed runs, in-process and across processes, were
+  bit-identical. Different BLAS builds or thread counts may still perturb the last digits.
+- Wall-clock seconds always vary.
 
 ### Reading the report
 
@@ -64,11 +77,16 @@ report's run-details section records the per-stage and per-model seconds. Lower 
 2. **ROC / PR curves**: all models overlaid; the PR baseline is the test positive rate.
 3. **Metrics / operating point**: column-normalised heatmap and the confusion matrix at the
    valid-chosen best-F1 threshold.
-4. **Calibration**: mean predicted probability vs observed positive rate per quantile bin
-   (class-weighted models are expected to over-predict).
+4. **Calibration**: mean predicted probability vs observed positive rate per quantile bin.
+   Logistic Regression, RF and XGBoost are class-weighted and over-predict; the ANNs are
+   unweighted. Log loss, Brier and calibration are therefore **not comparable** across the two
+   groups (shown as n/c, never bolded); compare on ranking metrics (AUC, PR-AUC, KS,
+   recall@precision, top-k).
 5. **SHAP**: cross-model normalised importance, then per model the top features and their SHAP
    value distribution. Units differ (log-odds for linear/XGBoost, probability for RF/ANNs),
-   so compare rankings, not raw magnitudes.
+   so compare rankings, not raw magnitudes. The explained sample is positive-enriched (up to 50%
+   positives vs the base rate), so mean|SHAP| describes that sample. KernelSHAP uses a 10-centroid
+   k-means background and 1,000 coalition samples.
 6. **Run details**: data dir, split sizes, bad rate, feature list, stage and per-model timings,
    ANN epochs.
 
