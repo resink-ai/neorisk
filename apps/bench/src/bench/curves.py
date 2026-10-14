@@ -61,14 +61,24 @@ def _fit_xgb(tr, va, cols, seed):
     return m
 
 
+def _thin(a, b, max_points: int = 800):
+    """Keep at most ``max_points`` curve points (small-sample curves stay exact)."""
+    if len(a) <= max_points:
+        return a.tolist(), b.tolist()
+    idx = np.unique(np.linspace(0, len(a) - 1, max_points).astype(int))
+    return a[idx].tolist(), b[idx].tolist()
+
+
 def _curves(y, p) -> dict:
     fpr, tpr, _ = roc_curve(y, p)
     prec, rec, _ = precision_recall_curve(y, p)
+    fpr, tpr = _thin(fpr, tpr)
+    rec, prec = _thin(rec, prec)
     return {
-        "fpr": fpr.tolist(),
-        "tpr": tpr.tolist(),
-        "recall": rec.tolist(),
-        "precision": prec.tolist(),
+        "fpr": fpr,
+        "tpr": tpr,
+        "recall": rec,
+        "precision": prec,
         "auc": float(roc_auc_score(y, p)),
         "pr_auc": float(average_precision_score(y, p)),
         "n": len(y),
