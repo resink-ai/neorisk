@@ -5,7 +5,12 @@ from datetime import UTC, datetime
 
 import numpy as np
 import polars as pl
-from sklearn.metrics import average_precision_score, precision_recall_curve, roc_auc_score
+from sklearn.metrics import (
+    average_precision_score,
+    precision_recall_curve,
+    roc_auc_score,
+    roc_curve,
+)
 from xgboost import XGBClassifier
 
 from bench.models import _xgb, train_all
@@ -96,13 +101,25 @@ def _delay_correction(df, cutoff, window_end_rows):
     return np.where(obs, 1.0, q)
 
 
+def _thin(a, b, max_points=300):
+    idx = np.unique(np.linspace(0, len(a) - 1, min(max_points, len(a))).astype(int))
+    return a[idx].tolist(), b[idx].tolist()
+
+
 def _scores(y, p):
+    y = np.asarray(y)
+    fpr, tpr, _ = roc_curve(y, p)
+    prec, rec, _ = precision_recall_curve(y, p)
+    fx, ty = _thin(fpr, tpr)
+    rx, py = _thin(rec, prec)
     return {
         "auc": float(roc_auc_score(y, p)),
         "pr_auc": float(average_precision_score(y, p)),
         "n": len(y),
         "n_pos": int(y.sum()),
         "base_rate": float(np.mean(y)),
+        "roc": {"fpr": fx, "tpr": ty},
+        "pr": {"recall": rx, "precision": py},
     }
 
 
@@ -111,12 +128,6 @@ def _mean_scores(rows):
     for k in ("auc", "pr_auc"):
         out[k] = float(np.mean([r[k] for r in rows]))
     return out
-
-
-def _pr(y, p, max_points=400):
-    prec, rec, _ = precision_recall_curve(y, p)
-    idx = np.unique(np.linspace(0, len(rec) - 1, max_points).astype(int))
-    return {"recall": rec[idx].tolist(), "precision": prec[idx].tolist()}
 
 
 def run_temporal(
@@ -266,8 +277,6 @@ def run_temporal(
             ),
             "oot_offline": _scores(y_test, offline),
             "oot_serving": _scores(y_test, serving),
-            "pr_offline": _pr(y_test, offline),
-            "pr_serving": _pr(y_test, serving),
             "importance": {
                 c: float(v) for c, v in zip(cols, mod.estimator.feature_importances_, strict=True)
             },
@@ -405,7 +414,13 @@ _TXT = {
             "离线（含泄漏列的历史数据）看起来极好，且 OOT 也没有暴露问题，因为泄漏列在测试期同样"
             "来自未来。只有按上线时能拿到的 point-in-time 取值重算，才会崩塌（PR-AUC 低于基线）。"
         ),
-        "pr_h": "含泄漏模型：离线 vs 上线 的 PR 曲线",
+        "pr_h": "ROC 与 PR 曲线：干净模型 vs 含泄漏模型（离线、上线）",
+        "roc": "ROC 曲线",
+        "pr": "PR 曲线",
+        "base": "基线坏账率",
+        "c_clean": "干净（上线）",
+        "c_leak_off": "含泄漏（离线）",
+        "c_leak_srv": "含泄漏（上线）",
         "det_h": "怎么发现泄漏",
         "det_cols": ["特征", "单特征 AUC", "point-in-time 重算不一致率", "含泄漏模型重要度"],
         "det_note": (
@@ -505,7 +520,13 @@ _TXT = {
             "Only recomputing with the values available at event time collapses it (PR-AUC below "
             "the base rate)."
         ),
-        "pr_h": "Leaky model: offline vs serving PR curve",
+        "pr_h": "ROC and PR curves: clean vs leaky (offline, serving)",
+        "roc": "ROC curve",
+        "pr": "PR curve",
+        "base": "base rate",
+        "c_clean": "Clean (serving)",
+        "c_leak_off": "Leaky (offline)",
+        "c_leak_srv": "Leaky (serving)",
         "det_h": "How to find the leak",
         "det_cols": [
             "Feature",
@@ -556,6 +577,30 @@ def _table(head, rows):
         "<tr>" + "".join(f'<td style="text-align:left">{c}</td>' for c in r) + "</tr>" for r in rows
     )
     return f'<div class="tablewrap"><table><thead><tr>{th}</tr></thead><tbody>{tr}</tbody></table></div>'
+
+
+def _pair(items, T):
+    """ROC and PR curves side by side for [(name, color, scores)]; scores carry roc/pr curves."""
+    roc = [
+        {"name": n, "color": c, "xs": sc["roc"]["fpr"], "ys": sc["roc"]["tpr"]}
+        for n, c, sc in items
+    ]
+    pr = [
+        {"name": n, "color": c, "xs": sc["pr"]["recall"], "ys": sc["pr"]["precision"]}
+        for n, c, sc in items
+    ]
+    legend = "".join(
+        f'<span class="chip"><i style="background:{c}"></i>{_esc(n)}</span>' for n, c, _ in items
+    )
+    rates = ", ".join(f"{sc['base_rate']:.3f}" for _, _, sc in items)
+    return (
+        f'<div class="legend">{legend}</div><div class="grid">'
+        f'<div class="card"><h3>{_esc(T["roc"])}</h3>'
+        f"{svg_lines(roc, xlabel='FPR', ylabel='TPR', diagonal=True)}</div>"
+        f'<div class="card"><h3>{_esc(T["pr"])}</h3>'
+        f"{svg_lines(pr, xlabel='Recall', ylabel='Precision', baseline_y=items[0][2]['base_rate'])}"
+        f'<p class="note">{_esc(T["base"])}: {rates}</p></div></div>'
+    )
 
 
 def render_temporal(r: dict, lang: str = "zh") -> str:
@@ -674,36 +719,30 @@ def render_temporal(r: dict, lang: str = "zh") -> str:
                 f3(m["oot_serving"]["auc"]),
             ]
         )
-    base = lk["clean"]["oot_serving"]["base_rate"]
-    pr_chart = svg_lines(
+    lk["clean"]["oot_serving"]["base_rate"]
+    leak_pair = _pair(
         [
-            {
-                "name": "offline",
-                "color": "#e4572e",
-                "xs": lk["leaky"]["pr_offline"]["recall"],
-                "ys": lk["leaky"]["pr_offline"]["precision"],
-            },
-            {
-                "name": "serving",
-                "color": "#6c757d",
-                "xs": lk["leaky"]["pr_serving"]["recall"],
-                "ys": lk["leaky"]["pr_serving"]["precision"],
-            },
-            {
-                "name": "clean",
-                "color": "#17a398",
-                "xs": lk["clean"]["pr_serving"]["recall"],
-                "ys": lk["clean"]["pr_serving"]["precision"],
-            },
+            (T["c_clean"], "#17a398", lk["clean"]["oot_serving"]),
+            (T["c_leak_off"], "#e4572e", lk["leaky"]["oot_offline"]),
+            (T["c_leak_srv"], "#6c757d", lk["leaky"]["oot_serving"]),
         ],
-        xlabel="Recall",
-        ylabel="Precision",
-        baseline_y=base,
+        T,
     )
-    legend = (
-        '<div class="legend"><span class="chip"><i style="background:#e4572e"></i>offline (leaky)</span>'
-        '<span class="chip"><i style="background:#6c757d"></i>serving (leaky)</span>'
-        '<span class="chip"><i style="background:#17a398"></i>clean</span></div>'
+    val_pair = _pair(
+        [
+            (T["val_rand"], "#8e44ad", val["random_split"]),
+            (T["val_oot"], "#2f6fed", val["oot"]),
+            (T["bias_imm"], "#f2a900", eb["immature"]),
+        ],
+        T,
+    )
+    sweep_pair = _pair(
+        [
+            (f"{T['sweep_cols'][0]} 0", "#e4572e", sw[0]),
+            (f"{T['sweep_cols'][0]} {sw[-1]['embargo']}", "#6c757d", sw[-1]),
+            (T["corr"], "#17a398", r["corrected"]),
+        ],
+        T,
     )
     imp = lk["leaky"]["importance"]
     det_rows = []
@@ -725,17 +764,16 @@ def render_temporal(r: dict, lang: str = "zh") -> str:
         f'<div class="grid"><div class="card"><h3>{_esc(T["delay_h"])}</h3>{delay_chart}</div>'
         f'<div class="card"><h3>{_esc(T["weekly_h"])}</h3>{weekly_chart}'
         f'<p class="note">{_esc(T["weekly_note"])}</p></div></div>'
-        f"<h3>{_esc(T['val_h'])}</h3>{_table(T['val_cols'], val_rows)}"
+        f"<h3>{_esc(T['val_h'])}</h3>{_table(T['val_cols'], val_rows)}{val_pair}"
         f"<h3>{_esc(T['bias_h'])}</h3>{_table(T['bias_cols'], bias_rows)}"
         f'<h3>{_esc(T["sweep_h"])}</h3><p class="note">{_esc(T["sweep_note"])}</p>'
-        f'<div class="card" style="max-width:640px">{sweep_chart}</div>'
+        f'<div class="card" style="max-width:640px">{sweep_chart}</div>{sweep_pair}'
         f"{_table(T['sweep_cols'], sweep_rows)}"
     )
     p2 = (
         f"<h3>{_esc(T['leak_h'])}</h3>{_table(T['leak_cols'], leak_rows)}"
         f'<p class="note">{_esc(T["leak_note"])}</p>'
-        f"<h3>{_esc(T['pr_h'])}</h3>{legend}"
-        f'<div class="card" style="max-width:640px">{pr_chart}</div>'
+        f"<h3>{_esc(T['pr_h'])}</h3>{leak_pair}"
         f"<h3>{_esc(T['det_h'])}</h3>{_table(T['det_cols'], det_rows)}"
         f'<p class="note">{_esc(T["det_note"])}</p><p class="note">{_esc(T["abl"])}: {abl}</p>'
     )
