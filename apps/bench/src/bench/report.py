@@ -48,6 +48,11 @@ def _fmt_int(v) -> str:
     return "—" if f is None else f"{round(f):,}"
 
 
+def _pct(v):
+    f = _num(v)
+    return None if f is None else f * 100
+
+
 LABELS = {
     "zh": {
         "title": "模型对比报告",
@@ -61,7 +66,7 @@ LABELS = {
         "details": "运行详情",
         "failed": "失败的模型",
         "model": "模型",
-        "best": "加粗为每列最优",
+        "best": "加粗为每列最优（并列/全部相同时不加粗）",
         "heat_note": "颜色越深越好（按列归一化）",
         "baseline": "正例率基线",
         "ideal": "完美校准",
@@ -72,7 +77,7 @@ LABELS = {
         "shap_strip": "SHAP 值分布（点颜色：特征值 低 → 高；横线：P25-P75，刻度：中位数）",
         "feature": "特征",
         "train_s": "训练 s",
-        "infer_s": "推理 s",
+        "infer_s": "推理(test) s",
         "shap_s": "SHAP s",
         "stages": "阶段耗时 (特征 / 全部训练 / 总计)",
         "data_dir": "数据目录",
@@ -84,12 +89,46 @@ LABELS = {
         "generated": "生成时间",
         "features": "特征列表",
         "timings": "耗时与训练信息",
-        "epochs": "训练轮数",
+        "epochs": "轮数/迭代",
         "method": "解释方法",
         "rows": "解释行数",
         "no_models": "没有可展示的模型结果。",
         "pred_mean": "平均预测概率",
         "frac_pos": "实际正例比例",
+        "methods": "方法与注意事项",
+        "methods_note": "各模型的不平衡处理、早停规则与超参数；表中不可比项以 n/c 标注。",
+        "caveat_title": "log loss、Brier 与校准不可跨模型比较",
+        "caveat_body": (
+            "逻辑回归、随机森林与 XGBoost 使用了类别加权（会系统性高估概率），而两个 ANN 未加权，"
+            "因此 log loss、Brier 分数与校准曲线在加权与未加权模型之间不可比：ANN 在这些指标上"
+            "“更好”主要是因为概率未被重新加权，而非排序能力更强。公平的比较应看排序类指标："
+            "ROC-AUC、PR-AUC、KS、给定精确率下的召回率与 top-k 精确率/提升。"
+        ),
+        "imbalance": "不平衡处理",
+        "early_stop": "早停",
+        "hyper": "关键超参数",
+        "rounds_epochs": "轮数/迭代",
+        "mean_pred_p": "平均预测概率",
+        "base_rate": "测试集正例率",
+        "shap_method_unit": "SHAP 方法 · 单位",
+        "imb_class_weight_balanced": "class_weight=balanced（加权）",
+        "imb_class_weight_balanced_subsample": "class_weight=balanced_subsample（加权）",
+        "imb_scale_pos_weight": "scale_pos_weight=负/正（加权）",
+        "imb_none": "无（未加权）",
+        "es_none": "无（固定迭代上限）",
+        "es_fmt": "验证集 {metric}，patience {patience}",
+        "nc": "n/c",
+        "nc_note": "n/c：加权与未加权模型之间不可比，不参与加粗与热力图。",
+        "cal_note": "注意：加权模型（逻辑回归、RF、XGBoost）会高估概率；ANN 未加权。校准曲线在二者之间不可直接比较。",
+        "shap_units_note": (
+            "SHAP 单位因模型而异（线性/XGBoost 为对数几率，RF 与 ANN 为概率），请比较排名或"
+            "归一化占比，而非原始数值。"
+        ),
+        "shap_sample_note": (
+            "被解释样本为正例富集的分层抽样（最多 50% 正例，测试集基线为 {base}，样本为 {pos}），"
+            "因此 mean|SHAP| 描述的是该富集样本，而非整体人群。"
+        ),
+        "warn_train_pos": "警告：训练集仅有 {n} 个正例（低于 {thr}），结果不稳定。",
     },
     "en": {
         "title": "Model comparison report",
@@ -103,7 +142,7 @@ LABELS = {
         "details": "Run details",
         "failed": "Failed models",
         "model": "Model",
-        "best": "Best value per column in bold",
+        "best": "Best value per column in bold (no bold on ties or all-equal columns)",
         "heat_note": "Darker is better (min-max per column)",
         "baseline": "Positive-rate baseline",
         "ideal": "Perfect calibration",
@@ -117,7 +156,7 @@ LABELS = {
         ),
         "feature": "Feature",
         "train_s": "Train s",
-        "infer_s": "Infer s",
+        "infer_s": "Predict test s",
         "shap_s": "SHAP s",
         "stages": "Stage seconds (features / all training / total)",
         "data_dir": "Data dir",
@@ -129,12 +168,58 @@ LABELS = {
         "generated": "Generated",
         "features": "Feature list",
         "timings": "Timings and training info",
-        "epochs": "Epochs",
+        "epochs": "Rounds/epochs",
         "method": "Explainer",
         "rows": "Rows explained",
         "no_models": "No model results to show.",
         "pred_mean": "Mean predicted probability",
         "frac_pos": "Observed positive fraction",
+        "methods": "Methods & caveats",
+        "methods_note": (
+            "Imbalance handling, early-stopping rule and key hyperparameters per model. "
+            "Metrics that are not comparable are marked n/c."
+        ),
+        "caveat_title": "Log loss, Brier and calibration are not comparable across models",
+        "caveat_body": (
+            "Logistic Regression, Random Forest and XGBoost are class-weighted (which inflates "
+            "predicted probabilities) while the two ANNs are unweighted. Log loss, Brier score "
+            "and calibration are therefore NOT comparable between weighted and unweighted models: "
+            "the ANNs look better on them mainly because their probabilities are not re-weighted, "
+            "not because they rank better. The fair comparison is on ranking metrics: ROC-AUC, "
+            "PR-AUC, KS, recall at fixed precision and top-k precision/lift."
+        ),
+        "imbalance": "Imbalance handling",
+        "early_stop": "Early stopping",
+        "hyper": "Key hyperparameters",
+        "rounds_epochs": "Rounds/epochs",
+        "mean_pred_p": "Mean predicted p",
+        "base_rate": "Test base rate",
+        "shap_method_unit": "SHAP method · unit",
+        "imb_class_weight_balanced": "class_weight=balanced (weighted)",
+        "imb_class_weight_balanced_subsample": "class_weight=balanced_subsample (weighted)",
+        "imb_scale_pos_weight": "scale_pos_weight=neg/pos (weighted)",
+        "imb_none": "none (unweighted)",
+        "es_none": "none (fixed iteration cap)",
+        "es_fmt": "valid {metric}, patience {patience}",
+        "nc": "n/c",
+        "nc_note": (
+            "n/c: not comparable between weighted and unweighted models; "
+            "excluded from bolding and the heatmap."
+        ),
+        "cal_note": (
+            "Note: weighted models (LogReg, RF, XGBoost) over-predict; the ANNs are unweighted. "
+            "Calibration curves are not directly comparable between the two groups."
+        ),
+        "shap_units_note": (
+            "SHAP units differ by model (log-odds for linear/XGBoost, probability for RF and "
+            "ANN): compare rankings or normalised shares, not raw magnitudes."
+        ),
+        "shap_sample_note": (
+            "The explained sample is a positive-enriched stratified sample (up to 50% positives; "
+            "test base rate {base}, sample {pos}), so mean|SHAP| describes that enriched sample, "
+            "not the whole population."
+        ),
+        "warn_train_pos": "Warning: only {n} positives in train (below {thr}); results are unstable.",
     },
 }
 
@@ -150,7 +235,11 @@ _SUMMARY_COLS = [
     ("log_loss", "log loss", False, 4),
     ("brier", "Brier", False, 4),
 ]
-_HEAT_KEYS = _SUMMARY_COLS + [("precision_top_0_5pct", "P@top0.5%", True, 3)]
+# not comparable between class-weighted and unweighted models
+_NOT_COMPARABLE = {"log_loss", "brier"}
+_HEAT_KEYS = [c for c in _SUMMARY_COLS if c[0] not in _NOT_COMPARABLE] + [
+    ("precision_top_0_5pct", "P@top0.5%", True, 3)
+]
 
 _CSS = """
 :root{--bg:#fafaf8;--fg:#1c1e21;--muted:#62666d;--card:#fff;--line:#d9dbe0;--grid:#e6e8ec;
@@ -293,26 +382,39 @@ def _legend(models) -> str:
     return f'<div class="legend">{chips}</div>'
 
 
-def _best_flags(models, key, higher):
+def _best_flags(models, key, higher, digits=3):
+    """Flag the best column value(s), comparing rounded display values.
+
+    No flags when fewer than two values exist or every value displays the same.
+    """
     vals = [_num((m["metrics"] or {}).get(key)) for m in models]
-    finite = [v for v in vals if v is not None]
-    if not finite:
-        return [False] * len(models)
+    return _flags_from(vals, higher, digits)
+
+
+def _flags_from(vals, higher, digits):
+    shown = [None if v is None else round(v, digits) for v in vals]
+    finite = [v for v in shown if v is not None]
+    if len(finite) < 2 or len(set(finite)) == 1:
+        return [False] * len(vals)
     target = max(finite) if higher else min(finite)
-    return [v is not None and v == target for v in vals]
+    return [v is not None and v == target for v in shown]
 
 
 def _summary_table(models, L) -> str:
     cols = _SUMMARY_COLS
-    head = "".join(f"<th>{_esc(h)}</th>" for _, h, _, _ in cols)
+    head = "".join(
+        f"<th>{_esc(h)}{' (' + _esc(L['nc']) + ')' if k in _NOT_COMPARABLE else ''}</th>"
+        for k, h, _, _ in cols
+    )
     head += f"<th>{_esc(L['train_s'])}</th><th>{_esc(L['infer_s'])}</th>"
-    flags = {k: _best_flags(models, k, hi) for k, _, hi, _ in cols}
-    tflags = {}
-    for k in ("train_seconds", "infer_seconds"):
-        vals = [_num(m.get(k)) for m in models]
-        fin = [v for v in vals if v is not None]
-        t = min(fin) if fin else None
-        tflags[k] = [v is not None and v == t for v in vals]
+    flags = {
+        k: ([False] * len(models) if k in _NOT_COMPARABLE else _best_flags(models, k, hi, d))
+        for k, _, hi, d in cols
+    }
+    tflags = {
+        k: _flags_from([_num(m.get(k)) for m in models], False, 2)
+        for k in ("train_seconds", "infer_seconds")
+    }
     rows = []
     for i, m in enumerate(models):
         cells = [
@@ -332,6 +434,7 @@ def _summary_table(models, L) -> str:
         '<div class="tablewrap"><table><thead><tr>'
         f"<th>{_esc(L['model'])}</th>{head}</tr></thead><tbody>{''.join(rows)}</tbody>"
         f'</table></div><p class="note">{_esc(L["best"])}</p>'
+        f'<p class="note">{_esc(L["nc_note"])}</p>'
     )
 
 
@@ -429,7 +532,7 @@ def _norm_importance(shap) -> dict[str, float]:
     return {k: (v / tot if tot > 0 else 0.0) for k, v in imp.items()}
 
 
-def _bar_svg(items, color, width=520) -> str:
+def _bar_svg(items, color, width=520, label="") -> str:
     """Horizontal bars; items: [(name, frac)]."""
     if not items:
         return ""
@@ -437,7 +540,7 @@ def _bar_svg(items, color, width=520) -> str:
     h = row_h * len(items) + 8
     mx = max(v for _, v in items) or 1.0
     pw = width - ml - mr
-    out = [f'<svg class="chart" viewBox="0 0 {width} {h}" role="img">']
+    out = [f'<svg class="chart" viewBox="0 0 {width} {h}" role="img" aria-label="{_esc(label)}">']
     for i, (name, v) in enumerate(items):
         y = 4 + i * row_h
         w = max(1.0, pw * v / mx)
@@ -458,7 +561,7 @@ def _value_color(t: float) -> str:
     return f"hsl({hue:.0f} 75% 52%)"
 
 
-def _strip_svg(shap, feats, width=520) -> str:
+def _strip_svg(shap, feats, width=520, label="") -> str:
     row_h, ml, mr, mt, mb = 26, 150, 14, 6, 26
     pts = shap.get("points") or {}
     quants = shap.get("quantiles") or {}
@@ -477,7 +580,7 @@ def _strip_svg(shap, feats, width=520) -> str:
     def X(v):
         return ml + (v - lo) / (hi - lo) * pw
 
-    out = [f'<svg class="chart" viewBox="0 0 {width} {h}" role="img">']
+    out = [f'<svg class="chart" viewBox="0 0 {width} {h}" role="img" aria-label="{_esc(label)}">']
     if lo < 0 < hi:
         out.append(
             f'<line x1="{X(0):.1f}" y1="{mt}" x2="{X(0):.1f}" y2="{h - mb}" '
@@ -485,8 +588,11 @@ def _strip_svg(shap, feats, width=520) -> str:
         )
     for i, f in enumerate(feats):
         cy = mt + i * row_h + row_h / 2
-        label = f if len(f) <= 24 else f[:23] + "…"
-        out.append(f'<text x="{ml - 8}" y="{cy + 4:.1f}" text-anchor="end">{_esc(label)}</text>')
+        short = f if len(f) <= 24 else f[:23] + "…"
+        out.append(
+            f'<text x="{ml - 8}" y="{cy + 4:.1f}" text-anchor="end">{_esc(short)}'
+            f"<title>{_esc(f)}</title></text>"
+        )
         q = [_num(x) for x in quants.get(f, [])]
         if len(q) >= 4 and q[1] is not None and q[3] is not None:
             out.append(
@@ -513,9 +619,20 @@ def _strip_svg(shap, feats, width=520) -> str:
     return "".join(out)
 
 
-def _shap_section(models, L) -> str:
+def _shap_section(models, L, run=None) -> str:
     have = [m for m in models if m.get("shap")]
-    parts = []
+    run = run or {}
+    base, pos = _num(run.get("test_bad_rate")), _num(run.get("shap_sample_pos_rate"))
+    sample = L["shap_sample_note"].format(
+        base="—" if base is None else f"{base * 100:.2f}%",
+        pos="—" if pos is None else f"{pos * 100:.1f}%",
+    )
+    parts = [
+        (
+            f'<div class="callout warn"><p style="margin:0">{_esc(L["shap_units_note"])}</p>'
+            f'<p style="margin:6px 0 0">{_esc(sample)}</p></div>'
+        )
+    ]
     if have:
         norms = {m["key"]: _norm_importance(m["shap"]) for m in have}
         union: list[str] = []
@@ -559,18 +676,75 @@ def _shap_section(models, L) -> str:
             continue
         norm = _norm_importance(s)
         top = sorted(norm.items(), key=lambda kv: -kv[1])[:12]
+        unit = str(s.get("unit") or "")
+        method_unit = str(s.get("method", "")) + (f" · {unit}" if unit else "")
         info = (
-            f'<p class="note">{_esc(L["method"])}: {_esc(str(s.get("method", "")))} · '
+            f'<p class="note">{_esc(L["method"])}: <b>{_esc(method_unit)}</b> · '
             f"{_esc(L['rows'])}: {_fmt_int(s.get('n_rows'))}</p>"
         )
+        bars_label = f"{m['display']}: {L['shap_bars']}"
+        strip_label = f"{m['display']}: {L['shap_strip']}"
         cards.append(
             f'<div class="card">{title}{info}'
-            f'<p class="note">{_esc(L["shap_bars"])}</p>{_bar_svg(top, m["color"])}'
+            f'<p class="note">{_esc(L["shap_bars"])}</p>'
+            f"{_bar_svg(top, m['color'], label=bars_label)}"
             f'<p class="note">{_esc(L["shap_strip"])}</p>'
-            f"{_strip_svg(s, [f for f, _ in top])}</div>"
+            f"{_strip_svg(s, [f for f, _ in top], label=strip_label)}</div>"
         )
     parts.append(f'<div class="grid">{"".join(cards)}</div>')
     return "".join(parts)
+
+
+def _methods_section(models, run, L) -> str:
+    base = _num(run.get("test_bad_rate"))
+    if base is None:
+        base = _num(run.get("bad_rate"))
+    rows = []
+    for m in models:
+        info = m.get("model_info") or {}
+        es = info.get("early_stopping")
+        es_txt = (
+            L["es_fmt"].format(metric=es.get("metric"), patience=es.get("patience"))
+            if isinstance(es, dict)
+            else L["es_none"]
+        )
+        imb = info.get("imbalance")
+        imb_txt = L.get(f"imb_{imb}", str(imb)) if imb else "—"
+        hp = info.get("hyperparams") or {}
+        hp_txt = ", ".join(f"{k}={v}" for k, v in hp.items()) or "—"
+        ep = m.get("epochs")
+        unit = info.get("count_unit")
+        ep_txt = "—" if ep is None else f"{_fmt_int(ep)}" + (f" {_esc(unit)}" if unit else "")
+        mp = _num(m.get("mean_pred"))
+        mp_txt = _fmt(mp, 4)
+        if mp is not None and base:
+            mp_txt += f" ({mp / base:.1f}x)"
+        sh = info.get("shap_method")
+        sh_txt = f"{sh} · {info.get('shap_unit')}" if sh else "—"
+        wrap = 'style="text-align:left;white-space:normal"'
+        rows.append(
+            f'<tr><td><span class="dot" style="background:{m["color"]}"></span>'
+            f"{_esc(m['display'])}</td>"
+            f"<td {wrap}>{_esc(imb_txt)}</td><td {wrap}>{_esc(es_txt)}</td>"
+            f"<td {wrap}>{_esc(hp_txt)}</td><td>{ep_txt}</td><td>{_esc(mp_txt)}</td>"
+            f"<td {wrap}>{_esc(sh_txt)}</td></tr>"
+        )
+    heads = [
+        L["imbalance"],
+        L["early_stop"],
+        L["hyper"],
+        L["rounds_epochs"],
+        f"{L['mean_pred_p']} (base {_fmt(base, 4)})",
+        L["shap_method_unit"],
+    ]
+    return (
+        f'<div class="callout warn"><b>{_esc(L["caveat_title"])}</b>'
+        f'<p style="margin:6px 0 0">{_esc(L["caveat_body"])}</p></div>'
+        f'<p class="note">{_esc(L["methods_note"])}</p>'
+        '<div class="tablewrap"><table><thead><tr>'
+        f"<th>{_esc(L['model'])}</th>{''.join(f'<th>{_esc(h)}</th>' for h in heads)}"
+        f"</tr></thead><tbody>{''.join(rows)}</tbody></table></div>"
+    )
 
 
 def _facts(run, L) -> str:
@@ -595,11 +769,6 @@ def _facts(run, L) -> str:
         + "".join(f'<div class="fact"><b>{v}</b><span>{_esc(k)}</span></div>' for k, v in items)
         + "</div>"
     )
-
-
-def _pct(v):
-    f = _num(v)
-    return None if f is None else f * 100
 
 
 def _details(run, models, L) -> str:
@@ -633,6 +802,11 @@ def _details(run, models, L) -> str:
             " ".join(f"<code>{_esc(str(f))}</code>" for f in run.get("feature_names") or []),
         ),
     ]
+    tp, thr = _num(run.get("train_positives")), _num(run.get("min_train_pos"))
+    warn = ""
+    if tp is not None and thr is not None and tp < thr:
+        msg = L["warn_train_pos"].format(n=_fmt_int(tp), thr=_fmt_int(thr))
+        warn = f'<div class="callout warn"><b>{_esc(msg)}</b></div>'
     kv = "".join(
         f'<tr><td>{_esc(k)}</td><td style="text-align:left;white-space:normal">{v}</td></tr>'
         for k, v in rows
@@ -647,6 +821,7 @@ def _details(run, models, L) -> str:
             f"<td>{_fmt_int(ep) if ep is not None else chr(8212)}</td></tr>"
         )
     return (
+        f"{warn}"
         f'<div class="tablewrap"><table><tbody>{kv}</tbody></table></div>'
         f"<h3>{_esc(L['timings'])}</h3>"
         '<div class="tablewrap"><table><thead><tr>'
@@ -656,7 +831,8 @@ def _details(run, models, L) -> str:
 
 
 def render_report(results: dict, *, lang: str = "zh") -> str:
-    L = LABELS.get(lang, LABELS["zh"])
+    lang = lang if lang in LABELS else "zh"
+    L = LABELS[lang]
     run = results.get("run") or {}
     all_models = []
     for i, (key, m) in enumerate((results.get("models") or {}).items()):
@@ -695,6 +871,7 @@ def render_report(results: dict, *, lang: str = "zh") -> str:
         sections.append(f"<p>{_esc(L['no_models'])}</p>")
     else:
         sec(L["summary"], _legend(ok) + _summary_table(ok, L))
+        sec(L["methods"], _methods_section(ok, run, L))
         roc = svg_lines(
             _curve_series(ok, "roc_curve", "fpr", "tpr"),
             xlabel="FPR",
@@ -726,13 +903,14 @@ def render_report(results: dict, *, lang: str = "zh") -> str:
         sec(
             L["calibration"],
             _legend(ok) + f'<div class="card" style="max-width:640px">{_calibration_svg(ok, L)}'
-            f'<p class="note">{_esc(L["ideal"])}: y = x</p></div>',
+            f'<p class="note">{_esc(L["ideal"])}: y = x</p>'
+            f'<p class="note">{_esc(L["cal_note"])}</p></div>',
         )
-        sec(L["shap"], _legend(ok) + _shap_section(ok, L))
+        sec(L["shap"], _legend(ok) + _shap_section(ok, L, run))
     sec(L["details"], _details(run, all_models, L))
 
     return (
-        '<!DOCTYPE html><html lang="' + ("zh" if lang == "zh" else "en") + '"><head>'
+        '<!DOCTYPE html><html lang="' + lang + '"><head>'
         '<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
         f"<title>{_esc(L['title'])}</title><style>{_CSS}</style></head><body>"
         f"<main><header><h1>{_esc(L['title'])}</h1>"

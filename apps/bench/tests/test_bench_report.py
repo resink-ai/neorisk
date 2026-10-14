@@ -43,6 +43,7 @@ def _shap(top):
     feats = [top, "b", "c"]
     return {
         "method": "TreeExplainer",
+        "unit": "log-odds",
         "n_rows": 100,
         "importance": {top: 1.0, "b": 0.3, "c": 0.01},
         "quantiles": {f: [-1, -0.5, 0, 0.5, 1] for f in feats},
@@ -61,6 +62,17 @@ def _results():
             "metrics": _metrics(auc),
             "valid_metrics": _metrics(auc),
             "shap": _shap("amount"),
+            "mean_pred": 0.3 if name != "ann_small" else 0.014,
+            "epochs": 40 if name == "xgb" else None,
+            "model_info": {
+                "imbalance": "none" if name == "ann_small" else "class_weight_balanced",
+                "weighted": name != "ann_small",
+                "early_stopping": {"metric": "aucpr", "patience": 30, "split": "valid"},
+                "count_unit": "rounds" if name == "xgb" else "epochs",
+                "hyperparams": {"max_depth": 6},
+                "shap_method": "TreeExplainer",
+                "shap_unit": "log-odds",
+            },
         }
     models["ann_small"]["epochs"] = 17
     models["ann_large"] = {
@@ -151,3 +163,77 @@ def test_svg_lines_is_well_formed():
     assert "nan" not in s.lower()
     assert "FPR" in s and "TPR" in s
     assert not math.isnan(float(root.get("viewBox").split()[2]))
+
+
+def _strip_tags(html):
+    return re.sub(r"<[^>]+>", " ", html)
+
+
+def test_caveat_section_zh_and_en_same_label_keys():
+    from bench.report import LABELS
+
+    assert set(LABELS["zh"]) == set(LABELS["en"])
+    en = render_report(_results(), lang="en")
+    zh = render_report(_results(), lang="zh")
+    assert "Methods &amp; caveats" in en and "NOT comparable" in en
+    assert "方法与注意事项" in zh and "不可比" in zh
+    assert "class_weight=balanced (weighted)" in en and "none (unweighted)" in en
+    assert "valid aucpr, patience 30" in en
+    assert "40 rounds" in en and "17 epochs" in en  # xgb best iteration shown
+
+
+def test_log_loss_and_brier_are_not_bolded_or_heatmapped():
+    r = _results()
+    r["models"]["rf"]["metrics"]["log_loss"] = 0.05  # strictly best, still must not be bold
+    r["models"]["rf"]["metrics"]["brier"] = 0.001
+    html = render_report(r, lang="en")
+    summary = html.split("<h2>Summary</h2>")[1].split("</section>")[0]
+    assert "n/c" in summary
+    header = summary.split("<tbody>")[0]
+    assert header.count("(n/c)") == 2
+    for row in re.findall(r"<tr>.*?</tr>", summary.split("<tbody>")[1]):
+        cells = re.findall(r"<td[^>]*>.*?</td>", row)
+        # cells: model, 7 comparable metrics, log loss, brier, train s, infer s
+        assert 'class="best"' not in cells[8] and 'class="best"' not in cells[9]
+    assert "log loss" not in html.split("<h3>Metrics</h3>")[1].split("<h3>Operating")[0]
+
+
+def test_ties_and_all_equal_columns_not_highlighted():
+    html = render_report(_results(), lang="en")
+    summary = html.split("<h2>Summary</h2>")[1].split("</section>")[0]
+    # KS is 0.4 for every model: no bold; AUC differs: exactly one bold
+    rows = re.findall(r"<tr>.*?</tr>", summary.split("<tbody>")[1])
+    ks_cells = [re.findall(r"<td[^>]*>.*?</td>", r)[3] for r in rows]
+    assert all('class="best"' not in c for c in ks_cells)
+    auc_cells = [re.findall(r"<td[^>]*>.*?</td>", r)[1] for r in rows]
+    assert sum('class="best"' in c for c in auc_cells) == 1
+
+
+def test_shap_cards_show_method_unit_and_enrichment_note():
+    r = _results()
+    r["models"]["rf"]["shap"]["unit"] = "probability"
+    r["run"].update(test_bad_rate=0.0188, shap_sample_pos_rate=0.5)
+    html = render_report(r, lang="en")
+    shap = html.split("<h2>SHAP</h2>")[1]
+    assert shap.count("TreeExplainer · log-odds") == 3
+    assert shap.count("TreeExplainer · probability") == 1
+    assert "not raw magnitudes" in shap and "positive-enriched" in shap
+    assert "1.88%" in shap and "50.0%" in shap
+    assert 'aria-label="RF: ' in shap and "<title>amount</title>" in shap
+
+
+def test_calibration_note_and_unknown_lang_fallback():
+    html = render_report(_results(), lang="fr")
+    assert '<html lang="zh">' in html and "方法与注意事项" in html
+    en = render_report(_results(), lang="en")
+    cal = en.split("<h2>Calibration</h2>")[1]
+    assert "over-predict" in cal
+
+
+def test_low_train_positive_warning_in_details():
+    r = _results()
+    r["run"].update(train_positives=12, min_train_pos=50)
+    en = render_report(r, lang="en")
+    assert "only 12 positives in train" in en.split("<h2>Run details</h2>")[1]
+    r["run"].update(train_positives=500)
+    assert "only 500 positives" not in render_report(r, lang="en")
