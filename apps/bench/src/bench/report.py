@@ -3,6 +3,8 @@
 import html as _html
 import math
 
+from bench.datagen_section import render_datagen
+
 PALETTE = ["#2f6fed", "#e4572e", "#17a398", "#f2a900", "#8e44ad"]
 
 _esc = _html.escape
@@ -96,6 +98,7 @@ LABELS = {
         "pred_mean": "平均预测概率",
         "frac_pos": "实际正例比例",
         "methods": "方法与注意事项",
+        "datagen": "数据如何生成",
         "methods_note": "各模型的不平衡处理、早停规则与超参数；表中不可比项以 n/c 标注。",
         "caveat_title": "log loss、Brier 与校准不可跨模型比较",
         "caveat_body": (
@@ -175,6 +178,7 @@ LABELS = {
         "pred_mean": "Mean predicted probability",
         "frac_pos": "Observed positive fraction",
         "methods": "Methods & caveats",
+        "datagen": "How the data was generated",
         "methods_note": (
             "Imbalance handling, early-stopping rule and key hyperparameters per model. "
             "Metrics that are not comparable are marked n/c."
@@ -872,6 +876,7 @@ def render_report(results: dict, *, lang: str = "zh") -> str:
     else:
         sec(L["summary"], _legend(ok) + _summary_table(ok, L))
         sec(L["methods"], _methods_section(ok, run, L))
+        sec(L["datagen"], render_datagen(run, lang))
         roc = svg_lines(
             _curve_series(ok, "roc_curve", "fpr", "tpr"),
             xlabel="FPR",

@@ -19,6 +19,23 @@ def _log(verbose: bool, msg: str) -> None:
         print(msg, file=sys.stderr, flush=True)
 
 
+def _observed(events) -> dict:
+    """Counts realised in the data, for the report's data-generation section."""
+    out = {}
+    for col, key in (
+        ("user_id", "n_users"),
+        ("device_id", "n_devices"),
+        ("product_id", "n_products"),
+    ):
+        if col in events.columns:
+            out[key] = int(events[col].drop_nulls().n_unique())
+    if "event_type" in events.columns:
+        out["n_txn"] = int((events["event_type"] == 0).sum())
+        out["n_invite"] = int((events["event_type"] == 1).sum())
+    out["n_bad"] = int(events["label"].sum())
+    return out
+
+
 def run_compare(
     data_dir,
     *,
@@ -128,7 +145,11 @@ def run_compare(
             "test_rows": len(y["test"]),
             "ann_shap_rows": ann_shap_rows,
             "generated_at": datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC"),
-            "dataset_meta": {k: meta.get(k) for k in ("scenario", "seed", "n_events", "bad_rate")},
+            "dataset_meta": {
+                **{k: meta.get(k) for k in ("scenario", "seed", "n_events", "bad_rate")},
+                "config": meta.get("config"),
+                "observed": _observed(events),
+            },
             "timings": {
                 "feature_seconds": float(feature_seconds),
                 "train_all_seconds": float(train_total),
