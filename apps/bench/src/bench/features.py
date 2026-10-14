@@ -3,7 +3,8 @@ import polars as pl
 from neorisk_simkit import rolling, rolling_asof
 
 WINDOWS = (7, 14, 30)
-IDENTIFIER_LIKE = ("user_street", "user_zip", "device_ip")  # near-unique ints act like IDs
+# near-unique ints act like IDs (product_launch_day is a near-unique product proxy)
+IDENTIFIER_LIKE = ("user_street", "user_zip", "device_ip", "product_launch_day")
 _REQUIRED = (
     "event_id",
     "event_time",
