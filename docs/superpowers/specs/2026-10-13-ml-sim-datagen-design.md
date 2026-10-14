@@ -63,12 +63,31 @@ One row per event. Columns: `event_id` (UUID), `event_time`, linked entity IDs
 `currency`, ...), and entity attributes resolved **as-of event time** (latest
 `valid_from <= event_time`), plus `label`.
 
+### Linkages (edges)
+
+A linkage is a typed, directed edge list between entities, with edge attributes:
+`(edge_id, src_id, dst_id, edge_time, <edge attrs>)`. Example: `invite` edges
+(inviter -> invitee) with edge attribute `referral_bonus`. Edge attributes use the same
+synthetic-value rules as entity attributes (integers, cardinality/volatility specs; edge
+attrs are fixed at `edge_time`).
+
+- `LinkageSpec(name, src_entity, dst_entity, edge_attrs, generator)`: the generator
+  decides who links to whom, so scenarios can plant structure (e.g. a few "bounty
+  hunter" inviters each with many low-activity "zombie" invitees and large total bonus).
+- Edges are time-stamped, so graph features are computed point-in-time like any other
+  golden feature.
+- Visibility is per linkage (`visible=True|False`): visible edge lists are exported as
+  raw benchmark input; hidden ones join the ground truth. Graph-*derived* features are
+  always golden.
+
 ### Golden features
 
 Derived from events + entity attributes, computed point-in-time (strictly before the
 event) so there is no future leakage. Examples: per-user count/sum/avg/max/min over
 7/14/30 days; max-to-median amount ratio; users-per-device over 7d; recent
-address/state change count. Never present in benchmark inputs.
+address/state change count. Graph-derived examples: out-degree per inviter over
+7/14/30d, total/avg/max referral bonus per inviter, share of invitees with no further
+activity (zombie ratio), invitee-cluster size. Never present in benchmark inputs.
 
 ### Labels
 
@@ -83,8 +102,9 @@ Scorer is a fixed-parameter XGBoost (random preset weights, seeded) or small MLP
 |---|---|---|
 | `attributes` | AttrSpec + change-point timeline sampler | `build_entity_table(n, specs, time_range, rng) -> pl.DataFrame` |
 | `entities` | Entity type = ID namespace + attr specs | `EntitySpec(name, n, attrs)` |
+| `linkages` | LinkageSpec + edge sampler with time-stamped edge attributes | `generate_edges(spec, entity_tables, time_range, rng) -> pl.DataFrame` |
 | `events` | Sample events, link entities, as-of join attributes | `EventSpec(...)`, `generate_events(...)` |
-| `features` | Point-in-time rolling-window helpers | `rolling(events, key, col, windows, aggs)` |
+| `features` | Point-in-time rolling-window helpers (events and edges) | `rolling(events, key, col, windows, aggs)`, `edge_agg(edges, key, col, windows, aggs)` |
 | `scorer` | Scorer interface, XGBScorer, MLPScorer, bad-rate calibration | `Scorer.score(df) -> p`, `calibrate(p, target_rate)` |
 | `export` | Write outputs | `export(dataset, out_dir)` |
 
@@ -97,6 +117,8 @@ Scenarios are modules in `datagen/scenarios/` exposing `build(config) -> Scenari
 Outputs:
 - `events.parquet` — raw event/entity columns + label (benchmark input)
 - `golden.parquet` — `event_id` + golden features + score (hidden ground truth)
+- `edges_<linkage>.parquet` — one per visible linkage (`edge_id, src_id, dst_id,
+  edge_time, edge attrs`); hidden linkages go to `golden_edges_<linkage>.parquet`
 - `meta.json` — seed, scenario, config, achieved bad rate, versions
 
 ### apps/bench
@@ -114,6 +136,9 @@ table and JSON.
   large amount.
 - Golden features: velocity (count/sum/avg/max/min × 7/14/30d), amount ratio,
   users-per-device 7d, recent address-change count.
+- Linkage: `invite` (user -> user, edge attr `referral_bonus`). Plant bounty-hunter
+  inviters with many zombie invitees and large total bonus; their events are more
+  likely labeled bad via the graph-derived golden features.
 - Target bad rate default ~2%, configurable.
 
 ## 6. Error handling
@@ -129,11 +154,15 @@ table and JSON.
   cardinality ranges.
 - Leakage: rolling features at *t* use only events < *t* (property test vs brute force).
 - Labels: achieved bad rate within tolerance.
+- Linkages: edge endpoints reference existing entity IDs; edge times within range;
+  planted structure present (bounty hunters' degree and bonus well above baseline);
+  graph features at *t* use only edges with `edge_time < t`.
 - Export: golden columns absent from `events.parquet`.
 - Bench smoke test on tiny data: oracle AUC > raw-column AUC > 0.5.
 
 ## 8. Out of scope (v1)
 
-Agent-based behavior simulation, declarative YAML scenarios, distributed scale
+Heterogeneous multi-hop graph features beyond 1-hop aggregates, graph neural-net
+baselines, agent-based behavior simulation, declarative YAML scenarios, distributed scale
 (Spark), full model leaderboard/reports, LTV and growth-risk scenarios (framework
 must make them addable, but they are not built).
