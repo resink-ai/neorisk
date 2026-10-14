@@ -116,6 +116,6 @@ def test_describe_covers_every_model_and_flags_weighting():
     for name in MODEL_ORDER:
         d = describe(name)
         assert d["imbalance"] and d["hyperparams"] and d["shap_unit"] and d["count_unit"]
-    assert [describe(n)["weighted"] for n in MODEL_ORDER] == [True, True, True, False, False]
+    assert [describe(n)["weighted"] for n in MODEL_ORDER] == [True, True, False, False, False]
     assert describe("xgb")["early_stopping"]["metric"] == "aucpr"
     assert describe("ann_small")["early_stopping"]["patience"] == 5

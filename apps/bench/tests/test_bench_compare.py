@@ -39,11 +39,11 @@ def test_run_compare_all_models(data_dir):
     assert r["run"]["n_events"] == 20000 and r["run"]["n_features"] > 10
     assert sum(r["run"]["split_sizes"].values()) == 20000
     assert r["models"]["ann_small"]["epochs"] >= 1
-    assert 1 <= r["models"]["xgb"]["epochs"] <= 500  # best_iteration + 1 (rounds kept)
+    assert 1 <= r["models"]["xgb"]["epochs"] <= 1000  # best_iteration + 1 (rounds kept)
     for name, m in r["models"].items():
         info = m["model_info"]
         assert info["imbalance"] and info["shap_unit"] in ("log-odds", "probability")
-        assert info["weighted"] == (name in ("logreg", "rf", "xgb"))
+        assert info["weighted"] == (name in ("logreg", "rf"))
         assert info["epochs"] == m["epochs"]
         assert m["shap"]["unit"] == info["shap_unit"]
         assert 0 < m["mean_pred"] < 1

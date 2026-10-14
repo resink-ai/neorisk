@@ -56,7 +56,7 @@ point-in-time correctness on a sample.
 |---|---|---|
 | Logistic Regression | `sklearn` `LogisticRegression` in a `StandardScaler` pipeline | `class_weight="balanced"`, `max_iter=1000` |
 | Random Forest | `sklearn` `RandomForestClassifier` | 300 trees, `max_depth=12`, `min_samples_leaf=20`, `class_weight="balanced_subsample"`, `n_jobs=-1` |
-| XGBoost | `xgboost` `XGBClassifier` | `scale_pos_weight = neg/pos`, depth 6, `eta=0.1`, up to 500 rounds, early stopping on valid |
+| XGBoost | `xgboost` `XGBClassifier` | unweighted (`scale_pos_weight=1`; neg/pos weighting made early stopping fire after 2-5 rounds), depth 6, `eta=0.05`, up to 1,000 rounds, early stopping on valid aucpr (patience 50) |
 | ANN small | `sklearn` `MLPClassifier` (inputs standardized) | hidden `(32, 16)`, early stopping |
 | ANN large | `sklearn` `MLPClassifier` (inputs standardized) | hidden `(256, 128, 64)`, `alpha=1e-4`, early stopping |
 

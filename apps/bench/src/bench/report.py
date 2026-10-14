@@ -99,8 +99,8 @@ LABELS = {
         "methods_note": "各模型的不平衡处理、早停规则与超参数；表中不可比项以 n/c 标注。",
         "caveat_title": "log loss、Brier 与校准不可跨模型比较",
         "caveat_body": (
-            "逻辑回归、随机森林与 XGBoost 使用了类别加权（会系统性高估概率），而两个 ANN 未加权，"
-            "因此 log loss、Brier 分数与校准曲线在加权与未加权模型之间不可比：ANN 在这些指标上"
+            "逻辑回归与随机森林使用了类别加权（会系统性高估概率），而 XGBoost 与两个 ANN 未加权，"
+            "因此 log loss、Brier 分数与校准曲线在加权与未加权模型之间不可比：未加权模型在这些指标上"
             "“更好”主要是因为概率未被重新加权，而非排序能力更强。公平的比较应看排序类指标："
             "ROC-AUC、PR-AUC、KS、给定精确率下的召回率与 top-k 精确率/提升。"
         ),
@@ -119,7 +119,7 @@ LABELS = {
         "es_fmt": "验证集 {metric}，patience {patience}",
         "nc": "n/c",
         "nc_note": "n/c：加权与未加权模型之间不可比，不参与加粗与热力图。",
-        "cal_note": "注意：加权模型（逻辑回归、RF、XGBoost）会高估概率；ANN 未加权。校准曲线在二者之间不可直接比较。",
+        "cal_note": "注意：加权模型（逻辑回归、RF）会高估概率；XGBoost 与 ANN 未加权。校准曲线在二者之间不可直接比较。",
         "shap_units_note": (
             "SHAP 单位因模型而异（线性/XGBoost 为对数几率，RF 与 ANN 为概率），请比较排名或"
             "归一化占比，而非原始数值。"
@@ -181,10 +181,10 @@ LABELS = {
         ),
         "caveat_title": "Log loss, Brier and calibration are not comparable across models",
         "caveat_body": (
-            "Logistic Regression, Random Forest and XGBoost are class-weighted (which inflates "
-            "predicted probabilities) while the two ANNs are unweighted. Log loss, Brier score "
+            "Logistic Regression and Random Forest are class-weighted (which inflates "
+            "predicted probabilities) while XGBoost and the two ANNs are unweighted. Log loss, Brier score "
             "and calibration are therefore NOT comparable between weighted and unweighted models: "
-            "the ANNs look better on them mainly because their probabilities are not re-weighted, "
+            "the unweighted models look better on them mainly because their probabilities are not re-weighted, "
             "not because they rank better. The fair comparison is on ranking metrics: ROC-AUC, "
             "PR-AUC, KS, recall at fixed precision and top-k precision/lift."
         ),
@@ -207,7 +207,7 @@ LABELS = {
             "excluded from bolding and the heatmap."
         ),
         "cal_note": (
-            "Note: weighted models (LogReg, RF, XGBoost) over-predict; the ANNs are unweighted. "
+            "Note: weighted models (LogReg, RF) over-predict; XGBoost and the ANNs are unweighted. "
             "Calibration curves are not directly comparable between the two groups."
         ),
         "shap_units_note": (

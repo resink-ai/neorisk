@@ -70,10 +70,12 @@ def _rf(seed, pos_weight):
 
 def _xgb(seed, pos_weight):
     return XGBClassifier(
-        n_estimators=500,
+        n_estimators=1000,
         max_depth=6,
-        learning_rate=0.1,
-        scale_pos_weight=pos_weight,
+        learning_rate=0.05,
+        # unweighted: with scale_pos_weight ~ neg/pos early stopping on valid aucpr fired after
+        # 2-5 rounds (see final-fix-report.md); unweighted keeps probabilities near the base rate
+        scale_pos_weight=1.0,
         eval_metric="aucpr",
         early_stopping_rounds=_XGB_PATIENCE,
         tree_method="hist",
@@ -104,7 +106,7 @@ _FACTORIES = {
 _ANN_EPOCHS = 60
 _ANN_PATIENCE = 5
 _ANN_BATCH = 1024
-_XGB_PATIENCE = 30
+_XGB_PATIENCE = 50
 
 
 def describe(name: str) -> dict:
@@ -138,15 +140,15 @@ def describe(name: str) -> dict:
     if name == "xgb":
         return {
             **base,
-            "imbalance": "scale_pos_weight",
-            "weighted": True,
+            "imbalance": "none",
+            "weighted": False,
             "early_stopping": {"metric": "aucpr", "patience": _XGB_PATIENCE, "split": "valid"},
             "count_unit": "rounds",
             "hyperparams": {
-                "n_estimators": 500,
+                "n_estimators": 1000,
                 "max_depth": 6,
-                "learning_rate": 0.1,
-                "scale_pos_weight": "neg/pos",
+                "learning_rate": 0.05,
+                "scale_pos_weight": 1.0,
             },
         }
     hidden = (32, 16) if name == "ann_small" else (256, 128, 64)

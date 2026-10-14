@@ -28,7 +28,7 @@ best-F1 threshold shown as the operating point; every headline metric is on test
 |---|---|---|
 | `logreg` | Logistic Regression | standardized inputs, `class_weight="balanced"` |
 | `rf` | Random Forest | 300 trees, depth 12, `min_samples_leaf=20`, balanced subsample |
-| `xgb` | XGBoost | hist, depth 6, lr 0.1, up to 500 rounds, early stopping on valid PR-AUC; the "rounds/epochs" column shows best iteration + 1 |
+| `xgb` | XGBoost | hist, depth 6, lr 0.05, up to 1000 rounds, unweighted (`scale_pos_weight=1`), early stopping on valid PR-AUC with patience 50; the "rounds/epochs" column shows best iteration + 1 |
 | `ann_small` | MLP `(32, 16)` | standardized inputs, early stopping on valid AUC (patience 5) |
 | `ann_large` | MLP `(256, 128, 64)` | `alpha=1e-4`, same early stopping |
 
@@ -78,7 +78,7 @@ Runs are seeded and deterministic except for these known, cosmetic effects:
 3. **Metrics / operating point**: column-normalised heatmap and the confusion matrix at the
    valid-chosen best-F1 threshold.
 4. **Calibration**: mean predicted probability vs observed positive rate per quantile bin.
-   Logistic Regression, RF and XGBoost are class-weighted and over-predict; the ANNs are
+   Logistic Regression and RF are class-weighted and over-predict; XGBoost and the ANNs are
    unweighted. Log loss, Brier and calibration are therefore **not comparable** across the two
    groups (shown as n/c, never bolded); compare on ranking metrics (AUC, PR-AUC, KS,
    recall@precision, top-k).
