@@ -1,0 +1,17 @@
+[project]
+name = "datagen"
+version = "0.1.0"
+description = "Synthetic tabular event data generator (fraud scenario first)"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = ["neorisk-simkit", "numpy>=1.26", "polars>=1.0", "xgboost>=2.0"]
+
+[project.scripts]
+datagen = "datagen.cli:main"
+
+[build-system]
+requires = ["uv_build>=0.11.26,<0.12.0"]
+build-backend = "uv_build"
+
+[tool.uv.sources]
+neorisk-simkit = { workspace = true }
