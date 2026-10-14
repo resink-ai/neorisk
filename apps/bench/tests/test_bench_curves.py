@@ -1,3 +1,5 @@
+import itertools
+
 import numpy as np
 
 from bench.curves import _curves, _pr_step, render_curves
@@ -8,7 +10,7 @@ def test_pr_step_is_monotone_in_recall_and_ends_at_full_recall():
     y = (rng.random(200) < 0.1).astype(int)
     c = _curves(y, rng.random(200))
     xs, ys = _pr_step(c)
-    assert all(b >= a for a, b in zip(xs, xs[1:], strict=False))
+    assert all(b >= a for a, b in itertools.pairwise(xs))
     assert xs[-1] == 1.0 and len(xs) == len(ys)
 
 
