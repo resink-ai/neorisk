@@ -7,7 +7,7 @@ Scenario-agnostic primitives for synthetic event data. Import name: `neorisk_sim
 | `attributes` | AttrSpec + change-point timeline sampler | `AttrSpec`, `sample_timeline` |
 | `entities` | Entity type = ID namespace + attr specs; as-of attribute join | `EntitySpec`, `build_entities`, `attach_asof`, `map_ids` |
 | `references` | RefSpec + choosers filling reference columns with existing entity idx | `RefSpec`, `uniform`, `skewed`, `hubs`, `resolve_reference` |
-| `features` | Point-in-time rolling windows over [t-w, t) grouped by any key | `rolling(df, key=, value=, windows_days=, aggs=, prefix=)` |
+| `features` | Point-in-time rolling windows over [t-w, t) grouped by any key; `rolling_asof` evaluates a source table (e.g. invites keyed by inviter) at arbitrary query rows | `rolling(df, key=, value=, windows_days=, aggs=, prefix=)`, `rolling_asof(queries, source, query_key=, source_key=, ...)` |
 | `scorer` | Label-probability scorers and bad-rate calibration | `XGBScorer`, `MLPScorer`, `calibrate`, `sample_labels` |
 | `export` | Attach UUIDs and write outputs | `Dataset`, `export(ds, out_dir)` |
 | `ids` | Seeded UUID generation | `make_uuids` |

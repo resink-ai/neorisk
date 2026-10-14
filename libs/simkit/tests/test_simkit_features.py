@@ -2,7 +2,7 @@ import numpy as np
 import polars as pl
 import pytest
 
-from neorisk_simkit.features import rolling
+from neorisk_simkit.features import rolling, rolling_asof
 
 T0 = np.datetime64("2026-01-01T00:00:00", "us")
 
@@ -126,3 +126,83 @@ def test_empty_and_non_empty_outputs_have_same_dtypes():
     for a in aggs:
         dt = full.schema[f"f_{a}_7d"]
         assert dt == (pl.Int64 if a in ("count", "n_unique") else pl.Float64), a
+
+
+def _asof_frames(seed=0):
+    rng = np.random.default_rng(seed)
+    nq, ns = 400, 150
+    q_hours = rng.integers(0, 24 * 40, nq)
+    s_hours = np.concatenate([rng.integers(0, 24 * 40, ns - 20), q_hours[:20]])  # ties
+    qk = rng.integers(0, 6, nq).astype("float")
+    qk[rng.random(nq) < 0.1] = np.nan
+    sk = rng.integers(0, 6, ns).astype("float")
+    sk[rng.random(ns) < 0.1] = np.nan
+    us = 3_600_000_000
+    queries = pl.DataFrame(
+        {
+            "event_id": [f"q{i}" for i in range(nq)],
+            "event_time": T0 + (q_hours * us).astype("timedelta64[us]"),
+            "user": pl.Series(qk).fill_nan(None).cast(pl.Int64),
+        }
+    )
+    source = pl.DataFrame(
+        {
+            "event_time": T0 + (s_hours * us).astype("timedelta64[us]"),
+            "inviter": pl.Series(sk).fill_nan(None).cast(pl.Int64),
+            "bonus": rng.integers(1, 100, ns),
+        }
+    )
+    return queries, source
+
+
+def test_rolling_asof_matches_bruteforce_and_keeps_query_order():
+    queries, source = _asof_frames()
+    aggs = ["count", "sum", "mean", "max"]
+    got = rolling_asof(
+        queries,
+        source,
+        query_key="user",
+        source_key="inviter",
+        value="bonus",
+        windows_days=[7, 30],
+        aggs=aggs,
+        prefix="r",
+    )
+    assert got["event_id"].equals(queries["event_id"])
+    src = source.to_dicts()
+    for q, row in zip(queries.to_dicts(), got.to_dicts()):
+        for w in (7, 30):
+            lo = q["event_time"] - np.timedelta64(w, "D").astype("timedelta64[us]").item()
+            vals = [
+                s["bonus"]
+                for s in src
+                if q["user"] is not None
+                and s["inviter"] == q["user"]
+                and lo <= s["event_time"] < q["event_time"]
+            ]
+            exp = {
+                "count": len(vals),
+                "sum": sum(vals),
+                "mean": sum(vals) / len(vals) if vals else 0.0,
+                "max": max(vals) if vals else 0.0,
+            }
+            for a in aggs:
+                assert row[f"r_{a}_{w}d"] == pytest.approx(exp[a]), (q["event_id"], a, w)
+
+
+def test_rolling_asof_excludes_same_instant_source_rows():
+    t = T0 + np.array([0, 24], dtype="timedelta64[h]").astype("timedelta64[us]")
+    queries = pl.DataFrame({"event_id": ["a", "b"], "event_time": t, "user": [1, 1]})
+    source = pl.DataFrame({"event_time": t[:1], "inviter": [1], "bonus": [5]})
+    got = rolling_asof(
+        queries,
+        source,
+        query_key="user",
+        source_key="inviter",
+        value="bonus",
+        windows_days=[7],
+        aggs=["count"],
+        prefix="r",
+    )
+    assert got["r_count_7d"].to_list() == [0, 1]
+    assert got.schema["r_count_7d"] == pl.Int64

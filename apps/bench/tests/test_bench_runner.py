@@ -129,3 +129,12 @@ def test_time_split_is_stable_under_input_order():
     tr, va, te = time_split(shuffled)
     joined = pl.concat([tr, va, te])
     assert joined.equals(df.sort("event_time", "event_id"))
+
+
+def test_graph_golden_features_hidden_from_raw(data_dir):
+    ev, meta = load_events(data_dir)
+    for c in ("invr_bonus_count_30d", "invr_zombie_mean_30d", "inv_bonus_sum_30d"):
+        assert c in meta["golden_columns"]
+        assert c not in ev.columns and c not in raw_features(ev).columns
+    golden = pl.read_parquet(data_dir / "golden.parquet")
+    assert "invr_bonus_sum_30d" in raw_features(oracle_frame(ev, golden)).columns

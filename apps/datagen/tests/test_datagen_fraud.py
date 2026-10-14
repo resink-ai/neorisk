@@ -98,3 +98,101 @@ def test_golden_rows_align_with_events_and_labels_follow_score(ds):
     bad = j.filter(pl.col("label") == 1)["score"].mean()
     good = j.filter(pl.col("label") == 0)["score"].mean()
     assert bad > 2 * good
+
+
+def _joined(ds):
+    return ds.events.select("event_id", "event_time", "event_type", "user_id", "inviter_id").join(
+        ds.golden, on="event_id", maintain_order="left"
+    )
+
+
+def _hunters(ds, min_degree=3):
+    inv = ds.events.filter(pl.col("event_type") == 1).drop_nulls("inviter_id")
+    deg = inv.group_by("inviter_id").len()
+    return deg.filter(pl.col("len") >= min_degree)["inviter_id"]
+
+
+def test_inviter_side_features_have_no_future_leakage(ds):
+    j = _joined(ds)
+    inv = j.filter(pl.col("event_type") == 1).drop_nulls("inviter_id")
+    by_inviter = {
+        k: list(zip(g["event_time"].to_list(), g["referral_bonus"].to_list()))
+        for (k,), g in inv.join(
+            ds.events.select("event_id", "referral_bonus"), on="event_id"
+        ).group_by("inviter_id")
+    }
+    # oversample users who did invite, so the check is not dominated by trivial zeros
+    inviters = j.filter(pl.col("user_id").is_in(_hunters(ds, 1).implode()))
+    sample = pl.concat([inviters.sample(300, seed=0), j.sample(200, seed=1)])
+    w = np.timedelta64(30, "D").astype("timedelta64[us]").item()
+    nonzero = 0
+    for r in sample.iter_rows(named=True):
+        t = r["event_time"]
+        vals = [b for ti, b in by_inviter.get(r["user_id"], []) if t - w <= ti < t]
+        assert r["invr_bonus_count_30d"] == len(vals), r["event_id"]
+        assert r["invr_bonus_sum_30d"] == pytest.approx(sum(vals)), r["event_id"]
+        nonzero += bool(vals)
+    assert nonzero > 50
+
+
+def test_invitee_side_graph_features_are_point_in_time(ds):
+    # on an invite row, inv_* aggregate the same inviter's earlier invites only
+    j = _joined(ds)
+    inv = j.filter(pl.col("event_type") == 1).drop_nulls("inviter_id")
+    rows = inv.select("event_time", "inviter_id").to_dicts()
+    w = np.timedelta64(30, "D").astype("timedelta64[us]").item()
+    for r in inv.iter_rows(named=True):
+        t = r["event_time"]
+        n = sum(
+            1 for x in rows if x["inviter_id"] == r["inviter_id"] and t - w <= x["event_time"] < t
+        )
+        assert r["inv_bonus_count_30d"] == n
+    # later events of an invitee carry the values frozen at their invite
+    frozen = inv.select("user_id", pl.col("inv_bonus_sum_30d").alias("at_invite"))
+    later = j.filter(pl.col("event_type") == 0).join(frozen, on="user_id")
+    assert later.height > 0
+    assert (later["inv_bonus_sum_30d"] == later["at_invite"]).all()
+
+
+def test_hunters_own_transactions_carry_inviter_side_features(ds):
+    j = _joined(ds).filter(pl.col("event_type") == 0)
+    is_h = pl.col("user_id").is_in(_hunters(ds).implode())
+    hunter_txn = j.filter(is_h)
+    assert hunter_txn.height > 0
+    assert (hunter_txn["invr_bonus_count_30d"] > 0).mean() > 0.3
+    assert hunter_txn["invr_zombie_mean_30d"].max() > 0.5
+    others = j.filter(~is_h)
+    assert others["invr_bonus_sum_30d"].mean() < 0.1 * hunter_txn["invr_bonus_sum_30d"].mean()
+
+
+def test_zombie_invitees_transact_after_their_invite(ds):
+    j = _joined(ds)
+    zombies = j.filter((pl.col("event_type") == 1) & (pl.col("invitee_is_zombie") == 1))
+    assert zombies.height > 0
+    txn = j.filter(pl.col("event_type") == 0)
+    first = txn.group_by("user_id").agg(pl.col("event_time").min().alias("first_txn"))
+    z = zombies.select("user_id", "event_time").join(first, on="user_id", how="left")
+    assert z["first_txn"].null_count() == 0
+    assert (z["first_txn"] > z["event_time"]).all()
+
+
+def test_graph_signal_drives_labels(ds):
+    j = _joined(ds).join(ds.events.select("event_id", "label"), on="event_id")
+    hunters = _hunters(ds)
+    invited = ds.events.filter(
+        (pl.col("event_type") == 1) & pl.col("inviter_id").is_in(hunters.implode())
+    )["user_id"]
+    linked = pl.col("user_id").is_in(pl.concat([hunters, invited]).implode())
+    pos = j.filter(pl.col("label") == 1)
+    assert pos.filter(linked).height / pos.height > 0.08
+    assert j.filter(linked)["label"].mean() > 3 * j.filter(~linked)["label"].mean()
+
+
+def test_new_golden_columns_present():
+    for c in (
+        "invr_bonus_count_30d",
+        "invr_bonus_sum_7d",
+        "invr_bonus_max_14d",
+        "invr_zombie_mean_30d",
+    ):
+        assert c in generate(FraudConfig(n_events=500, seed=2, span_days=20)).golden.columns

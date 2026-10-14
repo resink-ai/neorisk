@@ -47,14 +47,16 @@ synthetic attributes. Every attribute is described by `AttrSpec` along two axes:
 
 Generation per entity: sample an initial value from the attribute's distribution, then
 sample change points over the simulation time range (Poisson rate by volatility). Fast
-attributes move by small random walk steps (e.g. battery 7→6→8); slow attributes
-redraw rarely. Stored long-form: `(entity_id, attr, valid_from, value)`.
+attributes move by small random walk steps (e.g. battery 7→6→8) that reflect at the range
+bounds (0 and k-1) rather than sticking there; slow attributes redraw rarely. Stored long-form: `(entity_id, attr, valid_from, value)`.
 
 Properties:
 - Within a short window the same entity's attributes are stable across events.
 - Across entities, values are independent draws, so mostly different.
 - Static attributes never change for a given entity ID.
 - Address is split into `state` (low-cardinality, slow) and `street`/`zip` (high-cardinality).
+  In v1 each of `state`, `street` and `zip` has its own independent change points (they do
+  not move together as one "address change"); `addr_chg_sum_30d` counts `state` changes.
 
 ### Events
 
@@ -84,10 +86,11 @@ grouping on the reference column.
 
 Derived from events + entity attributes, computed point-in-time (strictly before the
 event) so there is no future leakage. Examples: per-user count/sum/avg/max/min over
-7/14/30 days; max-to-median amount ratio; users-per-device over 7d; recent
-address/state change count. Graph-derived examples: out-degree per inviter over
-7/14/30d, total/avg/max referral bonus per inviter, share of invitees with no further
-activity (zombie ratio), invitee-cluster size. Never present in benchmark inputs.
+7/14/30 days; amount / (30d mean amount + 1) ratio; users-per-device over 7d; recent
+state change count. Graph-derived examples: out-degree per inviter over 7/14/30d,
+total/avg/max referral bonus per inviter, zombie ratio of an inviter's invitees (from the
+latent per-invitee zombie flag, not from observed inactivity). Never present in benchmark
+inputs.
 
 ### Labels
 
@@ -109,7 +112,7 @@ seeded tree model (native xgboost train API) to a tanh/sigmoid teacher over z-sc
 | `attributes` | AttrSpec + change-point timeline sampler | `sample_timeline(spec, created_at, t1, rng)` |
 | `entities` | Entity type = ID namespace + attr specs; as-of attribute join | `EntitySpec(name, n, attrs)`, `build_entities`, `attach_asof` |
 | `references` | RefSpec + choosers that fill reference columns with existing entity IDs | `RefSpec(column, target_entity, chooser)`; used by scenario code via `resolve_reference` |
-| `features` | Point-in-time rolling-window helpers (grouped by any ID or reference column) | `rolling(df, key=, value=, windows_days=, aggs=, prefix=)`; `key` may be a reference column |
+| `features` | Point-in-time rolling-window helpers (grouped by any ID or reference column) | `rolling(df, key=, value=, windows_days=, aggs=, prefix=)`; `key` may be a reference column. `rolling_asof(queries, source, query_key=, source_key=, ...)` evaluates a source keyed by a reference column at arbitrary query rows (e.g. a user's invites at each of their events) |
 | `scorer` | Scorer interface, XGBScorer, MLPScorer, bad-rate calibration | `Scorer.score(golden) -> p`, `calibrate(p, target_rate)`, `sample_labels` |
 | `export` | Write outputs | `export(dataset, out_dir)` |
 
@@ -121,7 +124,7 @@ Scenarios are modules in `datagen/scenarios/` exposing `generate(cfg) -> Dataset
 
 Outputs:
 - `events.parquet` — raw event/entity columns + label (benchmark input)
-- `golden.parquet` — `event_id` + golden features + score (hidden ground truth). Columns: `u_amt_{count,sum,mean,max,min}_{7,14,30}d`, `dev_users_n_unique_7d`, `addr_chg_sum_30d`, `amt_ratio_30d`, `inv_bonus_{count,sum,mean,max}_{7,14,30}d`, `inv_zombie_mean_30d`, `invitee_is_zombie`, `score`. Graph features on a transaction are looked up as-of from the user's invite row (frozen at invite time).
+- `golden.parquet` — `event_id` + golden features + score (hidden ground truth). Columns: `u_amt_{count,sum,mean,max,min}_{7,14,30}d`, `dev_users_n_unique_7d`, `addr_chg_sum_30d`, `amt_ratio_30d`, `inv_bonus_{count,sum,mean,max}_{7,14,30}d`, `inv_zombie_mean_30d`, `invr_bonus_{count,sum,mean,max}_{7,14,30}d`, `invr_zombie_mean_30d`, `invitee_is_zombie`, `score`. See section 5 for the graph features.
 - `meta.json` — seed, scenario, config, achieved bad rate, versions
 
 ### apps/bench
@@ -133,15 +136,36 @@ table and JSON.
 
 ## 5. Fraud scenario (v1)
 
-- Entities: user (~5–10 synthetic attrs incl. state, street), device (static OS/model,
-  fast battery, slow-ish IP), product (static launch time, category).
-- Behavior: bursty per-user activity; some users warm up with small amounts then one
-  large amount.
-- Golden features: velocity (count/sum/avg/max/min × 7/14/30d), amount ratio,
-  users-per-device 7d, recent address-change count.
-- Linkage: `invite` events carry `inviter_id` and `referral_bonus`. Plant bounty-hunter
-  inviters with many zombie invitees and large total bonus; events tied to them are more
-  likely labeled bad via the graph-derived golden features.
+- Entities: user (~5–10 synthetic attrs incl. state, street, zip), device (static OS/model,
+  fast battery, slow IP and user agent), product (static launch time, category). Users
+  sign up over the first 90% of the span, so invites (and the linkage signal) also occur
+  in the later, held-out part of the timeline.
+- Behavior: skewed per-user activity (earlier users transact more); some users warm up
+  with small amounts then cash out with large amounts.
+- Golden features: velocity (`u_amt_*`: count/sum/mean/max/min × 7/14/30d), amount ratio
+  `amt_ratio_30d` = amount / (30d mean amount + 1), users-per-device 7d, recent
+  state-change count (30d).
+- Linkage: `invite` events carry `inviter_id` and `referral_bonus`. A few bounty-hunter
+  inviters (drawn from users ranked 5–25% by sign-up, so they are not the heaviest
+  transactors) receive a large share of invites; their invitees are mostly zombies with a
+  large bonus, and 70% of those zombies share the hunter's device (device ring). Zombies
+  are otherwise inactive but make a short burst (~3 small transactions within 2 days)
+  right after their invite, typically on the shared ring device.
+- Graph-derived golden features (all point-in-time, window [t-w, t)):
+  - invitee side, `inv_bonus_{count,sum,mean,max}_{7,14,30}d`, `inv_zombie_mean_30d`:
+    the *inviter's* invite activity computed at the invite row that brought the event's
+    user in, then carried to all of that user's later events via a backward as-of
+    lookup. They are **frozen at invite time**, so `_30d` describes the 30 days before the
+    invite, not before the current event. Users who were not invited get 0.
+  - inviter side, `invr_bonus_{count,sum,mean,max}_{7,14,30}d`, `invr_zombie_mean_30d`:
+    the event's user's own activity *as an inviter* (their invites in [t-w, t)), evaluated
+    at every event of that user (`rolling_asof`), so hunters' own transactions carry them.
+  - zombie ratios (`inv_zombie_mean_30d`, `invr_zombie_mean_30d`) average the latent
+    per-invitee zombie flag, which is never exported in `events.parquet`;
+    `invitee_is_zombie` is that flag on the invite row.
+- Label weights (`GOLDEN_WEIGHTS`) include both invitee- and inviter-side graph features.
+  At 200k events (seed 7) hunter-linked users (hunters + their invitees, ~4% of events)
+  account for ~30% of positives and `invr_bonus_sum_30d` alone has label AUC ~0.67.
 - Target bad rate default ~2%, configurable.
 
 ## 6. Error handling
