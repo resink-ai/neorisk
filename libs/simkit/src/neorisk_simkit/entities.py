@@ -87,4 +87,4 @@ def map_ids(table: EntityTable, idx: pl.Series) -> pl.Series:
     out = np.full(len(idx), None, dtype=object)
     ids = table.ids["entity_id"].to_numpy()
     out[valid] = ids[idx.filter(idx.is_not_null()).to_numpy()]
-    return pl.Series(idx.name, out, dtype=pl.Utf8)
+    return pl.Series(idx.name, out.tolist(), dtype=pl.Utf8)  # list: avoid Object inference

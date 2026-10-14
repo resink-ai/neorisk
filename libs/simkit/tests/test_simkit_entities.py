@@ -87,3 +87,10 @@ def test_attach_asof_null_idx_gives_null_attrs():
 def test_map_ids_handles_nulls():
     s = map_ids(_manual_table(), pl.Series("x", [0, None], dtype=pl.Int64))
     assert s.to_list() == ["u0", None]
+
+
+def test_map_ids_mostly_null_column():
+    # many leading nulls: polars must not infer an Object dtype from the null prefix
+    idx = pl.Series("x", [None] * 2000 + [0], dtype=pl.Int64)
+    s = map_ids(_manual_table(), idx)
+    assert s.dtype == pl.Utf8 and s.null_count() == 2000 and s[-1] == "u0"
