@@ -22,6 +22,14 @@ DISPLAY = {
 _KIND = {"logreg": "linear", "rf": "tree", "xgb": "xgb", "ann_small": "ann", "ann_large": "ann"}
 _SCALED = {"logreg", "ann_small", "ann_large"}
 
+# SHAP explainer method and output unit per model kind (explain.py reads this too)
+SHAP_INFO = {
+    "linear": ("LinearExplainer", "log-odds"),
+    "tree": ("TreeExplainer", "probability"),
+    "xgb": ("TreeExplainer", "log-odds"),
+    "ann": ("KernelExplainer", "probability"),
+}
+
 
 @dataclass
 class FittedModel:
@@ -67,7 +75,7 @@ def _xgb(seed, pos_weight):
         learning_rate=0.1,
         scale_pos_weight=pos_weight,
         eval_metric="aucpr",
-        early_stopping_rounds=30,
+        early_stopping_rounds=_XGB_PATIENCE,
         tree_method="hist",
         random_state=seed,
     )
@@ -96,6 +104,66 @@ _FACTORIES = {
 _ANN_EPOCHS = 60
 _ANN_PATIENCE = 5
 _ANN_BATCH = 1024
+_XGB_PATIENCE = 30
+
+
+def describe(name: str) -> dict:
+    """Static, language-neutral facts about a model (imbalance handling, stopping, params).
+
+    ``imbalance`` is a code: ``class_weight_balanced``, ``class_weight_balanced_subsample``,
+    ``scale_pos_weight`` or ``none``; ``weighted`` says whether probabilities are re-weighted
+    (and therefore not calibrated to the base rate).
+    """
+    kind = _KIND[name]
+    method, unit = SHAP_INFO[kind]
+    base = {"shap_method": method, "shap_unit": unit}
+    if name == "logreg":
+        return {
+            **base,
+            "imbalance": "class_weight_balanced",
+            "weighted": True,
+            "early_stopping": None,
+            "count_unit": "iterations",
+            "hyperparams": {"class_weight": "balanced", "max_iter": 1000, "inputs": "standardized"},
+        }
+    if name == "rf":
+        return {
+            **base,
+            "imbalance": "class_weight_balanced_subsample",
+            "weighted": True,
+            "early_stopping": None,
+            "count_unit": "trees",
+            "hyperparams": {"n_estimators": 300, "max_depth": 12, "min_samples_leaf": 20},
+        }
+    if name == "xgb":
+        return {
+            **base,
+            "imbalance": "scale_pos_weight",
+            "weighted": True,
+            "early_stopping": {"metric": "aucpr", "patience": _XGB_PATIENCE, "split": "valid"},
+            "count_unit": "rounds",
+            "hyperparams": {
+                "n_estimators": 500,
+                "max_depth": 6,
+                "learning_rate": 0.1,
+                "scale_pos_weight": "neg/pos",
+            },
+        }
+    hidden = (32, 16) if name == "ann_small" else (256, 128, 64)
+    return {
+        **base,
+        "imbalance": "none",
+        "weighted": False,
+        "early_stopping": {"metric": "auc", "patience": _ANN_PATIENCE, "split": "valid"},
+        "count_unit": "epochs",
+        "hyperparams": {
+            "hidden_layer_sizes": list(hidden),
+            "alpha": 1e-4,
+            "max_epochs": _ANN_EPOCHS,
+            "batch_size": _ANN_BATCH,
+            "inputs": "standardized",
+        },
+    }
 
 
 def _fit_ann(est, xt, y_train, xv, y_valid, seed):
@@ -147,6 +215,8 @@ def train_all(x_train, y_train, x_valid, y_valid, *, names=MODEL_ORDER, seed: in
             epochs = None
             if name == "xgb":
                 est.fit(xt, y_train, eval_set=[(xv, y_valid)], verbose=False)
+                bi = getattr(est, "best_iteration", None)
+                epochs = int(bi) + 1 if bi is not None else int(est.n_estimators)
             elif _KIND[name] == "ann":
                 epochs = _fit_ann(est, xt, y_train, xv, y_valid, seed)
             else:

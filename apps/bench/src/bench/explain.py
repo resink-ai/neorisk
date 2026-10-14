@@ -1,9 +1,10 @@
 import numpy as np
 import shap
 
-from bench.models import FittedModel
+from bench.models import SHAP_INFO, FittedModel
 
 _QS = (5, 25, 50, 75, 95)
+_KERNEL_NSAMPLES = 1000
 
 
 def stratified_sample(y: np.ndarray, n: int, rng: np.random.Generator) -> np.ndarray:
@@ -51,7 +52,7 @@ def _shap_values(model: FittedModel, x_train, x_explain, ann_rows, seed):
     state = np.random.get_state()
     np.random.seed(seed)
     try:
-        sv = explainer.shap_values(xe[rows], nsamples=200, silent=True)
+        sv = explainer.shap_values(xe[rows], nsamples=_KERNEL_NSAMPLES, l1_reg=False, silent=True)
     finally:
         np.random.set_state(state)
     return _positive_class(sv), "KernelExplainer", rows
@@ -76,6 +77,7 @@ def explain_model(
     pick = np.sort(rng.choice(len(sv), min(len(sv), max_points), replace=False))
     out = {
         "method": method,
+        "unit": SHAP_INFO[model.kind][1],
         "n_rows": len(sv),
         "importance": {},
         "quantiles": {},

@@ -38,7 +38,17 @@ def test_run_compare_all_models(data_dir):
         assert m["shap"] and m["shap"]["importance"]
     assert r["run"]["n_events"] == 20000 and r["run"]["n_features"] > 10
     assert sum(r["run"]["split_sizes"].values()) == 20000
-    assert r["models"]["ann_small"]["epochs"] >= 1 and r["models"]["xgb"]["epochs"] is None
+    assert r["models"]["ann_small"]["epochs"] >= 1
+    assert 1 <= r["models"]["xgb"]["epochs"] <= 500  # best_iteration + 1 (rounds kept)
+    for name, m in r["models"].items():
+        info = m["model_info"]
+        assert info["imbalance"] and info["shap_unit"] in ("log-odds", "probability")
+        assert info["weighted"] == (name in ("logreg", "rf", "xgb"))
+        assert info["epochs"] == m["epochs"]
+        assert m["shap"]["unit"] == info["shap_unit"]
+        assert 0 < m["mean_pred"] < 1
+    assert r["models"]["xgb"]["model_info"]["count_unit"] == "rounds"
+    assert r["run"]["train_positives"] > 0 and r["run"]["shap_sample_pos_rate"] > 0
     t = r["run"]["timings"]
     assert t["feature_seconds"] >= 0 and t["total_seconds"] >= t["feature_seconds"]
     assert all(m["shap_seconds"] >= 0 for m in r["models"].values())
@@ -89,6 +99,8 @@ def test_cli_writes_report_and_json(data_dir, tmp_path):
     page = html.read_text()
     assert "Logistic Regression" in page and "XGBoost" in page
     assert "Stage seconds" in page and "SHAP s" in page  # per-stage timings rendered
+    assert "Methods &amp; caveats" in page and "TreeExplainer · log-odds" in page
+    assert "Predict test s" in page and "Rounds/epochs" in page
     assert not re.search(r"(src|href)=[\"']https?://", page)
     data = json.loads(js.read_text())  # strict JSON: no NaN literals
     assert data["models"]["xgb"]["metrics"]["auc"] > 0.5

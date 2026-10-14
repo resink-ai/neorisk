@@ -9,7 +9,7 @@ import numpy as np
 from bench.explain import explain_model, stratified_sample
 from bench.features import build_features, feature_names
 from bench.metrics import best_f1_threshold, compute_metrics
-from bench.models import DISPLAY, MODEL_ORDER, FittedModel, train_all
+from bench.models import DISPLAY, MODEL_ORDER, FittedModel, describe, train_all
 from bench.report import render_report, to_jsonable
 from bench.runner import load_events, time_split
 
@@ -71,6 +71,8 @@ def run_compare(
             "infer_seconds": 0.0,
             "shap_seconds": 0.0,
             "epochs": None,
+            "model_info": describe(name),
+            "mean_pred": None,
             "metrics": None,
             "valid_metrics": None,
             "shap": None,
@@ -82,10 +84,12 @@ def run_compare(
             continue
         entry["train_seconds"] = float(m.train_seconds)
         entry["epochs"] = m.epochs
-        t0 = time.perf_counter()
         p_valid = m.predict_proba(x["valid"])
-        p_test = m.predict_proba(x["test"])
+        t0 = time.perf_counter()
+        p_test = m.predict_proba(x["test"])  # infer_seconds: test split only
         entry["infer_seconds"] = float(time.perf_counter() - t0)
+        entry["model_info"]["epochs"] = m.epochs
+        entry["mean_pred"] = float(np.mean(p_test)) if len(p_test) else None
         thr = best_f1_threshold(y["valid"], p_valid)
         entry["valid_metrics"] = compute_metrics(y["valid"], p_valid, threshold=thr)
         entry["metrics"] = compute_metrics(y["test"], p_test, threshold=thr)
@@ -115,6 +119,13 @@ def run_compare(
             "bad_rate": float(events["label"].mean()),
             "seed": seed,
             "shap_rows": len(sample_idx),
+            "shap_sample_pos_rate": float(y["test"][sample_idx].mean())
+            if len(sample_idx)
+            else None,
+            "test_bad_rate": float(y["test"].mean()) if len(y["test"]) else None,
+            "train_positives": int(y["train"].sum()),
+            "min_train_pos": min_train_pos,
+            "test_rows": len(y["test"]),
             "ann_shap_rows": ann_shap_rows,
             "generated_at": datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC"),
             "dataset_meta": {k: meta.get(k) for k in ("scenario", "seed", "n_events", "bad_rate")},

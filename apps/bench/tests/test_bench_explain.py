@@ -69,3 +69,18 @@ def test_ann_deterministic_with_many_features_and_aligned_points():
     assert a["n_rows"] == 50
     p = a["points"]["f0"]
     assert np.corrcoef(p["shap"], p["value"])[0, 1] > 0.8
+
+
+@pytest.mark.parametrize(
+    ("name", "method", "unit"),
+    [
+        ("logreg", "LinearExplainer", "log-odds"),
+        ("rf", "TreeExplainer", "probability"),
+        ("xgb", "TreeExplainer", "log-odds"),
+        ("ann_small", "KernelExplainer", "probability"),
+    ],
+)
+def test_explain_result_carries_method_and_unit(fitted, name, method, unit):
+    res, x, _ = fitted
+    out = explain_model(res[name], x[:1800], x[1800:1900], NAMES, ann_rows=20, seed=0)
+    assert out["method"] == method and out["unit"] == unit
