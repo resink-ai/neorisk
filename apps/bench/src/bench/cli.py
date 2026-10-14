@@ -70,6 +70,25 @@ def _curves(args) -> int:
     return 0
 
 
+def _temporal(args) -> int:
+    import json as _json
+    from pathlib import Path
+
+    from bench.temporal import render_temporal, run_temporal
+    from bench.temporal_sim import TemporalConfig, generate_temporal
+
+    cfg = TemporalConfig(seed=args.seed)
+    if args.data_out:
+        Path(args.data_out).mkdir(parents=True, exist_ok=True)
+        generate_temporal(cfg).write_parquet(Path(args.data_out) / "events.parquet")
+    res = run_temporal(cfg)
+    Path(args.out).write_text(render_temporal(res, lang=args.lang), encoding="utf-8")
+    if args.json_path:
+        Path(args.json_path).write_text(_json.dumps(res), encoding="utf-8")
+    print(f"report: {args.out}")
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="bench")
     sub = parser.add_subparsers(dest="cmd", required=True)
@@ -103,7 +122,16 @@ def main(argv: Sequence[str] | None = None) -> int:
     k.add_argument("--seed", type=int, default=0)
     k.add_argument("--lang", choices=("zh", "en"), default="zh")
 
+    tp = sub.add_parser("temporal", help="label maturity and future-leakage experiments")
+    tp.add_argument("--out", required=True)
+    tp.add_argument("--json", dest="json_path", default=None)
+    tp.add_argument("--data-out", default=None, help="also write the sample events.parquet here")
+    tp.add_argument("--seed", type=int, default=7)
+    tp.add_argument("--lang", choices=("zh", "en"), default="zh")
+
     args = parser.parse_args(argv)
+    if args.cmd == "temporal":
+        return _temporal(args)
     if args.cmd == "curves":
         return _curves(args)
     return _compare(args) if args.cmd == "compare" else _run(args)
