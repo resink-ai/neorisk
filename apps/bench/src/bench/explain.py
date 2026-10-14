@@ -27,7 +27,11 @@ def _positive_class(sv) -> np.ndarray:
 
 
 def _shap_values(model: FittedModel, x_train, x_explain, ann_rows, seed):
-    """Return (shap values, method, row indices of ``x_explain`` actually explained)."""
+    """Return (shap values, method, row indices of ``x_explain`` actually explained).
+
+    Units differ per method: linear and xgb are in log-odds; RF (tree) and ANN (kernel) are in
+    probability. Importances are therefore not comparable across models without normalisation.
+    """
     rows = np.arange(len(x_explain))
     xe = model.transform(x_explain)
     if model.kind in ("tree", "xgb"):
@@ -39,9 +43,17 @@ def _shap_values(model: FittedModel, x_train, x_explain, ann_rows, seed):
         return _positive_class(sv), "LinearExplainer", rows
     if len(xe) > ann_rows:
         rows = np.sort(np.random.default_rng(seed).choice(len(xe), ann_rows, replace=False))
+    if len(xt) > 2000:
+        xt = shap.sample(xt, 2000, random_state=seed)
     bg = shap.kmeans(xt, 10)
     explainer = shap.KernelExplainer(lambda a: model.estimator.predict_proba(a)[:, 1], bg)
-    sv = explainer.shap_values(xe[rows], nsamples=200, silent=True)
+    # KernelExplainer samples coalitions from the global np.random state: seed it, then restore
+    state = np.random.get_state()
+    np.random.seed(seed)
+    try:
+        sv = explainer.shap_values(xe[rows], nsamples=200, silent=True)
+    finally:
+        np.random.set_state(state)
     return _positive_class(sv), "KernelExplainer", rows
 
 
