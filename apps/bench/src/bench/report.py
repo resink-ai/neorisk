@@ -73,6 +73,8 @@ LABELS = {
         "feature": "特征",
         "train_s": "训练 s",
         "infer_s": "推理 s",
+        "shap_s": "SHAP s",
+        "stages": "阶段耗时 (特征 / 全部训练 / 总计)",
         "data_dir": "数据目录",
         "n_events": "事件数",
         "n_features": "特征数",
@@ -116,6 +118,8 @@ LABELS = {
         "feature": "Feature",
         "train_s": "Train s",
         "infer_s": "Infer s",
+        "shap_s": "SHAP s",
+        "stages": "Stage seconds (features / all training / total)",
         "data_dir": "Data dir",
         "n_events": "Events",
         "n_features": "Features",
@@ -611,6 +615,19 @@ def _details(run, models, L) -> str:
         ),
         (L["bad_rate"], f"{_fmt(_pct(run.get('bad_rate')), 3)}%"),
         (L["seed"], _esc(str(run.get("seed", "")))),
+        *(
+            [
+                (
+                    L["stages"],
+                    " / ".join(
+                        _fmt(run["timings"].get(k), 1)
+                        for k in ("feature_seconds", "train_all_seconds", "total_seconds")
+                    ),
+                )
+            ]
+            if isinstance(run.get("timings"), dict)
+            else []
+        ),
         (
             f"{L['features']} ({_fmt_int(run.get('n_features'))})",
             " ".join(f"<code>{_esc(str(f))}</code>" for f in run.get("feature_names") or []),
@@ -626,6 +643,7 @@ def _details(run, models, L) -> str:
         trs.append(
             f"<tr><td>{_esc(m['display'])}</td><td>{_fmt(m.get('train_seconds'), 2)}</td>"
             f"<td>{_fmt(m.get('infer_seconds'), 2)}</td>"
+            f"<td>{_fmt(m.get('shap_seconds'), 2)}</td>"
             f"<td>{_fmt_int(ep) if ep is not None else chr(8212)}</td></tr>"
         )
     return (
@@ -633,7 +651,7 @@ def _details(run, models, L) -> str:
         f"<h3>{_esc(L['timings'])}</h3>"
         '<div class="tablewrap"><table><thead><tr>'
         f"<th>{_esc(L['model'])}</th><th>{_esc(L['train_s'])}</th><th>{_esc(L['infer_s'])}</th>"
-        f"<th>{_esc(L['epochs'])}</th></tr></thead><tbody>{''.join(trs)}</tbody></table></div>"
+        f"<th>{_esc(L['shap_s'])}</th><th>{_esc(L['epochs'])}</th></tr></thead><tbody>{''.join(trs)}</tbody></table></div>"
     )
 
 
