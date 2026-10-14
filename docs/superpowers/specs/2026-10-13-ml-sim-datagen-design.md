@@ -26,7 +26,7 @@ signal is learnable.
 ## 2. Layout
 
 ```
-libs/simkit/        framework (no scenario knowledge)
+libs/simkit/        framework, import name `neorisk_simkit` (no scenario knowledge)
 apps/datagen/       CLI + scenarios (fraud first)
 apps/bench/         baseline runner; reads only exported events.parquet
 ```
@@ -96,34 +96,38 @@ Scorer is a fixed-parameter XGBoost (random preset weights, seeded) or small MLP
 
 ## 4. Components
 
-### libs/simkit
+### libs/simkit (import `neorisk_simkit`)
+
+Entities carry an integer `idx` (rank by creation time) internally; UUIDs are attached at export.
+There is no separate `events` module in the final implementation: scenarios sample events directly and use
+`attach_asof` / `resolve_reference`. `MLPScorer` is an untrained, seeded random-weight MLP; `XGBScorer` fits a
+seeded tree model (native xgboost train API) to a tanh/sigmoid teacher over z-scored golden features.
 
 | Module | Responsibility | Interface |
 |---|---|---|
-| `attributes` | AttrSpec + change-point timeline sampler | `build_entity_table(n, specs, time_range, rng) -> pl.DataFrame` |
-| `entities` | Entity type = ID namespace + attr specs | `EntitySpec(name, n, attrs)` |
+| `attributes` | AttrSpec + change-point timeline sampler | `sample_timeline(spec, created_at, t1, rng)` |
+| `entities` | Entity type = ID namespace + attr specs; as-of attribute join | `EntitySpec(name, n, attrs)`, `build_entities`, `attach_asof` |
 | `references` | RefSpec + choosers that fill reference columns with existing entity IDs | `RefSpec(column, target_entity, chooser)`; used by `events` and `attributes` |
-| `events` | Sample events, link entities, as-of join attributes | `EventSpec(...)`, `generate_events(...)` |
-| `features` | Point-in-time rolling-window helpers (grouped by any ID or reference column) | `rolling(events, key, col, windows, aggs)`; `key` may be a reference column |
-| `scorer` | Scorer interface, XGBScorer, MLPScorer, bad-rate calibration | `Scorer.score(df) -> p`, `calibrate(p, target_rate)` |
+| `features` | Point-in-time rolling-window helpers (grouped by any ID or reference column) | `rolling(df, key=, value=, windows_days=, aggs=, prefix=)`; `key` may be a reference column |
+| `scorer` | Scorer interface, XGBScorer, MLPScorer, bad-rate calibration | `Scorer.score(golden) -> p`, `calibrate(p, target_rate)`, `sample_labels` |
 | `export` | Write outputs | `export(dataset, out_dir)` |
 
 ### apps/datagen
 
 `datagen generate --scenario fraud --n-events 1000000 --seed 42 --out data/fraud/`
 
-Scenarios are modules in `datagen/scenarios/` exposing `build(config) -> Scenario`.
+Scenarios are modules in `datagen/scenarios/` exposing `generate(cfg) -> Dataset`, registered in `datagen.scenarios.SCENARIOS`.
 
 Outputs:
 - `events.parquet` — raw event/entity columns + label (benchmark input)
-- `golden.parquet` — `event_id` + golden features + score (hidden ground truth)
+- `golden.parquet` — `event_id` + golden features + score (hidden ground truth). Columns: `u_amt_{count,sum,mean,max,min}_{7,14,30}d`, `dev_users_n_unique_7d`, `addr_chg_sum_30d`, `amt_ratio_30d`, `inv_bonus_{count,sum,mean,max}_{7,14,30}d`, `inv_zombie_mean_30d`, `invitee_is_zombie`, `score`. Graph features on a transaction are looked up as-of from the user's invite row (frozen at invite time).
 - `meta.json` — seed, scenario, config, achieved bad rate, versions
 
 ### apps/bench
 
 `bench run data/fraud/` reads only `events.parquet`; time-based train/valid/test split;
-baselines: logistic regression, XGBoost on raw columns; optional `--oracle` trains on
-golden features as an upper bound. Reports AUC, PR-AUC, recall@fixed-precision as a
+baselines: logistic regression, XGBoost on raw columns; optional `--oracle` trains XGBoost on raw numeric columns plus all golden columns, including `score`
+(the label-generating probability), so it is a Bayes ceiling rather than a realistic feature-engineering bound. Reports AUC, PR-AUC, recall@fixed-precision as a
 table and JSON.
 
 ## 5. Fraud scenario (v1)

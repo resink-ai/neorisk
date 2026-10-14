@@ -815,9 +815,9 @@ def rolling(
             [pl.lit(0.0).alias(f"{prefix}_{a}_{w}d") for w in windows_days for a in aggs]
         )
     for w in windows_days:
-        r = base.rolling(
-            index_column=time_col, period=f"{w}d", closed="left", group_by=key
-        ).agg([_AGGS[a](value).alias(f"{prefix}_{a}_{w}d") for a in aggs])
+        r = base.rolling(index_column=time_col, period=f"{w}d", closed="left", group_by=key).agg(
+            [_AGGS[a](value).alias(f"{prefix}_{a}_{w}d") for a in aggs]
+        )
         if r.height != base.height or not (
             r[key].equals(base[key]) and r[time_col].equals(base[time_col])
         ):
@@ -1138,9 +1138,26 @@ from neorisk_simkit.references import RefSpec, hubs, resolve_reference, skewed, 
 from neorisk_simkit.scorer import MLPScorer, XGBScorer, calibrate, sample_labels
 
 __all__ = [
-    "AttrSpec", "Cardinality", "Volatility", "EntitySpec", "EntityTable", "attach_asof",
-    "build_entities", "map_ids", "Dataset", "export", "rolling", "make_uuids", "RefSpec",
-    "hubs", "resolve_reference", "skewed", "uniform", "MLPScorer", "XGBScorer", "calibrate",
+    "AttrSpec",
+    "Cardinality",
+    "Volatility",
+    "EntitySpec",
+    "EntityTable",
+    "attach_asof",
+    "build_entities",
+    "map_ids",
+    "Dataset",
+    "export",
+    "rolling",
+    "make_uuids",
+    "RefSpec",
+    "hubs",
+    "resolve_reference",
+    "skewed",
+    "uniform",
+    "MLPScorer",
+    "XGBScorer",
+    "calibrate",
     "sample_labels",
 ]
 ```
@@ -1250,9 +1267,10 @@ def test_bad_rate_near_target(ds):
 def test_attributes_are_stable_within_short_window(ds):
     ev = ds.events.filter(pl.col("event_type") == 0).sort("event_time")
     # static attribute: constant per device
-    assert ev.group_by("device_id").agg(pl.col("device_os").n_unique()).get_column(
-        "device_os"
-    ).max() == 1
+    assert (
+        ev.group_by("device_id").agg(pl.col("device_os").n_unique()).get_column("device_os").max()
+        == 1
+    )
     # slow attribute: few changes per user over the span
     chg = ev.group_by("user_id").agg(
         (pl.col("user_state").diff().fill_null(0) != 0).sum().alias("c"), pl.len().alias("n")
@@ -1281,10 +1299,7 @@ def test_bounty_hunter_signature_is_planted(ds):
 
 def test_rolling_features_have_no_future_leakage(ds):
     first = (
-        ds.events.filter(pl.col("event_type") == 0)
-        .sort("event_time")
-        .group_by("user_id")
-        .first()
+        ds.events.filter(pl.col("event_type") == 0).sort("event_time").group_by("user_id").first()
     )
     g = ds.golden.filter(pl.col("event_id").is_in(first["event_id"]))
     assert (g["u_amt_count_30d"] == 0).all()
@@ -1486,9 +1501,7 @@ def _transactions(cfg, n_txn, created, user_device, user_is_zombie, t1, rng):
     )
     # warm-up / cash-out: cashout users send small amounts, then a large burst at the end
     return (
-        df.with_columns(
-            rank=pl.int_range(pl.len()).over("user_idx"), n=pl.len().over("user_idx")
-        )
+        df.with_columns(rank=pl.int_range(pl.len()).over("user_idx"), n=pl.len().over("user_idx"))
         .with_columns(
             amount=pl.when(pl.col("cashout_user"))
             .then(
@@ -1514,13 +1527,16 @@ def _address_changes(events: pl.DataFrame, users) -> pl.DataFrame:
             pl.lit(1.0).alias("is_change"),
         )
     )
-    ev = events.select("event_id", "user_idx", "event_time").with_columns(
-        is_change=pl.lit(0.0)
-    )
+    ev = events.select("event_id", "user_idx", "event_time").with_columns(is_change=pl.lit(0.0))
     both = pl.concat([ev, ch.select(ev.columns)]).with_row_index("_rid")
     r = rolling(
-        both, key="user_idx", value="is_change", windows_days=[30], aggs=["sum"],
-        prefix="addr_chg", id_col="_rid",
+        both,
+        key="user_idx",
+        value="is_change",
+        windows_days=[30],
+        aggs=["sum"],
+        prefix="addr_chg",
+        id_col="_rid",
     )
     return (
         both.join(r, on="_rid")
@@ -1535,19 +1551,35 @@ def _golden(events: pl.DataFrame, users) -> pl.DataFrame:
         zombie_f=pl.col("zombie").cast(pl.Float64)
     )
     vel = rolling(
-        txn, key="user_idx", value="amount", windows_days=[7, 14, 30],
-        aggs=["count", "sum", "mean", "max", "min"], prefix="u_amt",
+        txn,
+        key="user_idx",
+        value="amount",
+        windows_days=[7, 14, 30],
+        aggs=["count", "sum", "mean", "max", "min"],
+        prefix="u_amt",
     )
     devu = rolling(
-        txn, key="device_idx", value="user_idx", windows_days=[7], aggs=["n_unique"],
+        txn,
+        key="device_idx",
+        value="user_idx",
+        windows_days=[7],
+        aggs=["n_unique"],
         prefix="dev_users",
     )
     g_bonus = rolling(
-        inv, key="inviter_idx", value="referral_bonus", windows_days=[7, 14, 30],
-        aggs=["count", "sum", "mean", "max"], prefix="inv_bonus",
+        inv,
+        key="inviter_idx",
+        value="referral_bonus",
+        windows_days=[7, 14, 30],
+        aggs=["count", "sum", "mean", "max"],
+        prefix="inv_bonus",
     )
     g_zombie = rolling(
-        inv, key="inviter_idx", value="zombie_f", windows_days=[30], aggs=["mean"],
+        inv,
+        key="inviter_idx",
+        value="zombie_f",
+        windows_days=[30],
+        aggs=["mean"],
         prefix="inv_zombie",
     )
     # graph features of the invite that brought each user in, looked up as-of event time
@@ -1630,8 +1662,16 @@ def generate(cfg: FraudConfig) -> Dataset:
         label=pl.Series(labels),
     ).drop("user_idx", "device_idx", "product_idx", "inviter_idx", "zombie")
     lead = [
-        "event_id", "event_time", "event_type", "user_id", "device_id", "product_id",
-        "inviter_id", "amount", "currency", "referral_bonus",
+        "event_id",
+        "event_time",
+        "event_type",
+        "user_id",
+        "device_id",
+        "product_id",
+        "inviter_id",
+        "amount",
+        "currency",
+        "referral_bonus",
     ]
     out = out.select(lead + [c for c in out.columns if c not in lead and c != "label"] + ["label"])
 
@@ -1693,8 +1733,19 @@ from datagen.cli import main
 def test_generate_writes_dataset(tmp_path):
     out = tmp_path / "fraud"
     rc = main(
-        ["generate", "--scenario", "fraud", "--n-events", "3000", "--seed", "3",
-         "--span-days", "30", "--out", str(out)]
+        [
+            "generate",
+            "--scenario",
+            "fraud",
+            "--n-events",
+            "3000",
+            "--seed",
+            "3",
+            "--span-days",
+            "30",
+            "--out",
+            str(out),
+        ]
     )
     assert rc == 0
     ev = pl.read_parquet(out / "events.parquet")
@@ -1746,7 +1797,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
     ds = SCENARIOS[args.scenario](cfg)
     export(ds, args.out)
-    print(f"wrote {ds.events.height} events to {args.out} (bad rate {ds.events['label'].mean():.4f})")
+    print(
+        f"wrote {ds.events.height} events to {args.out} (bad rate {ds.events['label'].mean():.4f})"
+    )
     return 0
 
 
@@ -1826,8 +1879,19 @@ from bench.runner import evaluate, load_events, raw_features, run, time_split
 def data_dir(tmp_path_factory):
     out = tmp_path_factory.mktemp("fraud")
     datagen_main(
-        ["generate", "--scenario", "fraud", "--n-events", "20000", "--seed", "11",
-         "--span-days", "60", "--out", str(out)]
+        [
+            "generate",
+            "--scenario",
+            "fraud",
+            "--n-events",
+            "20000",
+            "--seed",
+            "11",
+            "--span-days",
+            "60",
+            "--out",
+            str(out),
+        ]
     )
     return out
 
@@ -1917,9 +1981,7 @@ def time_split(df: pl.DataFrame, fracs=(0.6, 0.2, 0.2)):
 
 def raw_features(df: pl.DataFrame) -> pl.DataFrame:
     cols = [
-        c
-        for c, t in df.schema.items()
-        if t.is_numeric() and c != "label" and not c.endswith("_id")
+        c for c, t in df.schema.items() if t.is_numeric() and c != "label" and not c.endswith("_id")
     ]
     return df.select(cols).fill_null(-1)
 
