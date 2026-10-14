@@ -45,7 +45,17 @@ class RefSpec:
 def resolve_reference(
     spec: RefSpec, times: np.ndarray, target_created_at: np.ndarray, rng: np.random.Generator
 ) -> pl.Series:
-    """Fill a reference column with idx of target entities that exist at ``times``."""
+    """Fill a reference column with idx of target entities that exist at ``times``.
+
+    ``target_created_at`` must be sorted ascending (entity ``idx`` is the rank by creation
+    time), so the entities that exist at ``t`` are exactly ``idx < m`` with
+    ``m = searchsorted(target_created_at, t)``. A ``ValueError`` is raised otherwise.
+    With ``spec.strict`` the target must be created strictly before ``t``; otherwise an
+    entity created at the same instant is eligible too. Rows with no eligible target (or
+    dropped by ``null_prob``) are null.
+    """
+    if len(target_created_at) > 1 and (target_created_at[1:] < target_created_at[:-1]).any():
+        raise ValueError("target_created_at must be sorted ascending")
     side = "left" if spec.strict else "right"
     m = np.searchsorted(target_created_at, times, side=side)
     idx = spec.chooser(m, rng)

@@ -33,10 +33,17 @@ class AttrSpec:
 
     @property
     def size(self) -> int:
-        k = self.k or DEFAULT_K[self.cardinality]
+        k = DEFAULT_K[self.cardinality] if self.k is None else self.k
         if k < 2:
             raise ValueError(f"attribute {self.name!r}: k must be >= 2, got {k}")
         return k
+
+
+def _reflect(x: np.ndarray, k: int) -> np.ndarray:
+    """Fold an unbounded walk into [0, k-1] with reflecting boundaries."""
+    period = 2 * (k - 1)
+    m = np.mod(x, period)
+    return np.where(m <= k - 1, m, period - m)
 
 
 def sample_timeline(
@@ -45,8 +52,12 @@ def sample_timeline(
     """Long-form (idx, valid_from, value) timeline for one attribute.
 
     Each entity starts with an independent draw at ``created_at``; change points are
-    Poisson in time. SLOW/STATIC redraw; FAST attributes random-walk (clipped to range).
+    Poisson in time. SLOW/STATIC redraw; FAST attributes take +-s random-walk steps that
+    reflect at 0 and k-1 (a triangle-wave fold of ``init + cumsum``), so they never stick
+    at a bound.
     """
+    if len(created_at) and (created_at > t1).any():
+        raise ValueError("created_at must not be after t1")
     n = len(created_at)
     k = spec.size
     init = rng.integers(0, k, size=n)
@@ -71,7 +82,7 @@ def sample_timeline(
                 .with_columns(c=pl.col("step").cum_sum().over("idx"))["c"]
                 .to_numpy()
             )
-            values = np.clip(init[idx] + cum, 0, k - 1)
+            values = _reflect(init[idx] + cum, k)
         else:
             values = rng.integers(0, k, size=total)
         idx_parts.append(idx)

@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 
 from neorisk_simkit.references import RefSpec, hubs, resolve_reference, skewed, uniform
 
@@ -60,3 +61,38 @@ def test_skewed_favours_early_entities():
     m = np.full(10_000, 100)
     idx = skewed(3.0)(m, np.random.default_rng(0))
     assert idx.mean() < 30 and idx.max() < 100
+
+
+def test_non_strict_allows_same_instant_reference():
+    created = _created()
+    times = np.full(2000, created[5])
+    spec = RefSpec("r", "user", uniform, strict=False)
+    idx = resolve_reference(spec, times, created, np.random.default_rng(0)).to_numpy()
+    assert idx.max() == 5 and (created[idx] <= times).all()
+
+
+def test_strict_boundary_holds_over_many_draws():
+    created = _created()
+    rng = np.random.default_rng(1)
+    times = created[rng.integers(1, len(created), 20_000)]  # exactly at creation instants
+    for chooser in (uniform, skewed(0.3), hubs(np.array([0, 40, 80]), 0.5)):
+        s = resolve_reference(RefSpec("r", "user", chooser), times, created, rng)
+        assert s.null_count() == 0
+        assert (created[s.to_numpy()] < times).all()
+
+
+def test_resolve_reference_same_seed_is_deterministic():
+    created = _created()
+    times = created[10:] + np.timedelta64(30, "m")
+    spec = RefSpec("r", "user", hubs(np.array([1, 2]), 0.4), null_prob=0.2)
+    a = resolve_reference(spec, times, created, np.random.default_rng(3))
+    b = resolve_reference(spec, times, created, np.random.default_rng(3))
+    assert a.equals(b)
+
+
+def test_unsorted_target_created_at_raises():
+    created = _created()[::-1].copy()
+    with pytest.raises(ValueError, match="sorted"):
+        resolve_reference(
+            RefSpec("r", "user", uniform), created[:3], created, np.random.default_rng(0)
+        )
