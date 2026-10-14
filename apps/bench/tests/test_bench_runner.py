@@ -87,3 +87,45 @@ def test_load_events_requires_golden_columns_key(data_dir, tmp_path):
     (tmp_path / "meta.json").write_text(json.dumps(meta))
     with pytest.raises(ValueError, match="golden_columns"):
         load_events(tmp_path)
+
+
+def test_single_class_train_emits_nan_rows(data_dir, tmp_path):
+    ev = pl.read_parquet(data_dir / "events.parquet")
+    cut = ev["event_time"].sort()[int(ev.height * 0.7)]
+    ev = ev.with_columns(
+        label=pl.when(pl.col("event_time") < cut).then(0).otherwise(pl.col("label"))
+    )
+    ev.write_parquet(tmp_path / "events.parquet")
+    (tmp_path / "meta.json").write_text((data_dir / "meta.json").read_text())
+    rows = run(tmp_path)
+    got = {(r["model"], r["split"]) for r in rows}
+    assert got == {(m, s) for m in ("logreg_raw", "xgb_raw") for s in ("valid", "test")}
+    for r in rows:
+        assert np.isnan(r["auc"]) and np.isnan(r["pr_auc"]) and np.isnan(r["recall_at_precision"])
+
+
+def test_raw_features_fill_nan_and_null():
+    df = pl.DataFrame(
+        {
+            "a": [1.0, float("nan"), None],
+            "b": pl.Series([1, None, 3], dtype=pl.Int64),
+            "label": [0, 1, 0],
+        }
+    )
+    x = raw_features(df)
+    assert x["a"].to_list() == [1.0, -1.0, -1.0]
+    assert x["b"].to_list() == [1, -1, 3]
+    assert not np.isnan(x.to_numpy().astype("float64")).any()
+
+
+def test_time_split_is_stable_under_input_order():
+    t = np.datetime64("2026-01-01T00:00:00", "us") + np.repeat(np.arange(10), 10).astype(
+        "timedelta64[h]"
+    ).astype("timedelta64[us]")
+    df = pl.DataFrame({"event_id": [f"e{i:03d}" for i in range(100)], "event_time": t})
+    shuffled = df.sample(fraction=1.0, shuffle=True, seed=3)
+    for a, b in zip(time_split(df), time_split(shuffled)):
+        assert a["event_id"].equals(b["event_id"])
+    tr, va, te = time_split(shuffled)
+    joined = pl.concat([tr, va, te])
+    assert joined.equals(df.sort("event_time", "event_id"))
