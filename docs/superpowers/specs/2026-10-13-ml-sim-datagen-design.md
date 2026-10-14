@@ -63,22 +63,22 @@ One row per event. Columns: `event_id` (UUID), `event_time`, linked entity IDs
 `currency`, ...), and entity attributes resolved **as-of event time** (latest
 `valid_from <= event_time`), plus `label`.
 
-### Linkages (edges)
+### Linkages (reference columns)
 
-A linkage is a typed, directed edge list between entities, with edge attributes:
-`(edge_id, src_id, dst_id, edge_time, <edge attrs>)`. Example: `invite` edges
-(inviter -> invitee) with edge attribute `referral_bonus`. Edge attributes use the same
-synthetic-value rules as entity attributes (integers, cardinality/volatility specs; edge
-attrs are fixed at `edge_time`).
+There is no separate edge table. A linkage is a **reference column**: an ordinary event
+or entity attribute whose value is another entity's ID. Example: an `invite` event has
+`user_id` (the invitee), `inviter_id` (the inviter's `user_id`), and `referral_bonus`
+(an event attribute). The graph is implicit in these columns and is recovered by
+grouping on the reference column.
 
-- `LinkageSpec(name, src_entity, dst_entity, edge_attrs, generator)`: the generator
-  decides who links to whom, so scenarios can plant structure (e.g. a few "bounty
-  hunter" inviters each with many low-activity "zombie" invitees and large total bonus).
-- Edges are time-stamped, so graph features are computed point-in-time like any other
-  golden feature.
-- Visibility is per linkage (`visible=True|False`): visible edge lists are exported as
-  raw benchmark input; hidden ones join the ground truth. Graph-*derived* features are
-  always golden.
+- `RefSpec(column, target_entity, nullable, chooser)`: declares a reference column and a
+  `chooser` that picks the referenced ID per row, so scenarios can plant structure (e.g.
+  few "bounty hunter" inviters chosen far more often, whose invitees are zombies).
+- Event-level references take the event time; entity-level references are ordinary
+  attributes with change points (so a reference can also change over time).
+- Referenced IDs must exist before the row's time (inviter registered earlier).
+- Reference columns are normal raw columns and are visible to the benchmark. Features
+  derived by aggregating over them (degree, bonus totals, zombie ratio) are golden.
 
 ### Golden features
 
@@ -102,9 +102,9 @@ Scorer is a fixed-parameter XGBoost (random preset weights, seeded) or small MLP
 |---|---|---|
 | `attributes` | AttrSpec + change-point timeline sampler | `build_entity_table(n, specs, time_range, rng) -> pl.DataFrame` |
 | `entities` | Entity type = ID namespace + attr specs | `EntitySpec(name, n, attrs)` |
-| `linkages` | LinkageSpec + edge sampler with time-stamped edge attributes | `generate_edges(spec, entity_tables, time_range, rng) -> pl.DataFrame` |
+| `references` | RefSpec + choosers that fill reference columns with existing entity IDs | `RefSpec(column, target_entity, chooser)`; used by `events` and `attributes` |
 | `events` | Sample events, link entities, as-of join attributes | `EventSpec(...)`, `generate_events(...)` |
-| `features` | Point-in-time rolling-window helpers (events and edges) | `rolling(events, key, col, windows, aggs)`, `edge_agg(edges, key, col, windows, aggs)` |
+| `features` | Point-in-time rolling-window helpers (grouped by any ID or reference column) | `rolling(events, key, col, windows, aggs)`; `key` may be a reference column |
 | `scorer` | Scorer interface, XGBScorer, MLPScorer, bad-rate calibration | `Scorer.score(df) -> p`, `calibrate(p, target_rate)` |
 | `export` | Write outputs | `export(dataset, out_dir)` |
 
@@ -117,8 +117,6 @@ Scenarios are modules in `datagen/scenarios/` exposing `build(config) -> Scenari
 Outputs:
 - `events.parquet` — raw event/entity columns + label (benchmark input)
 - `golden.parquet` — `event_id` + golden features + score (hidden ground truth)
-- `edges_<linkage>.parquet` — one per visible linkage (`edge_id, src_id, dst_id,
-  edge_time, edge attrs`); hidden linkages go to `golden_edges_<linkage>.parquet`
 - `meta.json` — seed, scenario, config, achieved bad rate, versions
 
 ### apps/bench
@@ -136,8 +134,8 @@ table and JSON.
   large amount.
 - Golden features: velocity (count/sum/avg/max/min × 7/14/30d), amount ratio,
   users-per-device 7d, recent address-change count.
-- Linkage: `invite` (user -> user, edge attr `referral_bonus`). Plant bounty-hunter
-  inviters with many zombie invitees and large total bonus; their events are more
+- Linkage: `invite` events carry `inviter_id` and `referral_bonus`. Plant bounty-hunter
+  inviters with many zombie invitees and large total bonus; events tied to them are more
   likely labeled bad via the graph-derived golden features.
 - Target bad rate default ~2%, configurable.
 
@@ -154,9 +152,9 @@ table and JSON.
   cardinality ranges.
 - Leakage: rolling features at *t* use only events < *t* (property test vs brute force).
 - Labels: achieved bad rate within tolerance.
-- Linkages: edge endpoints reference existing entity IDs; edge times within range;
-  planted structure present (bounty hunters' degree and bonus well above baseline);
-  graph features at *t* use only edges with `edge_time < t`.
+- References: referenced IDs exist and predate the row; planted structure present
+  (bounty hunters' degree and bonus well above baseline); features grouped by a
+  reference column at *t* use only rows with time < *t*.
 - Export: golden columns absent from `events.parquet`.
 - Bench smoke test on tiny data: oracle AUC > raw-column AUC > 0.5.
 
