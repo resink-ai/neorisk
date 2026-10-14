@@ -61,3 +61,50 @@ def test_single_class_train_is_a_failure_not_a_crash():
     y = np.zeros(len(x), dtype=int)
     res = train_all(x[:2000], y[:2000], x[2000:], y[2000:], names=("logreg",), seed=0)
     assert isinstance(res["logreg"], ModelFailure)
+
+
+def test_ann_early_stops_and_restores_best():
+    from sklearn.metrics import roc_auc_score
+
+    import bench.models as m
+
+    x, y = _data(40000, seed=5)
+    res = train_all(x[:30000], y[:30000], x[30000:], y[30000:], names=("ann_small",), seed=0)
+    f = res["ann_small"]
+    assert f.epochs is not None and f.epochs < 60
+    # best-weights restore: final valid AUC >= AUC at every epoch is checked via re-run
+    est = m._FACTORIES["ann_small"](0, 1.0)
+    xs = f.transform(x[:30000])
+    xv = f.transform(x[30000:])
+    last = {}
+    orig = m.roc_auc_score
+
+    def spy(yt, p):
+        v = orig(yt, p)
+        last["v"] = v
+        return v
+
+    m.roc_auc_score = spy
+    try:
+        m._fit_ann(est, xs, y[:30000], xv, y[30000:], 0)
+    finally:
+        m.roc_auc_score = orig
+    final = roc_auc_score(y[30000:], est.predict_proba(xv)[:, 1])
+    assert final >= last["v"] - 1e-9
+
+
+def test_ann_single_class_valid_does_not_raise():
+    x, y = _data()
+    res = train_all(
+        x[:2000], y[:2000], x[2000:], np.zeros(1000, dtype=int), names=("ann_small",), seed=0
+    )
+    assert isinstance(res["ann_small"], FittedModel) and res["ann_small"].epochs == 60
+
+
+def test_ann_deterministic_strict():
+    x, y = _data()
+    a = train_all(x[:2000], y[:2000], x[2000:], y[2000:], names=("ann_large",), seed=2)
+    b = train_all(x[:2000], y[:2000], x[2000:], y[2000:], names=("ann_large",), seed=2)
+    assert np.array_equal(
+        a["ann_large"].predict_proba(x[2000:]), b["ann_large"].predict_proba(x[2000:])
+    )

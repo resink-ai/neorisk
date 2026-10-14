@@ -1,3 +1,4 @@
+import copy
 import time
 from dataclasses import dataclass
 from typing import Any
@@ -5,6 +6,7 @@ from typing import Any
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import roc_auc_score
 from sklearn.neural_network import MLPClassifier
 from sklearn.preprocessing import StandardScaler
 from xgboost import XGBClassifier
@@ -28,6 +30,7 @@ class FittedModel:
     estimator: Any
     scaler: StandardScaler | None
     train_seconds: float
+    epochs: int | None = None
 
     def transform(self, x: np.ndarray) -> np.ndarray:
         return x if self.scaler is None else self.scaler.transform(x)
@@ -75,12 +78,6 @@ def _ann(hidden, alpha):
         return MLPClassifier(
             hidden_layer_sizes=hidden,
             alpha=alpha,
-            batch_size=1024,
-            max_iter=60,
-            # sklearn's early stopping scores accuracy, which stalls on imbalanced labels
-            # and halts training near init; stop on training loss instead.
-            early_stopping=False,
-            n_iter_no_change=5,
             random_state=seed,
         )
 
@@ -94,6 +91,40 @@ _FACTORIES = {
     "ann_small": _ann((32, 16), 1e-4),
     "ann_large": _ann((256, 128, 64), 1e-4),
 }
+
+
+_ANN_EPOCHS = 60
+_ANN_PATIENCE = 5
+_ANN_BATCH = 1024
+
+
+def _fit_ann(est, xt, y_train, xv, y_valid, seed):
+    """Seeded partial_fit loop with validation-AUC early stopping; returns epochs run."""
+    rng = np.random.default_rng(seed)
+    y_train = np.asarray(y_train)
+    y_valid = np.asarray(y_valid)
+    use_val = len(np.unique(y_valid)) == 2
+    best_auc, best_state, bad, epochs = -np.inf, None, 0, 0
+    n = len(xt)
+    for _ in range(_ANN_EPOCHS):
+        idx = rng.permutation(n)
+        for s in range(0, n, _ANN_BATCH):
+            b = idx[s : s + _ANN_BATCH]
+            est.partial_fit(xt[b], y_train[b], classes=[0, 1])
+        epochs += 1
+        if not use_val:
+            continue
+        auc = roc_auc_score(y_valid, est.predict_proba(xv)[:, 1])
+        if auc > best_auc:
+            best_auc, bad = auc, 0
+            best_state = (copy.deepcopy(est.coefs_), copy.deepcopy(est.intercepts_))
+        else:
+            bad += 1
+            if bad >= _ANN_PATIENCE:
+                break
+    if best_state is not None:
+        est.coefs_, est.intercepts_ = best_state
+    return epochs
 
 
 def train_all(x_train, y_train, x_valid, y_valid, *, names=MODEL_ORDER, seed: int = 0):
@@ -113,11 +144,16 @@ def train_all(x_train, y_train, x_valid, y_valid, *, names=MODEL_ORDER, seed: in
                 scaler = StandardScaler().fit(x_train)
                 xt, xv = scaler.transform(x_train), scaler.transform(x_valid)
             t0 = time.perf_counter()
+            epochs = None
             if name == "xgb":
                 est.fit(xt, y_train, eval_set=[(xv, y_valid)], verbose=False)
+            elif _KIND[name] == "ann":
+                epochs = _fit_ann(est, xt, y_train, xv, y_valid, seed)
             else:
                 est.fit(xt, y_train)
-            out[name] = FittedModel(name, _KIND[name], est, scaler, time.perf_counter() - t0)
+            out[name] = FittedModel(
+                name, _KIND[name], est, scaler, time.perf_counter() - t0, epochs
+            )
         except Exception as e:  # noqa: BLE001 - isolate per-model failures
             out[name] = ModelFailure(name, f"{type(e).__name__}: {e}")
     return out
