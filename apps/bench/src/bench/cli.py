@@ -56,6 +56,20 @@ def _compare(args) -> int:
     return 0
 
 
+def _curves(args) -> int:
+    import json as _json
+    from pathlib import Path
+
+    from bench.curves import render_curves, run_curves
+
+    res = run_curves(args.data_dir, args.rare_dir, seed=args.seed, verbose=True)
+    Path(args.out).write_text(render_curves(res, lang=args.lang), encoding="utf-8")
+    if args.json_path:
+        Path(args.json_path).write_text(_json.dumps(res), encoding="utf-8")
+    print(f"report: {args.out}")
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="bench")
     sub = parser.add_subparsers(dest="cmd", required=True)
@@ -81,7 +95,17 @@ def main(argv: Sequence[str] | None = None) -> int:
     c.add_argument("--seed", type=int, default=0)
     c.add_argument("--lang", choices=("zh", "en"), default="zh")
 
+    k = sub.add_parser("curves", help="ROC/PR curve shapes: imbalance, stairs, leakage")
+    k.add_argument("data_dir", help="base dataset (needs golden.parquet for the leak case)")
+    k.add_argument("rare_dir", help="same scenario generated with a very low bad rate")
+    k.add_argument("--out", required=True)
+    k.add_argument("--json", dest="json_path", default=None)
+    k.add_argument("--seed", type=int, default=0)
+    k.add_argument("--lang", choices=("zh", "en"), default="zh")
+
     args = parser.parse_args(argv)
+    if args.cmd == "curves":
+        return _curves(args)
     return _compare(args) if args.cmd == "compare" else _run(args)
 
 
