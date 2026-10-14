@@ -18,11 +18,12 @@ def _frame(n=300, n_keys=7, seed=0, with_ties=True):
             "event_time": T0 + (hours * 3_600_000_000).astype("timedelta64[us]"),
             "key": pl.Series(keys).fill_nan(None),
             "amt": rng.random(n) * 100,
+            "u": rng.integers(0, 5, n),
         }
     )
 
 
-def _brute(df, w, agg):
+def _brute(df, w, agg, value="amt"):
     rows = df.to_dicts()
     out = {}
     for r in rows:
@@ -30,7 +31,7 @@ def _brute(df, w, agg):
             continue
         lo = r["event_time"] - np.timedelta64(w, "D").astype("timedelta64[us]").item()
         vals = [
-            x["amt"]
+            x[value]
             for x in rows
             if x["key"] == r["key"] and lo <= x["event_time"] < r["event_time"]
         ]
@@ -43,6 +44,7 @@ def _brute(df, w, agg):
                 "mean": sum(vals) / len(vals),
                 "max": max(vals),
                 "min": min(vals),
+                "n_unique": len(set(vals)),
             }[agg]
     return out
 
@@ -59,6 +61,12 @@ def test_rolling_matches_bruteforce(with_ties):
             assert set(col) == set(exp)
             for k, v in exp.items():
                 assert col[k] == pytest.approx(v), (w, agg, k)
+    got_u = rolling(df, key="key", value="u", windows_days=[7, 14], aggs=["n_unique"], prefix="g")
+    for w in (7, 14):
+        exp = _brute(df, w, "n_unique", value="u")
+        col = dict(zip(got_u["event_id"], got_u[f"g_n_unique_{w}d"]))
+        assert set(col) == set(exp)
+        assert all(col[k] == v for k, v in exp.items()), w
 
 
 def test_null_keys_absent_and_no_future_leakage():
@@ -85,3 +93,36 @@ def test_n_unique_and_unknown_agg():
     assert got["d_n_unique_7d"].to_list() == [0, 1, 2]
     with pytest.raises(ValueError):
         rolling(df, key="device", value="user", windows_days=[7], aggs=["median"], prefix="d")
+
+
+def test_tied_rows_are_excluded_from_each_others_window():
+    t = T0 + np.array([0, 24, 24, 48], dtype="timedelta64[h]").astype("timedelta64[us]")
+    df = pl.DataFrame(
+        {
+            "event_id": ["a", "b", "c", "d"],
+            "event_time": t,
+            "key": [1] * 4,
+            "amt": [1.0, 2.0, 4.0, 8.0],
+        }
+    )
+    got = rolling(df, key="key", value="amt", windows_days=[7], aggs=["count", "sum"], prefix="f")
+    res = dict(zip(got["event_id"], zip(got["f_count_7d"], got["f_sum_7d"])))
+    assert res == {"a": (0, 0.0), "b": (1, 1.0), "c": (1, 1.0), "d": (3, 7.0)}
+
+
+def test_output_is_ordered_by_key_then_time():
+    df = _frame()
+    got = rolling(df, key="key", value="amt", windows_days=[7], aggs=["count"], prefix="f")
+    order = df.drop_nulls("key").sort(["key", "event_time"], maintain_order=True)["event_id"]
+    assert got["event_id"].equals(order)
+
+
+def test_empty_and_non_empty_outputs_have_same_dtypes():
+    aggs = ["count", "sum", "mean", "max", "min", "n_unique"]
+    df = _frame()
+    full = rolling(df, key="key", value="u", windows_days=[7], aggs=aggs, prefix="f")
+    empty = rolling(df.head(0), key="key", value="u", windows_days=[7], aggs=aggs, prefix="f")
+    assert empty.height == 0 and empty.schema == full.schema
+    for a in aggs:
+        dt = full.schema[f"f_{a}_7d"]
+        assert dt == (pl.Int64 if a in ("count", "n_unique") else pl.Float64), a

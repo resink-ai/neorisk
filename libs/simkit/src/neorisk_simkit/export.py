@@ -13,11 +13,22 @@ class Dataset:
 
 
 def export(ds: Dataset, out_dir: str | Path) -> None:
+    """Validate ``ds`` and write events.parquet, golden.parquet and meta.json.
+
+    All checks run before anything is written, so a refused export leaves no files.
+    """
     for col in ("event_id", "label"):
         if col not in ds.events.columns:
             raise ValueError(f"events is missing required column {col!r}")
     if "event_id" not in ds.golden.columns:
         raise ValueError("golden is missing required column 'event_id'")
+    if ds.events.height == 0:
+        raise ValueError("events is empty")
+    if ds.events["label"].null_count() == ds.events.height:
+        raise ValueError("events 'label' is all null")
+    for name, frame in (("events", ds.events), ("golden", ds.golden)):
+        if frame["event_id"].is_duplicated().any():
+            raise ValueError(f"{name} has duplicate event_id values")
     golden_cols = [c for c in ds.golden.columns if c != "event_id"]
     leaked = [c for c in golden_cols if c in ds.events.columns]
     if leaked:

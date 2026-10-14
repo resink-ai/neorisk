@@ -1,5 +1,6 @@
 import numpy as np
 import polars as pl
+import pytest
 
 from neorisk_simkit.attributes import AttrSpec, Cardinality, Volatility
 from neorisk_simkit.entities import (
@@ -76,12 +77,39 @@ def test_attach_asof_picks_latest_valid_value_and_preserves_order():
 
 
 def test_attach_asof_null_idx_gives_null_attrs():
+    t = _manual_table()
+    t.attrs = pl.concat(
+        [
+            t.attrs,
+            pl.DataFrame(
+                {"idx": [0], "attr": ["tier"], "valid_from": [_dt(T0)], "value": [3]},
+                schema=t.attrs.schema,
+            ),
+        ]
+    )
     ev = pl.DataFrame(
-        {"user_idx": [0, None], "event_time": [_dt(T0 + np.timedelta64(1, "D"))] * 2},
+        {
+            "user_idx": [0, None, 0],
+            "event_time": [
+                _dt(T0 + np.timedelta64(1, "D")),
+                _dt(T0 + np.timedelta64(5, "D")),
+                _dt(T0 + np.timedelta64(12, "D")),
+            ],
+        },
         schema={"user_idx": pl.Int64, "event_time": pl.Datetime("us")},
     )
-    out = attach_asof(ev, _manual_table(), idx_col="user_idx")
-    assert out["user_state"].to_list() == [5, None]
+    out = attach_asof(ev, t, idx_col="user_idx")
+    assert out["user_idx"].to_list() == [0, None, 0]
+    assert out["user_state"].to_list() == [5, None, 7]
+    assert out["user_tier"].to_list() == [3, None, 3]
+
+
+def test_attach_asof_rejects_existing_output_column():
+    ev = pl.DataFrame(
+        {"user_idx": [0], "event_time": [_dt(T0 + np.timedelta64(1, "D"))], "user_state": [1]}
+    )
+    with pytest.raises(ValueError, match="user_state"):
+        attach_asof(ev, _manual_table(), idx_col="user_idx")
 
 
 def test_map_ids_handles_nulls():

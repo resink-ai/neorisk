@@ -37,3 +37,34 @@ def test_export_requires_label_and_matching_ids(tmp_path):
         export(_ds(events=_ds().events.drop("label")), tmp_path)
     with pytest.raises(ValueError, match="event_id"):
         export(_ds(golden=_ds().golden.head(1)), tmp_path)
+
+
+def test_export_requires_event_id_in_golden(tmp_path):
+    with pytest.raises(ValueError, match="event_id"):
+        export(_ds(golden=_ds().golden.drop("event_id")), tmp_path)
+
+
+@pytest.mark.parametrize("which", ["events", "golden"])
+def test_export_rejects_duplicate_event_ids(tmp_path, which):
+    ds = _ds()
+    frame = getattr(ds, which)
+    dup = pl.concat([frame, frame.head(1)])
+    with pytest.raises(ValueError, match="duplicate"):
+        export(_ds(**{which: dup}), tmp_path)
+
+
+def test_export_rejects_empty_events_and_all_null_label(tmp_path):
+    ds = _ds()
+    with pytest.raises(ValueError, match="empty"):
+        export(_ds(events=ds.events.head(0), golden=ds.golden.head(0)), tmp_path)
+    null_label = ds.events.with_columns(label=pl.lit(None, dtype=pl.Int64))
+    with pytest.raises(ValueError, match="label"):
+        export(_ds(events=null_label), tmp_path)
+
+
+def test_refused_export_leaves_no_files(tmp_path):
+    out = tmp_path / "out"
+    leaky = _ds().events.with_columns(vel_7d=pl.lit(0.0))
+    with pytest.raises(ValueError):
+        export(_ds(events=leaky), out)
+    assert not out.exists()

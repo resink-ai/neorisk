@@ -57,8 +57,20 @@ def attach_asof(
     time_col: str = "event_time",
     prefix: str | None = None,
 ) -> pl.DataFrame:
-    """Add each attribute's value as-of ``time_col`` for the entity in ``idx_col``."""
+    """Add each attribute's value as-of ``time_col`` for the entity in ``idx_col``.
+
+    Adds one column ``{prefix}_{attr}`` per attribute (latest ``valid_from <= time``);
+    null ``idx_col`` rows get nulls. Row order is preserved. Raises ``ValueError`` if an
+    output column already exists in ``events``.
+    """
     prefix = prefix or table.name
+    clash = [
+        f"{prefix}_{a}"
+        for a in table.attrs["attr"].unique(maintain_order=True)
+        if f"{prefix}_{a}" in events.columns
+    ]
+    if clash:
+        raise ValueError(f"attach_asof would overwrite existing columns: {clash}")
     base = events.with_row_index("_row")
     # join_asof cannot take null `by` keys: join only non-null rows, left-join back on _row.
     left = base.filter(pl.col(idx_col).is_not_null()).sort(time_col)
