@@ -32,6 +32,6 @@ uv run bench run data/fraud --oracle
 `events.parquet` is the benchmark input; `golden.parquet` holds hidden golden features and
 labels' ground truth; `meta.json` records seed, config and achieved bad rate.
 
-Note: `--oracle` trains XGBoost on the raw numeric columns plus ALL golden columns, including
-`score`, the probability the labels were sampled from. It is therefore a Bayes-style ceiling,
-not a realistic "best feature engineering" model.
+Note: `--oracle` trains XGBoost on the raw numeric columns plus all golden columns except
+`score` (the label-generating probability, which stays in `golden.parquet` but is not trained
+on). It is therefore a golden-feature ceiling, not a realistic "best feature engineering" model.

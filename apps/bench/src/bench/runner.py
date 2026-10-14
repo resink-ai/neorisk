@@ -16,7 +16,9 @@ def load_events(data_dir: str | Path) -> tuple[pl.DataFrame, dict]:
     meta = json.loads((d / "meta.json").read_text())
     if "label" not in events.columns:
         raise ValueError("events.parquet has no label column")
-    leaked = [c for c in meta.get("golden_columns", []) if c in events.columns]
+    if "golden_columns" not in meta:
+        raise ValueError("meta.json is missing required key 'golden_columns'")
+    leaked = [c for c in meta["golden_columns"] if c in events.columns]
     if leaked:
         raise ValueError(f"golden columns found in events.parquet: {leaked}")
     return events, meta
@@ -59,12 +61,17 @@ def _models() -> dict:
     }
 
 
+def oracle_frame(events: pl.DataFrame, golden: pl.DataFrame) -> pl.DataFrame:
+    """Events joined with golden columns except `score` (the label-generating probability)."""
+    return events.join(golden.drop("score"), on="event_id")
+
+
 def run(data_dir: str | Path, oracle: bool = False) -> list[dict]:
     events, _ = load_events(data_dir)
     feature_sets = {"raw": events}
     if oracle:
         golden = pl.read_parquet(Path(data_dir) / "golden.parquet")
-        feature_sets["oracle"] = events.join(golden, on="event_id")
+        feature_sets["oracle"] = oracle_frame(events, golden)
 
     rows: list[dict] = []
     for fs_name, frame in feature_sets.items():

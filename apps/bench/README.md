@@ -11,6 +11,7 @@ Only `events.parquet` (and `meta.json`) is read unless `--oracle` is passed, in 
 
 ## About `--oracle`
 
-`--oracle` trains XGBoost on the raw numeric columns plus ALL golden columns, **including `score`**,
-which is the probability the labels were sampled from. The resulting model is a Bayes ceiling
-(close to the best achievable AUC), not a realistic upper bound for engineered features.
+`--oracle` trains XGBoost on the raw numeric columns plus all golden columns **except `score`**
+(the probability the labels were sampled from; it stays in `golden.parquet` but is not a
+feature). The resulting model is a golden-feature ceiling, not a realistic upper bound for
+engineered features.

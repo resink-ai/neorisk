@@ -273,7 +273,7 @@ def generate(cfg: FraudConfig) -> Dataset:
 
     events = (
         pl.concat([invites, txns], how="diagonal_relaxed")
-        .sort("event_time", "event_type", "user_idx")
+        .sort("event_time", "event_type", "user_idx", maintain_order=True)
         .with_columns(event_id=pl.Series(make_uuids(cfg.n_events, rng)))
     )
     events = attach_asof(events, users, idx_col="user_idx")

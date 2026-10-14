@@ -2,7 +2,7 @@ import numpy as np
 import polars as pl
 import pytest
 
-from bench.runner import evaluate, load_events, raw_features, run, time_split
+from bench.runner import evaluate, load_events, oracle_frame, raw_features, run, time_split
 from datagen.cli import main as datagen_main
 
 
@@ -67,3 +67,23 @@ def test_oracle_beats_raw_beats_chance(data_dir):
     test = {r["model"]: r for r in rows if r["split"] == "test"}
     raw = max(test["logreg_raw"]["auc"], test["xgb_raw"]["auc"])
     assert test["xgb_oracle"]["auc"] > raw > 0.5
+
+
+def test_oracle_features_exclude_score_but_include_golden(data_dir):
+    ev, _ = load_events(data_dir)
+    golden = pl.read_parquet(data_dir / "golden.parquet")
+    assert "score" in golden.columns
+    cols = raw_features(oracle_frame(ev, golden)).columns
+    assert "score" not in cols
+    assert "u_amt_count_7d" in cols
+
+
+def test_load_events_requires_golden_columns_key(data_dir, tmp_path):
+    import json
+
+    (tmp_path / "events.parquet").write_bytes((data_dir / "events.parquet").read_bytes())
+    meta = json.loads((data_dir / "meta.json").read_text())
+    meta.pop("golden_columns")
+    (tmp_path / "meta.json").write_text(json.dumps(meta))
+    with pytest.raises(ValueError, match="golden_columns"):
+        load_events(tmp_path)

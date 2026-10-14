@@ -80,7 +80,7 @@ def test_rolling_features_have_no_future_leakage(ds):
     first = (
         ds.events.filter(pl.col("event_type") == 0).sort("event_time").group_by("user_id").first()
     )
-    g = ds.golden.filter(pl.col("event_id").is_in(first["event_id"]))
+    g = ds.golden.filter(pl.col("event_id").is_in(first["event_id"].implode()))
     assert (g["u_amt_count_30d"] == 0).all()
 
 

@@ -92,7 +92,8 @@ activity (zombie ratio), invitee-cluster size. Never present in benchmark inputs
 ### Labels
 
 `golden features -> Scorer -> p in [0,1] -> calibrate to target bad rate -> Bernoulli`.
-Scorer is a fixed-parameter XGBoost (random preset weights, seeded) or small MLP.
+Scorer is an XGBScorer, which fits a seeded tree model to a tanh/sigmoid teacher over z-scored golden
+features, or a small seeded MLP.
 
 ## 4. Components
 
@@ -107,7 +108,7 @@ seeded tree model (native xgboost train API) to a tanh/sigmoid teacher over z-sc
 |---|---|---|
 | `attributes` | AttrSpec + change-point timeline sampler | `sample_timeline(spec, created_at, t1, rng)` |
 | `entities` | Entity type = ID namespace + attr specs; as-of attribute join | `EntitySpec(name, n, attrs)`, `build_entities`, `attach_asof` |
-| `references` | RefSpec + choosers that fill reference columns with existing entity IDs | `RefSpec(column, target_entity, chooser)`; used by `events` and `attributes` |
+| `references` | RefSpec + choosers that fill reference columns with existing entity IDs | `RefSpec(column, target_entity, chooser)`; used by scenario code via `resolve_reference` |
 | `features` | Point-in-time rolling-window helpers (grouped by any ID or reference column) | `rolling(df, key=, value=, windows_days=, aggs=, prefix=)`; `key` may be a reference column |
 | `scorer` | Scorer interface, XGBScorer, MLPScorer, bad-rate calibration | `Scorer.score(golden) -> p`, `calibrate(p, target_rate)`, `sample_labels` |
 | `export` | Write outputs | `export(dataset, out_dir)` |
@@ -126,8 +127,8 @@ Outputs:
 ### apps/bench
 
 `bench run data/fraud/` reads only `events.parquet`; time-based train/valid/test split;
-baselines: logistic regression, XGBoost on raw columns; optional `--oracle` trains XGBoost on raw numeric columns plus all golden columns, including `score`
-(the label-generating probability), so it is a Bayes ceiling rather than a realistic feature-engineering bound. Reports AUC, PR-AUC, recall@fixed-precision as a
+baselines: logistic regression, XGBoost on raw columns; optional `--oracle` trains XGBoost on raw numeric columns plus all golden columns except `score`
+(the label-generating probability, which stays in `golden.parquet`), so it is a golden-feature ceiling rather than a realistic feature-engineering bound. Reports AUC, PR-AUC, recall@fixed-precision as a
 table and JSON.
 
 ## 5. Fraud scenario (v1)
