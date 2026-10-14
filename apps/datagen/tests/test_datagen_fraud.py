@@ -1,6 +1,7 @@
 import numpy as np
 import polars as pl
 import pytest
+from sklearn.metrics import roc_auc_score
 
 from datagen.config import FraudConfig
 from datagen.scenarios.fraud import generate
@@ -196,3 +197,29 @@ def test_new_golden_columns_present():
         "invr_zombie_mean_30d",
     ):
         assert c in generate(FraudConfig(n_events=500, seed=2, span_days=20)).golden.columns
+
+
+def test_inviter_side_features_are_predictive(ds):
+    j = _joined(ds).join(ds.events.select("event_id", "label"), on="event_id")
+    is_h = pl.col("user_id").is_in(_hunters(ds).implode())
+    hunters, others = j.filter(is_h), j.filter(~is_h)
+    assert hunters.height > 0
+    assert hunters["label"].mean() > 5 * others["label"].mean()
+    assert roc_auc_score(j["label"], j["invr_bonus_sum_30d"]) > 0.57
+
+
+def test_invites_and_inviter_features_exist_in_tail_of_span():
+    cfg = FraudConfig(n_events=20000, seed=3, span_days=60)
+    out = generate(cfg)
+    t = out.events["event_time"]
+    cut = t.min() + (t.max() - t.min()) * 0.8
+    tail = out.events.filter(pl.col("event_time") >= cut)
+    assert tail.filter(pl.col("event_type") == 1).height > 0
+    g = tail.select("event_id").join(out.golden, on="event_id")
+    assert (g["invr_bonus_count_30d"] > 0).sum() > 0
+
+
+def test_zombie_bursts_do_not_pile_up_at_span_end():
+    out = generate(FraudConfig(n_events=2000, seed=5, span_days=10))
+    mult = out.events.group_by("event_time").len()["len"].max()
+    assert mult <= 3

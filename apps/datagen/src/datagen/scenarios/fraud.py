@@ -129,19 +129,24 @@ def _zombie_activity(invites: pl.DataFrame, n_products: int, t1, rng) -> pl.Data
     rows = np.repeat(np.arange(z.height), n_each)
     start = z["event_time"].to_numpy()[rows]
     offs = (60e6 + rng.random(total) * ZOMBIE_TXN_DAYS * 86_400e6).astype("int64")
-    times = np.minimum(start + offs.astype("timedelta64[us]"), t1 - np.timedelta64(1, "us"))
+    times = start + offs.astype("timedelta64[us]")
+    keep = times < t1  # bursts that would run past the span are dropped, not clamped (no ties)
     product = np.where(rng.random(total) < 0.7, rng.integers(0, n_products, total), -1)
-    return pl.DataFrame(
-        {
-            "event_time": times,
-            "event_type": np.zeros(total, dtype="int64"),
-            "user_idx": z["user_idx"].to_numpy()[rows],
-            "device_idx": z["device_idx"].to_numpy()[rows],
-            "product_idx": product.astype("int64"),
-            "amount": np.round(rng.lognormal(2.0, 0.5, total), 2),
-        }
-    ).with_columns(
-        pl.when(pl.col("product_idx") >= 0).then(pl.col("product_idx")).alias("product_idx")
+    return (
+        pl.DataFrame(
+            {
+                "event_time": times,
+                "event_type": np.zeros(total, dtype="int64"),
+                "user_idx": z["user_idx"].to_numpy()[rows],
+                "device_idx": z["device_idx"].to_numpy()[rows],
+                "product_idx": product.astype("int64"),
+                "amount": np.round(rng.lognormal(2.0, 0.5, total), 2),
+            }
+        )
+        .filter(pl.Series(keep))
+        .with_columns(
+            pl.when(pl.col("product_idx") >= 0).then(pl.col("product_idx")).alias("product_idx")
+        )
     )
 
 

@@ -18,7 +18,9 @@ def _frame(n=300, n_keys=7, seed=0, with_ties=True):
             "event_time": T0 + (hours * 3_600_000_000).astype("timedelta64[us]"),
             "key": pl.Series(keys).fill_nan(None),
             "amt": rng.random(n) * 100,
-            "u": rng.integers(0, 5, n),
+            "u": pl.Series(np.where(rng.random(n) < 0.2, -1, rng.integers(0, 5, n))).replace(
+                -1, None
+            ),
         }
     )
 
@@ -35,6 +37,8 @@ def _brute(df, w, agg, value="amt"):
             for x in rows
             if x["key"] == r["key"] and lo <= x["event_time"] < r["event_time"]
         ]
+        if agg == "n_unique":
+            vals = [v for v in vals if v is not None]  # n_unique ignores nulls
         if not vals:
             out[r["event_id"]] = 0.0
         else:

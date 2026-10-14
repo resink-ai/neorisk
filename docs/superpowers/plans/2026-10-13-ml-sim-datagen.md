@@ -23,7 +23,7 @@
 - Build backend is `uv_build>=0.11.26,<0.12.0` (same as `libs/core`, `apps/hello`).
 - pytest `testpaths = ["libs", "apps"]`: test file basenames must be unique across the repo (no `__init__.py` in test dirs).
 - Attribute values are synthetic integers; IDs are UUID strings; no real-world values.
-- Same seed must reproduce byte-identical datasets (single `np.random.Generator` threaded through; `n_jobs=1` for xgboost).
+- Same seed must reproduce identical frames/content (compare by content; parquet bytes can differ with thread count) (single `np.random.Generator` threaded through; `n_jobs=1` for xgboost).
 - Golden features must never appear in `events.parquet`; rolling features are strictly point-in-time (window `[t - w, t)`).
 - Commit messages end with the attribution trailers required by the session (`Co-Authored-By: ...`, `Claude-Session: ...`).
 
@@ -2125,7 +2125,7 @@ uv run pytest -v
 uv run datagen generate --scenario fraud --n-events 200000 --seed 42 --out data/fraud
 uv run bench run data/fraud --oracle --json /tmp/neorisk-bench.json
 ```
-Expected: lint clean, all tests pass, generation completes (note wall time), bench table shows `xgb_oracle` test AUC above `xgb_raw` and `logreg_raw`, both above 0.5. Run the datagen command twice with the same seed and confirm `events.parquet` checksums match (`shasum`).
+Expected: lint clean, all tests pass, generation completes (note wall time), bench table shows `xgb_oracle` test AUC above `xgb_raw` and `logreg_raw`, both above 0.5. Run the datagen command twice with the same seed and confirm the two `events.parquet` files hold identical frames (compare by content, e.g. polars `frame_equal`; parquet bytes can differ with thread count).
 
 - [ ] **Step 5: Commit**
 
