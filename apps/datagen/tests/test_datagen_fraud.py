@@ -87,3 +87,14 @@ def test_rolling_features_have_no_future_leakage(ds):
 def test_tiny_dataset_does_not_crash():
     out = generate(FraudConfig(n_events=300, seed=1, span_days=10))
     assert out.events.height == 300 and np.isfinite(out.golden["score"].to_numpy()).all()
+
+
+def test_golden_rows_align_with_events_and_labels_follow_score(ds):
+    # labels are attached by position from golden's score: row order must be identical
+    assert ds.golden["event_id"].equals(ds.events["event_id"])
+    j = ds.events.select("event_id", "label").join(
+        ds.golden.select("event_id", "score"), on="event_id"
+    )
+    bad = j.filter(pl.col("label") == 1)["score"].mean()
+    good = j.filter(pl.col("label") == 0)["score"].mean()
+    assert bad > 2 * good

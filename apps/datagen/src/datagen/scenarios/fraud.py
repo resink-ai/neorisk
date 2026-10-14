@@ -239,11 +239,11 @@ def _golden(events: pl.DataFrame, users) -> pl.DataFrame:
     )
     out = (
         events.select("event_id", "amount")
-        .join(vel, on="event_id", how="left")
-        .join(devu, on="event_id", how="left")
-        .join(_address_changes(events, users), on="event_id", how="left")
-        .join(graph, on="event_id", how="left")
-        .join(zombie_flag, on="event_id")
+        .join(vel, on="event_id", how="left", maintain_order="left")
+        .join(devu, on="event_id", how="left", maintain_order="left")
+        .join(_address_changes(events, users), on="event_id", how="left", maintain_order="left")
+        .join(graph, on="event_id", how="left", maintain_order="left")
+        .join(zombie_flag, on="event_id", how="left", maintain_order="left")
         .with_columns(
             amt_ratio_30d=pl.col("amount").fill_null(0.0) / (pl.col("u_amt_mean_30d") + 1.0)
         )
@@ -288,6 +288,9 @@ def generate(cfg: FraudConfig) -> Dataset:
     )
 
     golden = _golden(events, users)
+    # labels are attached to events by position, so golden rows must be in events' order
+    if not golden["event_id"].equals(events["event_id"]):
+        raise RuntimeError("golden rows are not aligned with events; labels would be scrambled")
     p = calibrate(XGBScorer(GOLDEN_WEIGHTS, seed=cfg.seed).score(golden), cfg.target_bad_rate)
     labels = sample_labels(p, rng)
     golden = golden.with_columns(score=pl.Series(p))
