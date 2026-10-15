@@ -21,3 +21,17 @@ uv init --lib libs/<name> --name neorisk-<name>   # new shared library
 uv init --app apps/<name> --name <name>           # new application
 cd apps/<app> && uv add --workspace neorisk-<name> # app depends on a lib
 ```
+
+## Synthetic event data + benchmark
+
+```sh
+uv run datagen generate --scenario fraud --n-events 100000 --seed 42 --out data/fraud
+uv run bench run data/fraud --oracle
+```
+
+`events.parquet` is the benchmark input; `golden.parquet` holds hidden golden features and
+labels' ground truth; `meta.json` records seed, config and achieved bad rate.
+
+Note: `--oracle` trains XGBoost on the raw numeric columns plus all golden columns except
+`score` (the label-generating probability, which stays in `golden.parquet` but is not trained
+on). It is therefore a golden-feature ceiling, not a realistic "best feature engineering" model.
