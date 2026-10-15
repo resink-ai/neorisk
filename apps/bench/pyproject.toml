@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Baseline model benchmark runner for synthetic event datasets"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = ["numpy>=1.26", "polars>=1.0", "scikit-learn>=1.4", "xgboost>=2.0"]
+dependencies = ["neorisk-simkit", "numpy>=1.26", "polars>=1.0", "scikit-learn>=1.4", "shap>=0.46", "xgboost>=2.0"]
 
 [project.scripts]
 bench = "bench.cli:main"
@@ -18,3 +18,4 @@ build-backend = "uv_build"
 
 [tool.uv.sources]
 datagen = { workspace = true }
+neorisk-simkit = { workspace = true }

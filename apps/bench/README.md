@@ -1,6 +1,96 @@
 # bench
 
-Baseline model benchmark runner for synthetic event datasets.
+Model benchmark runner for synthetic event datasets. Two commands:
+
+- `bench compare`: five models on observable point-in-time features, written up as a single
+  self-contained HTML report (plus optional JSON).
+- `bench run`: the original two-model raw-column baseline (and the `--oracle` ceiling).
+
+## `bench compare`
+
+```
+uv run bench compare DATA_DIR --out report.html [--json metrics.json] \
+    [--models logreg,rf,xgb,ann_small,ann_large] [--shap-rows 5000] [--ann-shap-rows 1000] \
+    [--seed 0] [--lang zh|en]
+```
+
+Only `events.parquet` and `meta.json` are read; **`golden.parquet` is never opened** (a test
+guards this), and loading fails if any `meta.json["golden_columns"]` column leaks into
+`events.parquet`. Labels, golden columns and `*_id` columns are never model inputs.
+
+Pipeline: build features -> chronological 60/20/20 split -> train -> score valid/test ->
+metrics -> SHAP -> report. The valid split is used only for early stopping and to pick the
+best-F1 threshold shown as the operating point; every headline metric is on test.
+
+### Models
+
+| key | model | notes |
+|---|---|---|
+| `logreg` | Logistic Regression | standardized inputs, `class_weight="balanced"` |
+| `rf` | Random Forest | 300 trees, depth 12, `min_samples_leaf=20`, balanced subsample |
+| `xgb` | XGBoost | hist, depth 6, lr 0.05, up to 1000 rounds, unweighted (`scale_pos_weight=1`), early stopping on valid PR-AUC with patience 50; the "rounds/epochs" column shows best iteration + 1 |
+| `ann_small` | MLP `(32, 16)` | standardized inputs, early stopping on valid AUC (patience 5) |
+| `ann_large` | MLP `(256, 128, 64)` | `alpha=1e-4`, same early stopping |
+
+A model that fails to train (or a SHAP failure) is reported in the page instead of aborting
+the run.
+
+### Observable features (`bench/features.py`)
+
+All engineered features are strictly point-in-time over `[t - w, t)` with `w` in 7/14/30 days:
+
+- `obs_u_amt_{count,sum,mean,max,min}_{7,14,30}d`: the user's transaction amounts;
+- `obs_dev_users_n_unique_7d`: distinct users on the device;
+- `obs_u_state_n_unique_30d`: the user's distinct states (location churn);
+- `obs_invr_bonus_{count,sum,mean,max}_{7,14,30}d`: the user's own invites as an inviter;
+- `obs_inv_bonus_{count,sum,mean,max}_30d`: the inviter's activity as of the invite that brought
+  the user in;
+- `obs_amt_ratio_30d`: amount relative to the user's 30-day mean;
+- the raw numeric event columns (minus near-unique identifier-like ints: `user_street`,
+  `user_zip`, `device_ip` and `product_launch_day`, a near-unique product proxy).
+
+### Runtime
+
+Measured on an Apple-silicon laptop, 500k events (seed 42) with defaults: about 3 min 10 s
+wall clock. Features 0.4 s; training 41 s in total (LR 0.7 s, RF 10 s, XGBoost 0.9 s, ANN small
+7 s, ANN large 22 s); SHAP is the slowest stage, dominated by exact TreeSHAP on the Random
+Forest (~140 s for 5,000 rows; KernelSHAP on the ANNs takes a few seconds at 1,000 rows). The
+report's run-details section records the per-stage and per-model seconds. Lower `--shap-rows`
+to cut the RF TreeSHAP cost (`--ann-shap-rows` only affects the ANNs). "Predict test s" times
+the test split only.
+
+### Reproducibility
+
+Runs are seeded and deterministic except for these known, cosmetic effects:
+
+- Random Forest `n_jobs=-1`: tree-building order can change the last decimals of the mean
+  predicted probability (and, rarely, a metric's last digit) between runs.
+- ANN KernelSHAP (`nsamples=1000`, k-means background) is seeded through the global NumPy
+  state; on a 30k-event dataset two same-seed runs, in-process and across processes, were
+  bit-identical. Different BLAS builds or thread counts may still perturb the last digits.
+- Wall-clock seconds always vary.
+
+### Reading the report
+
+1. **Summary**: AUC, PR-AUC, KS, recall at 50%/80% precision, top-1% precision and lift,
+   train/infer seconds; best value per column in bold.
+2. **ROC / PR curves**: all models overlaid; the PR baseline is the test positive rate.
+3. **Metrics / operating point**: column-normalised heatmap and the confusion matrix at the
+   valid-chosen best-F1 threshold.
+4. **Calibration**: mean predicted probability vs observed positive rate per quantile bin.
+   Logistic Regression and RF are class-weighted and over-predict; XGBoost and the ANNs are
+   unweighted. Log loss, Brier and calibration are therefore **not comparable** across the two
+   groups (shown as n/c, never bolded); compare on ranking metrics (AUC, PR-AUC, KS,
+   recall@precision, top-k).
+5. **SHAP**: cross-model normalised importance, then per model the top features and their SHAP
+   value distribution. Units differ (log-odds for linear/XGBoost, probability for RF/ANNs),
+   so compare rankings, not raw magnitudes. The explained sample is positive-enriched (up to 50%
+   positives vs the base rate), so mean|SHAP| describes that sample. KernelSHAP uses a 10-centroid
+   k-means background and 1,000 coalition samples.
+6. **Run details**: data dir, split sizes, bad rate, feature list, stage and per-model timings,
+   ANN epochs.
+
+## `bench run`
 
 ```
 uv run bench run data/fraud [--oracle] [--json out.json]

@@ -22,6 +22,8 @@ dev = [
 [tool.ruff]
 line-length = 100
 src = ["libs/*/src", "apps/*/src"]
+# plans/specs embed illustrative code blocks; they are not formatted source
+extend-exclude = ["docs"]
 
 [tool.pytest.ini_options]
 testpaths = ["libs", "apps"]
