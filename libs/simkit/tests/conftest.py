@@ -41,3 +41,10 @@ def records_of(world, table):
     cols = {k: np.concatenate([p[k] for p in parts]) for k in parts[0]}
     order = np.lexsort((cols["seq"], cols["pid"], cols["lamport"], cols["time"]))
     return {k: v[order] for k, v in cols.items()}
+
+
+def event_dicts(d: Path) -> dict[str, list[dict]]:
+    """Every event table of a dataset as row dicts, keyed by type, in canonical order."""
+    from neorisk_simkit.io.read import read_events  # lazy: conftest loads before io exists
+
+    return {k: v.to_dicts() for k, v in sorted(read_events(d).items())}

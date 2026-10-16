@@ -1,0 +1,155 @@
+import hashlib
+import json
+from datetime import UTC, datetime, timedelta
+
+import polars as pl
+import pyarrow.parquet as pq
+import pytest
+from conftest import FIXTURES, dataset_tree
+
+from neorisk_simkit.io.dataset import ValidationFailed, run_to_dataset
+from neorisk_simkit.io.read import read_events
+from neorisk_simkit.io.step_index import read_step_index
+
+
+@pytest.fixture(scope="module")
+def ds(tmp_path_factory):
+    out = tmp_path_factory.mktemp("mini") / "sample-s7"
+    return run_to_dataset(FIXTURES / "mini", "sample", ["behavior.take_p=0.4"], out_dir=out)
+
+
+def test_layout(ds):
+    d = ds.out_dir
+    for p in ("manifest.json", "run_stats.json", "schema/schema.json", "_index/steps.parquet",
+              "entities/user/part-00000.parquet", "entities/item/part-00000.parquet"):
+        assert (d / p).exists(), p
+    files = sorted((d / "events" / "ping").rglob("*.parquet"))
+    assert files and all(f.parent.name.startswith("date=2026-03-0") for f in files)
+    assert all(f.name.startswith("step-") and len(f.stem) == len("step-000000") for f in files)
+
+
+def test_files_sorted_and_dated(ds):
+    for f in (ds.out_dir / "events").rglob("*.parquet"):
+        t = pl.read_parquet(f)
+        key = t.select("event_time", "lamport", "partition_id", "seq")
+        assert key.equals(key.sort(["event_time", "lamport", "partition_id", "seq"]))
+        day = f.parent.name.removeprefix("date=")
+        assert (t["event_time"].dt.strftime("%Y-%m-%d") == day).all()
+
+
+def test_writer_settings_are_pinned(ds):
+    f = next((ds.out_dir / "events" / "took").rglob("*.parquet"))
+    md = pq.ParquetFile(f).metadata
+    col = md.row_group(0).column(md.schema.names.index("ok"))
+    assert col.compression == "ZSTD" and "RLE_DICTIONARY" in col.encodings
+    assert md.row_group(0).column(md.schema.names.index("event_time")).statistics is not None
+    assert ds.manifest["writer"]["compression_level"] == 3
+    assert ds.manifest["writer"]["row_group_size"] == 131_072
+
+
+def test_manifest_counts_and_hashes(ds):
+    m = ds.manifest
+    events = read_events(ds.out_dir)
+    assert {k: v.height for k, v in events.items()} == {
+        k: m["counts"][k] for k in events}
+    for entry in m["files"]:
+        data = (ds.out_dir / entry["path"]).read_bytes()
+        assert hashlib.sha256(data).hexdigest() == entry["sha256"]
+    assert m["seed"] == 7 and m["pack"] == "mini" and len(m["pack_revision"]) == 7
+    assert "late_messages" in m and m["overrides"] == ["behavior.take_p=0.4"]
+
+
+def test_step_index_matches_files(ds):
+    idx = read_step_index(ds.out_dir)
+    assert idx["step"].to_pylist() == sorted(idx["step"].to_pylist())
+    assert sum(idx["rows__ping"].to_pylist()) == ds.manifest["counts"]["ping"]
+
+
+def test_schema_json_lists_common_columns_first(ds):
+    doc = json.loads((ds.out_dir / "schema" / "schema.json").read_text())
+    ping = next(t for t in doc["tables"] if t["name"] == "ping")
+    assert [c["name"] for c in ping["columns"]][:3] == ["event_id", "event_type", "event_time"]
+    note_col = next(c for c in ping["columns"] if c["name"] == "note_id")
+    assert note_col["nullable"] and note_col["ref"] == "note"
+
+
+def test_identical_replay_is_byte_identical(ds, tmp_path):
+    again = run_to_dataset(FIXTURES / "mini", "sample", ["behavior.take_p=0.4"],
+                           out_dir=tmp_path / "again", threads=1)
+    assert dataset_tree(ds.out_dir) == dataset_tree(again.out_dir)
+
+
+def test_refuses_to_overwrite_without_force(ds):
+    with pytest.raises(FileExistsError):
+        run_to_dataset(FIXTURES / "mini", "sample", ["behavior.take_p=0.4"], out_dir=ds.out_dir)
+
+
+def test_empty_export_window_still_writes_manifest(tmp_path):
+    r = run_to_dataset(FIXTURES / "bad_abi", "sample", ["mode=0"], out_dir=tmp_path / "empty")
+    assert (r.out_dir / "manifest.json").exists() and (r.out_dir / "_index/steps.parquet").exists()
+    assert r.manifest["counts"]["e"] == 0
+    assert not list((r.out_dir / "events").rglob("*.parquet"))
+
+
+def test_run_stats_carry_engine_counters_and_machine(ds):
+    stats = json.loads((ds.out_dir / "run_stats.json").read_text())
+    for key in ("rejects", "retries", "late_messages", "continuations"):
+        assert stats[key] == ds.stats[key]
+    assert isinstance(stats["rejects"], dict) and isinstance(stats["retries"], int)
+    assert set(stats["machine"]) == {"arch", "cpus", "ram_bytes"}
+
+
+def test_validation_failure_message_lists_errors(tmp_path):
+    with pytest.raises(ValidationFailed, match="exceed the memory budget") as e:
+        run_to_dataset(FIXTURES / "mini", "sample", ["budget.memory=1KB"],
+                       out_dir=tmp_path / "refused")
+    assert e.value.report.errors and not (tmp_path / "refused").exists()
+
+
+def test_step_crossing_midnight_and_the_start_instant(tmp_path):
+    # mini: start 2026-03-01T00:00Z, warm-up 6h; 5h steps from 02-28T18:00 give 18-23, 23-00
+    # (forced boundary at start), then 00-05, 05-10, 10-15, 15-20, 20-01 (crosses midnight)
+    r = run_to_dataset(FIXTURES / "mini", "sample", ["engine.step=5h"], out_dir=tmp_path / "m5")
+    dirs: dict[tuple[str, str], set[str]] = {}
+    for f in (r.out_dir / "events").rglob("*.parquet"):
+        dirs.setdefault((f.parent.parent.name, f.stem), set()).add(f.parent.name)
+    assert any(len(v) == 2 for v in dirs.values())        # same step-NNNNNN under two date= dirs
+    start = datetime(2026, 3, 1, tzinfo=UTC)
+    for t in read_events(r.out_dir).values():
+        if t.height:
+            assert t["event_time"].min() >= start          # exact instants: next test
+
+
+def test_exact_instants_across_start_step_ends_and_midnight(tmp_path):
+    # instants: `mark`s at fixed offsets from start (S) with 5h steps from S-6h, so steps are
+    # [S-6h, S-1h), [S-1h, S) (forced), [S, S+5h), [S+5h, S+10h), ... [S+20h, S+25h), [S+25h, ...)
+    r = run_to_dataset(FIXTURES / "instants", "sample", out_dir=tmp_path / "i")
+    start = datetime(2026, 3, 1, tzinfo=UTC)
+    hour, us = timedelta(hours=1), timedelta(microseconds=1)
+    expected = {1: start, 2: start + 5 * hour - us, 3: start + 5 * hour, 4: start + 10 * hour,
+                5: start + 23.5 * hour, 6: start + 24 * hour, 7: start + 25 * hour}
+    marks = read_events(r.out_dir)["mark"]
+    # mark 0 sits at start - 1us: simulated (warm-up) but not exported
+    assert {m["n"]: m["event_time"] for m in marks.to_dicts()} == expected
+    assert marks["n"].to_list() == sorted(expected)                    # canonical order
+
+    idx = read_step_index(r.out_dir).to_pylist()
+    step_of = {}
+    for f in (r.out_dir / "events" / "mark").rglob("*.parquet"):
+        step = int(f.stem.removeprefix("step-"))
+        for n in pl.read_parquet(f)["n"]:
+            step_of[n] = (step, f.parent.name)
+    for n, t in expected.items():
+        row = idx[step_of[n][0]]
+        assert row["step"] == step_of[n][0] and row["t_start"] <= t < row["t_end"]
+    assert idx[step_of[1][0]]["t_start"] == start                      # t == start is exported
+    assert idx[step_of[2][0]]["t_end"] == expected[3]                  # S+5h-1us ends the step...
+    assert idx[step_of[3][0]]["t_start"] == expected[3]                # ...S+5h opens the next
+    assert step_of[2][0] + 1 == step_of[3][0]
+    assert idx[step_of[4][0]]["t_start"] == expected[4]
+    assert idx[step_of[7][0]]["t_start"] == expected[7]                # S+25h: step end -> next
+    assert step_of[6][0] + 1 == step_of[7][0]
+    # the step [S+20h, S+25h) crosses midnight: one step number under two date= dirs
+    assert step_of[5][0] == step_of[6][0]
+    assert (step_of[5][1], step_of[6][1]) == ("date=2026-03-01", "date=2026-03-02")
+    assert read_step_index(r.out_dir)["rows__mark"].to_pylist()[:2] == [0, 0]   # warm-up steps
