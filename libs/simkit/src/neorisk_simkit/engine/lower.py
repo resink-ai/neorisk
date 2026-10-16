@@ -629,6 +629,7 @@ class _Lowerer(ast.NodeTransformer):
         self._positional(node, "out.reserve", 0, 0)
         res = self.lay.resources
         vec: list[ast.expr] = [ast.Constant(0) for _ in res]
+        seen: dict[str, set[str]] = {}
         for k, v in kw.items():
             if k in ("timers", "requests"):
                 vec[res.index(k)] = self.visit(v)
@@ -639,6 +640,9 @@ class _Lowerer(ast.NodeTransformer):
                     if not self._is_str(key):
                         self.err(node, f"out.reserve: {k}= keys must be string literals")
                     name = key.value
+                    if name in seen.setdefault(k, set()):
+                        self.err(node, f"out.reserve: duplicate key {name!r} in {k}=")
+                    seen[k].add(name)
                     if k == "records" and name not in self.lay.events \
                             and name not in self.lay.change_groups:
                         self.err(node, f"out.reserve: {self.proc} does not write records "
@@ -651,6 +655,25 @@ class _Lowerer(ast.NodeTransformer):
         return _call(f"_reserve_{self.proc}", _name("out"), ast.Tuple(vec, ast.Load()))
 
 
+def _check_strings(mod: _Module, fn: ast.FunctionDef) -> None:
+    """After lowering, a str literal may not meet a compare or a state/local store: category
+    literals were translated to codes, so any left over would compare int with str silently."""
+    def is_str(n: ast.AST) -> bool:
+        return isinstance(n, ast.Constant) and isinstance(n.value, str)
+
+    for n in ast.walk(fn):
+        if isinstance(n, ast.Compare) and any(
+                isinstance(op, (ast.Eq, ast.NotEq)) for op in n.ops) and any(
+                is_str(x) for x in (n.left, *n.comparators)):
+            mod.err(n, "string literal compared with a non-category expression")
+        if isinstance(n, (ast.Assign, ast.AugAssign)) and is_str(n.value):
+            targets = n.targets if isinstance(n, ast.Assign) else [n.target]
+            for t in targets:
+                if isinstance(t, ast.Subscript):
+                    mod.err(n, f"string literal assigned to {ast.unparse(t)} "
+                               "(not a category column)")
+
+
 def _lower_function(mod: _Module, an: _Analysis, layout: KernelLayout, name: str,
                     is_kernel: bool, sites: dict[int, int]) -> str:
     fn = mod.funcs[name]
@@ -659,6 +682,7 @@ def _lower_function(mod: _Module, an: _Analysis, layout: KernelLayout, name: str
     new = copy.deepcopy(fn)                    # lowering mutates; the module AST stays pristine
     new.decorator_list = []
     lowered = _Lowerer(mod, an, layout, new, sites).visit(new)
+    _check_strings(mod, lowered)
     return ast.unparse(ast.fix_missing_locations(lowered))
 
 

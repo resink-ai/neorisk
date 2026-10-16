@@ -64,6 +64,9 @@ class Local:
             m = _LOCAL_RE.match(decl)
             if m is None:
                 raise ValueError(f"unknown local type {decl!r} for field {name!r}")
+            if m.group(2) is not None and int(m.group(2)) < 2:
+                raise ValueError(f"local array {decl!r} for field {name!r} needs at least 2 "
+                                 f"slots; use {m.group(1)!r} for a scalar")
             parsed[name] = (m.group(1), int(m.group(2)) if m.group(2) else 1)
         object.__setattr__(self, "fields", parsed)
 

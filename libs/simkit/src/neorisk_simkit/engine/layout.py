@@ -28,6 +28,7 @@ CMD_PAY_ROW = 6
 OWNER_STATE_BASE = 1
 SHARD_INDEX, SHARD_OFF, SHARD_N, SHARD_ITEMS, SHARD_STATE_BASE = range(5)
 
+PAYLOAD_USER_COLS = 7          # pay arena columns 0..6 are user payload; 7..11 are engine-owned
 _STATE_RE = re.compile(r"^(\w+?)(?:\[(\w+)\])?$")
 _N_COMMON = len(COMMON_COLUMNS)
 
@@ -104,7 +105,15 @@ def _cols(cols: tuple[Column, ...]) -> list[tuple[str, LType]]:
     return [(c.name, c.ltype) for c in cols]
 
 
+def _check_width(cols: tuple[Column, ...], where: str) -> None:
+    if len(cols) > PAYLOAD_USER_COLS:
+        c = cols[PAYLOAD_USER_COLS]
+        raise LoweringError(f"payload {c.name!r} needs slot {PAYLOAD_USER_COLS}, but payloads "
+                            f"hold at most {PAYLOAD_USER_COLS} fields ({where})")
+
+
 def _add_slots(slots: dict[str, int], cols: tuple[Column, ...], where: str) -> None:
+    _check_width(cols, where)
     for j, c in enumerate(cols):
         if slots.setdefault(c.name, j) != j:
             raise LoweringError(f"payload {c.name!r} has slot {slots[c.name]} and slot {j} "
@@ -179,8 +188,11 @@ def _layout(plan: Plan, pd, recipes: list[Any], resources: tuple[str, ...]) -> K
             bd = plan.boundary(b)
             dest[local] = [c.name for c in bd.payload]
             boundary_of[local] = b
+            _check_width(bd.payload, f"process {pd.name}, boundary {b}")
             out_payload[b] = _cols(bd.payload)
     responses = {b: list(plan.boundary(b).responses) for b in pd.on_request}
+    for b in pd.on_request:
+        _check_width(plan.boundary(b).response_payload, f"process {pd.name}, responses of {b}")
     response_payload = {b: _cols(plan.boundary(b).response_payload) for b in pd.on_request}
 
     change_groups = {g.name: _cols(g.cols) for g in plan.change_groups

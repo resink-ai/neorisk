@@ -177,3 +177,71 @@ def test_lowering_the_real_mini_kernels(plan):
     low = lower_module(src, kernel_layouts(plan), {"user_main": "user_main", "bin_desk": "bin_desk"})
     compile(low, "<mini>", "exec")
     assert "_emit_ping(" in low and "_respond_take_ok(" in low and "@kernel" not in low
+
+
+# ---------------------------------------------------------------- fix round 1 regressions
+
+
+def test_str_literal_against_non_category_expression_is_rejected(plan):
+    with pytest.raises(LoweringError, match="string literal compared with a non-category"):
+        _lower(plan, """
+            def k(ctx, s, loc, cmd, out):
+                x = s.tier
+                return x == "b"
+        """)
+    with pytest.raises(LoweringError, match="string literal assigned to"):
+        _lower(plan, """
+            def k(ctx, s, loc, cmd, out):
+                s.balance = "b"
+                return 0
+        """)
+
+
+def test_payload_slots_must_fit_the_user_columns_of_the_arena():
+    from neorisk_simkit.engine import layout
+    from neorisk_simkit.spec.plan import Column
+    from neorisk_simkit.spec.types import i64
+
+    cols = tuple(Column(f"p{i}", i64()) for i in range(layout.PAYLOAD_USER_COLS + 1))
+    with pytest.raises(LoweringError, match="payload 'p7' needs slot 7"):
+        layout._add_slots({}, cols, "boundary wide")
+
+
+def test_array_local_needs_at_least_two_slots():
+    from neorisk_simkit.engine import Local
+
+    with pytest.raises(ValueError, match="at least 2"):
+        Local(x="i32[1]")
+
+
+def test_reserve_rejects_duplicate_keys(plan):
+    with pytest.raises(LoweringError, match="duplicate key 'ping'"):
+        _lower(plan, """
+            def k(ctx, s, loc, cmd, out):
+                return out.reserve(records={"ping": 1, "ping": 2})
+        """)
+
+
+def test_row_count_of_a_table_without_fixed_n_is_read_at_runtime(plan):
+    import dataclasses
+
+    lay = kernel_layouts(plan)
+    lay["user_main"] = dataclasses.replace(lay["user_main"], read_n={"item": None})
+    low = lower_module(textwrap.dedent("""
+        def k(ctx, s, loc, cmd, out):
+            return ctx.reads.item.n
+    """), lay, {"k": "user_main"})
+    assert "ctx[10][0].shape[0]" in low
+    reads = (np.zeros(17, np.int32), np.zeros(17, np.int64), np.zeros(17, np.int32))
+    c = _ctx()
+    c = c[:10] + (reads,) + c[11:]
+    assert _exec(low)["k"](c, None, None, None, None) == 17
+
+
+def test_lowering_is_byte_identical_on_repeat(plan):
+    from pathlib import Path
+    src = Path(plan.process("user_main").kernel.module_file).read_text()
+    funcs = {"user_main": "user_main", "bin_desk": "bin_desk"}
+    a = lower_module(src, kernel_layouts(plan), funcs)
+    b = lower_module(src, kernel_layouts(plan), funcs)
+    assert a == b
