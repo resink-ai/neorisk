@@ -15,7 +15,7 @@
 Every task implicitly includes this section. Values are copied from the spec; do not change them.
 
 **Repo**
-- Python `>=3.12`; ruff `line-length = 100`; `uv run ruff check libs apps examples/ecommerce_s1 benchmarks` must pass after every task (Task 1 adds a per-file ignore of `B008`, `RUF009` for `examples/**`, where dataclass `dist.*` defaults are the authoring style).
+- Python `>=3.12`; ruff `line-length = 100`; ruff must pass after every task on the existing paths among `libs apps examples/ecommerce_s1 benchmarks` (`examples/ecommerce_s1` exists from Task 14, `benchmarks` from Task 24; naming a missing path fails with E902). Every task's lint step uses exactly this form: `uv run ruff check $(ls -d libs apps examples/ecommerce_s1 benchmarks 2>/dev/null)` (Task 1 adds a per-file ignore of `B008`, `RUF009` for `examples/**`, where dataclass `dist.*` defaults are the authoring style).
 - Workspace members `libs/*`, `apps/*`. Run tests with `uv run --all-packages pytest ...` (a bare `uv run pytest` does not install workspace members in this checkout). The full existing suite `uv run --all-packages pytest` must keep passing after every task.
 - Test file basenames are unique across the repo; no `__init__.py` in test dirs. Fixture projects live in `libs/simkit/tests/fixtures/<name>/` (`datagen.toml` + `specs/pack.py` + `specs/kernels.py`, no `__init__.py`; the loader treats `specs/` as a package).
 - New dependencies (spec §17): `numba` and `pyarrow` in `libs/simkit/pyproject.toml`; `duckdb` in the root `dev` group (tests only). `confluent-kafka` is not added in S1.
@@ -44,7 +44,7 @@ Every task implicitly includes this section. Values are copied from the spec; do
 - Run ahead: each runnable owner executes its events in order until the step end or until it issues a request, then the whole owner suspends.
 - Safe horizon `H = min(step end, min over suspended owners of (request time + δ))`; shards process every request with time < H in canonical order. (Planner extension: see decision D5.)
 - Calendar queue: partitions in time buckets by next event time; no step scans all owners.
-- `max_spawn_depth` default 3; per-step `max_admissions`; exceeding either fails the run naming the process.
+- `max_spawn_depth` default 3 (depth enforcement in S2, spec §17); per-step `max_admissions`; exceeding either fails the run naming the process (S1: `CapExceeded("max_admissions_per_step", …)` whose message ends with `in process <name>`, Tasks 10 and 18).
 - A step seals only when no owner is runnable below the step end, no request below the step end is pending, and no creation is unadmitted.
 - Execution pops commands by `(time, priority, cause_lamport, seq)`. Scheduled times must be ≥ the current time.
 - `lamport = max(partition_clock, cause_lamport) + 1`, assigned at commit; one `partition_clock` per partition, shards included.
@@ -106,6 +106,8 @@ Every task implicitly includes this section. Values are copied from the spec; do
 | `merge_working_space` | 2 × step output |
 | `live_partition_state` | declared max live partitions × row bytes |
 | `timer_heaps` | physical entries × entry bytes (D8: 40 B) |
+
+Deviation from spec §10 (24 B): kept at 40 B to avoid a payload indirection on the hot path; memory caps use the real size.
 | `requests_and_inboxes` | per-step message count × payload bytes |
 | `fanout_bursts` | sub-step size × record bytes per partition |
 | `read_inputs` | counted as resident |
@@ -127,7 +129,7 @@ Where the spec is silent or ambiguous; each line is binding for this plan.
 - **D5** The safe horizon is also bounded by the earliest unadmitted creation time: `H = min(step end, min(t_req + δ), min(t_create))` — a created owner starts next round and could otherwise request below `H`.
 - **D6** A shard decides a request at the request's time (§07 shows decision records at 10:00:00.0); one-way messages (`p.message`) are processed at send time + latency and never suspend the sender; only requests (which have responses) suspend.
 - **D7** An owner is suspended while it has outstanding responses (`pending > 0`); it resumes when all responses of its suspending commit have been scheduled.
-- **D8** A command node is 40 B (time, key, seq, tag, next, kind, proc, payload index), not 24 B; `timer_heaps` uses 40 B.
+- **D8** A command node is 40 B (time, key, seq, tag, next, kind, proc, payload index), not 24 B; `timer_heaps` uses 40 B. Deviation from spec §10 (24 B): kept at 40 B to avoid a payload indirection on the hot path; memory caps use the real size.
 - **D9** Command key packing: `key = priority << 56 | cause_lamport`, priority 0..63, cause_lamport < 2⁵⁶; the fourth key part is the receiving partition's command sequence number.
 - **D10** Priorities: `PRIO_CONTINUE = 0`, `PRIO_MESSAGE = 1` (responses, messages, starts), `PRIO_EXPIRY = 2`, `PRIO_TIMER = 5` (default for `out.timer`).
 - **D11** Provisional handle = bit 62 | ns(6 bits) << 56 | global slot(32 bits) << 24 | per-step ordinal(24 bits). At seal, handles are remapped to dense values in records, created rows, state and local `ref` fields of touched partitions, and the tag/payload of every command queued this step; a slot retired in a step is reused only after that step seals.
@@ -170,7 +172,7 @@ Inputs the spec implies but no exit test names; each line has a pinning test in 
 Implementers of engine tasks read this section; names here are the contract.
 
 **Global partition slots.** Owners of every type and shards share one slot space `g ∈ [0, G)`, `G = Σ owners max_live + Σ shards n`. Hidden arrays in `engine/world.py`, length `G`:
-`pid int64, ptype int16, lslot int32` (row in the type's state arrays), `gen uint32, alive uint8, clock int64` (Lamport), `rseq int32` (next record seq), `cseq int64` (next command seq), `pending int32` (outstanding responses), `qhead int32` (−1 = empty), `inst int64` (RNG instance key), `self_id int64` (own row id: dense, or provisional handle in its creation step; shard index for shards), `occ uint32[G, A]` (A = max processes per partition type), `ordn int32[G, N_NS]` (per-step create ordinal per namespace), `retire_at int64` (I64_MAX unless retiring).
+`pid int64, ptype int16, lslot int32` (row in the type's state arrays), `gen uint32, alive uint8, clock int64` (Lamport), `rseq int32` (next record seq), `cseq int64` (next command seq), `pending int32` (outstanding responses), `qhead int32` (−1 = empty), `inst int64` (RNG instance key), `self_id int64` (own row id: dense, or provisional handle in its creation step; shard index for shards), `occ uint32[G, A]` (A = max processes per partition type), `ordn int32[G, N_NS]` (per-step create ordinal per namespace), `retire_at int64` (I64_MAX unless retiring), `susp_t int64` (time of the suspending request, I64_MAX when not suspended; Task 9), `susp_delta int64` (δ of the suspending request's boundary; Task 10). All hidden arrays and their dtypes are declared once in `engine/world.py` as `HIDDEN_DTYPES: tuple[tuple[str, np.dtype, int], ...]` (`(name, dtype, per-slot multiplicity)`, where multiplicity `"A"`/`"N_NS"` is resolved per plan); `spec.caps` derives `HIDDEN_BYTES` from it (Task 4 creates the table with every array above, Task 8 allocates them all from it, and Tasks 9 and 10 only use `susp_t`/`susp_delta`).
 
 **Command node pool** (`engine/cmdq.py`, capacity `engine.timer_nodes`): `n_time int64, n_key int64, n_seq int64, n_tag int64, n_next int32, n_kind int16, n_proc int16, n_pay int32` (payload row or −1). Per-partition singly linked list sorted by `(time, key, seq)`; free lists per worker (`free_head int32[W]`, `free_n int64[W]`) plus a global reserve list. **Payload arena**: `pay int64[payload_slots, PAYLOAD_W]` (`PAYLOAD_W = 12`: columns 0..6 user payload, 7 `src_g`, 8 `src_gen`, 9 `src_self_id`, 10 `src_action`, 11 reserved) with its own free lists.
 
@@ -370,7 +372,7 @@ Expected: PASS (8 tests).
 
 - [ ] **Step 6: Full suite and lint**
 
-Run: `uv run --all-packages pytest -q && uv run ruff check libs apps`
+Run: `uv run --all-packages pytest -q && uv run ruff check $(ls -d libs apps examples/ecommerce_s1 benchmarks 2>/dev/null)`
 Expected: all existing tests pass; `All checks passed!`
 
 - [ ] **Step 7: Commit**
@@ -394,10 +396,10 @@ Claude-Session: https://claude.ai/code/session_01BKddEJ7kY3XR8oXDK9HriN"
 **Interfaces:**
 - Consumes: nothing.
 - Produces:
-  - `engine.abi`: `COMMIT = 0`, `RETRY = -1`, `START = 0`, `PRIO_CONTINUE = 0`, `PRIO_MESSAGE = 1`, `PRIO_EXPIRY = 2`, `PRIO_TIMER = 5`; `reject(code: int) -> int` (`@njit(cache=True)`; returns `1 + code`; `code` must be ≥ 0); `Res(records: dict[str,int] | None = None, creates: dict[str,int] | None = None, timers: int = 0, requests: int = 0)` frozen dataclass (dicts stored as `MappingProxyType`); `Local(**fields: str)` with `.fields: dict[str, tuple[str, int]]` (type in `i8 i16 i32 i64 u8 u32 f64 ref`, optional `[n]` suffix → length n, else 1); `KernelSpec(name, func, module_file, state, local, commands, max, substep, params)`; `kernel(state, local=None, commands=(), max=Res(), substep=None) -> Callable` (returns the function unchanged with `fn.__kernel__ = KernelSpec(...)`); `is_kernel(fn) -> bool`.
-  - `engine.errors`: `AbiViolation(Exception)`, `EngineError(Exception)`, `CapExceeded(Exception)` with attributes `item: str, limit: int, attempted: int` and message `f"memory cap exceeded: {item} (limit {limit}, attempted {attempted})"`.
+  - `engine.abi`: `COMMIT = 0`, `RETRY = -1`, `START = 0`, `PRIO_CONTINUE = 0`, `PRIO_MESSAGE = 1`, `PRIO_EXPIRY = 2`, `PRIO_TIMER = 5`; `reject(code: int) -> int` (`@njit(cache=True)`; returns `1 + code`; `code` must be ≥ 0); `Res(records: dict[str,int] | None = None, creates: dict[str,int] | None = None, timers: int = 0, requests: int = 0)` frozen dataclass (dicts stored as `MappingProxyType`); `Local(**fields: str)` with `.fields: dict[str, tuple[str, int]]` (type in `i8 i16 i32 i64 u8 u32 f64 ref`, optional `[n]` suffix → length n, else 1); `KernelSpec(name, func, module_file, state, local, commands, max, substep, params)` — a `@dataclass(frozen=True)` (Task 4's tests call `dataclasses.replace(p.kernel, state=…, max=…, commands=…)`); `kernel(state, local=None, commands=(), max=Res(), substep=None) -> Callable` (returns the function unchanged with `fn.__kernel__ = KernelSpec(...)`); `is_kernel(fn) -> bool`.
+  - `engine.errors`: `AbiViolation(Exception)`, `EngineError(Exception)`, `CapExceeded(Exception)` with constructor `CapExceeded(item, limit, attempted, process=None)`, attributes `item: str, limit: int, attempted: int, process: str | None` and message `f"memory cap exceeded: {item} (limit {limit}, attempted {attempted})"` followed by `f" in process {process}"` when `process` is given (spec §06: exceeding `max_admissions` fails the run naming the process; Task 10 passes the creating process).
   - `engine/__init__.py` re-exports `COMMIT, RETRY, START, PRIO_*, Local, Res, kernel, reject, KernelSpec, AbiViolation, EngineError, CapExceeded`.
-  - `std.checked`: `I64_MAX`, `I64_MIN`, `NULL = I64_MIN`; `checked_add(a, b)`, `checked_sub(a, b)`, `checked_mul(a, b)`, `checked_min(a, b)`, `checked_max(a, b)` — all `@njit(cache=True)`, raise `OverflowError("int64 overflow")`. `std/__init__.py` re-exports them and `NULL`.
+  - `std.checked`: `I64_MAX`, `I64_MIN`, `NULL = I64_MIN`; `checked_add(a, b)`, `checked_sub(a, b)`, `checked_mul(a, b)`, `checked_min(a, b)`, `checked_max(a, b)` — all `@njit(cache=True)`, raise `OverflowError("int64 overflow")`. `std/__init__.py` re-exports them and `NULL`. `neorisk_simkit.std` is the one and only `std` package: Task 3 adds `generated` and `law` to it, Task 14 `catalog`/`devices`/`stock`, Task 15 `handoff`, Task 16 `rows`; `neorisk_simkit.spec` re-exports this same package as `spec.std` (Task 3).
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -490,6 +492,9 @@ def test_checked_arithmetic_compiled_matches():
 def test_cap_exceeded_message():
     e = CapExceeded("timer_heaps", 10, 11)
     assert e.item == "timer_heaps" and "timer_heaps" in str(e) and "limit 10" in str(e)
+    a = CapExceeded("max_admissions_per_step", 0, 1, process="journey")
+    assert a.item == "max_admissions_per_step" and a.process == "journey"
+    assert str(a).endswith("in process journey") and e.process is None
 ```
 
 - [ ] **Step 2: Run tests to verify they fail**
@@ -530,6 +535,7 @@ def checked_sub(a, b):
 `engine/abi.py`:
 - `kernel(...)` validates: `substep is None or substep >= 1` (`ValueError("substep must be >= 1")`); command ids unique (`ValueError("duplicate command id 1")`); the decorated function's parameter names must equal `("ctx", "s", "loc", "cmd", "out")` when `local` is given, else `("ctx", "s", "cmd", "out")` — raise `TypeError(f"kernel {name} must take (ctx, s, loc, cmd, out)")` / `(ctx, s, cmd, out)`. `module_file = inspect.getsourcefile(fn)`.
 - `Local` parses `"i32[5]"` with a regex `^(i8|i16|i32|i64|u8|u32|f64|ref)(?:\[(\d+)\])?$`.
+- `KernelSpec` and `Res` are `@dataclass(frozen=True)`; `Local` is a frozen dataclass holding `fields`.
 
 - [ ] **Step 4: Run tests to verify they pass**
 
@@ -538,7 +544,7 @@ Expected: PASS (8 tests).
 
 - [ ] **Step 5: Lint and commit**
 
-Run: `uv run ruff check libs apps`
+Run: `uv run ruff check $(ls -d libs apps examples/ecommerce_s1 benchmarks 2>/dev/null)`
 ```bash
 git add libs/simkit/src/neorisk_simkit/engine libs/simkit/src/neorisk_simkit/std libs/simkit/tests/test_engine_abi.py
 git commit -m "simkit: kernel ABI surface and checked arithmetic
@@ -553,7 +559,7 @@ Claude-Session: https://claude.ai/code/session_01BKddEJ7kY3XR8oXDK9HriN"
 
 **Files:**
 - Create: `libs/simkit/src/neorisk_simkit/spec/pack.py`, `spec/plan.py`, `spec/project.py`, `spec/sources.py`, `spec/law.py`
-- Modify: `spec/__init__.py` (export `Pack`, `PackError`, `dist`, `std`, `law`)
+- Modify: `spec/__init__.py` (export `Pack`, `PackError`, `dist`, `law`, and `std` = the Task 2 package `neorisk_simkit.std`); `libs/simkit/src/neorisk_simkit/std/__init__.py` (add `generated` and `law`)
 - Create fixture: `libs/simkit/tests/fixtures/mini/datagen.toml`, `fixtures/mini/specs/pack.py`, `fixtures/mini/specs/kernels.py`
 - Create: `libs/simkit/tests/conftest.py`
 - Test: `libs/simkit/tests/test_spec_pack.py`
@@ -566,7 +572,7 @@ Claude-Session: https://claude.ai/code/session_01BKddEJ7kY3XR8oXDK9HriN"
     `event(name, *, cols, owner=None, shard=None, doc="") -> str`;
     `ids(*names) -> None`;
     `owner(name, *, table, max_live, children=(), retire_when_idle=True, execution_owner=None) -> str`;
-    `shard(name, *, key, n, items, state, init=None, doc="") -> str`;
+    `shard(name, *, key, n, items: str | None, state: dict[str, str], init=None, doc="") -> str` (`items=None` with `state={}` declares a shard with no per-item arrays; a `"T[<table>]"` state field then raises `PackError("shard <name>: per-item state needs items=")`);
     `request(name, *, frm, to, payload, responses, latency, response_payload=None) -> str`;
     `message(name, *, frm, to, payload, latency) -> str`;
     `population(table, *, n, initial, arrivals=None, attrs=None, refs=None) -> None`;
@@ -576,10 +582,11 @@ Claude-Session: https://claude.ai/code/session_01BKddEJ7kY3XR8oXDK9HriN"
   - `spec.plan`: frozen dataclasses `Column(name, ltype)`, `TableDef(name, code, key, cols, mutable, doc, child_of, source, creatable)`, `EventDef(name, code, partition, kind, doc, cols)` (cols include the 8 common columns first), `PartitionDef(name, kind, ptype_code, table, n, max_live, items, key, state, init, retire_when_idle)`, `BoundaryDef(name, code, kind ("request"|"message"), frm, to, payload, response_payload, responses, latency, min_latency_us)`, `ProcessDef(name, partition, action_id, kernel: KernelSpec, config, start, requests, messages, on_request, on_response, on_message, reads, refs, commands, every_us, jitter)`, `PopulationDef(table, n, initial, arrivals, attrs, refs)`, `ChangeGroupDef(name, code, table, cols)`, `Plan(pack, schema_version, revision, tables, events, namespaces, partitions, boundaries, processes, populations, change_groups, checks, cfg)` with lookups `plan.table(n)`, `plan.event(n)`, `plan.partition(n)`, `plan.boundary(n)`, `plan.process(n)`, `plan.change_group(n)`, and `plan.ns_code(name) -> int`.
     `build_plan(pack_module, cfg, specs_dir: Path) -> Plan`.
     `action_id` = index of the process in declaration order (0-based, global); `ptype_code` = 1 + index of the partition in declaration order; event/table/boundary/change-group codes are 0-based in declaration order; `namespaces` = creatable tables (`child_of` set, or owner tables without a population) in declaration order, then `p.ids` names.
-  - `spec.project`: `Budget(threads, memory_bytes, max_step_rows, max_step_bytes, max_spawn_depth, max_admissions_per_step)`, `WriterSettings(compression, compression_level, row_group_rows)`, `EngineSettings(step_us, step_min_us, step_max_us, adapt, slab_bytes, timer_nodes, payload_slots, max_messages_per_step, parallel_min_partitions, force_capacity: Mapping[str,int])`, `Project(dir, name, pack_path, toml)`, `RunSpec(name, profile, seed, start_us, span_us, warmup_us, mode, budget, writer, engine, cfg, plan, overrides)`; `load_project(dir) -> Project`; `resolve_run(project, profile, overrides=(), seed=None) -> RunSpec`; `parse_duration(s) -> int` (µs; units `us ms s m h d`); `parse_size(s) -> int` (bytes; `KB MB GB`, powers of 1024); `ProjectError(Exception)`.
-  - `spec.sources`: `generated(n, cols: dict[str, Dist]) -> Source` (exported as `std.generated`), base class `Source` with `generate(n_rows, table: TableDef, seed: int, stream: int) -> dict[str, np.ndarray]` (Task 5 fills in the keyed sampling; this task stores the object only).
-  - `spec.law`: inert builders `never_negative(path)`, `resolved(...)`, `sum_le(...)`, `at_most_once(...)` returning `LawSpec(kind, args)`.
-  - `conftest.py` fixture `fixture_project(name) -> Path`.
+  - `spec.project` (every class below is a `@dataclass(frozen=True)`; Tasks 4, 8–13 and 17 call `dataclasses.replace` on `RunSpec`, `Budget`, `EngineSettings` and `WriterSettings`): `Budget(threads, memory_bytes, max_step_rows, max_step_bytes, max_spawn_depth, max_admissions_per_step)`, `WriterSettings(compression, compression_level, row_group_rows)`, `EngineSettings(step_us, step_min_us, step_max_us, adapt, slab_bytes, timer_nodes, payload_slots, max_messages_per_step, parallel_min_partitions, force_capacity: Mapping[str,int])`, `Project(dir, name, pack_path, toml)`, `RunSpec(name, profile, seed, start_us, span_us, warmup_us, mode, budget, writer, engine, cfg, plan, overrides)`; `load_project(dir) -> Project`; `resolve_run(project, profile, overrides=(), seed=None) -> RunSpec`; `parse_duration(s) -> int` (µs; units `us ms s m h d`); `parse_size(s) -> int` (bytes; `KB MB GB`, powers of 1024); `ProjectError(Exception)`.
+  - `spec.sources`: `generated(n, cols: dict[str, Dist]) -> Source` (exported as `std.generated` by `std/__init__.py`), base class `Source` with `generate(n_rows, table: TableDef, seed: int, stream: int) -> dict[str, np.ndarray]` (Task 5 fills in the keyed sampling; this task stores the object only).
+  - `spec.law`: inert builders `never_negative(path)`, `resolved(...)`, `sum_le(...)`, `at_most_once(...)` returning `LawSpec(kind, args)` (exported as `std.law`, so packs write `std.law.never_negative(...)`).
+  - `std/__init__.py` gains `from neorisk_simkit.spec import law` and `from neorisk_simkit.spec.sources import generated`. `spec/__init__.py` imports `std` last (`from neorisk_simkit import std`), after `dist`, `types`, `law`, `sources`, `pack`, so the `spec` ↔ `std` cycle resolves (`std` only imports spec submodules).
+  - `conftest.py`: `FIXTURES: Path`; fixture `fixture_project(name) -> Path`; plain helpers (imported by tests as `from conftest import …`) `make_run(name, overrides=(), **engine) -> RunSpec` (`resolve_run(load_project(FIXTURES / name), "sample", list(overrides))`, then `dataclasses.replace(run, engine=dataclasses.replace(run.engine, **engine))` when `engine` is non-empty) and `dataset_tree(d: Path) -> dict[str, bytes]` (POSIX relative path → file bytes for every file under `d` except `run_stats.json`, which is not part of replay identity; used by Tasks 12 and 17). Task 9 appends `records_of`; Task 12 appends `event_dicts`.
 
 - [ ] **Step 1: Create the `mini` fixture project**
 
@@ -769,6 +776,7 @@ def bin_desk(ctx, s, cmd, out):
 
 `libs/simkit/tests/conftest.py`:
 ```python
+import dataclasses
 from pathlib import Path
 
 import pytest
@@ -783,6 +791,21 @@ def fixture_project():
         assert (path / "datagen.toml").exists(), path
         return path
     return get
+
+
+def make_run(name, overrides=(), **engine):
+    from neorisk_simkit.spec.project import load_project, resolve_run  # lazy: conftest loads first
+
+    run = resolve_run(load_project(FIXTURES / name), "sample", list(overrides))
+    if engine:
+        run = dataclasses.replace(run, engine=dataclasses.replace(run.engine, **engine))
+    return run
+
+
+def dataset_tree(d: Path) -> dict[str, bytes]:
+    """Every file of a dataset except run_stats.json (not part of replay identity), by path."""
+    return {p.relative_to(d).as_posix(): p.read_bytes() for p in sorted(d.rglob("*"))
+            if p.is_file() and p.name != "run_stats.json"}
 ```
 
 - [ ] **Step 2: Write the failing tests**
@@ -879,6 +902,15 @@ def test_pack_rejects_duplicates_and_unknown_refs():
         p.event("e", owner="ghost", cols={})
     with pytest.raises(PackError, match="exactly one of owner= or shard="):
         p.event("e2", cols={})
+    assert p.shard("desk", key="desk", n=1, items=None, state={}) == "desk"
+    with pytest.raises(PackError, match="per-item state needs items="):
+        p.shard("desk2", key="desk", n=1, items=None, state={"x": "i32[user]"})
+
+
+def test_make_run_helper_applies_engine_settings():
+    from conftest import make_run
+    run = make_run("mini", ["users=20"], slab_bytes=4096)
+    assert run.cfg.users == 20 and run.engine.slab_bytes == 4096
 
 
 def test_parse_helpers():
@@ -905,17 +937,19 @@ Notes:
 - `build_plan(pack_module, cfg, specs_dir)`: `p = Pack(pack_module.PACK, pack_module.SCHEMA_VERSION)`; `pack_module.define(p, cfg)`; normalize; revision per D22 (hash `specs/**/*.py` and `specs/expectations.yaml` if present).
 - `EngineSettings.force_capacity` defaults to an empty mapping; `engine.force_capacity` is only set by tests through `resolve_run(..., overrides=[...])` is not needed — tests pass it via `run_to_dataset(engine_overrides=...)` (Task 12).
 - `Source.generate` raises `NotImplementedError` here; Task 5 implements it.
+- `shard(..., items=None, state={})` is legal (the `ordering` and `abi_proof` fixtures of Tasks 10 and 13 use it): `PartitionDef.items` is `None` and the shard has no per-item arrays.
+- `KernelSpec` (Task 2), `RunSpec`, `Budget`, `EngineSettings`, `WriterSettings` and every `spec.plan` class are frozen dataclasses.
 
 - [ ] **Step 5: Run tests to verify they pass**
 
 Run: `uv run --all-packages pytest libs/simkit/tests/test_spec_pack.py -v`
-Expected: PASS (9 tests).
+Expected: PASS (10 tests).
 
 - [ ] **Step 6: Lint and commit**
 
-Run: `uv run ruff check libs apps`
+Run: `uv run ruff check $(ls -d libs apps examples/ecommerce_s1 benchmarks 2>/dev/null)`
 ```bash
-git add libs/simkit/src/neorisk_simkit/spec libs/simkit/tests/conftest.py libs/simkit/tests/fixtures/mini libs/simkit/tests/test_spec_pack.py
+git add libs/simkit/src/neorisk_simkit/spec libs/simkit/src/neorisk_simkit/std/__init__.py libs/simkit/tests/conftest.py libs/simkit/tests/fixtures/mini libs/simkit/tests/test_spec_pack.py
 git commit -m "simkit: pack API, normalized plan, project loader, mini fixture
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
@@ -927,14 +961,15 @@ Claude-Session: https://claude.ai/code/session_01BKddEJ7kY3XR8oXDK9HriN"
 ### Task 4: `validate` and memory caps
 
 **Files:**
-- Create: `libs/simkit/src/neorisk_simkit/spec/validate.py`, `spec/caps.py`
+- Create: `libs/simkit/src/neorisk_simkit/spec/validate.py`, `spec/caps.py`, `libs/simkit/src/neorisk_simkit/engine/world.py` (only the hidden-array dtype table; Task 8 adds the `World` class to this file)
 - Test: `libs/simkit/tests/test_spec_validate.py`
 
 **Interfaces:**
-- Consumes: Task 3 `Plan`, `RunSpec`, `build_plan`; Task 2 `KernelSpec`, `CapExceeded`.
+- Consumes: Task 3 `Plan`, `RunSpec`, `build_plan` (all frozen dataclasses); Task 2 `KernelSpec` (frozen dataclass), `CapExceeded`.
 - Produces:
-  - `spec.caps`: `CAP_ITEMS = ("output_slabs", "step_output", "merge_working_space", "live_partition_state", "timer_heaps", "requests_and_inboxes", "fanout_bursts", "read_inputs", "checker_state", "scorer")`; `CapItem(name, hard_bytes, estimate_bytes, note)`; `NODE_BYTES = 40`; `OUTBOX_ROW_BYTES = 8 * 12 + 8 * PAYLOAD_W` (= 192 with `PAYLOAD_W = 12`; import `PAYLOAD_W` lazily or hard-code 12 here; Task 7 adds an assertion that they agree); `row_bytes(cols) -> int` (sum of storage itemsizes + 1 per nullable column); `slabs_per_worker(plan) -> int` (= #events + #change groups + #namespaces + 1 outbox); `compute_caps(run: RunSpec) -> list[CapItem]`; `BudgetError(Exception)`; `check_budget(caps, budget) -> None` (raises `BudgetError` naming every item, largest first, when `Σ hard_bytes > budget.memory_bytes`).
+  - `spec.caps`: `CAP_ITEMS = ("output_slabs", "step_output", "merge_working_space", "live_partition_state", "timer_heaps", "requests_and_inboxes", "fanout_bursts", "read_inputs", "checker_state", "scorer")`; `CapItem(name, hard_bytes, estimate_bytes, note)`; `NODE_BYTES = 40` (D8; deviation from spec §10 (24 B): kept at 40 B to avoid a payload indirection on the hot path; memory caps use the real size); `PAYLOAD_W = 12` and `OUTBOX_ROW_BYTES = 8 * 12 + 8 * PAYLOAD_W` (= 192; `engine.cmdq` does not exist yet, so the width is hard-coded here and Task 7's test asserts `caps.PAYLOAD_W == cmdq.PAYLOAD_W` and `caps.OUTBOX_ROW_BYTES == 8*12 + 8*cmdq.PAYLOAD_W`); `hidden_bytes(plan) -> int` (per-slot bytes of the hidden partition arrays: imports `engine.world.hidden_bytes` lazily inside the function and calls it with `a` = max processes per partition type, `n_ns = len(plan.namespaces)`); `row_bytes(cols) -> int` (sum of storage itemsizes + 1 per nullable column); `slabs_per_worker(plan) -> int` (= #events + #change groups + #namespaces + 1 outbox); `compute_caps(run: RunSpec) -> list[CapItem]`; `BudgetError(Exception)`; `check_budget(caps, budget) -> None` (raises `BudgetError` naming every item, largest first, when `Σ hard_bytes > budget.memory_bytes`).
   - `spec.validate`: `ValidationReport(errors: list[str], warnings: list[str], caps: list[CapItem])` with `.ok`; `validate(run: RunSpec) -> ValidationReport`.
+  - `engine.world` (this task creates the module with only these two names; it imports numpy only): `HIDDEN_DTYPES: tuple[tuple[str, str, int | str], ...]` — `(name, numpy dtype name, per-slot multiplicity)` with multiplicity `1`, `"A"` or `"N_NS"`, one row per hidden array of the Engine reference, in this order: `pid int64 1, ptype int16 1, lslot int32 1, gen uint32 1, alive uint8 1, clock int64 1, rseq int32 1, cseq int64 1, pending int32 1, qhead int32 1, inst int64 1, self_id int64 1, occ uint32 A, ordn int32 N_NS, retire_at int64 1, susp_t int64 1, susp_delta int64 1`; `hidden_bytes(a: int, n_ns: int) -> int` = `Σ itemsize × multiplicity` (= `8*8 + 4*5 + 2 + 1 + 4a + 4n_ns`). Task 8's `World` allocates every hidden array from this table (2-D `[G, A]` / `[G, N_NS]` for the non-1 multiplicities), so the cap and the allocation cannot drift; Tasks 9 and 10 use `susp_t` / `susp_delta` without adding arrays.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -1013,6 +1048,29 @@ def test_caps_formulas(run):
     assert all(c.estimate_bytes <= c.hard_bytes for c in caps.values())
 
 
+def test_hidden_bytes_follow_the_world_dtype_table(run):
+    import numpy as np
+
+    from neorisk_simkit.engine.world import HIDDEN_DTYPES, hidden_bytes
+    from neorisk_simkit.spec import caps as caps_mod
+    per = {1: 1, "A": 3, "N_NS": 2}
+    expect = sum(np.dtype(dt).itemsize * per[m] for _, dt, m in HIDDEN_DTYPES)
+    assert hidden_bytes(3, 2) == expect == 8 * 8 + 4 * 5 + 2 + 1 + 4 * 3 + 4 * 2
+    names = [n for n, _, _ in HIDDEN_DTYPES]
+    assert "susp_t" in names and "susp_delta" in names and len(names) == len(set(names))
+    assert caps_mod.hidden_bytes(run.plan) == hidden_bytes(1, len(run.plan.namespaces))
+
+
+def test_forced_timer_capacity_below_a_kernel_maximum_is_an_error(run):
+    bad = dataclasses.replace(run, engine=dataclasses.replace(
+        run.engine, force_capacity={"timers": 0}))
+    assert any("force_capacity timers=0 is below the declared maximum timers=1 of user_main" in e
+               for e in validate(bad).errors)
+    ok = dataclasses.replace(run, engine=dataclasses.replace(
+        run.engine, force_capacity={"timers": 1}))
+    assert validate(ok).ok
+
+
 def test_budget_refusal_names_items(run):
     small = dataclasses.replace(run, budget=dataclasses.replace(run.budget, memory_bytes=1024))
     with pytest.raises(BudgetError, match="exceed the memory budget") as e:
@@ -1035,7 +1093,7 @@ Structural rules in `validate` (each produces one error string, exact prefixes a
 4. `<proc> handles START but has no start= or every=`; every command id in `on_request/on_response/on_message` values must appear in `kernel.commands`: `<proc> maps <what> to command <c> not listed in commands`.
 5. Events emitted by kernels with non-optional `text` columns: `event <e>: column <c> is text; S1 kernels can only write opt(text)` (D18).
 6. Requests must go owner → shard: `boundary <b>: requests go from an owner to a shard`; messages owner → shard only in S1 (owner → owner next-step delivery is deferred): `boundary <b>: owner-to-owner messages arrive in S2`.
-7. Kernel max: `timers` > `engine.timer_nodes`, or any records count > slab rows for that table → `<proc>: declared maximum of <res> exceeds slab capacity` (capacity = `slab_bytes // row_bytes`).
+7. Kernel max: `timers` > `engine.timer_nodes`, or any records count > slab rows for that table → `<proc>: declared maximum of <res> exceeds slab capacity` (capacity = `slab_bytes // row_bytes`). Forced capacities (Task 8 semantics; `force_capacity["timers"] = n` caps each worker's node refill chunk): `engine: force_capacity timers=<n> is below the declared maximum timers=<m> of <proc>` for every process whose `kernel.max.timers > n` (a kernel that reserves `m` timers could never succeed).
 8. Spawn bound placeholder: `budget.max_spawn_depth` must be ≥ 1.
 9. Caps over budget: append `BudgetError` message from `check_budget` to errors.
 Warnings: `checks declared but not evaluated until S2: chk.x, ...` when `plan.checks` is non-empty.
@@ -1044,7 +1102,7 @@ Warnings: `checks declared but not evaluated until S2: chk.x, ...` when `plan.ch
 - `output_slabs` = `threads × slabs_per_worker × slab_bytes`.
 - `step_output` = `max(max_step_rows × max event row bytes (incl. common columns), max_step_bytes)`... use `min(max_step_rows × max_row_bytes, max_step_bytes)` if `max_step_bytes` is set, else the product.
 - `merge_working_space` = `2 × step_output`.
-- `live_partition_state` = `Σ owners max_live × (table row bytes + Σ local bytes of its processes + HIDDEN_BYTES)` + `Σ shards (n × HIDDEN_BYTES + items × state bytes)`, `HIDDEN_BYTES = 8*7 + 4*4 + 2 + 1 + 4*A + 4*N_NS`.
+- `live_partition_state` = `Σ owners max_live × (table row bytes + Σ local bytes of its processes + HIDDEN_BYTES)` + `Σ shards (n × HIDDEN_BYTES + items × state bytes)`, `HIDDEN_BYTES = caps.hidden_bytes(plan)` (derived from `engine.world.HIDDEN_DTYPES`; never a hand-written formula).
 - `timer_heaps` = `timer_nodes × NODE_BYTES`.
 - `requests_and_inboxes` = `max_messages_per_step × OUTBOX_ROW_BYTES + payload_slots × 8 × PAYLOAD_W`.
 - `fanout_bursts` = `Σ processes with substep: substep × max record row bytes`.
@@ -1056,13 +1114,13 @@ Warnings: `checks declared but not evaluated until S2: chk.x, ...` when `plan.ch
 - [ ] **Step 4: Run tests to verify they pass**
 
 Run: `uv run --all-packages pytest libs/simkit/tests/test_spec_validate.py -v`
-Expected: PASS (7 tests).
+Expected: PASS (9 tests).
 
 - [ ] **Step 5: Lint and commit**
 
-Run: `uv run ruff check libs apps`
+Run: `uv run ruff check $(ls -d libs apps examples/ecommerce_s1 benchmarks 2>/dev/null)`
 ```bash
-git add libs/simkit/src/neorisk_simkit/spec libs/simkit/tests/test_spec_validate.py
+git add libs/simkit/src/neorisk_simkit/spec libs/simkit/src/neorisk_simkit/engine/world.py libs/simkit/tests/test_spec_validate.py
 git commit -m "simkit: structural validation and memory caps
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
@@ -1081,7 +1139,8 @@ Claude-Session: https://claude.ai/code/session_01BKddEJ7kY3XR8oXDK9HriN"
 **Interfaces:**
 - Consumes: Task 1 `dist`; Task 3 `Source`.
 - Produces (all `@njit(cache=True, nogil=True)` unless noted):
-  - `rng.mix64(x: uint64) -> uint64` (splitmix64 finalizer); `rng.name_key(name: str) -> int` (Python: first 8 bytes of sha256 as signed int64); `rng.key_uniform(seed, inst, action, occ, site, k) -> float64` in [0, 1); `rng.next_k(kc, site) -> int` (returns and advances the per-invocation counter for `site`); samplers taking a uniform pair: `rng.sample_us(code, p1, p2, p3, u1, u2) -> int64` for duration dists, `rng.geometric(mean, u) -> int64`, `rng.bernoulli(p, u) -> bool`, `rng.uniform_int(lo, hi, u) -> int64`, `rng.categorical(weights_tuple, u) -> int64`, `rng.pareto_us(alpha, min_us, u)`, `rng.normal(u1, u2) -> float64` (Box–Muller); vectorized Python helper `rng.uniforms(seed, stream, n, offset=0) -> np.ndarray` (= `key_uniform(seed, stream, 0, 0, 0, offset+i)`).
+  - `rng.u64(x) -> uint64`: a plain Python function `np.uint64(int(x) & 0xFFFF_FFFF_FFFF_FFFF)` with a `numba.extending.overload` whose compiled implementation is `uint64(x)` (wrap-around cast). Every njit function in `rng`/`identity` converts integer arguments with `u64(...)`, never with `uint64(...)` directly, so the uncompiled leg (`NUMBA_DISABLE_JIT=1`, where `numba.uint64` is `np.uint64` and NumPy 2 raises `OverflowError` on negative Python ints) gives the same bits as the compiled one. `rng.MASK64 = 0xFFFF_FFFF_FFFF_FFFF`.
+  - `rng.mix64(x) -> uint64` (splitmix64 finalizer; `x = u64(x)` first); `rng.name_key(name: str) -> int` (Python: `int.from_bytes(sha256(name)[:8], "little")`, an unsigned value in `[0, 2^64)`); Python callers mask every key part with `& MASK64` before `mix64` (`feistel_key`, `uniforms`, the `inst = mix(name_key(table), ordinal)` instance keys); `rng.key_uniform(seed, inst, action, occ, site, k) -> float64` in [0, 1); `rng.next_k(kc, site) -> int` (returns and advances the per-invocation counter for `site`); samplers taking a uniform pair: `rng.sample_us(code, p1, p2, p3, u1, u2) -> int64` for duration dists, `rng.geometric(mean, u) -> int64`, `rng.bernoulli(p, u) -> bool`, `rng.uniform_int(lo, hi, u) -> int64`, `rng.categorical(weights_tuple, u) -> int64`, `rng.pareto_us(alpha, min_us, u)`, `rng.normal(u1, u2) -> float64` (Box–Muller); vectorized Python helper `rng.uniforms(seed, stream, n, offset=0) -> np.ndarray` (= `key_uniform(seed, stream, 0, 0, 0, offset+i)`).
   - `identity.FLAG = 1 << 62`; `make_handle(ns, slot, ordinal) -> int64`; `handle_ns(h)`, `handle_slot(h)`, `handle_ordinal(h)`; `is_provisional(v) -> bool` (`v >= 0 and v & FLAG`); `feistel_key(seed: int, name: str) -> np.ndarray[uint64, 4]` (Python; round keys); `feistel63(dense: int64, keys) -> int64` (bijection `[0, 2^63-1) → [1, 2^63-1]`); `feistel63_array(dense: np.ndarray, keys) -> np.ndarray`; `assign_dense(pids: np.ndarray, ordinals: np.ndarray, base: int) -> np.ndarray` (dense value per row, ranked by `(pid, ordinal)`); `remap_inplace(values: np.ndarray, src_sorted: np.ndarray, dst: np.ndarray) -> int` (replaces provisional values found in `src_sorted` by the matching `dst`; returns number of provisional values not found).
   - `Source.generate(n_rows, table, seed, stream) -> dict[str, np.ndarray]` for `generated(n, cols)`: column `c` uses uniforms of stream `hash(stream, c)`.
 
@@ -1115,6 +1174,19 @@ def test_python_and_compiled_agree():
     assert rng.key_uniform.py_func(42, 7, 1, 3, 5, 9) == rng.key_uniform(42, 7, 1, 3, 5, 9)
     assert ident.feistel63.py_func(123, ident.feistel_key(1, "user")) == ident.feistel63(
         123, ident.feistel_key(1, "user"))
+
+
+def test_negative_and_high_bit_keys_work_uncompiled():
+    # instance keys live in int64 arrays, so half of them are negative; the uncompiled leg
+    # (NUMBA_DISABLE_JIT=1) must accept them and agree bit for bit with the compiled code
+    for name in ("user", "order", "device", "sku", "session", "payment", "item", "note"):
+        assert 0 <= rng.name_key(name) < 2**64
+        keys = ident.feistel_key(7, name)
+        assert keys.dtype == np.uint64 and len(keys) == 4
+    u_py = rng.key_uniform.py_func(42, -12345, 1, 3, 5, 0)
+    assert u_py == rng.key_uniform(42, -12345, 1, 3, 5, 0) and 0.0 <= u_py < 1.0
+    assert int(rng.mix64.py_func(-1)) == int(rng.mix64(-1))
+    assert int(rng.mix64.py_func(2**64 - 1)) == int(rng.mix64(-1))
 
 
 def test_next_k_counts_per_site():
@@ -1194,13 +1266,26 @@ Key code (`engine/rng.py`):
 ```python
 import numpy as np
 from numba import njit, uint64
+from numba.extending import overload
 
 _GOLD = np.uint64(0x9E3779B97F4A7C15)
 
 
+MASK64 = 0xFFFF_FFFF_FFFF_FFFF
+
+
+def u64(x):                       # used as-is when NUMBA_DISABLE_JIT=1
+    return np.uint64(int(x) & MASK64)
+
+
+@overload(u64)
+def _u64_jit(x):                  # compiled: a wrap-around cast
+    return lambda x: uint64(x)
+
+
 @njit(cache=True, nogil=True)
 def mix64(x):
-    x = uint64(x)
+    x = u64(x)
     x = (x ^ (x >> uint64(30))) * uint64(0xBF58476D1CE4E5B9)
     x = (x ^ (x >> uint64(27))) * uint64(0x94D049BB133111EB)
     return x ^ (x >> uint64(31))
@@ -1208,17 +1293,18 @@ def mix64(x):
 
 @njit(cache=True, nogil=True)
 def key_uniform(seed, inst, action, occ, site, k):
-    h = mix64(uint64(seed) + _GOLD)
-    h = mix64(h ^ uint64(inst))
-    h = mix64(h ^ (uint64(action) << uint64(32)) ^ uint64(site))
-    h = mix64(h ^ uint64(occ))
-    h = mix64(h ^ uint64(k))
+    h = mix64(u64(seed) + _GOLD)
+    h = mix64(h ^ u64(inst))
+    h = mix64(h ^ (u64(action) << uint64(32)) ^ u64(site))
+    h = mix64(h ^ u64(occ))
+    h = mix64(h ^ u64(k))
     return (h >> uint64(11)) * (1.0 / 9007199254740992.0)    # 53 bits -> [0, 1)
 ```
+(`uint64(<constant>)` on literals is safe in both modes because the constants are non-negative.)
 - `next_k(kc, site)`: linear scan of the `kc[0]` used pairs; append `(site, 0)` if absent (raise `EngineError`-free `ValueError("more than 16 sites")` beyond 16 distinct sites per invocation).
 - `sample_us`: CONST → `p1`; EXP → `-p1 * log(1-u1)`; LOGNORMAL → `p1 * exp(p2 * z)`; SHIFTED_LOGNORMAL → `p1 + p2 * exp(p3 * z)`; GAMMA → Marsaglia–Tsang is not usable with two fixed uniforms, so use the Wilson–Hilferty approximation `mean * (1 - 1/(9k) + z*sqrt(1/(9k)))**3` clipped at 0 and at `p3` when `p3 > 0`; NORMAL → `p1 + p2 * z`; PARETO → `min_us * (1-u1)**(-1/alpha)`; `z` = Box–Muller from `(u1, u2)`; result rounded to int64.
 - `feistel63`: 4-round balanced Feistel on 64 bits with round function `mix64(right ^ key[i]) & 0xFFFFFFFF`; cycle-walk until the output is `< 2^63 - 1`; return `output + 1`. Domain input must be `< 2^63 - 1`.
-- `feistel_key(seed, name)`: `k_i = mix64(seed ^ name_key(name) ^ i)` for i in 0..3, as a uint64 array.
+- `feistel_key(seed, name)`: `k_i = mix64(((seed & MASK64) ^ name_key(name) ^ i) & MASK64)` for i in 0..3, as a uint64 array (`name_key` is unsigned, so no negative Python int ever reaches `np.uint64`).
 - `assign_dense`: `np.lexsort((ordinals, pids))` ranks → `base + rank` scattered back (njit with `np.argsort` on a combined structured key is fine in Python; implement in numpy, not njit).
 - `remap_inplace`: `np.searchsorted` over `src_sorted` for values with the flag bit; misses counted.
 - `Source.generate` for `generated`: for each column, `u = rng.uniforms(seed, mix(stream, name_key(col)), n)`, then `dist.sample_np(d, u, u2)` supporting UNIFORM_INT, CATEGORICAL (returns codes), LOGNORMAL_MINOR, NEGBINOM (gamma–Poisson via inverse transform on two uniforms), ZIPF (bounded by n rows: weights `1/(i+1)^s`). `n_rows != self.n` → `ValueError("row count 41 does not match source n=40")`.
@@ -1226,11 +1312,11 @@ def key_uniform(seed, inst, action, occ, site, k):
 - [ ] **Step 4: Run tests to verify they pass**
 
 Run: `uv run --all-packages pytest libs/simkit/tests/test_engine_rng_identity.py -v`
-Expected: PASS (10 tests).
+Expected: PASS (11 tests).
 
 - [ ] **Step 5: Lint and commit**
 
-Run: `uv run ruff check libs apps`
+Run: `uv run ruff check $(ls -d libs apps examples/ecommerce_s1 benchmarks 2>/dev/null)`
 ```bash
 git add libs/simkit/src/neorisk_simkit libs/simkit/tests/test_engine_rng_identity.py
 git commit -m "simkit: keyed RNG, Feistel public IDs, provisional handles, generated sources
@@ -1250,7 +1336,7 @@ Claude-Session: https://claude.ai/code/session_01BKddEJ7kY3XR8oXDK9HriN"
 **Interfaces:**
 - Consumes: Task 3 `Plan`; Task 2 `KernelSpec`.
 - Produces:
-  - `engine.layout`: `CTX_FIELDS = ("t", "self_id", "pid", "g", "inst", "action", "occ", "kc", "seed", "cfg", "reads", "refs", "lamport", "flags")`; `CMD_FIELDS = ("kind", "tag", "time", "cursor", "sender")` with `CMD_PAY = 5`, `CMD_PAY_ROW = 6`; `KernelLayout(name, partition_kind, state_fields: dict[str, int], state_cats: dict[str, tuple[str,...]], array_fields: dict[str, int], items_name: str | None, local_fields: dict[str, tuple[int, int]], cfg_fields: dict[str, int], cfg_nested: dict[str, dict], reads: dict[str, dict[str, int]], refs: dict[str, int], payload_slots: dict[str, int], events: dict[str, list[tuple[str, LType]]], creates: dict[str, list[tuple[str, LType]] | None], requests: dict[str, list[str]], messages: dict[str, list[str]], responses: dict[str, list[str]], change_groups: dict[str, list[tuple[str, LType]]])`; `kernel_layouts(plan) -> dict[str, KernelLayout]` (keyed by process name; a module-level helper function used by several kernels is lowered once per *module* using the union layout, see notes).
+  - `engine.layout` (`payload_slots` = union over every inbound boundary: requests, messages, responses; `reads` row counts are constants only for fixed-`n` sources): `CTX_FIELDS = ("t", "self_id", "pid", "g", "inst", "action", "occ", "kc", "seed", "cfg", "reads", "refs", "lamport", "flags")`; `CMD_FIELDS = ("kind", "tag", "time", "cursor", "sender")` with `CMD_PAY = 5`, `CMD_PAY_ROW = 6`; `KernelLayout(name, partition_kind, state_fields: dict[str, int], state_cats: dict[str, tuple[str,...]], array_fields: dict[str, int], items_name: str | None, local_fields: dict[str, tuple[int, int]], cfg_fields: dict[str, int], cfg_nested: dict[str, dict], reads: dict[str, dict[str, int]], refs: dict[str, int], payload_slots: dict[str, int], events: dict[str, list[tuple[str, LType]]], creates: dict[str, list[tuple[str, LType]] | None], requests: dict[str, list[str]], messages: dict[str, list[str]], responses: dict[str, list[str]], change_groups: dict[str, list[tuple[str, LType]]])`; `kernel_layouts(plan) -> dict[str, KernelLayout]` (keyed by process name; a module-level helper function used by several kernels is lowered once per *module* using the union layout, see notes).
   - `engine.lower`: `LoweringError(Exception)`; `lower_module(source: str, layouts: Mapping[str, KernelLayout], kernel_funcs: Mapping[str, str]) -> str` where `kernel_funcs` maps function name → process name. Output is plain Python (no decorators) referencing only helper names `_emit_<event>`, `_create_<ns>`, `_new_id`, `_timer`, `_request_<b>`, `_send_<b>`, `_respond_<b>_<response>`, `_continue_at`, `_change_<group>`, `_reserve_<proc>`, `_rng_<method>`, `_reads_sample_by_weight`, `_refs_pick`, `_refs_count`, `_refs_get`, `reject`, `std`, and the integer constants it defines itself.
 
 Lowering rules (the whole contract; anything else raises `LoweringError` with `file:line`):
@@ -1259,7 +1345,7 @@ Lowering rules (the whole contract; anything else raises `LoweringError` with `f
 |---|---|
 | `ctx.t`, `ctx.self_id`, `ctx.partition_id` | `ctx[0]`, `ctx[1]`, `ctx[2]` |
 | `ctx.cfg` (or a local name bound to it) `.f` | `ctx[9][i_f]` / `cfg[i_f]`; nested dataclass `.a.b` → `[i_a][i_b]` |
-| `ctx.reads.<t>.<col>[i]`, `ctx.reads.<t>.n`, `.local_index[i]` | `ctx[10][j][i]`, constant row count, `ctx[10][j_li][i]` |
+| `ctx.reads.<t>.<col>[i]`, `ctx.reads.<t>.n`, `.local_index[i]` | `ctx[10][j][i]`; `.n` → the constant row count only when `<t>` has a `source` with a fixed `n` (e.g. `std.generated(n=…)`), otherwise `ctx[10][j_0].shape[0]` (`j_0` = the table's first read column) so recipe-built tables whose size scales with the population (e.g. `std.devices`) bake no population-dependent constant into the generated module (Task 24 asserts the compile run and the scaled run share one module file); `ctx[10][j_li][i]` |
 | `ctx.reads.<t>.sample_by_weight(u)` | `_reads_sample_by_weight(ctx[10][j_cumw], u)` |
 | `ctx.refs.<r>.pick(id, u)` / `.count(id)` / `.get(id, k)` | `_refs_pick(ctx[11][j], ctx[11][j+1], id, u)` etc. |
 | `ctx.rng.<m>(site=N, **kw)` (N an int literal) | `_rng_<m>(ctx, N, *kw in declared order)`; methods: `uniform()`, `bernoulli(p)`, `geometric(mean)`, `uniform_int(lo, hi)`, `categorical(p)`, `exp_us(mean_s)`, `pareto_us(alpha, min_h)`, `dist_us(d)`, `lognormal_minor(median, sigma)` |
@@ -1337,8 +1423,9 @@ def test_emit_maps_kwargs_to_column_order_and_cat_codes(plan):
     """)
     emit = Rec()
     ns = _exec(low, _emit_took=emit)
-    ns["k"](_ctx(), None, None, None, "OUT")
-    assert emit.calls == [("OUT", _ctx(), 1000, 3, 5, 1)]
+    c = _ctx()                      # one ctx object: tuple == short-circuits on identity
+    ns["k"](c, None, None, None, "OUT")
+    assert emit.calls == [("OUT", c, 1000, 3, 5, 1)]
 
 
 def test_missing_optional_becomes_null_and_missing_required_fails(plan):
@@ -1474,7 +1561,7 @@ Expected: FAIL with `ModuleNotFoundError: No module named 'neorisk_simkit.engine
 
 - [ ] **Step 3: Implement**
 
-- `kernel_layouts(plan)`: for each process build a `KernelLayout`. Owner state fields: the owner table's columns in order (index i → tuple index `1+i`); shard: fields from `PartitionDef.state` (`"i32[item]"` → array field), `items_name` = the items table name. Local fields from `KernelSpec.local`. Config fields from the process config dataclass (`dataclasses.fields`, recursive). Reads: for each `reads={"item": item}` entry, every column of the table plus `local_index` (if the table is some shard's items table) and `cumw` (if it has a weight source); `n` is the constant row count resolved at lowering (sources know `n`). Payload slots: union over the kernel's inbound boundaries (requests it handles for shards; responses it receives for owners); a name with two different slot indices → `LoweringError`.
+- `kernel_layouts(plan)`: for each process build a `KernelLayout`. Owner state fields: the owner table's columns in order (index i → tuple index `1+i`); shard: fields from `PartitionDef.state` (`"i32[item]"` → array field), `items_name` = the items table name. Local fields from `KernelSpec.local`. Config fields from the process config dataclass (`dataclasses.fields`, recursive). Reads: for each `reads={"item": item}` entry, every column of the table plus `local_index` (if the table is some shard's items table) and `cumw` (if it has a weight source); `n` is inlined as a constant only for tables whose `source` declares a fixed `n`; every other table (recipe-built, e.g. Task 14's `device`) reads `n` at runtime from the reads tuple (`ctx[10][j_0].shape[0]`). Payload slots: union over every inbound boundary of the kernel — requests (shards), messages (`p.message`, e.g. shard `commit`/`release` commands that read `cmd.quantity`) and responses (owners); a name with two different slot indices → `LoweringError`.
 - Resource vector order (shared with Task 8, also exposed as `layout.resource_names(plan) -> list[str]`): `[f"records:{e}" for events] + [f"records:{g}" for change groups] + [f"creates:{ns}" for namespaces] + ["timers", "requests"]`. In the mini plan: 5 + 0 + 2 + 2 = 9.
 - Implement with `ast.NodeTransformer`: first pass collects module constants (`Assign` of literals and tuples of literals at module level) and mutable globals; second pass per kernel function (and the helpers it calls, followed transitively by name) rewrites. Track local aliases: `x = ctx.cfg` makes `x` a cfg alias; a parameter named `cfg` in a helper is a cfg alias when every caller passes a cfg alias in that position.
 - Output = prelude + module constants + lowered functions, formatted with `ast.unparse`.
@@ -1486,7 +1573,7 @@ Expected: PASS (9 tests).
 
 - [ ] **Step 5: Lint and commit**
 
-Run: `uv run ruff check libs apps`
+Run: `uv run ruff check $(ls -d libs apps examples/ecommerce_s1 benchmarks 2>/dev/null)`
 ```bash
 git add libs/simkit/src/neorisk_simkit/engine libs/simkit/tests/test_engine_lower.py
 git commit -m "simkit: lower kernel authoring surface to Numba-compilable code
@@ -1503,7 +1590,7 @@ Claude-Session: https://claude.ai/code/session_01BKddEJ7kY3XR8oXDK9HriN"
 - Test: `libs/simkit/tests/test_engine_cmdq_calendar.py`
 
 **Interfaces:**
-- Consumes: Task 2 `EngineError`, `CapExceeded`.
+- Consumes: Task 2 `EngineError`, `CapExceeded`; Task 4 `spec.caps.PAYLOAD_W`, `OUTBOX_ROW_BYTES` (the test asserts they agree with `cmdq.PAYLOAD_W`).
 - Produces:
   - `cmdq.PAYLOAD_W = 12` (columns 0..6 user payload, 7 `src_g`, 8 `src_gen`, 9 `src_self_id`, 10 `src_action`, 11 reserved); `cmdq.PAY_CONTINUE = -2` (an `n_pay` marker: the node is a continuation and `n_tag` is its cursor).
   - `NodePool(capacity: int, workers: int)` with arrays `time, key, seq, tag (int64), next (int32), kind, proc (int16), pay (int32)`, `free_head int32[W]`, `free_n int64[W]`, `reserve_head int32[1]`, `reserve_n int64[1]`; methods `as_tuple()`, `refill(worker: int, n: int) -> bool`, `splice_all() -> None`, `in_use() -> int`.
@@ -1623,16 +1710,26 @@ def test_calendar_straddling_bucket_keeps_later_entries():
 def test_calendar_compaction_when_full():
     c = cal.Calendar(n_slots=4, origin_us=0, width_us=10, n_buckets=4, capacity=3)
     C = c.as_tuple()
-    next_t = np.array([5, 5, 5, 5], np.int64)
-    assert all(cal.cal_push(C, g, 5) for g in range(3))
-    assert not cal.cal_push(C, 3, 5)
-    c.compact(next_t)
+    never = np.iinfo(np.int64).max
+    next_t = np.array([5, 5, never, 5], np.int64)
+    assert cal.cal_push(C, 0, 5) and cal.cal_push(C, 1, 5)
+    next_t[0] = 7                          # slot 0 moved later: its first entry is now stale
+    assert cal.cal_push(C, 0, 7)
+    assert not cal.cal_push(C, 3, 5)       # 3 entries (one stale): the entry pool is full
+    c.compact(next_t)                      # rebuild drops the stale entry
     C = c.as_tuple()
+    assert cal.cal_push(C, 3, 5)           # compaction freed space
     out = np.zeros(4, np.int32)
     n = cal.cal_collect(C, next_t, 0, 10, out)
-    assert sorted(out[:n].tolist()) == [0, 1, 2]
+    assert sorted(out[:n].tolist()) == [0, 1, 3]
+
+
+def test_caps_agree_with_payload_width():
+    from neorisk_simkit.spec import caps
+    assert caps.PAYLOAD_W == cmdq.PAYLOAD_W
+    assert caps.OUTBOX_ROW_BYTES == 8 * 12 + 8 * cmdq.PAYLOAD_W
 ```
-(`compact` keeps only entries for slots whose `next_t` is finite and that already had an entry, so slot 3 must be pushed again by the caller after compaction; the test checks that compaction frees space without losing live entries.)
+(`compact` keeps one entry per slot that already had an entry and whose `next_t` is finite, at time `next_t[slot]`; stale entries are dropped, so slot 3 is pushed again by the caller after compaction. The test pins that compaction frees space without losing live entries.)
 
 - [ ] **Step 2: Run tests to verify they fail**
 
@@ -1648,11 +1745,11 @@ Expected: FAIL with `ImportError: cannot import name 'calendar'`.
 - [ ] **Step 4: Run tests to verify they pass**
 
 Run: `uv run --all-packages pytest libs/simkit/tests/test_engine_cmdq_calendar.py -v`
-Expected: PASS (8 tests).
+Expected: PASS (9 tests).
 
 - [ ] **Step 5: Lint and commit**
 
-Run: `uv run ruff check libs apps`
+Run: `uv run ruff check $(ls -d libs apps examples/ecommerce_s1 benchmarks 2>/dev/null)`
 ```bash
 git add libs/simkit/src/neorisk_simkit/engine libs/simkit/tests/test_engine_cmdq_calendar.py
 git commit -m "simkit: per-partition command queues and calendar queue
@@ -1666,14 +1763,15 @@ Claude-Session: https://claude.ai/code/session_01BKddEJ7kY3XR8oXDK9HriN"
 ### Task 8: Slabs, generated emitters and the engine build
 
 **Files:**
-- Create: `libs/simkit/src/neorisk_simkit/engine/slabs.py`, `engine/codegen.py`, `engine/build.py`, `engine/world.py` (hidden arrays only in this task)
+- Create: `libs/simkit/src/neorisk_simkit/engine/slabs.py`, `engine/codegen.py`, `engine/build.py`
+- Modify: `engine/world.py` (Task 4 created it with `HIDDEN_DTYPES`/`hidden_bytes`; this task adds `Hidden` and `allocate_hidden` only), `engine/errors.py` (`EngineError.__str__`)
 - Test: `libs/simkit/tests/test_engine_codegen.py`
 
 **Interfaces:**
-- Consumes: Task 3 `Plan`, `RunSpec`, `EngineSettings`; Task 5 `rng`, `identity`; Task 6 `kernel_layouts`, `lower_module`, `resource_names`; Task 7 `NodePool`, `PayloadPool`, `PAYLOAD_W`, `PAY_CONTINUE`.
+- Consumes: Task 3 `Plan`, `RunSpec`, `EngineSettings` (frozen dataclasses); Task 4 `engine.world.HIDDEN_DTYPES`, `spec.caps.hidden_bytes`; Task 5 `rng`, `identity`; Task 6 `kernel_layouts`, `lower_module`, `resource_names`; Task 7 `NodePool`, `PayloadPool`, `PAYLOAD_W`, `PAY_CONTINUE`.
 - Produces:
-  - `world.Hidden` dataclass (arrays listed in the Engine reference) and `world.allocate_hidden(plan, run) -> Hidden` (also returns per-type `slot_base: dict[str, int]`).
-  - `slabs.SlabSet(plan, engine: EngineSettings, worker: int)`: `resources: list[str]` (= `resource_names(plan)`), `cap/cnt/resv int64[R]`, `miss int64[1]` (index of the resource a failed reserve lacked), `req_count int64[1]` (requests issued by the current command), buffers per event / change group (`time, lamport, pid, seq, action` + one array per column + `valid_<col>` uint8 for nullable columns), per namespace (`handle, pid, ordinal, created_at, g` + table columns), outbox (`kind, bnd, time, prio, cause, src_g, src_pid, src_seq, dst, tag, resp_kind, target_action` + `pay int64[cap, PAYLOAD_W]`); `as_tuple(hidden, pool, payload) -> tuple`; `flush() -> StepChunk` (copies filled record/create rows, resets those counters; the outbox is drained separately by routing); `outbox_view() -> dict[str, np.ndarray]`; `reset_outbox()`. Capacities: `max(1, slab_bytes // row_bytes)` per buffer unless `engine.force_capacity[name]` is set; `timers` capacity is the worker's free node count (dynamic); `requests` = outbox rows.
+  - `world.Hidden` (one attribute per `HIDDEN_DTYPES` row, so `susp_t` and `susp_delta` exist from this task on) and `world.allocate_hidden(plan, run) -> tuple[Hidden, dict[str, int]]` (`slot_base` per partition type). Arrays are allocated by looping over `HIDDEN_DTYPES` (`[G]` for multiplicity 1, `[G, A]` / `[G, N_NS]` otherwise); no hidden array is declared anywhere else, so `G × caps.hidden_bytes(plan)` equals the allocated bytes.
+  - `slabs.SlabSet(plan, engine: EngineSettings, worker: int)`: `resources: list[str]` (= `resource_names(plan)`), `cap/cnt/resv int64[R]`, `miss int64[1]` (index of the resource a failed reserve lacked), `req_count int64[1]` (requests issued by the current command), buffers per event / change group (`time, lamport, pid, seq, action` + one array per column + `valid_<col>` uint8 for nullable columns), per namespace (`handle, pid, ordinal, created_at, g` + table columns), outbox (`kind, bnd, time, prio, cause, src_g, src_pid, src_seq, dst, tag, resp_kind, target_action` + `pay int64[cap, PAYLOAD_W]`); `as_tuple(hidden, pool, payload) -> tuple`; `flush() -> StepChunk` (copies filled record/create rows, resets those counters; the outbox is drained separately by routing, or moved aside by `World.run_slots` on a `requests` miss — Task 9); `outbox_view() -> dict[str, np.ndarray]` (copies of the filled outbox rows); `reset_outbox()`. Capacities: `max(1, slab_bytes // row_bytes)` per buffer unless `engine.force_capacity[name]` is set; `timers` capacity is the worker's free node count (dynamic); `requests` = outbox rows. `force_capacity["timers"] = n` caps the per-worker node refill chunk: `World` refills a worker with at most `n` nodes and its free list never holds more than `n` (Task 9); `validate` (Task 4) requires `n ≥` every kernel's declared `max.timers`, so a kernel's reserve can always succeed after a refill.
   - `StepChunk(records: dict[str, dict[str, np.ndarray]], creates: dict[str, dict[str, np.ndarray]])`.
   - Outbox kinds: `OB_REQUEST = 1, OB_MESSAGE = 2, OB_RESPONSE = 3, OB_CREATE = 4`.
   - `codegen.generate_module(plan, *, checked: bool) -> str`: prelude + lowered kernels (with `@njit(cache=True, nogil=True, boundscheck=<checked>)` added) + per-resource constants `R_<NAME>` + `OUT_*`/`HID_*` tuple indices + generated `_reserve_<proc>`, `_emit_<e>`, `_create_<ns>`, `_new_id`, `_timer`, `_request_<b>`, `_send_<b>`, `_respond_<b>_<r>`, `_continue_at`, `_change_<g>` + `dispatch(action, ctx, cmd, world_state, out) -> int` + `RESOURCES = [...]` + `CHECKED = <bool>`. Task 9 adds `run_partitions`; Task 10 adds routing/round drivers.
@@ -1682,14 +1780,17 @@ Claude-Session: https://claude.ai/code/session_01BKddEJ7kY3XR8oXDK9HriN"
 
 Generated emitter semantics (every mode):
 - `_emit_<e>(out, ctx, t, cols…)`: `t != ctx.t` → `EngineError("records must be emitted at ctx.t")`; row `i = cnt[r]`; `time=t, lamport=ctx.lamport, pid=ctx.pid, seq=rseq[g]` then `rseq[g] += 1`, `action=ctx.action`; nullable columns: `valid = value != std.NULL`; `cnt[r] += 1`. Checked mode: `resv[r] -= 1`, `resv[r] < 0` → `AbiViolation("emit beyond reservation: <e>")`.
-- `_create_<ns>(out, ctx, cols…)`: `ordinal = ordn[g, ns]`, `ordn[g, ns] += 1`, `h = make_handle(ns, g, ordinal)`; row `(h, pid, ordinal, created_at=ctx.t, g, cols)`; for owner-table namespaces also append an `OB_CREATE` outbox row (consumes one `requests` unit). Returns `h`.
+- `_create_<ns>(out, ctx, cols…)`: `ordinal = ordn[g, ns]`, `ordn[g, ns] += 1`, `h = make_handle(ns, g, ordinal)`; row `(h, pid, ordinal, created_at=ctx.t, g, cols)`; for owner-table namespaces also append an `OB_CREATE` outbox row (consumes one `requests` unit; `pay[7..10] = (g, gen[g], self_id, action)` as for a request, so admission can name the creating process). Returns `h`.
+- `_new_id(out, ctx, ns)` (`p.ids` namespaces, D15): `ordinal = ordn[g, ns]`, `ordn[g, ns] += 1`, `h = make_handle(ns, g, ordinal)`; appends `(handle=h, pid=ctx.pid, ordinal, created_at=ctx.t, g)` to the namespace buffer of `ns` (`cnt[r] += 1` for `r = creates:<ns>`; the namespace has no table columns) and decrements `resv[r]` (checked mode: `resv[r] < 0` → `AbiViolation("new_id beyond reservation: <ns>")`). Returns `h`. The dense remap at seal (Task 11) reads these rows exactly like created rows.
 - `_timer(out, ctx, t, kind, prio, tag)`: `t < ctx.t` → `EngineError("timer scheduled before current time in <action name>")`; `q_push(own queue, seq=cseq[g]++, cause=ctx.lamport, proc=ctx.action)`.
-- `_request_<b>(out, ctx, t, shard, tag, payload…)`: `t < ctx.t` → `EngineError`; `shard >= n` or `< 0` → `EngineError("request <b> to shard <x> but <partition> has <n>")`; outbox row `OB_REQUEST`, `time=t`, `prio=PRIO_MESSAGE`, `cause=ctx.lamport`, `src_seq=cseq[g]++`, payload cols 0.., `pay[7..10] = (g, gen[g], self_id, action)`; `req_count[0] += 1`.
+- Error messages that name the process: Numba needs constant exception arguments, so a generated helper shared by several processes branches on `ctx.action` (one branch per process that can call it, known from the plan) and raises a constant message per branch, prefixed `<proc>: ` (Review Focus #3: the run fails naming the process and command).
+- `_request_<b>(out, ctx, t, shard, tag, payload…)`: `t < ctx.t` → `EngineError("<proc>: request <b> scheduled before current time")`; `shard >= n` or `< 0` → `EngineError("<proc>: request <b> to shard <x> but <partition> has <n>")`, generated per `(proc, b)` branch as `raise EngineError("user_main: request take to shard ", x, " but bin has 4")` (constant strings plus the runtime index; `EngineError.__str__` joins `args` with no separator, see Step 3); outbox row `OB_REQUEST`, `time=t`, `prio=PRIO_MESSAGE`, `cause=ctx.lamport`, `src_seq=cseq[g]++`, payload cols 0.., `pay[7..10] = (g, gen[g], self_id, action)`; `req_count[0] += 1`.
 - `_send_<b>`: like a request but `OB_MESSAGE`, `time = t + latency` with latency `sample_us(boundary latency, key_uniform(seed, inst, 30000 + b, ctx.lamport, j, 0), key_uniform(..., j, 1))`, `j` = index of this send within the command; does not touch `req_count`.
 - `_respond_<b>_<r>(out, ctx, cmd, payload…)`: `OB_RESPONSE` to `(cmd.pay[7], cmd.pay[8])`, `time = ctx.t + latency` (drawn with key `(seed, inst, 30000 + b, ctx.lamport, j, k)`), `prio=PRIO_MESSAGE`, `cause=ctx.lamport`, `tag=cmd.tag`, `resp_kind` = the requester's `on_response[(b, r)]` command id, `target_action = cmd.pay[10]`.
 - `_continue_at(out, ctx, t, cursor)`: `t != ctx.t` → `EngineError`; `q_push(..., prio=PRIO_CONTINUE, kind=<current cmd kind>, tag=cursor, pay=PAY_CONTINUE)`.
 - `_change_<g>(out, ctx, s, t, cols…)`: writes each column into the owner state row and appends a history row (resource `records:<g>`).
 - `_reserve_<proc>(out, vec)`: for each `r` with `vec[r] > 0`: records/creates need `cap[r] - cnt[r] >= vec[r]`; `timers` needs `free_n[w] >= vec[r]`; `requests` needs outbox room. On failure set `miss[0] = r` and return False; on success `resv[:] = vec` and return True.
+- `req_count[0]` counts requests issued by the command being dispatched; `run_partitions` (Task 9) sets it to 0 before every dispatch.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -1802,8 +1903,18 @@ def test_request_bounds_and_outbox_row(run):
     ob = slab.outbox_view()
     assert ob["kind"].tolist() == [1] and ob["dst"].tolist() == [2] and ob["tag"].tolist() == [99]
     assert ob["pay"][0, 0] == 17 and ob["pay"][0, 7] == 3 and slab.req_count[0] == 1
-    with pytest.raises(EngineError, match="request take to shard 9 but bin has 4"):
+    with pytest.raises(EngineError, match="user_main: request take to shard 9 but bin has 4"):
         gen._request_take(out, _ctx(), 1_000, 9, 99, 17)
+
+
+def test_hidden_arrays_match_the_cap_table(run):
+    from neorisk_simkit.engine.world import HIDDEN_DTYPES
+    from neorisk_simkit.spec.caps import hidden_bytes
+    hidden, slot_base = allocate_hidden(run.plan, run)
+    G = len(hidden.pid)
+    assert G == 200 + 4 and slot_base == {"user": 0, "bin": 200}
+    assert sum(getattr(hidden, n).nbytes for n, _, _ in HIDDEN_DTYPES) == G * hidden_bytes(run.plan)
+    assert hidden.susp_t.dtype == np.int64 and hidden.susp_delta.dtype == np.int64
 ```
 
 - [ ] **Step 2: Run tests to verify they fail**
@@ -1817,16 +1928,17 @@ Expected: FAIL with `ModuleNotFoundError: No module named 'neorisk_simkit.engine
 - `HID` sub-tuple order: `(rseq, cseq, ordn, gen, self_id, pid, qhead)`.
 - Exceptions raised in generated code use the classes from `neorisk_simkit.engine.errors` with constant messages (Numba requires compile-time constant arguments; build the message text into the generated source per event/boundary name).
 - `build_engine`: `source = generate_module(plan, checked=checked)`; `digest = sha256(source.encode()).hexdigest()[:16]`; path = cache dir / f"gen_{digest}.py"; write atomically (`.tmp` + `os.replace`) if missing; import with `importlib.util.spec_from_file_location(f"neorisk_gen_{digest}", path)`; memoize in a module dict.
-- `allocate_hidden(plan, run)`: `G = Σ owners max_live + Σ shards n`; owner slot ranges first (in plan order) then shards; returns `slot_base`.
+- `allocate_hidden(plan, run)`: `G = Σ owners max_live + Σ shards n`; owner slot ranges first (in plan order) then shards; allocates every array from `HIDDEN_DTYPES` (fill values: `qhead = -1`, `retire_at = susp_t = I64_MAX`, the rest 0); returns `(hidden, slot_base)`.
+- `EngineError.__str__` (Task 2's class, in `engine/errors.py`) renders `"".join(str(a) for a in self.args)` so generated raises with constant-plus-scalar arguments read as one sentence (a single-argument `EngineError("text")` is unchanged).
 
 - [ ] **Step 4: Run tests to verify they pass**
 
 Run: `uv run --all-packages pytest libs/simkit/tests/test_engine_codegen.py -v`
-Expected: PASS (7 tests). The first run compiles (tens of seconds); a second run must be faster (warm cache) — check with `time`.
+Expected: PASS (8 tests). The first run compiles (tens of seconds); a second run must be faster (warm cache) — check with `time`.
 
 - [ ] **Step 5: Lint and commit**
 
-Run: `uv run ruff check libs apps`
+Run: `uv run ruff check $(ls -d libs apps examples/ecommerce_s1 benchmarks 2>/dev/null)`
 ```bash
 git add libs/simkit/src/neorisk_simkit/engine libs/simkit/tests/test_engine_codegen.py
 git commit -m "simkit: slabs, generated typed emitters and cached engine build
@@ -1850,8 +1962,12 @@ Claude-Session: https://claude.ai/code/session_01BKddEJ7kY3XR8oXDK9HriN"
   - `World.build(run: RunSpec, *, threads: int, checked: bool = False) -> World` — builds the engine module, read tables (sources), refs CSR (from population `refs` recipes), population schedule (initial owners at `start − warmup`, arrivals drawn from `arrivals` with keyed uniforms, ordinal = rank by `(arrival time, draw index)`), owner state arrays per type, local arrays per process, shard state (items CSR by the shard key column; `init` dict of `Dist` or explicit lists, or a `std` recipe object with `.init(...)`), per-process `cfg` tuples, `Hidden`, `NodePool`, `PayloadPool`, `Calendar`, one `SlabSet` per worker.
   - `World.admit_population(t0, t1) -> np.ndarray` (global slots admitted; queues `START` at the arrival time with `PRIO_MESSAGE` for every process with `start=on_created(table)`; raises `CapExceeded("live_partition_state", …)` when the type has no free slot).
   - `World.init_shards() -> None` (queues the first `START` of each periodic process, D26).
-  - `World.run_slots(worker: int, slots: np.ndarray, limit_t: int, *, owners: bool) -> None` — calls the generated `run_partitions` until it returns `DONE`, handling `NEED_SWAP` (flush that worker's slab into `World.chunks[worker]`) and `NEED_NODES` (`pool.refill(worker, chunk)`; if the reserve is empty → `CapExceeded("timer_heaps", …)`).
-  - Generated `run_partitions(W, out, worker, slots, start, limit_t, owners) -> (status, index)`. Per slot `g`: loop `node = q_peek`; stop when `node < 0` or `time >= limit_t`, or (owners) `pending[g] > 0`; build `cmd`; `lamport = max(clock[g], cause) + 1`; reset `kc[0] = 0`; `rc = dispatch(...)`. `COMMIT`: `clock[g] = lamport`, `occ[g, a] += 1`, pop+free the node (free its payload row), if `req_count > 0`: `pending[g] += req_count`, `susp_t[g] = time`, stop this slot. `rc >= 1` (reject): `occ[g, a] += 1`, pop+free, count `rejects[a] += 1`. `RETRY`: leave the node, return `(NEED_SWAP or NEED_NODES by miss[0], index)`. After the loop, owners with an empty queue and `pending == 0` and `retire_when_idle` get `retire_at[g] = last time` (freed at seal). Periodic `START` nodes with cursor 0 enqueue the next occurrence before dispatch (D26).
+  - `World.run_slots(worker: int, slots: np.ndarray, limit_t: int, *, owners: bool) -> None` — calls the generated `run_partitions` until it returns `DONE`, handling `NEED_SWAP` and `NEED_NODES`:
+    - `NEED_SWAP` with `slab.miss[0]` = a `records:*`/`creates:*` resource: flush that worker's slab into `World.chunks[worker]`.
+    - `NEED_SWAP` with `slab.miss[0]` = `requests` (the outbox is full): append `slab.outbox_view()` to `World.pending_outbox[worker]` and call `slab.reset_outbox()`, then re-invoke. Routing (Task 10) consumes `pending_outbox` plus the live outboxes and sorts by key, so moving rows aside changes neither RNG draws nor order, and a full outbox can never livelock.
+    - `NEED_NODES` (`timers` or payload free list empty): `pool.refill(worker, chunk)` where `chunk = engine.force_capacity.get("timers", <default chunk>) - free_n[worker]` when `"timers"` is forced (the worker free list never holds more than `force_capacity["timers"]` nodes; Task 8 semantics), else the default chunk; if the reserve is empty → `CapExceeded("timer_heaps", …)`.
+  - `World.slabs: list[SlabSet]` (one per worker; tests read `w.slabs[0].outbox_view()`), `World.pending_outbox: list[list[dict[str, np.ndarray]]]` (per worker, outbox snapshots moved aside this round; emptied by routing).
+  - Generated `run_partitions(W, out, worker, slots, start, limit_t, owners) -> (status, index)`. Per slot `g`: loop `node = q_peek`; stop when `node < 0` or `time >= limit_t`, or (owners) `pending[g] > 0`; build `cmd`; `lamport = max(clock[g], cause) + 1`; reset `kc[0] = 0` and `req_count[0] = 0` (before every dispatch, including a re-invocation after `RETRY`); `rc = dispatch(...)`. `COMMIT`: `clock[g] = lamport`, `occ[g, a] += 1`, pop+free the node (free its payload row), if `req_count > 0`: `pending[g] += req_count`, `susp_t[g] = time`, stop this slot. `rc >= 1` (reject): `occ[g, a] += 1`, pop+free, count `rejects[a] += 1`. `RETRY`: leave the node, return `(NEED_SWAP or NEED_NODES by miss[0], index)`. After the loop, owners with an empty queue and `pending == 0` and `retire_when_idle` get `retire_at[g] = last time` (freed at seal). Periodic `START` nodes with cursor 0 enqueue the next occurrence before dispatch (D26).
   - Checked mode (generated only when `CHECKED`): before dispatch copy the state row, local row, `cnt[:]`, `cseq[g]`, `ordn[g]`; after `RETRY` or reject, any difference → `AbiViolation("process <name> wrote before returning reject|RETRY")`.
   - `World.chunks: list[list[StepChunk]]`, `World.flush_all() -> None` (flushes every worker slab into its `chunks` list), `World.take_chunks() -> list[StepChunk]` (returns and clears them; used by seal), `World.stats` (`rejects` per process name, `retries`, `late_messages`, `continuations` = continuation nodes executed).
 
@@ -1913,11 +2029,8 @@ def bad(ctx, s, cmd, out):
     return RETRY
 ```
 
-Append to `libs/simkit/tests/conftest.py` (a plain helper, shared by engine tests):
+Add `import numpy as np` to the top import block of `libs/simkit/tests/conftest.py` (after `import dataclasses`; an import below the existing definitions fails ruff E402), and append this plain helper, shared by engine tests:
 ```python
-import numpy as np
-
-
 def records_of(world, table):
     """All records of one event table held by a World, in canonical order (flushes slabs)."""
     world.flush_all()
@@ -1934,30 +2047,24 @@ def records_of(world, table):
 
 `libs/simkit/tests/test_engine_execute.py`:
 ```python
-import dataclasses
-
 import numpy as np
 import pytest
 
+from conftest import make_run
+from conftest import records_of as _records
 from neorisk_simkit.engine import AbiViolation, EngineError
 from neorisk_simkit.engine.world import World
-from neorisk_simkit.spec.project import load_project, resolve_run
 
 H = 3_600_000_000
 
 
-from conftest import records_of as _records
-
-
-def _world(fixture_project, name="mini", overrides=(), checked=False, force=None, threads=1):
-    run = resolve_run(load_project(fixture_project(name)), "sample", list(overrides))
-    if force:
-        run = dataclasses.replace(run, engine=dataclasses.replace(run.engine, force_capacity=force))
+def _world(name="mini", overrides=(), checked=False, force=None, threads=1):
+    run = make_run(name, overrides, **({"force_capacity": force} if force else {}))
     return run, World.build(run, threads=threads, checked=checked)
 
 
-def test_population_admission(fixture_project):
-    run, w = _world(fixture_project)
+def test_population_admission():
+    run, w = _world()
     t0 = run.start_us - run.warmup_us
     slots = w.admit_population(t0, t0 + 1)
     assert len(slots) == 100                                  # initial = 0.5 of 200
@@ -1966,8 +2073,8 @@ def test_population_admission(fixture_project):
     assert len(later) == 100 and len(np.intersect1d(slots, later)) == 0
 
 
-def test_owner_run_assigns_lamport_and_seq(fixture_project):
-    run, w = _world(fixture_project, overrides=["behavior.take_p=0.0"])
+def test_owner_run_assigns_lamport_and_seq():
+    run, w = _world(overrides=["behavior.take_p=0.0"])
     t0 = run.start_us - run.warmup_us
     slots = w.admit_population(t0, t0 + 1)
     w.run_slots(0, slots, t0 + 6 * H, owners=True)
@@ -1982,8 +2089,8 @@ def test_owner_run_assigns_lamport_and_seq(fixture_project):
     assert (ping["time"] < t0 + 6 * H).all()
 
 
-def test_reject_advances_occurrence_and_retires(fixture_project):
-    run, w = _world(fixture_project, overrides=["behavior.max_pings=1", "behavior.take_p=0.0"])
+def test_reject_advances_occurrence_and_retires():
+    run, w = _world(overrides=["behavior.max_pings=1", "behavior.take_p=0.0"])
     t0 = run.start_us - run.warmup_us
     slots = w.admit_population(t0, t0 + 1)
     w.run_slots(0, slots, run.start_us + run.span_us, owners=True)
@@ -1992,10 +2099,10 @@ def test_reject_advances_occurrence_and_retires(fixture_project):
     assert (w.hidden.retire_at[slots] < np.iinfo(np.int64).max).all()
 
 
-def test_retry_with_tiny_slabs_gives_identical_records(fixture_project):
+def test_retry_with_tiny_slabs_gives_identical_records():
     over = ["behavior.take_p=0.0"]
-    run, big = _world(fixture_project, overrides=over)
-    _, small = _world(fixture_project, overrides=over, force={"records:ping": 1, "timers": 1})
+    run, big = _world(overrides=over)
+    _, small = _world(overrides=over, force={"records:ping": 1, "timers": 1})
     t0 = run.start_us - run.warmup_us
     for w in (big, small):
         w.run_slots(0, w.admit_population(t0, t0 + 1), t0 + 12 * H, owners=True)
@@ -2004,8 +2111,8 @@ def test_retry_with_tiny_slabs_gives_identical_records(fixture_project):
     assert small.stats["retries"] > big.stats["retries"]
 
 
-def test_request_suspends_owner(fixture_project):
-    run, w = _world(fixture_project, overrides=["behavior.take_p=1.0"])
+def test_request_suspends_owner():
+    run, w = _world(overrides=["behavior.take_p=1.0"])
     t0 = run.start_us - run.warmup_us
     slots = w.admit_population(t0, t0 + 1)
     w.run_slots(0, slots, t0 + 24 * H, owners=True)
@@ -2014,21 +2121,31 @@ def test_request_suspends_owner(fixture_project):
     assert len(ob["kind"]) == 100 and (ob["kind"] == 1).all()
 
 
+def test_full_outbox_is_moved_aside_instead_of_livelocking():
+    run, w = _world(overrides=["behavior.take_p=1.0"], force={"requests": 1})
+    t0 = run.start_us - run.warmup_us
+    slots = w.admit_population(t0, t0 + 1)
+    w.run_slots(0, slots, t0 + 24 * H, owners=True)
+    assert (w.hidden.pending[slots] == 1).all()
+    moved = sum(len(ob["kind"]) for ob in w.pending_outbox[0])
+    assert moved + len(w.slabs[0].outbox_view()["kind"]) == 100
+
+
 @pytest.mark.parametrize("mode,exc,msg", [
     (0, AbiViolation, "wrote before returning reject"),
     (1, AbiViolation, "emit beyond reservation: e"),
     (2, EngineError, "timer scheduled before current time"),
     (3, AbiViolation, "wrote before returning RETRY"),
 ])
-def test_checked_mode_catches_abi_violations(fixture_project, mode, exc, msg):
-    run, w = _world(fixture_project, "bad_abi", overrides=[f"mode={mode}"], checked=True)
+def test_checked_mode_catches_abi_violations(mode, exc, msg):
+    run, w = _world("bad_abi", overrides=[f"mode={mode}"], checked=True)
     slots = w.admit_population(run.start_us, run.start_us + 1)
     with pytest.raises(exc, match=msg):
         w.run_slots(0, slots, run.start_us + H, owners=True)
 
 
-def test_unchecked_mode_still_rejects_time_travel(fixture_project):
-    run, w = _world(fixture_project, "bad_abi", overrides=["mode=2"])
+def test_unchecked_mode_still_rejects_time_travel():
+    run, w = _world("bad_abi", overrides=["mode=2"])
     slots = w.admit_population(run.start_us, run.start_us + 1)
     with pytest.raises(EngineError, match="timer scheduled before current time"):
         w.run_slots(0, slots, run.start_us + H, owners=True)
@@ -2052,11 +2169,11 @@ Expected: FAIL with `ImportError: cannot import name 'World'`.
 - [ ] **Step 5: Run tests to verify they pass**
 
 Run: `uv run --all-packages pytest libs/simkit/tests/test_engine_execute.py -v`
-Expected: PASS (10 tests).
+Expected: PASS (11 tests).
 
 - [ ] **Step 6: Lint and commit**
 
-Run: `uv run ruff check libs apps`
+Run: `uv run ruff check $(ls -d libs apps examples/ecommerce_s1 benchmarks 2>/dev/null)`
 ```bash
 git add libs/simkit/src/neorisk_simkit/engine libs/simkit/tests/conftest.py libs/simkit/tests/fixtures/bad_abi libs/simkit/tests/test_engine_execute.py
 git commit -m "simkit: world building and the partition executor with ABI checks
@@ -2079,8 +2196,8 @@ Claude-Session: https://claude.ai/code/session_01BKddEJ7kY3XR8oXDK9HriN"
 - Consumes: Tasks 7–9.
 - Produces:
   - `route.safe_horizon(step_end: int, susp_t: np.ndarray, susp_delta: np.ndarray, create_t: np.ndarray) -> int` (D5).
-  - `@njit route_outbox(...)`: merges every worker's outbox rows, sorts them by `(time, prio, cause, src_pid, src_seq)`, and delivers: `OB_REQUEST` → shard queue at the request time (receiver `cseq`); `OB_MESSAGE` → destination queue at its delivery time; `OB_RESPONSE` → owner queue if `gen[dst] == src_gen` and `alive`, then `pending[dst] -= 1`; otherwise `late_messages += 1`; `OB_CREATE` → pending admissions list. Messages counted per step against `max_messages_per_step` (`CapExceeded("requests_and_inboxes", …)`). Payload rows move with the command (allocated from the routing worker's payload list).
-  - `World.admit_created(limit_t)`: allocates slots for pending creations (`CapExceeded("max_admissions_per_step", …)` beyond `budget.max_admissions_per_step`; `CapExceeded("live_partition_state", …)` without a free slot), copies the create row into the new owner's state, `self_id = handle`, `pid = handle` (provisional; D12), `inst = mix(creator inst, lamport, ordinal)`, queues `START` at the creation time.
+  - `@njit route_outbox(...)`: merges every worker's outbox rows — the live outbox of each `World.slabs[w]` plus every snapshot in `World.pending_outbox[w]` (rows moved aside on a full outbox, Task 9), which it empties together with `reset_outbox()` — sorts them by `(time, prio, cause, src_pid, src_seq)`, and delivers: `OB_REQUEST` → shard queue at the request time (receiver `cseq`); `OB_MESSAGE` → destination queue at its delivery time; `OB_RESPONSE` → owner queue if `gen[dst] == src_gen` and `alive`, then `pending[dst] -= 1`; otherwise `late_messages += 1`; `OB_CREATE` → pending admissions list. Messages counted per step against `max_messages_per_step` (`CapExceeded("requests_and_inboxes", …)`). Payload rows move with the command (allocated from the routing worker's payload list).
+  - `World.admit_created(limit_t)`: allocates slots for pending creations (`CapExceeded("max_admissions_per_step", limit, attempted, process=<creating process name>)` beyond `budget.max_admissions_per_step` — the message ends with `in process <name>`, the process whose `create` produced the first admission over the cap, looked up from the `OB_CREATE` row's `src_action` (payload column 10); `CapExceeded("live_partition_state", …)` without a free slot), copies the create row into the new owner's state, `self_id = handle`, `pid = handle` (provisional; D12), `inst = mix(creator inst, lamport, ordinal)`, queues `START` at the creation time.
   - `rounds.RoundStats(rounds: int, owners_run: list[int], shard_cmds: list[int], compiled_rounds: int)`.
   - `rounds.run_step(world, t0: int, t1: int) -> RoundStats`: admit population arrivals in `[t0, t1)`; runnable = calendar collect ∪ admitted; loop { owner phase (thread pool when `len(runnable) >= parallel_min_partitions`, else inline); route; `H = safe_horizon(...)`; shard phase: every shard with a queued command `< H` runs to `H` (thread pool if many, inline otherwise); route; admit creations; runnable = owners whose `pending` dropped to 0 with head `< t1` ∪ admitted } until closure (no owner runnable below `t1`, no shard command below `t1`, no pending creation). Push calendar entries for every owner touched. Small rounds after the first go through the generated `drain_small_rounds`, which repeats the same steps in compiled code until a round is large or a slab/pool needs Python (D4).
   - `World.touched` (global slots touched this step: ran, received a command, or were created).
@@ -2183,30 +2300,26 @@ def ledger_desk(ctx, s, cmd, out):
     out.respond(cmd, "ack")
     return COMMIT
 ```
-(A shard with `items=None` has no per-item state; `p.shard` accepts that in Task 3's API — if it does not yet, extend it here and add a test line to `test_spec_pack.py`.)
+(A shard with `items=None` has no per-item state; Task 3's `p.shard` API and `test_spec_pack.py` already cover it.)
 
 - [ ] **Step 2: Write the failing tests**
 
 `libs/simkit/tests/test_engine_rounds.py`:
 ```python
-import dataclasses
-
 import numpy as np
 import pytest
 
+from conftest import make_run, records_of
 from neorisk_simkit.engine import CapExceeded
 from neorisk_simkit.engine.rounds import run_step
 from neorisk_simkit.engine.route import safe_horizon
 from neorisk_simkit.engine.world import World
-from neorisk_simkit.spec.project import load_project, resolve_run
 
 H = 3_600_000_000
 
 
-def _step(fixture_project, name, overrides=(), threads=1, engine=None):
-    run = resolve_run(load_project(fixture_project(name)), "sample", list(overrides))
-    if engine:
-        run = dataclasses.replace(run, engine=dataclasses.replace(run.engine, **engine))
+def _step(name, overrides=(), threads=1, engine=None):
+    run = make_run(name, overrides, **(engine or {}))
     w = World.build(run, threads=threads)
     w.init_shards()
     t0 = run.start_us - run.warmup_us
@@ -2215,7 +2328,6 @@ def _step(fixture_project, name, overrides=(), threads=1, engine=None):
 
 
 def _rows(w, table):
-    from conftest import records_of
     return records_of(w, table)
 
 
@@ -2231,8 +2343,8 @@ def test_safe_horizon():
                         np.array([inf], np.int64)) == 250
 
 
-def test_mini_step_closes_with_responses_after_delta(fixture_project):
-    run, w, stats = _step(fixture_project, "mini", ["behavior.take_p=1.0"])
+def test_mini_step_closes_with_responses_after_delta():
+    run, w, stats = _step("mini", ["behavior.take_p=1.0"])
     t1 = run.start_us - run.warmup_us + run.engine.step_us
     taken = np.concatenate([_rows(w, "item_taken")["time"], _rows(w, "take_failed")["time"]])
     expected = sorted(int(x) + 200_000 for x in taken if x + 200_000 < t1)
@@ -2242,8 +2354,8 @@ def test_mini_step_closes_with_responses_after_delta(fixture_project):
     assert stats.rounds >= 2
 
 
-def test_priority_inversion_credit_runs_before_debit(fixture_project):
-    _, w, _ = _step(fixture_project, "ordering")
+def test_priority_inversion_credit_runs_before_debit():
+    _, w, _ = _step("ordering")
     cr, de = _rows(w, "credited"), _rows(w, "debited")
     assert len(cr["time"]) == 2 and len(de["time"]) == 2
     assert (cr["time"] == de["time"]).all()
@@ -2253,8 +2365,8 @@ def test_priority_inversion_credit_runs_before_debit(fixture_project):
 
 
 @pytest.mark.parametrize("threads", [1, 4])
-def test_equal_keys_order_by_partition_id(fixture_project, threads):
-    _, w, _ = _step(fixture_project, "ordering", threads=threads)
+def test_equal_keys_order_by_partition_id(threads):
+    _, w, _ = _step("ordering", threads=threads)
     opened = _rows(w, "opened")
     assert (opened["lamport"] == 1).all() and opened["pid"].tolist() == sorted(opened["pid"])
     noted = _rows(w, "noted")
@@ -2262,24 +2374,24 @@ def test_equal_keys_order_by_partition_id(fixture_project, threads):
     assert noted["lamport"].tolist() == [2, 3]
 
 
-def test_threads_do_not_change_mini_records(fixture_project):
-    a = _step(fixture_project, "mini", ["behavior.take_p=0.5"], threads=1)[1]
-    b = _step(fixture_project, "mini", ["behavior.take_p=0.5"], threads=4,
+def test_threads_do_not_change_mini_records():
+    a = _step("mini", ["behavior.take_p=0.5"], threads=1)[1]
+    b = _step("mini", ["behavior.take_p=0.5"], threads=4,
               engine={"parallel_min_partitions": 1})[1]
     for table in ("ping", "took", "item_taken"):
         ra, rb = _rows(a, table), _rows(b, table)
         assert all(np.array_equal(ra[k], rb[k]) for k in ra)
 
 
-def test_late_response_to_retired_slot_is_dropped(fixture_project):
-    run, w, _ = _step(fixture_project, "mini", ["behavior.take_p=1.0"])
+def test_late_response_to_retired_slot_is_dropped():
+    run, w, _ = _step("mini", ["behavior.take_p=1.0"])
     assert w.route_stale_response_for_test() == 1          # bumps gen of a waiting slot, routes
     assert w.stats["late_messages"] == 1
 
 
-def test_message_cap(fixture_project):
+def test_message_cap():
     with pytest.raises(CapExceeded, match="requests_and_inboxes"):
-        _step(fixture_project, "mini", ["behavior.take_p=1.0"],
+        _step("mini", ["behavior.take_p=1.0"],
               engine={"max_messages_per_step": 1})
 ```
 `World.route_stale_response_for_test()` is a small test hook: pick one owner with `pending > 0` whose request was answered in the outbox of a fresh shard run, bump its `gen` before routing, route, and return the number of dropped responses. Keep it in `world.py`, prefixed `_for_test` and documented as such.
@@ -2295,7 +2407,8 @@ Expected: FAIL with `ModuleNotFoundError: No module named 'neorisk_simkit.engine
 - Owner phase: split the runnable slots into `threads` contiguous chunks (sorted by slot for reproducible scheduling), run each with `World.run_slots(worker, chunk, t1, owners=True)` in a `ThreadPoolExecutor`; the generated functions release the GIL.
 - Shard phase: shards with a head `< H` run with `limit_t = H` (shards never suspend).
 - `World.next_command_time(owners: bool) -> int`: min head time over live owners (or shards).
-- Track `susp_delta[g]` at suspension from the boundary of the request (minimum δ over the requests of that commit).
+- Track `susp_delta[g]` at suspension from the boundary of the request (minimum δ over the requests of that commit). `susp_t`/`susp_delta` are hidden arrays declared in Task 4's `HIDDEN_DTYPES` and allocated by Task 8; this task adds no array.
+- A request to a shard index ≥ n (or < 0) fails in the generated `_request_<b>` (Task 8) with `EngineError("<proc>: request <b> to shard <x> but <partition> has <n>")`, naming the process and the command (Review Focus #3).
 - Round loop must terminate: each round either runs an owner, processes a shard command `< H`, or admits a creation; assert progress and raise `EngineError("no progress in round <n>")` otherwise.
 - Per-step counters: `rounds`, `owners_run` and `shard_cmds` per round (lists), `compiled_rounds`.
 
@@ -2306,7 +2419,7 @@ Expected: PASS.
 
 - [ ] **Step 6: Lint and commit**
 
-Run: `uv run ruff check libs apps`
+Run: `uv run ruff check $(ls -d libs apps examples/ecommerce_s1 benchmarks 2>/dev/null)`
 ```bash
 git add libs/simkit/src/neorisk_simkit/engine libs/simkit/tests/fixtures/ordering libs/simkit/tests/test_engine_rounds.py
 git commit -m "simkit: rounds with safe horizon, shard processing and routing
@@ -2326,23 +2439,23 @@ Claude-Session: https://claude.ai/code/session_01BKddEJ7kY3XR8oXDK9HriN"
 **Interfaces:**
 - Consumes: Tasks 5, 9, 10.
 - Produces:
-  - `engine.run.Simulation(run: RunSpec, *, threads: int, checked: bool = False)` with `static_entities() -> dict[str, pa.Table]` (read tables and population owner tables: `id` public, `created_at`, `origin` in {"initial", "arrival", "static"}, every table column at creation), `steps() -> Iterator[SealedStep]`, `stats: dict` (cumulative: `steps`, `rows_per_table`, `late_messages`, `rejects`, `retries`, `rounds_per_step`, stage seconds `generate_s`, `seal_s`).
+  - `engine.run.Simulation(run: RunSpec, *, threads: int, checked: bool = False)` with `static_entities() -> dict[str, pa.Table]` (read tables and population owner tables: `id` public, `created_at`, `origin` in {"initial", "arrival", "static"}, every table column at creation), `steps() -> Iterator[SealedStep]`, `stats: dict` (cumulative: `steps`, `rows_per_table`, `late_messages` (int), `rejects` (dict: process name → count), `retries` (int), `continuations` (int, continuation nodes executed), `rounds_per_step`, `round_detail`, stage seconds `generate_s`, `seal_s`; the four counters are copied from `World.stats` after every step, and Task 12 writes them verbatim into `run_stats.json` and `RunResult.stats`).
   - `io.seal.SealedStep(step: int, t_start: int, t_end: int, exported: bool, events: dict[str, pa.Table], history: dict[str, pa.Table], entities: dict[str, pa.Table], stats: dict)`; event tables have the plan's columns in order with Arrow types from `arrow_type` (`event_time` as timestamp, IDs as public int64, `cause_id` null, `event_type` string); rows sorted by the canonical key.
-  - `io.seal.seal_step(world, step, t0, t1, exported, id_bases) -> SealedStep`.
+  - `io.seal.seal_step(world, step, t0, t1, exported, id_bases) -> SealedStep`; `id_bases: dict[str, int]` holds one cumulative base per namespace (key `<ns>`) and one per event table (key `event:<name>`), both starting at 0 and advanced by the rows sealed in each step, so dense indices and `event_id`s never repeat across steps.
   - `checks.structural.check_step(sealed, plan) -> dict[str, int]` (counts per check; raises `EngineError` on: non-increasing canonical key within a table, null in a required column, cat code out of range, provisional handle left after remap, `event_time` outside `[t_start, t_end)`).
   - `engine.run.next_step_length(prev_len, rows, engine, budget) -> int`.
 
-Step loop (`Simulation.steps`): `t = start − warmup`, `end = start + span`, `len = engine.step_us`; while `t < end`: `t1 = min(t + len, end)`; if `t < start < t1`: `t1 = start` (D20); `run_step(world, t, t1)`; `seal_step(...)`; `exported = t >= start`; yield; `t = t1`; if `engine.adapt`: `len = next_step_length(len, rows, …)`.
+Step loop (`Simulation.steps`): `t = start − warmup`, `end = start + span`, `len = engine.step_us`; call `world.init_shards()` once (queues the first `START` of every periodic shard process, D26; without it periodic processes such as Task 14's `restock` never run); while `t < end`: `t1 = min(t + len, end)`; if `t < start < t1`: `t1 = start` (D20); `run_step(world, t, t1)`; `seal_step(...)`; `exported = t >= start`; yield; `t = t1`; if `engine.adapt`: `len = next_step_length(len, rows, …)`.
 
 Seal (`seal_step`), in this order:
 1. Collect every worker's flushed `StepChunk`s.
 2. Dense assignment per namespace: rows created this step get `dense = id_bases[ns] + rank by (pid, ordinal)` (`identity.assign_dense`); `id_bases[ns] += n`. Created owners' final `pid = ptype_code << 56 | dense`.
 3. Remap provisional handles (D11) with `identity.remap_inplace` in: event ref columns, created rows' ref columns, `pid` columns of records from created owners, owner state and local `ref` fields and `self_id`/`pid` of touched slots, `n_tag` and payload columns 0..6 of every queued node of touched slots. A provisional value not found → `EngineError("unresolved handle …")`.
 4. Free slots with `retire_at` set: `alive = 0`, `gen += 1`, release queue nodes.
-5. Event dense indices per table by `(pid, seq)`, `event_id = feistel63(dense, feistel_key(seed, <event name>))`; ref columns → `feistel63(value, feistel_key(seed, <target>))` (null stays null); `event_type` constant.
+5. Event dense indices per table: `dense = id_bases["event:<name>"] + rank by (pid, seq)` within the step, then `id_bases["event:<name>"] += rows`; `event_id = feistel63(dense, feistel_key(seed, <event name>))`; ref columns → `feistel63(value, feistel_key(seed, <target>))` (null stays null); `event_type` constant.
 6. Canonical sort per table: `np.lexsort((seq, pid, lamport, time))`.
 7. Step caps: total rows `> budget.max_step_rows` or bytes `> budget.max_step_bytes` → `CapExceeded("step_output", …)`.
-8. Warm-up steps: drop events (D20) but keep `entities`.
+8. Warm-up steps: drop events (D20) and `history` rows (time-indexed, like events) but keep `entities`; state changes made by change groups still apply to owner state.
 9. `check_step` on exported steps.
 
 - [ ] **Step 1: Write the failing tests**
@@ -2355,22 +2468,20 @@ import numpy as np
 import pyarrow.compute as pc
 import pytest
 
+from conftest import make_run
 from neorisk_simkit.engine import CapExceeded
 from neorisk_simkit.engine.run import Simulation, next_step_length
-from neorisk_simkit.spec.project import load_project, resolve_run
 
 H = 3_600_000_000
 
 
-def _sim(fixture_project, overrides=(), **engine):
-    run = resolve_run(load_project(fixture_project("mini")), "sample", list(overrides))
-    if engine:
-        run = dataclasses.replace(run, engine=dataclasses.replace(run.engine, **engine))
+def _sim(overrides=(), **engine):
+    run = make_run("mini", overrides, **engine)
     return run, Simulation(run, threads=2)
 
 
-def test_steps_cover_the_window_with_a_boundary_at_start(fixture_project):
-    run, sim = _sim(fixture_project, step_us=4 * H)
+def test_steps_cover_the_window_with_a_boundary_at_start():
+    run, sim = _sim(step_us=4 * H)
     steps = list(sim.steps())
     t0, end = run.start_us - run.warmup_us, run.start_us + run.span_us
     assert steps[0].t_start == t0 and steps[-1].t_end == end
@@ -2381,8 +2492,8 @@ def test_steps_cover_the_window_with_a_boundary_at_start(fixture_project):
         assert all(t.num_rows == 0 for t in s.events.values()) or s.exported
 
 
-def test_events_are_canonical_and_ids_public(fixture_project):
-    _, sim = _sim(fixture_project)
+def test_events_are_canonical_and_ids_public():
+    _, sim = _sim()
     seen = set()
     for s in sim.steps():
         for name, t in s.events.items():
@@ -2400,8 +2511,8 @@ def test_events_are_canonical_and_ids_public(fixture_project):
                                           "partition_id", "seq", "cause_id", "action_id"]
 
 
-def test_created_rows_get_contiguous_dense_ids_and_refs_resolve(fixture_project):
-    _, sim = _sim(fixture_project, ["behavior.note_p=0.5"])
+def test_created_rows_get_contiguous_dense_ids_and_refs_resolve():
+    _, sim = _sim(["behavior.note_p=0.5"])
     notes, refs = [], []
     for s in sim.steps():
         if "note" in s.entities:
@@ -2413,16 +2524,16 @@ def test_created_rows_get_contiguous_dense_ids_and_refs_resolve(fixture_project)
     assert set(refs) <= set(notes)                   # cross-step references resolve
 
 
-def test_static_entities(fixture_project):
-    run, sim = _sim(fixture_project)
+def test_static_entities():
+    run, sim = _sim()
     ents = sim.static_entities()
     assert ents["user"].num_rows == 200 and ents["item"].num_rows == 40
     assert set(ents["user"]["origin"].to_pylist()) == {"initial", "arrival"}
     assert ents["user"].column_names[:3] == ["id", "created_at", "origin"]
 
 
-def test_boundary_instants(fixture_project):
-    run, sim = _sim(fixture_project, step_us=6 * H)
+def test_boundary_instants():
+    run, sim = _sim(step_us=6 * H)
     for s in sim.steps():
         for t in s.events.values():
             if t.num_rows:
@@ -2431,19 +2542,28 @@ def test_boundary_instants(fixture_project):
                 assert times.min() >= run.start_us
 
 
-def test_step_output_cap(fixture_project):
-    run, sim = _sim(fixture_project)
+def test_step_output_cap():
+    run, sim = _sim()
     run2 = dataclasses.replace(run, budget=dataclasses.replace(run.budget, max_step_rows=10))
     with pytest.raises(CapExceeded, match="step_output"):
         list(Simulation(run2, threads=1).steps())
 
 
-def test_next_step_length_targets_quarter_of_cap(fixture_project):
-    run, _ = _sim(fixture_project)
+def test_next_step_length_targets_quarter_of_cap():
+    run, _ = _sim()
     eng, bud = run.engine, dataclasses.replace(run.budget, max_step_rows=1000)
     assert next_step_length(4 * H, 500, eng, bud) == 2 * H        # 25% of 1000 = 250 rows
     assert next_step_length(4 * H, 0, eng, bud) == eng.step_max_us
     assert next_step_length(4 * H, 10**9, eng, bud) == eng.step_min_us
+
+
+def test_stats_carry_engine_counters():
+    _, sim = _sim(["behavior.max_pings=1", "behavior.take_p=0.0"])
+    steps = list(sim.steps())
+    st = sim.stats
+    assert st["steps"] == len(steps) and len(st["rounds_per_step"]) == len(steps)
+    assert 0 < st["rejects"]["user_main"] <= 200 and isinstance(st["retries"], int)
+    assert isinstance(st["late_messages"], int) and isinstance(st["continuations"], int)
 ```
 
 - [ ] **Step 2: Run tests to verify they fail**
@@ -2460,11 +2580,11 @@ Expected: FAIL with `ModuleNotFoundError: No module named 'neorisk_simkit.engine
 - [ ] **Step 4: Run tests to verify they pass**
 
 Run: `uv run --all-packages pytest libs/simkit/tests/test_engine_seal.py -v`
-Expected: PASS (7 tests).
+Expected: PASS (8 tests).
 
 - [ ] **Step 5: Lint and commit**
 
-Run: `uv run ruff check libs apps`
+Run: `uv run ruff check $(ls -d libs apps examples/ecommerce_s1 benchmarks 2>/dev/null)`
 ```bash
 git add libs/simkit/src/neorisk_simkit libs/simkit/tests/test_engine_seal.py
 git commit -m "simkit: frontier steps, seal with dense ids and public ids, structural checks
@@ -2479,38 +2599,52 @@ Claude-Session: https://claude.ai/code/session_01BKddEJ7kY3XR8oXDK9HriN"
 
 **Files:**
 - Create: `libs/simkit/src/neorisk_simkit/io/writer.py`, `io/manifest.py`, `io/step_index.py`, `io/entities.py`, `io/dataset.py`, `io/read.py`, `io/stats.py`, `io/schema/__init__.py`, `io/schema/schema_json.py`
+- Modify: `libs/simkit/tests/conftest.py` (append `event_dicts`)
 - Test: `libs/simkit/tests/test_io_writer.py`
 
 **Interfaces:**
-- Consumes: Task 11 `Simulation`, `SealedStep`; Task 4 `validate`, `check_budget`.
+- Consumes: Task 11 `Simulation` (incl. `stats["rejects"/"retries"/"late_messages"/"continuations"]`), `SealedStep`; Task 4 `validate`, `check_budget`; Task 3 conftest `FIXTURES`, `dataset_tree`.
 - Produces:
-  - `io.writer.WRITER_OPTIONS(writer: WriterSettings) -> dict` (the exact `pq.write_table` kwargs, pinned in the manifest); `write_step(run_dir, sealed, writer, plan) -> list[FileEntry]`; `FileEntry(path: str, rows: int, sha256: str)`.
+  - `io.writer.writer_options(writer: WriterSettings, dict_cols: list[str], stat_cols: list[str]) -> dict` (the exact `pq.write_table` kwargs, pinned in the manifest); `write_step(run_dir, sealed, writer, plan) -> list[FileEntry]`; `FileEntry(path: str, rows: int, sha256: str)`.
   - `io.step_index.write_step_index(run_dir, rows: list[dict])`, `read_step_index(run_dir) -> pa.Table`. Columns: `step int32, t_start ts, t_end ts, rows int64, first_time ts, first_lamport int64, first_partition int64, first_seq int32, last_time ts, last_lamport, last_partition, last_seq`, then `rows__<type> int64` per event type (zero-row steps keep null first/last keys).
   - `io.schema.schema_json.schema_document(plan) -> dict` (keys: `pack`, `revision`, `schema_version`, `tables`: list of `{name, kind: "event"|"entity"|"history", doc, columns: [{name, type, nullable, arrow, ref, values, asset, quantum, minimum, doc}]}`), `write_schema(run_dir, plan)`, `load_schema(dataset_dir) -> dict`.
   - `io.manifest.write_manifest(run_dir, run, files, counts, checks, late_messages) -> dict` (keys: `schema_version`, `pack`, `pack_revision`, `engine_revision`, `uv_lock_sha256`, `seed`, `profile`, `overrides`, `config` (merged, JSON-safe), `writer`, `counts` (per table), `checks`, `late_messages`, `files` (sorted by path, with `rows` and `sha256`)); JSON written with `sort_keys=True, indent=2` and a trailing newline.
-  - `io.stats.write_run_stats(run_dir, stats)` (`run_stats.json`: timings, stage seconds, rates, peak RSS bytes, rounds per step, threads, machine).
-  - `io.dataset.RunResult(out_dir: Path, manifest: dict, stats: dict)`; `run_to_dataset(project_dir, profile="sample", overrides=(), *, seed=None, out_dir=None, threads=None, checked=False, force=False, engine_overrides=None) -> RunResult` — validate (raise `ValidationFailed(report)` on errors, `BudgetError` included), refuse an existing `out_dir` without `force` (`FileExistsError`), write into `out_dir.with_suffix(".partial")` then rename, stream steps to the writer.
+  - `io.stats.write_run_stats(run_dir, stats)` (`run_stats.json`: timings, stage seconds, rates, peak RSS bytes, rounds per step, `round_detail`, threads, `machine = {"arch", "cpus", "ram_bytes"}` (exactly these keys; Task 24 reads them), and the engine counters `rejects` (process name → count), `retries`, `late_messages`, `continuations` copied verbatim from `Simulation.stats`).
+  - `io.dataset.ValidationFailed(Exception)` holding `.report: ValidationReport`; `str(e)` = `"; ".join(report.errors)` (Tasks 18 and 19 match error text such as `"exceed the memory budget"` against it).
+  - `io.dataset.RunResult(out_dir: Path, manifest: dict, stats: dict)` (`stats` = the dict written to `run_stats.json`, so `RunResult.stats["retries"]`, `["continuations"]`, `["rejects"]` exist); `run_to_dataset(project_dir, profile="sample", overrides=(), *, seed=None, out_dir=None, threads=None, checked=False, force=False, engine_overrides=None) -> RunResult` — validate (raise `ValidationFailed(report)` on errors, `BudgetError` included), refuse an existing `out_dir` without `force` (`FileExistsError`), write into `out_dir.with_suffix(".partial")` then rename, stream steps to the writer.
   - `io.read.read_events(dataset_dir, types=None) -> dict[str, pl.DataFrame]` (all step files per type, canonical order).
+  - `conftest.event_dicts(d: Path) -> dict[str, list[dict]]` = `{k: v.to_dicts() for k, v in sorted(read_events(d).items())}` (used by Tasks 13 and 17).
 
 - [ ] **Step 1: Write the failing tests**
+
+Append to `libs/simkit/tests/conftest.py`:
+```python
+def event_dicts(d: Path) -> dict[str, list[dict]]:
+    """Every event table of a dataset as row dicts, keyed by type, in canonical order."""
+    from neorisk_simkit.io.read import read_events  # lazy: conftest loads before io exists
+
+    return {k: v.to_dicts() for k, v in sorted(read_events(d).items())}
+```
+
 
 `libs/simkit/tests/test_io_writer.py`:
 ```python
 import hashlib
 import json
+from datetime import datetime, timezone
 
 import polars as pl
 import pyarrow.parquet as pq
 import pytest
 
-from neorisk_simkit.io.dataset import run_to_dataset
+from conftest import FIXTURES, dataset_tree
+from neorisk_simkit.io.dataset import ValidationFailed, run_to_dataset
 from neorisk_simkit.io.read import read_events
 from neorisk_simkit.io.step_index import read_step_index
 
 
 @pytest.fixture(scope="module")
 def ds(tmp_path_factory):
-    from conftest import FIXTURES
     out = tmp_path_factory.mktemp("mini") / "sample-s7"
     return run_to_dataset(FIXTURES / "mini", "sample", ["behavior.take_p=0.4"], out_dir=out)
 
@@ -2571,27 +2705,50 @@ def test_schema_json_lists_common_columns_first(ds):
 
 
 def test_identical_replay_is_byte_identical(ds, tmp_path):
-    from conftest import FIXTURES
     again = run_to_dataset(FIXTURES / "mini", "sample", ["behavior.take_p=0.4"],
                            out_dir=tmp_path / "again", threads=1)
-    def tree(d):
-        return {p.relative_to(d).as_posix(): p.read_bytes() for p in d.rglob("*")
-                if p.is_file() and p.name != "run_stats.json"}
-    assert tree(ds.out_dir) == tree(again.out_dir)
+    assert dataset_tree(ds.out_dir) == dataset_tree(again.out_dir)
 
 
 def test_refuses_to_overwrite_without_force(ds):
-    from conftest import FIXTURES
     with pytest.raises(FileExistsError):
         run_to_dataset(FIXTURES / "mini", "sample", ["behavior.take_p=0.4"], out_dir=ds.out_dir)
 
 
 def test_empty_export_window_still_writes_manifest(tmp_path):
-    from conftest import FIXTURES
     r = run_to_dataset(FIXTURES / "bad_abi", "sample", ["mode=0"], out_dir=tmp_path / "empty")
     assert (r.out_dir / "manifest.json").exists() and (r.out_dir / "_index/steps.parquet").exists()
     assert r.manifest["counts"]["e"] == 0
     assert not list((r.out_dir / "events").rglob("*.parquet"))
+
+
+def test_run_stats_carry_engine_counters_and_machine(ds):
+    stats = json.loads((ds.out_dir / "run_stats.json").read_text())
+    for key in ("rejects", "retries", "late_messages", "continuations"):
+        assert stats[key] == ds.stats[key]
+    assert isinstance(stats["rejects"], dict) and isinstance(stats["retries"], int)
+    assert set(stats["machine"]) == {"arch", "cpus", "ram_bytes"}
+
+
+def test_validation_failure_message_lists_errors(tmp_path):
+    with pytest.raises(ValidationFailed, match="exceed the memory budget") as e:
+        run_to_dataset(FIXTURES / "mini", "sample", ["budget.memory=1KB"],
+                       out_dir=tmp_path / "refused")
+    assert e.value.report.errors and not (tmp_path / "refused").exists()
+
+
+def test_step_crossing_midnight_and_the_start_instant(tmp_path):
+    # mini: start 2026-03-01T00:00Z, warm-up 6h; 5h steps from 02-28T18:00 give 18-23, 23-00
+    # (forced boundary at start), then 00-05, 05-10, 10-15, 15-20, 20-01 (crosses midnight)
+    r = run_to_dataset(FIXTURES / "mini", "sample", ["engine.step=5h"], out_dir=tmp_path / "m5")
+    dirs: dict[tuple[str, str], set[str]] = {}
+    for f in (r.out_dir / "events").rglob("*.parquet"):
+        dirs.setdefault((f.parent.parent.name, f.stem), set()).add(f.parent.name)
+    assert any(len(v) == 2 for v in dirs.values())        # same step-NNNNNN under two date= dirs
+    start = datetime(2026, 3, 1, tzinfo=timezone.utc)
+    for t in read_events(r.out_dir).values():
+        if t.height:
+            assert t["event_time"].min() >= start          # start - 1us is warm-up only
 ```
 (`bad_abi` mode 0 rejects every command in unchecked mode, so the run exports zero events.)
 
@@ -2602,7 +2759,7 @@ Expected: FAIL with `ModuleNotFoundError: No module named 'neorisk_simkit.io.dat
 
 - [ ] **Step 3: Implement**
 
-`writer_options` (pinned, exact; `WRITER_OPTIONS` in the interface list is this function):
+`writer_options` (pinned, exact):
 ```python
 def writer_options(writer, dict_cols, stat_cols):
     return dict(compression=writer.compression, compression_level=writer.compression_level,
@@ -2614,18 +2771,19 @@ def writer_options(writer, dict_cols, stat_cols):
 - Build the step-index rows from each sealed step (first/last key over all event types).
 - `uv_lock_sha256`: sha256 of the workspace `uv.lock` if found by walking up from the project dir, else `null`.
 - Thread caps (D33): `run_to_dataset` sets `pyarrow.set_cpu_count(threads)` and `os.environ.setdefault("POLARS_MAX_THREADS", str(threads))`; `threads` defaults to `budget.threads`.
-- `run_stats.json` holds wall times, per-stage seconds, rows/s, `peak_rss_bytes` (`resource.getrusage(RUSAGE_SELF).ru_maxrss`, bytes on macOS, KiB × 1024 on Linux), `rounds_per_step`, `round_detail` (per step: `{"owners_run": [...], "shard_cmds": [...]}` from `RoundStats`), `threads`, `platform.machine()`, `os.cpu_count()`.
+- `run_stats.json` holds wall times, per-stage seconds, rows/s, `peak_rss_bytes` (`resource.getrusage(RUSAGE_SELF).ru_maxrss`, bytes on macOS, KiB × 1024 on Linux), `rounds_per_step`, `round_detail` (per step: `{"owners_run": [...], "shard_cmds": [...]}` from `RoundStats`), `threads`, `machine = {"arch": platform.machine(), "cpus": os.cpu_count(), "ram_bytes": os.sysconf("SC_PAGE_SIZE") * os.sysconf("SC_PHYS_PAGES")}`, and `rejects`, `retries`, `late_messages`, `continuations` copied verbatim from `Simulation.stats`. `RunResult.stats` is the same dict.
+- `ValidationFailed(report)`: `super().__init__("; ".join(report.errors))` and `self.report = report`; `run_to_dataset` raises it before creating any folder.
 
 - [ ] **Step 4: Run tests to verify they pass**
 
 Run: `uv run --all-packages pytest libs/simkit/tests/test_io_writer.py -v`
-Expected: PASS (9 tests).
+Expected: PASS (12 tests).
 
 - [ ] **Step 5: Full suite, lint and commit**
 
-Run: `uv run --all-packages pytest -q && uv run ruff check libs apps`
+Run: `uv run --all-packages pytest -q && uv run ruff check $(ls -d libs apps examples/ecommerce_s1 benchmarks 2>/dev/null)`
 ```bash
-git add libs/simkit/src/neorisk_simkit/io libs/simkit/tests/test_io_writer.py
+git add libs/simkit/src/neorisk_simkit/io libs/simkit/tests/conftest.py libs/simkit/tests/test_io_writer.py
 git commit -m "simkit: parquet writer, manifest, step index, schema.json, run_to_dataset
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
@@ -2640,7 +2798,7 @@ Claude-Session: https://claude.ai/code/session_01BKddEJ7kY3XR8oXDK9HriN"
 - Test: `libs/simkit/tests/test_exit_abi_proof.py`
 
 **Interfaces:**
-- Consumes: Task 12 `run_to_dataset(..., engine_overrides={"force_capacity": {...}}, checked=...)`, `read_events`; Task 8 `force_capacity` semantics (records/creates buffer rows; `timers` = node refill chunk; `requests` = outbox rows).
+- Consumes: Task 12 `run_to_dataset(..., engine_overrides={"force_capacity": {...}}, checked=...)`, `read_events`, `RunResult.stats["retries"]`, `run_stats.json["rejects"]`, conftest `event_dicts`; Task 8 `force_capacity` semantics (records/creates = buffer rows; `timers` = cap on each worker's node refill chunk, so its free list never holds more than n nodes — `validate` requires n ≥ every kernel's `max.timers`, and `MINIMA["timers"] = 2` equals `prove`'s maximum; `requests` = outbox rows, and a full outbox is moved aside to `World.pending_outbox` by Task 9, so `requests: 1` with 30 provers makes progress).
 - Produces: the §05 exit test. No production code unless the test exposes a bug (fix it in the owning module and say so in the commit body).
 
 - [ ] **Step 1: Create the fixture**
@@ -2773,9 +2931,10 @@ import os
 import subprocess
 import sys
 
+import polars as pl
 import pytest
 
-from conftest import FIXTURES
+from conftest import FIXTURES, event_dicts
 from neorisk_simkit.io.dataset import run_to_dataset
 from neorisk_simkit.io.read import read_events
 
@@ -2786,8 +2945,7 @@ MINIMA = {"records:e_alpha": 1, "records:e_beta": 1, "records:e_gamma": 2, "crea
 
 def logical(out_dir):
     """Every event table and the created-row entities, as comparable Python objects."""
-    data = {k: v.to_dicts() for k, v in sorted(read_events(out_dir).items())}
-    import polars as pl
+    data = event_dicts(out_dir)
     data["entities/box"] = pl.read_parquet(out_dir / "entities/box/part-00000.parquet").to_dicts()
     return data
 
@@ -2848,11 +3006,11 @@ def test_checked_and_uncompiled_runs_match(mode, baseline, tmp_path):
 - [ ] **Step 3: Run the test**
 
 Run: `uv run --all-packages pytest libs/simkit/tests/test_exit_abi_proof.py -v`
-Expected: first run FAILS until the fixture exists (`FileNotFoundError` / `AssertionError` in `fixture_project`), then PASS (1 + 7 + 2 tests). If a forced-exhaustion case differs from the baseline, the bug is in RETRY handling (Task 9) or slab flushing (Task 8): fix it there; never relax the comparison.
+Expected: PASS (1 + 7 + 2 tests; the fixture was created in Step 1). If a forced-exhaustion case differs from the baseline, the bug is in RETRY handling (Task 9) or slab flushing (Task 8): fix it there; never relax the comparison.
 
 - [ ] **Step 4: Lint and commit**
 
-Run: `uv run ruff check libs apps`
+Run: `uv run ruff check $(ls -d libs apps examples/ecommerce_s1 benchmarks 2>/dev/null)`
 ```bash
 git add libs/simkit/tests/fixtures/abi_proof libs/simkit/tests/test_exit_abi_proof.py
 git commit -m "test: S1 exit test - native ABI proof under forced exhaustion
@@ -2867,12 +3025,14 @@ Claude-Session: https://claude.ai/code/session_01BKddEJ7kY3XR8oXDK9HriN"
 
 **Files:**
 - Create: `examples/ecommerce_s1/README.md`, `examples/ecommerce_s1/datagen.toml`, `examples/ecommerce_s1/specs/brief.md`, `examples/ecommerce_s1/specs/pack.py`, `examples/ecommerce_s1/specs/kernels.py`, `examples/ecommerce_s1/{out,reports,logs}/.gitkeep`
-- Create: `libs/simkit/src/neorisk_simkit/std/sources.py` (`catalog`, `devices`, `stock`); Modify: `std/__init__.py` (export them and `generated`), `examples/README.md` (one row for `ecommerce_s1/`, marked "S1 slice; superseded by `ecommerce/` at M3")
+- Create: `libs/simkit/src/neorisk_simkit/std/sources.py` (`catalog`, `devices`, `stock`); Modify: `std/__init__.py` (export `catalog`, `devices`, `stock` only; `generated` and `law` are already exported since Task 3), `examples/README.md` (one row for `ecommerce_s1/`, marked "S1 slice; superseded by `ecommerce/` at M3")
+- Modify (engine wiring for recipe-derived tables and read columns): `libs/simkit/src/neorisk_simkit/engine/layout.py` (read columns include a recipe's extra read columns; recipe-built read tables), `engine/world.py` (build read tables and extra read columns from recipes), `engine/run.py` (`static_entities()` includes recipe-built tables)
 - Test: `apps/datagen/tests/test_example_ecom_s1.py`
 
 **Interfaces:**
-- Consumes: Tasks 1–12.
+- Consumes: Tasks 1–12 (`std` package from Tasks 2–3; `layout.kernel_layouts`, `World.build`, `Simulation.static_entities`).
 - Produces:
+  - Recipe protocol (the object passed as `population(refs={...})` values or as a shard's `init=`; `std.devices` and `std.stock` implement it, and Tasks 6/9/11 code paths call it duck-typed): `read_column_names(table: str) -> tuple[str, ...]` (plan-time, no data; extra read columns the recipe adds to `table`, e.g. `("stock_target",)` for the items table of `std.stock`), `extra_read_columns(table: str) -> dict[str, np.ndarray]` (build-time, after the recipe generated its data with keyed streams), and `table_rows(table: str) -> dict[str, np.ndarray] | None` (build-time; the full rows of a table the recipe generates, e.g. `device` for `std.devices`, `None` for tables it does not build). Wiring: `layout` appends `read_column_names(t)` after `t`'s own columns (and before `local_index`/`cumw`) for every reads entry, and a read table with no `source` gets its rows from the recipe that builds it, with its `n` read at runtime (Task 6 rule: only fixed-`n` sources are inlined); `World.build` fills those reads from `extra_read_columns`/`table_rows`; `Simulation.static_entities()` writes recipe-built tables (`origin = "static"`, `created_at` = the column `first_seen` when present, else `start − warmup`).
   - `std.catalog(n, category: Dist, price: Dist, group: Dist, weight: Dist) -> Source` for a table with columns `category`, `price`, `sku_group`; adds read-only derived arrays `cumw` (cumulative view weight, for `sample_by_weight`) and is the items table of the inventory shard.
   - `std.devices(per_user: Dist, table: str, share: float, kinds: dict[str, float] | None = None) -> RefsRecipe`: generates the device table rows (`os`, `kind`, `first_seen`) and the user→device CSR (each user ≥ 1 device; a `share` of users additionally reuse one device of a random earlier user — the household). Exposed in kernels as `ctx.refs.<name>.count(id)`, `.get(id, j)`, `.pick(id, u)`.
   - `std.stock(initial: Dist, by_weight: float = 0.0) -> ShardInit`: initial `on_hand` per SKU (`negbinom` draw, scaled up for heavy-weight SKUs), `reserved = 0`, and the derived read column `stock_target` on the items table (= initial stock).
@@ -3418,6 +3578,12 @@ def test_restock_uses_continuations(run, ev):
     assert run.stats["continuations"] > 0          # 150 SKUs per group: 3 sub-steps of 64
 
 
+def test_recipe_built_tables_are_exported(run):
+    dev = pl.read_parquet(run.out_dir / "entities/device/part-00000.parquet")
+    assert dev.height >= 3000 and set(dev["origin"]) == {"static"}
+    assert pl.read_parquet(run.out_dir / "entities/sku/part-00000.parquet").height == 1200
+
+
 def test_rates_are_plausible(ev):
     sessions, checkouts = ev["session_started"].height, ev["checkout_started"].height
     assert 0.01 < checkouts / sessions < 0.30
@@ -3433,18 +3599,20 @@ Expected: FAIL with `AttributeError: module 'neorisk_simkit.std' has no attribut
 Implement `std/sources.py` (pack-time numpy code using `rng.uniforms` streams keyed by table/recipe name; nothing here runs in kernels):
 - `catalog`: columns from the dists (category codes, price via `lognormal_minor`, `sku_group` via `uniform_int`); weights `zipf(s)` over a keyed random permutation of rows; `cumw` = normalized cumulative weights (float64). `sample_by_weight(cumw, u)` in Task 6/8 is `np.searchsorted(cumw, u, side="right")`.
 - `devices`: per user `m ~ per_user` devices; kinds drawn from `kinds` (default `{"phone": .55, "tablet": .10, "desktop": .35}`), `os` consistent with kind (phone/tablet → ios/android, desktop → windows/macos/linux), `first_seen` = owner arrival time; household sharing: with probability `share` append one device of the previous user in ordinal order. CSR `(offs int64[n_users+1], idx int64[total])`.
-- `stock`: `on_hand = negbinom(mean, disp)` scaled by `1 + by_weight * w / w.max()`, cast to int32; `stock_target = on_hand` copy registered as an extra read column of the items table.
+- `stock`: `on_hand = negbinom(mean, disp)` scaled by `1 + by_weight * w / w.max()`, cast to int32; `stock_target = on_hand` copy exposed through the recipe protocol (`read_column_names("sku") == ("stock_target",)`, `extra_read_columns("sku") == {"stock_target": …}`).
+- `devices`: `table_rows("device")` returns the generated device rows; `read_column_names` returns `()`.
+- Engine wiring (Files above): `layout.kernel_layouts` collects recipes from `plan.populations[*].refs` and `plan.partitions[*].init`; `World.build` and `Simulation.static_entities` call the protocol methods. No other engine change.
 
 - [ ] **Step 4: Run tests to verify they pass**
 
 Run: `uv run --all-packages pytest apps/datagen/tests/test_example_ecom_s1.py -v`
-Expected: PASS (7 tests). If a rate test fails, tune `Journey` defaults (not the test bounds) and note the change in the commit body.
+Expected: PASS (8 tests). If a rate test fails, tune `Journey` defaults (not the test bounds) and note the change in the commit body.
 
 - [ ] **Step 5: Lint and commit**
 
-Run: `uv run ruff check libs apps examples/ecommerce_s1`
+Run: `uv run ruff check $(ls -d libs apps examples/ecommerce_s1 benchmarks 2>/dev/null)`
 ```bash
-git add examples/ecommerce_s1 examples/README.md libs/simkit/src/neorisk_simkit/std apps/datagen/tests/test_example_ecom_s1.py
+git add examples/ecommerce_s1 examples/README.md libs/simkit/src/neorisk_simkit/std libs/simkit/src/neorisk_simkit/engine/layout.py libs/simkit/src/neorisk_simkit/engine/world.py libs/simkit/src/neorisk_simkit/engine/run.py apps/datagen/tests/test_example_ecom_s1.py
 git commit -m "examples: ecommerce_s1 slice (sessions, carts, single-SKU checkout, inventory shards)
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
@@ -3461,7 +3629,7 @@ Claude-Session: https://claude.ai/code/session_01BKddEJ7kY3XR8oXDK9HriN"
 - Test: `libs/simkit/tests/test_std_handoff.py`, `apps/datagen/tests/test_example_ecom_s1_kyc.py`
 
 **Interfaces:**
-- Consumes: Task 14 project; Task 8 `_change_<g>` emitter; `PRIO_EXPIRY`.
+- Consumes: Task 14 project; Task 8 `_change_<g>` emitter; `PRIO_EXPIRY`; Task 11 seal rule that warm-up steps drop `history` rows as well as events (so exported history rows equal exported `kyc_completed` rows); Task 2/3 `std` package (`std/__init__.py` gains `handoff`).
 - Produces:
   - `std.handoff` (`@njit(cache=True)`): status constants `NONE = 0, OPEN = 1, REDEEMED = 2, EXPIRED = 3, DONE = 4`; outcome constants `OK = 0, REJ_EXPIRED = 1, REJ_ALREADY = 2, REJ_UNKNOWN = 3`; `redeem(status, expires_at, t, token, presented) -> int` (`presented != token` → `REJ_UNKNOWN`; `status == REDEEMED or status == DONE` → `REJ_ALREADY`; `status == EXPIRED or t >= expires_at` → `REJ_EXPIRED`; `status == OPEN` → `OK`); `expire(status) -> int` (`OPEN` → `EXPIRED`, else unchanged).
   - Pack additions: `p.ids("flow")`; user columns `kyc_level: i16()`, `kyc_device: opt(ref("device"))`; `p.change_group("user_kyc", table="user", cols=["kyc_level", "kyc_device"])`; events `kyc_started(user_id, flow_id, session_id, device_id, expires_at: ts)`, `kyc_handoff_redeemed(user_id, flow_id, device_id)`, `kyc_handoff_rejected(user_id, flow_id, device_id, reason: cat("expired", "already_redeemed"))`, `kyc_handoff_expired(user_id, flow_id)`, `kyc_completed(user_id, flow_id, session_id, device_id, scan_device_id)`.
@@ -3580,7 +3748,7 @@ Expected: PASS.
 
 - [ ] **Step 5: Lint and commit**
 
-Run: `uv run ruff check libs apps examples/ecommerce_s1`
+Run: `uv run ruff check $(ls -d libs apps examples/ecommerce_s1 benchmarks 2>/dev/null)`
 ```bash
 git add libs/simkit/src/neorisk_simkit/std examples/ecommerce_s1 libs/simkit/tests/test_std_handoff.py apps/datagen/tests/test_example_ecom_s1_kyc.py
 git commit -m "examples: cross-device KYC kernel with std.handoff and the user_kyc change group
@@ -3594,7 +3762,7 @@ Claude-Session: https://claude.ai/code/session_01BKddEJ7kY3XR8oXDK9HriN"
 ### Task 16: Exit test — the recurring-shopper trace (§07) as a fixture
 
 **Files:**
-- Modify: `libs/simkit/src/neorisk_simkit/spec/sources.py` (add `rows(**cols: list)` explicit-rows source, exported as `std.rows`)
+- Modify: `libs/simkit/src/neorisk_simkit/spec/sources.py` (add `rows(**cols: list)` explicit-rows source), `libs/simkit/src/neorisk_simkit/std/__init__.py` (export it: `from neorisk_simkit.spec.sources import generated, rows`)
 - Create fixture: `libs/simkit/tests/fixtures/trace_shopper/{datagen.toml,specs/pack.py,specs/kernels.py}`
 - Test: `libs/simkit/tests/test_exit_trace_shopper.py`
 
@@ -3878,9 +4046,9 @@ Expected: FAIL first (`AttributeError: ... has no attribute 'rows'`), then PASS 
 
 - [ ] **Step 4: Lint and commit**
 
-Run: `uv run ruff check libs apps`
+Run: `uv run ruff check $(ls -d libs apps examples/ecommerce_s1 benchmarks 2>/dev/null)`
 ```bash
-git add libs/simkit/src/neorisk_simkit/spec/sources.py libs/simkit/tests/fixtures/trace_shopper libs/simkit/tests/test_exit_trace_shopper.py
+git add libs/simkit/src/neorisk_simkit/spec/sources.py libs/simkit/src/neorisk_simkit/std/__init__.py libs/simkit/tests/fixtures/trace_shopper libs/simkit/tests/test_exit_trace_shopper.py
 git commit -m "test: S1 exit test - recurring-shopper trace fixture (spec section 07)
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
@@ -3895,8 +4063,8 @@ Claude-Session: https://claude.ai/code/session_01BKddEJ7kY3XR8oXDK9HriN"
 - Test: `libs/simkit/tests/test_exit_invariance.py`
 
 **Interfaces:**
-- Consumes: Task 12 `run_to_dataset`, `read_events`, `load_schema`; Task 15 slice project.
-- Produces: the §10/§12 invariance exit test and the helper `canonicalize_ids(events, schema) -> dict[str, list[dict]]` (test-local).
+- Consumes: Task 12 `run_to_dataset`, `read_events`, `load_schema`, conftest `event_dicts`; Task 3 conftest `dataset_tree`; Task 9 full-outbox handling (`World.pending_outbox`, so the 16KB-slab runs, about 85 outbox rows per worker, make progress); Task 15 slice project.
+- Produces: the §10/§12 invariance exit test and the helper `canonicalize_ids(d: Path) -> dict[str, list[dict]]` (test-local; reads the dataset's events and `schema.json` itself).
 
 - [ ] **Step 1: Write the test**
 
@@ -3911,6 +4079,7 @@ from pathlib import Path
 import polars as pl
 import pytest
 
+from conftest import dataset_tree, event_dicts
 from neorisk_simkit.io.dataset import run_to_dataset
 from neorisk_simkit.io.read import read_events
 from neorisk_simkit.io.schema.schema_json import load_schema
@@ -3938,11 +4107,7 @@ def runs(tmp_path_factory):
     return out
 
 
-def exact(d):
-    return {k: v.to_dicts() for k, v in sorted(read_events(d).items())}
-
-
-def canonicalize_ids(d):
+def canonicalize_ids(d: Path) -> dict[str, list[dict]]:
     """Rename every ID namespace by first appearance in global canonical order (D13)."""
     schema, events = load_schema(d), read_events(d)
     refs = {t["name"]: {c["name"]: c["ref"] for c in t["columns"] if c.get("ref")}
@@ -3972,10 +4137,10 @@ def canonicalize_ids(d):
 
 @pytest.mark.parametrize("step", STEPS)
 def test_threads_and_slabs_give_identical_records(runs, step):
-    base = exact(runs[(1, "8MB", step)])
+    base = event_dicts(runs[(1, "8MB", step)])
     assert sum(len(v) for v in base.values()) > 10_000
     for threads, slab in itertools.product(THREADS, SLABS):
-        assert exact(runs[(threads, slab, step)]) == base, (threads, slab, step)
+        assert event_dicts(runs[(threads, slab, step)]) == base, (threads, slab, step)
 
 
 def test_step_lengths_give_identical_logical_records(runs):
@@ -3987,11 +4152,7 @@ def test_identical_replay_is_byte_identical(runs, tmp_path):
     run_to_dataset(EX, "sample", SMALL + ["engine.slab_bytes='8MB'", "engine.step='6h'"],
                    out_dir=again, threads=4, engine_overrides={"parallel_min_partitions": 1})
     first = runs[(4, "8MB", "6h")]
-
-    def tree(d):
-        return {p.relative_to(d).as_posix(): p.read_bytes() for p in d.rglob("*")
-                if p.is_file() and p.name != "run_stats.json"}
-    assert tree(first) == tree(again)
+    assert dataset_tree(first) == dataset_tree(again)
 ```
 (`partition_id` is renamed only because created-owner IDs may differ by step length (D12); the S1 slice creates no owners, so the rename is a no-op today.)
 
@@ -4002,7 +4163,7 @@ Expected: PASS (4 tests). Any difference is an engine bug (usually: an RNG key t
 
 - [ ] **Step 3: Lint and commit**
 
-Run: `uv run ruff check libs apps`
+Run: `uv run ruff check $(ls -d libs apps examples/ecommerce_s1 benchmarks 2>/dev/null)`
 ```bash
 git add libs/simkit/tests/test_exit_invariance.py
 git commit -m "test: S1 exit test - thread, slab and step invariance
@@ -4016,12 +4177,13 @@ Claude-Session: https://claude.ai/code/session_01BKddEJ7kY3XR8oXDK9HriN"
 ### Task 18: Exit test — memory caps enforced
 
 **Files:**
-- Modify (only if a case fails): `spec/caps.py`, `engine/world.py`, `engine/route.py`, `io/dataset.py`
+- Modify: `libs/simkit/src/neorisk_simkit/engine/world.py` (add `World.allocated_slab_bytes()`)
+- Modify (only if a case fails): `spec/caps.py`, `engine/route.py`, `io/dataset.py`
 - Test: `libs/simkit/tests/test_exit_memory_caps.py`
 
 **Interfaces:**
-- Consumes: Task 4 caps; runtime cap checks from Tasks 9–12; `io.dataset.ValidationFailed`.
-- Produces: the §10 exit test. Also `World.allocated_slab_bytes() -> int` (sum of every worker's buffer bytes) if not already present.
+- Consumes: Task 4 caps; runtime cap checks from Tasks 9–12; `io.dataset.ValidationFailed` (`str(e)` joins the report errors); Task 10 `CapExceeded("max_admissions_per_step", …, process=…)` (message ends with `in process <name>`).
+- Produces: the §10 exit test and `World.allocated_slab_bytes() -> int` (sum of `nbytes` of every buffer of every worker's `SlabSet`).
 
 - [ ] **Step 1: Write the test**
 
@@ -4063,6 +4225,8 @@ def test_runtime_caps_fail_with_the_item_named(tmp_path, project, overrides, ite
     with pytest.raises(CapExceeded) as e:
         run_to_dataset(project, "sample", overrides, out_dir=out)
     assert e.value.item == item and item in str(e.value)
+    if item == "max_admissions_per_step":                 # spec §06: names the process
+        assert str(e.value).endswith("in process journey")
     assert not out.exists() and not out.with_suffix(".partial").exists()
 
 
@@ -4086,7 +4250,7 @@ Expected: PASS (8 tests). For each failing case, add the missing check where the
 
 - [ ] **Step 3: Lint and commit**
 
-Run: `uv run ruff check libs apps`
+Run: `uv run ruff check $(ls -d libs apps examples/ecommerce_s1 benchmarks 2>/dev/null)`
 ```bash
 git add libs/simkit libs/simkit/tests/test_exit_memory_caps.py
 git commit -m "test: S1 exit test - memory caps enforced
@@ -4105,7 +4269,7 @@ Claude-Session: https://claude.ai/code/session_01BKddEJ7kY3XR8oXDK9HriN"
 - Test: `apps/datagen/tests/test_datagen_run_cli.py`
 
 **Interfaces:**
-- Consumes: Task 4 `validate`; Task 12 `run_to_dataset`, `ValidationFailed`; Task 2 `CapExceeded`.
+- Consumes: Task 4 `validate`; Task 12 `run_to_dataset`, `ValidationFailed` (`str(e)` = the report errors joined with `"; "`, so printing it shows `exceed the memory budget …`); Task 2 `CapExceeded`.
 - Produces:
   - `datagen validate PROJECT [--profile NAME] [--set K=V]...` — prints `pack <name> @ <revision> · schema_version <n>`, partitions, events, processes, warnings, then a caps table (`item`, `hard`, `estimate`, MiB) and `OK` or the errors; exit 0 or 2 (D35).
   - `datagen run PROJECT [--profile NAME] [--set K=V]... [--seed N] [--threads N] [--out DIR] [--force] [--checked]` — default run folder `<project>/<paths.out>/<profile>-s<seed>` (D21); prints the folder, exported rows per table, rounds and seconds; exit 0, 2 (validation failed, folder exists), 3 (`CapExceeded`, message names the item on stderr).
@@ -4189,7 +4353,7 @@ Expected: PASS (all datagen tests, old and new).
 
 - [ ] **Step 5: Lint and commit**
 
-Run: `uv run ruff check libs apps`
+Run: `uv run ruff check $(ls -d libs apps examples/ecommerce_s1 benchmarks 2>/dev/null)`
 ```bash
 git add apps/datagen libs/simkit
 git commit -m "datagen: validate and run commands for project folders
@@ -4402,7 +4566,7 @@ Expected: PASS (6 + 3 tests).
 
 - [ ] **Step 6: Lint and commit**
 
-Run: `uv run ruff check libs apps`
+Run: `uv run ruff check $(ls -d libs apps examples/ecommerce_s1 benchmarks 2>/dev/null)`
 ```bash
 git add libs/simkit apps/datagen
 git commit -m "datagen schema: Postgres and DuckDB DDL from a pack or a dataset
@@ -4422,7 +4586,7 @@ Claude-Session: https://claude.ai/code/session_01BKddEJ7kY3XR8oXDK9HriN"
 **Interfaces:**
 - Consumes: Task 12 layout, `read_step_index`, `load_schema`.
 - Produces:
-  - `CanonicalKey = tuple[int, int, int, int]` (event_time µs, lamport, partition_id, seq).
+  - `CanonicalKey = tuple[int, int, int, int]` (event_time µs, lamport, partition_id, seq). All replay time arguments are int µs since the epoch; the test builds its expected keys with `event_time` as int µs (`pl.col("event_time").dt.epoch("us")` for frames, `pc.cast(…, pa.int64())` for batches).
   - `ReplayRequest(first: int | None = None, last: int | None = None, t_from: int | None = None, t_to: int | None = None, types: tuple[str, ...] | None = None, batch_rows: int = 65_536)`; `ReplayError(Exception)`.
   - `plan_replay(dataset_dir, req) -> ReplayPlan` with `steps: list[int]` (ascending, pruned by the index for `--from/--to` and `--last`), `types: list[str]`, `schema: pa.Schema` (unified, D23), `doc: dict` (schema.json). Errors: `first` and `last` together, non-positive N, `t_from >= t_to`, unknown type, `batch_rows > 65_536`.
   - `iter_batches(plan) -> Iterator[pa.RecordBatch]`: canonical order, each batch ≤ `batch_rows`; reads only the files of selected types and planned steps (all `date=` dirs of a step), concatenates a step's tables, sorts by the key, applies the time filter, then `first`/`last`. `--last N` walks steps backwards using `rows__<type>` from the index (and real filtered counts when a time filter is set), then emits forward. `plan.files_opened` counts opened files (for tests).
@@ -4437,6 +4601,8 @@ import json
 import re
 
 import polars as pl
+import pyarrow as pa
+import pyarrow.compute as pc
 import pytest
 
 from conftest import FIXTURES
@@ -4458,13 +4624,19 @@ def ds(tmp_path_factory):
 
 
 def _keys(batches):
-    return [tuple(r[k] for k in KEY) for b in batches for r in b.select(KEY).to_pylist()]
+    """Canonical keys with event_time as int µs (ReplayRequest.t_from/t_to are int µs)."""
+    out = []
+    for b in batches:
+        t = pc.cast(b.column("event_time"), pa.int64()).to_pylist()
+        out.extend(zip(t, *(b.column(k).to_pylist() for k in KEY[1:])))
+    return out
 
 
 @pytest.fixture(scope="module")
 def everything(ds):
     ev = read_events(ds)
-    allk = pl.concat([v.select(KEY) for v in ev.values()]).sort(KEY)
+    allk = pl.concat([v.select(pl.col("event_time").dt.epoch("us"), *KEY[1:])
+                      for v in ev.values()]).sort(KEY)
     return [tuple(r) for r in allk.iter_rows()]
 
 
@@ -4542,7 +4714,7 @@ Expected: PASS (7 tests).
 
 - [ ] **Step 5: Lint and commit**
 
-Run: `uv run ruff check libs apps`
+Run: `uv run ruff check $(ls -d libs apps examples/ecommerce_s1 benchmarks 2>/dev/null)`
 ```bash
 git add libs/simkit/src/neorisk_simkit/io/replay libs/simkit/tests/test_replay_core.py
 git commit -m "simkit: replay planner, reader and canonical encoding
@@ -4687,9 +4859,11 @@ def test_tee_to_stdout_and_file(ds, tmp_path, capsys):
 
 
 def test_types_window_and_numbers(ds, capsys):
+    # the whole exported span (start 2026-01-01, run.span=3d), so the selection is not empty
     assert main(["replay", str(ds), "--types", "order_placed", "--from", "2026-01-01",
-                 "--to", "2026-01-03", "--numbers"]) == 0
+                 "--to", "2026-01-04", "--numbers"]) == 0
     rows = [json.loads(x) for x in capsys.readouterr().out.splitlines()]
+    assert rows
     assert all(r["event_type"] == "order_placed" and isinstance(r["amount"], int) for r in rows)
 
 
@@ -4730,7 +4904,7 @@ Expected: PASS (6 + 6 tests).
 
 - [ ] **Step 5: Lint and commit**
 
-Run: `uv run ruff check libs apps`
+Run: `uv run ruff check $(ls -d libs apps examples/ecommerce_s1 benchmarks 2>/dev/null)`
 ```bash
 git add libs/simkit/src/neorisk_simkit/io/sinks libs/simkit/tests/test_replay_sinks.py apps/datagen
 git commit -m "datagen replay: stdout and file sinks with tee and exit report
@@ -4826,7 +5000,7 @@ Expected: PASS (new tests plus every existing bench test unchanged).
 
 - [ ] **Step 5: Lint and commit**
 
-Run: `uv run ruff check libs apps`
+Run: `uv run ruff check $(ls -d libs apps examples/ecommerce_s1 benchmarks 2>/dev/null)`
 ```bash
 git add apps/bench apps/datagen/src/datagen/scenarios/fraud.py
 git commit -m "bench: feature allowlist; engine columns are never model inputs
@@ -4845,9 +5019,9 @@ Claude-Session: https://claude.ai/code/session_01BKddEJ7kY3XR8oXDK9HriN"
 - Test: `apps/datagen/tests/test_benchmark_s1.py`
 
 **Interfaces:**
-- Consumes: Tasks 12, 15, 19.
+- Consumes: Tasks 12 (`run_stats.json` incl. `machine = {"arch", "cpus", "ram_bytes"}`), 15, 19; Task 6 rule that only fixed-`n` source tables have `n` inlined.
 - Produces:
-  - Stats fields in `run_stats.json` (add any that are missing): `engine_seconds` (from `run_to_dataset` entry to `manifest.json` written), `stage_seconds` (`build`, `generate`, `seal`, `write`), `exported_events`, `events_per_second`, `peak_rss_bytes`, `proposals` (owner commands dispatched, retries excluded), `requests_by_boundary`, `rounds_per_step`, `threads`, `machine` (`platform.machine()`, `os.cpu_count()`, total RAM via `os.sysconf` when available).
+  - Stats fields in `run_stats.json` (add any that are missing): `engine_seconds` (from `run_to_dataset` entry to `manifest.json` written), `stage_seconds` (`build`, `generate`, `seal`, `write`), `exported_events`, `events_per_second`, `peak_rss_bytes`, `proposals` (owner commands dispatched, retries excluded), `requests_by_boundary`, `rounds_per_step`, `threads`, `machine` — exactly `{"arch": platform.machine(), "cpus": os.cpu_count(), "ram_bytes": <total RAM via os.sysconf>}` as Task 12 writes it (`evaluate` reads `machine["cpus"]` and `machine["ram_bytes"]` for `reference_hardware`).
   - `benchmark.load_workload(path) -> Workload(name, project: Path, profile, seed, overrides: list[str], expect: dict, gate: dict)`.
   - `benchmark.evaluate(stats: dict, wl: Workload, *, scale: float) -> dict` → `{"verdict": "pass"|"fail"|"skipped", "checks": [{"name", "value", "limit", "ok"}], "reference_hardware": bool}`; `skipped` when `scale != 1`.
   - `benchmark.run_benchmark(path, *, scale=1.0, cold=False, threads=None, out_json=None) -> dict`: (1) compile run in a subprocess on the same plan shape (`users=1000`, `run.span=1d`, `run.warmup=0s`; with `--cold`, fresh `NEORISK_JIT_CACHE`/`NUMBA_CACHE_DIR` dirs), timed as `cold_compile_seconds`; (2) warm run in a subprocess `python -m datagen.benchmark --child …` with the same cache dirs; (3) read its `run_stats.json`; (4) `evaluate`; (5) write the JSON report to `out_json` or `benchmarks/results/<name>-<utc>.json`; print a summary table.
@@ -4902,7 +5076,7 @@ S1 = Path(__file__).resolve().parents[3] / "benchmarks" / "s1.toml"
 def _stats(**kw):
     base = {"engine_seconds": 50.0, "peak_rss_bytes": 8 * 1024**3, "exported_events": 10_100_000,
             "proposals": 40_000_000, "requests_by_boundary": {"reserve": 3_300_000},
-            "threads": 16, "machine": {"cpus": 16, "ram_bytes": 64 * 1024**3}}
+            "threads": 16, "machine": {"arch": "x86_64", "cpus": 16, "ram_bytes": 64 * 1024**3}}
     return base | kw
 
 
@@ -4918,7 +5092,8 @@ def test_gate_pass_and_fail():
     assert evaluate(_stats(engine_seconds=61.0), wl, scale=1.0)["verdict"] == "fail"
     assert evaluate(_stats(peak_rss_bytes=17 * 1024**3), wl, scale=1.0)["verdict"] == "fail"
     assert evaluate(_stats(exported_events=8_000_000), wl, scale=1.0)["verdict"] == "fail"
-    r = evaluate(_stats(machine={"cpus": 14, "ram_bytes": 36 * 1024**3}), wl, scale=1.0)
+    r = evaluate(_stats(machine={"arch": "arm64", "cpus": 14, "ram_bytes": 36 * 1024**3}), wl,
+                 scale=1.0)
     assert r["reference_hardware"] is False
     assert evaluate(_stats(), wl, scale=0.01)["verdict"] == "skipped"
 
@@ -4942,7 +5117,7 @@ Expected: FAIL with `ModuleNotFoundError: No module named 'datagen.benchmark'`.
 - [ ] **Step 4: Implement `benchmark.py` and the stats fields**
 
 - `inventory_share_of_proposals = requests_by_boundary["reserve"] / proposals`.
-- `--scale X` overrides `users = round(2_000_000 * X)` (other shape values unchanged), so the generated module (which depends only on plan structure and read-table sizes) is the same as the full run's; assert in the child that `build_engine(plan).__file__` equals the compile run's.
+- `--scale X` overrides `users = round(2_000_000 * X)` (other shape values unchanged), so the generated module is the same as the full run's: it depends only on plan structure and on the row counts of fixed-`n` sources (`sku`, inlined by Task 6); recipe-built tables whose size scales with users (`device`, from `std.devices`) read their `n` at runtime (Task 6 rule), so no population-dependent constant is baked in. Assert in the child that `build_engine(plan).__file__` equals the compile run's; a mismatch means codegen inlined a population-dependent value — fix codegen, not the assertion.
 - Peak RSS is the warm child's own `ru_maxrss` from its `run_stats.json` (normalize macOS bytes vs Linux KiB).
 - Threads default to `min(gate.threads, os.cpu_count())` (D30); the child sets `NUMBA_NUM_THREADS=1`, `POLARS_MAX_THREADS=<threads>`.
 
@@ -4968,7 +5143,7 @@ Report the measured numbers exactly. If the verdict is `fail`, keep it, name the
 
 - [ ] **Step 8: Full suite, lint and commit**
 
-Run: `uv run --all-packages pytest -q && uv run ruff check libs apps examples/ecommerce_s1 benchmarks`
+Run: `uv run --all-packages pytest -q && uv run ruff check $(ls -d libs apps examples/ecommerce_s1 benchmarks 2>/dev/null)`
 ```bash
 git add benchmarks/s1.toml benchmarks/README.md .gitignore apps/datagen libs/simkit examples/ecommerce_s1
 git commit -m "bench: S1 workload, datagen benchmark, measured gate
