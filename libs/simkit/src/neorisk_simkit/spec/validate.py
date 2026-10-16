@@ -12,6 +12,7 @@ from neorisk_simkit.spec.caps import (
     compute_caps,
     record_row_bytes,
 )
+from neorisk_simkit.spec.types import storage_dtype
 
 
 @dataclass
@@ -23,6 +24,11 @@ class ValidationReport:
     @property
     def ok(self) -> bool:
         return not self.errors
+
+
+def _narrow_int(t) -> bool:
+    dt = storage_dtype(t)
+    return dt.kind in "iu" and dt.itemsize < 8
 
 
 def validate(run) -> ValidationReport:
@@ -57,7 +63,7 @@ def validate(run) -> ValidationReport:
         if t.name not in owner_tables:
             continue
         for c in t.cols:
-            if c.ltype.nullable and c.ltype.kind in ("i16", "i32"):
+            if c.ltype.nullable and _narrow_int(c.ltype):
                 errs.append(f"{t.name}.{c.name}: nullable {c.ltype.kind} state is not "
                             "supported; use opt(i64)")
 

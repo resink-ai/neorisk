@@ -134,3 +134,15 @@ def test_nullable_i64_and_non_null_narrow_owner_state_are_fine(run):
     ok2 = _with_table_col(run, "user", "balance", types.i32())
     for r in (ok1, ok2):
         assert not any("nullable" in e for e in validate(r).errors)
+
+
+def test_nullable_cat_owner_state_is_an_error(run):
+    from neorisk_simkit.spec import types
+    bad = _with_table_col(run, "user", "tier", types.opt(types.cat("a", "b")))
+    assert "user.tier: nullable cat state is not supported; use opt(i64)" in validate(bad).errors
+
+
+def test_nullable_f64_owner_state_is_fine(run):
+    from neorisk_simkit.spec import types
+    ok = _with_table_col(run, "user", "balance", types.opt(types.f64()))
+    assert not any("nullable" in e for e in validate(ok).errors)
