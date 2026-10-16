@@ -100,3 +100,12 @@ def test_budget_refusal_names_items(run):
         check_budget(compute_caps(small), small.budget)
     assert "step_output" in str(e.value) and "timer_heaps" in str(e.value)
     assert not validate(small).ok
+
+
+def test_every_on_an_owner_process_is_an_error(run):
+    plan = run.plan
+    ps = tuple(dataclasses.replace(p, every_us=3_600_000_000) if p.name == "user_main" else p
+               for p in plan.processes)
+    bad = dataclasses.replace(run, plan=dataclasses.replace(plan, processes=ps))
+    assert any("user_main: every= is only for shard processes (D26)" in e
+               for e in validate(bad).errors)

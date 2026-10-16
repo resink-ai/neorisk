@@ -10,6 +10,7 @@ slab into `World.chunks[worker]` or moves a full outbox aside into `World.pendin
 from __future__ import annotations
 
 import dataclasses
+import threading
 from typing import Any
 
 import numpy as np
@@ -221,6 +222,7 @@ class World:
         self.hidden, self.slot_base = allocate_hidden(plan, run)
         self.G = len(self.hidden.pid)
         self.pool = NodePool(eng.timer_nodes, self.threads)
+        self._reserve_lock = threading.Lock()     # workers refill from one reserve list
         self.payload = PayloadPool(eng.payload_slots, self.threads)
         self._build_tables()
         self._build_owners()
@@ -467,7 +469,8 @@ class World:
             "state": self.world_state, "args": self.action_args, "seed": self.seed,
             "counters": self.counters, "rejects": self.rejects, "occ_col": occ_col,
             "retire": retire, "every": every, "jitter": jitter, "sim_start": self.sim_start,
-            "kc": self.kc, "nopay": np.zeros((1, PAYLOAD_W), np.int64)}
+            "kc": self.kc, "nopay": np.zeros((1, PAYLOAD_W), np.int64),
+            "node_cap": int(self._node_cap())}
         self._W = tuple(parts[f] for f in WORLD_FIELDS)
 
     # ------------------------------------------------------------------ admission
@@ -477,10 +480,11 @@ class World:
 
     def _take_reserve_nodes(self, need: int) -> None:
         """Ensure the reserve holds `need` nodes (called between phases, never concurrently)."""
-        if self.pool.reserve_n[0] < need:
-            self.pool.splice_all()
-        if self.pool.reserve_n[0] < need:
-            raise CapExceeded("timer_heaps", self.pool.capacity, self.pool.in_use() + need)
+        with self._reserve_lock:
+            if self.pool.reserve_n[0] < need:
+                self.pool.splice_all()
+            if self.pool.reserve_n[0] < need:
+                raise CapExceeded("timer_heaps", self.pool.capacity, self.pool.in_use() + need)
 
     def admit_population(self, t0: int, t1: int) -> np.ndarray:
         """Admit every population owner arriving in `[t0, t1)`; returns their global slots.
@@ -564,6 +568,8 @@ class World:
             status, i = self.eng.run_partitions(self._W, out, worker, slots, i, int(limit_t),
                                                 bool(owners))
             if status == DONE:
+                if self._node_cap() >= 0:
+                    self._refill_nodes(worker)       # trim nodes freed by the last commands
                 return
             if status == NEED_SWAP:
                 m = int(slab.miss[0])
@@ -577,15 +583,23 @@ class World:
             else:
                 raise EngineError(f"run_partitions returned unknown status {status}")
 
-    def _refill_nodes(self, worker: int) -> None:
-        pool = self.pool
+    def _node_cap(self) -> int:
         force = self.run.engine.force_capacity.get("timers")
-        chunk = NODE_CHUNK if force is None else int(force) - int(pool.free_n[worker])
-        if pool.reserve_n[0] == 0:
-            raise CapExceeded("timer_heaps", pool.capacity, pool.in_use() + 1)
-        chunk = min(chunk, int(pool.reserve_n[0]))
-        if chunk > 0:                  # else a forced list is full: the retry cap ends the run
-            pool.refill(worker, chunk)
+        return -1 if force is None else int(force)
+
+    def _refill_nodes(self, worker: int) -> None:
+        """Bring `worker`'s node free list to its forced size (trimming or refilling), or refill
+        it by `NODE_CHUNK`. Threads share the reserve list, so this holds the reserve lock."""
+        pool, cap = self.pool, self._node_cap()
+        with self._reserve_lock:
+            have = int(pool.free_n[worker])
+            if cap >= 0 and have >= cap:
+                pool.release(worker, have - cap)   # == cap: a kernel needs more than forced;
+                return                             # the retry cap ends the run
+            if pool.reserve_n[0] == 0:
+                raise CapExceeded("timer_heaps", pool.capacity, pool.in_use() + 1)
+            chunk = NODE_CHUNK if cap < 0 else cap - have
+            pool.refill(worker, min(chunk, int(pool.reserve_n[0])))
 
     def _flush(self, worker: int) -> None:
         chunk = self.slabs[worker].flush()

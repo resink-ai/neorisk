@@ -91,6 +91,14 @@ class _FreeLists:
                   self.free_head, self.free_n, worker, n)
         return True
 
+    def release(self, worker: int, n: int) -> None:
+        """Move the first n nodes of `worker`'s free list back to the reserve."""
+        if n < 0 or self.free_n[worker] < n:
+            raise ValueError(f"worker {worker} holds {int(self.free_n[worker])} nodes, not {n}")
+        if n:
+            _move(self._nxt, self.free_head, self.free_n, worker,
+                  self.reserve_head, self.reserve_n, 0, n)
+
     def splice_all(self) -> None:
         """Return every worker's free list to the reserve."""
         _splice(self._nxt, self.free_head, self.free_n, self.reserve_head, self.reserve_n)

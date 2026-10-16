@@ -63,8 +63,11 @@ DONE, NEED_SWAP, NEED_NODES = 0, 1, 2
 #   every     int64[actions]: period of a periodic process (0 = not periodic); jitter
 #             float64[actions, 4]: encoded jitter Dist (code -1 = none); sim_start int64
 #   kc        int64[workers, 33]: rng site counters; nopay int64[1, PAYLOAD_W] (no payload)
+#   node_cap  int64: forced size of a worker's node free list (`force_capacity["timers"]`), or
+#             -1. A list above it makes the runner return NEED_NODES before the next dispatch,
+#             and `World` trims it back to the reserve.
 WORLD_FIELDS = ("hid", "pool", "pay", "state", "args", "seed", "counters", "rejects", "occ_col",
-                "retire", "every", "jitter", "sim_start", "kc", "nopay")
+                "retire", "every", "jitter", "sim_start", "kc", "nopay", "node_cap")
 COUNTERS = ("retries", "continuations", "late_messages", "retry_streak")
 MAX_RETRIES = 8                # consecutive RETRYs of one command before the run fails
 PERIODIC_QUEUED = 1 << 62      # START tag bit: the next periodic occurrence is already queued
@@ -619,6 +622,7 @@ class _Gen:
             "sim_start = W[_W_SIM_START]",
             "kc = W[_W_KC][worker]",
             "nopay = W[_W_NOPAY]",
+            "node_cap = W[_W_NODE_CAP]",
             "reqc = out[OUT_REQC]",
             "miss = out[OUT_MISS]",
             "free_n = P[P_FREE_N]",
@@ -635,6 +639,8 @@ class _Gen:
             "            break",
             "        if owners and pending[g] > 0:",
             "            break",
+            "        if node_cap >= 0 and free_n[worker] > node_cap:",
+            "            return _NEED_NODES, i",
             "        a = np.int64(P[6][node])",
             "        kind = np.int64(P[5][node])",
             "        tag = P[3][node]",

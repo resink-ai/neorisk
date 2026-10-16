@@ -117,3 +117,90 @@ def test_checked_calendar_rejects_lost_pushes_and_window_gaps():
         cal.cal_push(C, 6, t0 + H - 1)
     with pytest.raises(EngineError, match="must be contiguous"):
         cal.cal_collect(C, next_t, t0 + 2 * H, t0 + 3 * H, out)
+
+
+# ---------------------------------------------------------------- fix round 1 regressions
+def test_concurrent_refills_keep_the_node_reserve_consistent():
+    import threading
+    _, w = _world(threads=4)
+    pool, start = w.pool, threading.Barrier(4)
+
+    def hammer(worker):
+        start.wait()
+        for _ in range(60):
+            w._refill_nodes(worker)
+
+    ts = [threading.Thread(target=hammer, args=(k,)) for k in range(4)]
+    for t in ts:
+        t.start()
+    for t in ts:
+        t.join()
+    assert int(pool.reserve_n[0] + pool.free_n.sum()) == pool.capacity
+
+    def walk(head):
+        out, n = [], head
+        while n >= 0:
+            out.append(n)
+            n = pool.next[n]
+        return out
+
+    nodes = walk(pool.reserve_head[0]) + [x for k in range(4) for x in walk(pool.free_head[k])]
+    assert len(nodes) == len(set(nodes)) == pool.capacity
+    assert [len(walk(pool.free_head[k])) for k in range(4)] == pool.free_n.tolist()
+
+
+def test_forced_timer_capacity_bounds_the_worker_free_list(monkeypatch):
+    """Rejects free nodes without queueing new ones; the forced list must not keep them."""
+    run, w = _world(overrides=["behavior.take_p=0.0", "behavior.max_pings=1"],
+                    force={"timers": 1})
+    t0 = run.start_us - run.warmup_us
+    real, seen, statuses = w.eng.run_partitions, [], []
+
+    def spy(W, out, worker, slots, start, limit_t, owners):
+        seen.append(int(w.pool.free_n[worker]))           # what the kernels will reserve from
+        status, i = real(W, out, worker, slots, start, limit_t, owners)
+        statuses.append(status)
+        return status, i
+
+    monkeypatch.setattr(w.eng, "run_partitions", spy)
+    w.run_slots(0, w.admit_population(t0, t0 + 1), run.start_us + run.span_us, owners=True)
+    assert w.stats["rejects"]["user_main"] == 100
+    assert max(seen) <= 1 and int(w.pool.free_n[0]) <= 1
+    assert int(w.pool.reserve_n[0] + w.pool.free_n.sum()) == w.pool.capacity   # all idle
+    assert statuses.count(2) >= 100                           # the list is rebalanced each time
+
+
+def _periodic(force=None):
+    run, w = _world("periodic", force=force)
+    w.init_shards()
+    shards = np.arange(w.slot_base["clock"], w.slot_base["clock"] + 3)
+    w.run_slots(0, shards, run.start_us + run.span_us, owners=False)
+    return run, w, _records(w, "ticked")
+
+
+def test_periodic_shard_processes_are_phase_spread_jittered_and_retry_safe():
+    run, w, r = _periodic()
+    _, _, r2 = _periodic()
+    _, small, r3 = _periodic(force={"records:ticked": 1})
+    assert all(np.array_equal(r[k], r2[k]) and np.array_equal(r[k], r3[k]) for k in r)
+    assert small.stats["retries"] > 0                         # retried STARTs queued once
+    every = 2 * H
+    phases = []
+    for c in range(3):
+        mine = r["clock"] == c
+        assert r["j"][mine].tolist() == list(range(6)) == (r["n"][mine] - 1).tolist()
+        t = r["time"][mine] - run.start_us
+        phases.append(int(t[0]))
+        assert 0 <= t[0] < every
+        late = t[1:] - t[0] - every * np.arange(1, 6)          # jitter of occurrences 1..5
+        assert (late >= 0).all() and (late > 0).any() and (late < 600_000_000).all()
+    assert len(set(phases)) == 3
+    assert (w.hidden.occ[w.slot_base["clock"]:w.slot_base["clock"] + 3, 0] == 6).all()
+    assert (small.hidden.cseq == w.hidden.cseq).all()
+
+
+def test_unchecked_retry_cap_stops_a_kernel_that_never_progresses():
+    run, w = _world("bad_abi", overrides=["mode=3"])
+    slots = w.admit_population(run.start_us, run.start_us + 1)
+    with pytest.raises(EngineError, match="command retried 8 times without progress"):
+        w.run_slots(0, slots, run.start_us + H, owners=True)

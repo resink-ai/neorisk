@@ -72,6 +72,8 @@ def validate(run) -> ValidationReport:
             if name not in plan.namespaces:
                 errs.append(f"{p.name} reserves unknown namespace '{name}'")
         commands = set(p.commands) | set(k.commands)
+        if p.every_us is not None and part_kind.get(p.partition) != "shard":
+            errs.append(f"{p.name}: every= is only for shard processes (D26)")
         if START in commands and p.start is None and p.every_us is None:
             errs.append(f"{p.name} handles START but has no start= or every=")
         mapped = [(f"request {b}", c) for b, c in p.on_request.items()]
