@@ -12,14 +12,20 @@ def acct_main(ctx, s, cmd, out):
     if cmd.kind == START:
         if not out.reserve(records={"spawned": 1}, creates={"pay": 1}, requests=3):
             return RETRY
-        pay = out.create_pay(acct_id=ctx.self_id, amt=100 + ctx.self_id)
-        out.emit_spawned(ctx.t, acct_id=ctx.self_id, pay_id=pay)
+        if ctx.cfg.create_on_answer == 0:
+            pay = out.create_pay(acct_id=ctx.self_id, amt=100 + ctx.self_id)
+            out.emit_spawned(ctx.t, acct_id=ctx.self_id, pay_id=pay)
         out.send_tick(ctx.t, to=ctx.self_id % 2, v=ctx.self_id)
-        out.request_ask(ctx.t, shard=ctx.self_id % 2 + 5 * ctx.cfg.bad_shard, v=ctx.self_id)
+        out.request_ask(ctx.t + ctx.cfg.request_delay,
+                        shard=ctx.self_id % 2 + 5 * ctx.cfg.bad_shard, v=ctx.self_id)
         return COMMIT
-    if not out.reserve(records={"answered": 1}):
+    if not out.reserve(records={"answered": 1, "spawned": 1}, creates={"pay": 1},
+                       requests=1):
         return RETRY
     out.emit_answered(ctx.t, acct_id=ctx.self_id)
+    if ctx.cfg.create_on_answer == 1:
+        pay = out.create_pay(acct_id=ctx.self_id, amt=100 + ctx.self_id)
+        out.emit_spawned(ctx.t, acct_id=ctx.self_id, pay_id=pay)
     return COMMIT
 
 

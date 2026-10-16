@@ -214,3 +214,21 @@ def test_clean_run_end_only_trims_a_forced_node_list():
     w.pool.refill(1, int(w.pool.reserve_n[0]))       # reserve empty; worker 0 holds 0 < 4
     w.run_slots(0, slots, t0, owners=True)            # nothing runs before t0: DONE at once
     assert int(w.pool.free_n[0]) == 0 and int(w.pool.reserve_n[0]) == 0
+
+
+def test_a_partition_never_runs_a_command_before_its_last_one():
+    """Always-on guard: a command dated before the partition's last executed command fails."""
+    from neorisk_simkit.engine.abi import PRIO_MESSAGE
+    from neorisk_simkit.engine.cmdq import q_push
+    run, w = _world("ordering")
+    t0 = run.start_us - run.warmup_us
+    w.run_slots(0, w.admit_population(t0, t0 + 1), t0 + H, owners=True)
+    w.route()
+    g = w.slot_base["ledger"]
+    w.run_slots(0, np.array([g]), t0 + H, owners=False)       # the shard ran at t0
+    ledger = w.plan.process("ledger_desk")
+    w._take_reserve_nodes(1)
+    q_push(w._reserve_pool(), 0, w.hidden.qhead, g, t0 - 1, PRIO_MESSAGE, 0, 99, 1,
+           ledger.action_id, 0, -1)
+    with pytest.raises(EngineError, match="shard ledger: ledger_desk .*request note.* before"):
+        w.run_slots(0, np.array([g]), t0 + H, owners=False)

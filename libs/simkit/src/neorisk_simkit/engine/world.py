@@ -59,6 +59,7 @@ HIDDEN_DTYPES: tuple[tuple[str, str, int | str], ...] = (
     ("retire_at", "int64", 1),
     ("susp_t", "int64", 1),
     ("susp_delta", "int64", 1),
+    ("last_t", "int64", 1),        # time of the last executed command (monotonic-time guard)
 )
 
 
@@ -71,7 +72,8 @@ def hidden_bytes(a: int, n_ns: int) -> int:
 
 # Fill value per hidden array; every other array starts at 0.
 _I64_MAX = int(np.iinfo(np.int64).max)
-_FILL = {"qhead": -1, "retire_at": _I64_MAX, "susp_t": _I64_MAX}
+_FILL = {"qhead": -1, "retire_at": _I64_MAX, "susp_t": _I64_MAX,
+         "last_t": int(np.iinfo(np.int64).min)}
 
 
 class Hidden:
@@ -611,6 +613,7 @@ class World:
         hid.ordn[g] = 0
         hid.retire_at[g] = _I64_MAX
         hid.susp_t[g] = _I64_MAX
+        hid.last_t[g] = _FILL["last_t"]
         hid.inst[g] = inst
         hid.self_id[g] = self_id
         lslots = hid.lslot[g]

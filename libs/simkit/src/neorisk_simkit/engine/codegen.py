@@ -466,9 +466,14 @@ class _Gen:
         args = [f"p{i}" for i in range(len(bd.payload))]
         dest = "shard" if verb == "request" else "to"
         to = self.plan.partition(bd.to)
-        body = ["if t < ctx[CTX_T]:",
-                *self.by_proc(procs, "EngineError", lambda p: [
-                    _q(f"{p}: {verb} {bd.name} scheduled before current time")], "    ")]
+        if verb == "request":           # a delayed request is a timer followed by a request
+            body = ["if t != ctx[CTX_T]:",
+                    *self.by_proc(procs, "EngineError", lambda p: [
+                        _q(f"{p}: request {bd.name} must be dated ctx.t")], "    ")]
+        else:
+            body = ["if t < ctx[CTX_T]:",
+                    *self.by_proc(procs, "EngineError", lambda p: [
+                        _q(f"{p}: send {bd.name} scheduled before current time")], "    ")]
         if to.kind == "shard":
             body += [f"n_ = out[OUT_SHARD_N][{bd.code}]",
                      f"if {dest} < 0 or {dest} >= n_:",
@@ -626,10 +631,30 @@ class _Gen:
         body.append('raise EngineError("dispatch: unknown action ", action)')
         self.fn("_checked_dispatch", "action, ctx, cmd, ws, out", body)
 
+    def out_of_order(self) -> None:
+        """The monotonic-time guard's error: names partition type, process and command."""
+        body = []
+        for p in self.plan.processes:
+            part = self.plan.partition(p.partition)
+            labels = {0: "start"}
+            labels.update({k: f"request {b}" for b, k in p.on_request.items()})
+            labels.update({k: f"message {b}" for b, k in p.on_message.items()})
+            labels.update({k: f"response {b}.{r}" for (b, r), k in p.on_response.items()})
+            who = f"{part.kind} {part.name}: {p.name} would run"
+            tail = f"{_q(' before its last command at ')}, last)"
+            body.append(f"if a == {p.action_id}:")
+            for k, label in sorted(labels.items()):
+                body += [f"    if kind == {k}:",
+                         f"        raise EngineError({_q(f'{who} {label} at ')}, t, {tail}"]
+            body.append(f"    raise EngineError({_q(f'{who} command ')}, kind, {_q(' at ')}, t, "
+                        f"{tail}")
+        body.append('raise EngineError("command out of time order at ", t)')
+        self.fn("_out_of_order", "a, kind, t, last", body)
+
     def run_partitions(self) -> None:
         disp = "_checked_dispatch" if self.checked else "dispatch"
         hid = ["pid", "clock", "occ", "pending", "qhead", "inst", "self_id", "cseq", "retire_at",
-               "susp_t", "susp_delta", "ptype"]
+               "susp_t", "susp_delta", "ptype", "last_t"]
         body = ["hid = W[_W_HID]"]
         body += [f"{n} = hid[_WH_{n.upper()}]" for n in hid]
         body += [
@@ -656,7 +681,7 @@ class _Gen:
             "free_n = P[P_FREE_N]",
             "for i in range(start, slots.shape[0]):",
             "    g = np.int64(slots[i])",
-            "    last_t = np.int64(-1)",
+            "    prev_t = np.int64(-1)",
             "    ran = False",
             "    while True:",
             "        node = qhead[g]",
@@ -671,6 +696,8 @@ class _Gen:
             "            return _NEED_NODES, i",
             "        a = np.int64(P[6][node])",
             "        kind = np.int64(P[5][node])",
+            "        if t < last_t[g]:",
+            "            _out_of_order(a, kind, t, last_t[g])",
             "        tag = P[3][node]",
             "        prow = P[7][node]",
             "        cause = P[1][node] & _CAUSE_MASK",
@@ -728,7 +755,8 @@ class _Gen:
             "            pay_free(PA, worker, prow)",
             "        elif prow == PAY_CONTINUE:",
             "            counters[_C_CONTINUATIONS] += 1",
-            "        last_t = t",
+            "        last_t[g] = t",
+            "        prev_t = t",
             "        ran = True",
             "        if rc == COMMIT:",
             "            clock[g] = lamport",
@@ -747,7 +775,7 @@ class _Gen:
             "            rejects[a] += 1",
             ("    if ran and qhead[g] < 0 and pending[g] == 0 and retire[ptype[g]] != 0 "
              "and retire_at[g] == _I64_MAX:"),
-            "        retire_at[g] = last_t",
+            "        retire_at[g] = prev_t",
             "return _DONE, slots.shape[0]"]
         self.fn("run_partitions", "W, out, worker, slots, start, limit_t, owners", body)
 
@@ -826,6 +854,7 @@ class _Gen:
         self.periodic_time()
         if self.checked:
             self.checked_dispatch()
+        self.out_of_order()
         self.run_partitions()
         self.drain_small_rounds()
         return self.funcs

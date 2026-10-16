@@ -167,3 +167,75 @@ def test_request_to_a_missing_shard_names_the_process():
     from neorisk_simkit.engine import EngineError
     with pytest.raises(EngineError, match="acct_main: request ask to shard 5 but desk has 2"):
         _step("spawn", ["bad_shard=1"])
+
+
+# ---------------------------------------------------------------- fix round 1 regressions
+MS = 1_000
+
+
+def test_suspension_blocks_until_the_response_arrives():
+    """Reviewer repro: acct 0 asks at t and queues a second ask at t+10ms; acct 1 asks at
+    t+50ms. Suspension is blocking, so acct 0's t+10ms timer runs at its response time t+100ms
+    (after the response handler) and the shard sees the asks in time order."""
+    run, w, _ = _step("blocking")
+    t0 = run.start_us - run.warmup_us
+    noted = _rows(w, "noted")
+    assert (noted["time"] - t0).tolist() == [0, 50 * MS, 100 * MS]
+    assert noted["v"].tolist() == [0, 1, 0]
+    assert (np.diff(noted["lamport"]) > 0).all()
+    later, acked = _rows(w, "later"), _rows(w, "acked")
+    mine = later["acct_id"] == 0
+    assert (later["time"][mine] - t0).tolist() == [100 * MS]          # effective time t + delta
+    first_ack = acked["lamport"][(acked["acct_id"] == 0) & (acked["time"] == t0 + 100 * MS)]
+    assert len(first_ack) == 1 and first_ack[0] < later["lamport"][mine][0]   # response first
+    assert (acked["time"] - t0).tolist() == [100 * MS, 150 * MS, 200 * MS]
+
+
+def test_requests_must_be_dated_ctx_t():
+    from neorisk_simkit.engine import EngineError
+    with pytest.raises(EngineError, match="acct_main: request ask must be dated ctx.t"):
+        _step("spawn", ["request_delay=1"])
+
+
+def test_route_order_sorts_equal_keys_by_partition_id_then_seq():
+    from neorisk_simkit.engine.route import route_order
+    from neorisk_simkit.engine.slabs import OUTBOX_COLS
+    rng_ = np.random.default_rng(3)
+    n = 40
+    cols = {c: np.zeros(n, np.int64) for c in OUTBOX_COLS}
+    cols["time"][:] = rng_.integers(0, 2, n)          # many rows tie on (time, prio, cause)
+    cols["prio"][:] = 1
+    cols["cause"][:] = rng_.integers(0, 2, n)
+    cols["src_pid"][:] = rng_.permutation(n) // 4     # four rows per partition...
+    cols["src_seq"][:] = rng_.permutation(n)          # ...told apart by seq
+    ob = (*cols.values(), np.zeros((n, 12), np.int64))
+    want = np.lexsort((cols["src_seq"], cols["src_pid"], cols["cause"], cols["prio"],
+                       cols["time"]))
+    assert route_order(ob, n).tolist() == want.tolist()
+
+
+def test_creations_inside_compiled_rounds_return_to_python(monkeypatch):
+    from neorisk_simkit.engine.codegen import DR_PYTHON, PH_ROUTE1, RS_PHASE
+    run = make_run("spawn", ["create_on_answer=1"], parallel_min_partitions=10**9)
+    w = World.build(run, threads=1)
+    real, seen = w.eng.drain_small_rounds, []
+
+    def spy(*args):
+        code, n = real(*args)
+        seen.append((int(code), int(w.round_state[RS_PHASE])))
+        return code, n
+
+    monkeypatch.setattr(w.eng, "drain_small_rounds", spy)
+    t0 = run.start_us - run.warmup_us
+    stats = run_step(w, t0, t0 + run.engine.step_us)
+    assert (DR_PYTHON, PH_ROUTE1) in seen
+    paid, answered = _rows(w, "paid"), _rows(w, "answered")
+    assert len(paid["time"]) == 3 and (paid["time"] == t0 + 200 * MS).all()
+    assert sorted(answered["time"].tolist()) == sorted(paid["time"].tolist())
+    assert stats.owners_run[-1] == 3 and w.pending_creates == []
+
+
+def test_safe_horizon_saturates():
+    inf = np.iinfo(np.int64).max
+    assert safe_horizon(1000, np.array([inf], np.int64), np.array([inf], np.int64),
+                        np.array([], np.int64)) == 1000

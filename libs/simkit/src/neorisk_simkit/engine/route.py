@@ -52,7 +52,8 @@ def safe_horizon(step_end, susp_t, susp_delta, create_t):
     """H = min(step end, min over suspended owners of (susp_t + delta), min creation time)."""
     h = np.int64(step_end)
     for i in range(susp_t.shape[0]):
-        h = min(h, susp_t[i] + susp_delta[i])
+        if susp_t[i] < _I64_MAX - susp_delta[i]:          # saturating: never wraps negative
+            h = min(h, susp_t[i] + susp_delta[i])
     for i in range(create_t.shape[0]):
         h = min(h, create_t[i])
     return h
@@ -148,6 +149,50 @@ def command_count(counters):
 
 
 @njit(cache=True, nogil=True)
+def _append(nxt, heads, tails, k, node):
+    if tails[k] < 0:
+        heads[k] = node
+    else:
+        nxt[tails[k]] = node
+    tails[k] = node
+
+
+@njit(cache=True, nogil=True)
+def resume_owner(P, qhead, g):
+    """Blocking suspension: the owner resumes at T_r, the latest time among its delivered
+    responses, and runs nothing dated before it. Its queue becomes: the responses, then the
+    other commands dated before T_r, then those dated exactly T_r (each group in its (time,
+    key, seq) order), all re-dated to T_r — the effective time max(time, T_r) — then the rest.
+    The queue stays sorted by time.
+
+    In S1 an owner receives only responses, so its payload-carrying nodes are the responses.
+    """
+    ptime, nxt, ppay = P[0], P[4], P[7]
+    t_r = np.int64(-(2 ** 63))
+    node = qhead[g]
+    while node >= 0:
+        if ppay[node] >= 0:
+            t_r = max(t_r, ptime[node])
+        node = nxt[node]
+    heads = np.full(3, -1, np.int32)      # 0 responses, 1 earlier commands, 2 commands at t_r
+    tails = np.full(3, -1, np.int32)
+    node = qhead[g]
+    while node >= 0 and ptime[node] <= t_r:
+        nx = nxt[node]
+        nxt[node] = -1
+        k = 0 if ppay[node] >= 0 else (1 if ptime[node] < t_r else 2)
+        ptime[node] = t_r
+        _append(nxt, heads, tails, k, node)
+        node = nx
+    rest = node
+    for k in range(2, -1, -1):
+        if tails[k] >= 0:
+            nxt[tails[k]] = rest
+            rest = heads[k]
+    qhead[g] = rest
+
+
+@njit(cache=True, nogil=True)
 def route_order(ob, n):
     """Row order by (time, prio, cause, src_pid, src_seq): stable sorts, last key first."""
     order = np.argsort(ob[_SRC_SEQ][:n], kind="mergesort")
@@ -215,6 +260,7 @@ def route_outbox(R, ob, n, skip_creates):
         if kind == OB_RESPONSE:
             pending[g] -= 1
             if pending[g] == 0:
+                resume_owner(P, qhead, g)
                 woken[wn[0]] = g
                 wn[0] += 1
     return ROUTED, k
