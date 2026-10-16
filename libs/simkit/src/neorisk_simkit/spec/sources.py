@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-from neorisk_simkit.spec.dist import Dist
+from neorisk_simkit.spec.dist import Dist, sample_np
 
 if TYPE_CHECKING:
     from neorisk_simkit.spec.plan import TableDef
@@ -33,7 +33,18 @@ class GeneratedSource(Source):
 
     def generate(self, n_rows: int, table: TableDef, seed: int,
                  stream: int) -> dict[str, np.ndarray]:
-        raise NotImplementedError("generated sources are sampled from Task 5 on")
+        from neorisk_simkit.engine import rng  # lazy: engine imports spec.dist
+
+        if n_rows != self.n:
+            raise ValueError(f"row count {n_rows} does not match source n={self.n}")
+        base = rng.mix(stream)
+        out: dict[str, np.ndarray] = {}
+        for name, d in self.cols.items():
+            col_stream = rng.mix(base ^ rng.name_key(name))
+            u = rng.uniforms(seed, col_stream, n_rows)
+            u2 = rng.uniforms(seed, col_stream, n_rows, offset=n_rows)
+            out[name] = sample_np(d, u, u2)
+        return out
 
 
 def generated(n: int, cols: dict[str, Dist]) -> Source:

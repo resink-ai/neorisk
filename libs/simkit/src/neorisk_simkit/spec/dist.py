@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+import numpy as np
+
 (CONST, EXP, LOGNORMAL, SHIFTED_LOGNORMAL, GAMMA, NORMAL, PARETO, GEOMETRIC, NEGBINOM,
  UNIFORM_INT, CATEGORICAL, ZIPF, POISSON_DAILY, LOGNORMAL_MINOR) = range(14)
 
@@ -150,3 +152,52 @@ def min_us(d: Dist) -> int:
     if d.kind in (CONST, SHIFTED_LOGNORMAL):
         return int(d.params[0])
     return 0
+
+
+def _normal_np(u: np.ndarray, u2: np.ndarray) -> np.ndarray:
+    return np.sqrt(-2.0 * np.log1p(-u)) * np.cos(2.0 * np.pi * u2)
+
+
+def _negbinom_np(mean: float, disp: float, u: np.ndarray) -> np.ndarray:
+    """Exact inverse transform of the gamma-Poisson mixture (negative binomial)."""
+    q = mean / (mean + disp)
+    pmf = np.full(len(u), (1.0 - q) ** disp)
+    cdf = pmf.copy()
+    out = np.zeros(len(u), np.int64)
+    k = 0
+    pending = u >= cdf
+    while pending.any() and k < 100_000:
+        pmf = pmf * (k + disp) / (k + 1) * q
+        cdf = cdf + pmf
+        k += 1
+        out[pending] = k
+        pending = u >= cdf
+        if pmf.max() == 0.0:
+            break
+    return out
+
+
+def sample_np(d: Dist, u: np.ndarray, u2: np.ndarray) -> np.ndarray:
+    """Vectorized sampling of the count/category kinds used by static sources (int64 result)."""
+    p = d.params
+    if d.kind == UNIFORM_INT:
+        lo, hi = int(p[0]), int(p[1])
+        return lo + np.minimum((u * (hi - lo + 1)).astype(np.int64), hi - lo)
+    if d.kind == CATEGORICAL:
+        cum = np.cumsum(np.asarray(d.weights, np.float64))
+        return np.minimum(np.searchsorted(cum, u, side="right"), len(cum) - 1).astype(np.int64)
+    if d.kind == LOGNORMAL_MINOR:
+        v = np.rint(p[0] * np.exp(p[1] * _normal_np(u, u2))).astype(np.int64)
+        lo, hi = (int(w) for w in d.weights)
+        if lo:
+            v = np.maximum(v, lo)
+        if hi:
+            v = np.minimum(v, hi)
+        return v
+    if d.kind == NEGBINOM:
+        return _negbinom_np(p[0], p[1], u)
+    if d.kind == ZIPF:
+        w = 1.0 / np.arange(1, len(u) + 1, dtype=np.float64) ** p[0]
+        cum = np.cumsum(w / w.sum())
+        return np.minimum(np.searchsorted(cum, u, side="right"), len(u) - 1).astype(np.int64)
+    raise ValueError(f"sample_np does not support distribution kind {d.kind}")
