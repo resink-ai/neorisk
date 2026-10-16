@@ -12,16 +12,20 @@ from neorisk_simkit.std.checked import (
     checked_mul,
     checked_sub,
 )
+from neorisk_simkit.std.sources import catalog, devices, stock
 
 __all__ = [
     "I64_MAX",
     "I64_MIN",
     "NULL",
+    "catalog",
     "checked_add",
     "checked_max",
     "checked_min",
     "checked_mul",
     "checked_sub",
+    "devices",
     "generated",
     "law",
+    "stock",
 ]

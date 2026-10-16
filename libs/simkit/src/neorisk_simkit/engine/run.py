@@ -50,16 +50,20 @@ class Simulation:
 
     # ------------------------------------------------------------------ entities
     def static_entities(self) -> dict[str, pa.Table]:
-        """Read tables (`origin = "static"`) and population owner tables (`"initial"` /
-        `"arrival"`): public `id`, `created_at`, `origin`, every column at creation."""
+        """Read tables, from sources or recipes (`origin = "static"`, `created_at` = their
+        `first_seen` column when present, else start − warmup) and population owner tables
+        (`"initial"` / `"arrival"`): public `id`, `created_at`, `origin`, every column at
+        creation."""
         w, run = self.world, self.run
         plan, seed = run.plan, int(run.seed)
         out: dict[str, pa.Table] = {}
         for name, rows in w.tables.items():
             t = plan.table(name)
             n = len(next(iter(rows.values()))) if rows else 0
-            out[name] = entity_table(name, t.cols, np.arange(n, dtype=np.int64),
-                                     np.full(n, w.sim_start, np.int64), "static", rows, seed)
+            created = (np.asarray(rows["first_seen"], np.int64) if "first_seen" in rows
+                       else np.full(n, w.sim_start, np.int64))
+            out[name] = entity_table(name, t.cols, np.arange(n, dtype=np.int64), created,
+                                     "static", rows, seed)
         for pop in w.populations:
             t, part = plan.table(pop.table), pop.part.name
             n = len(pop.times)

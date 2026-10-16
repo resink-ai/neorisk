@@ -139,6 +139,11 @@ class Pack:
                 if m.group(2) != items:
                     raise PackError(f"shard {name}: state {field!r} is per {m.group(2)!r}, "
                                     f"but the shard's items are {items!r}")
+        if init is not None and hasattr(init, "bind"):    # a recipe learns its items table
+            try:
+                init = init.bind(items=items)
+            except ValueError as e:
+                raise PackError(f"shard {name}: {e}") from None
         self.partitions[name] = {
             "kind": "shard", "name": name, "table": None, "n": int(n), "max_live": int(n),
             "items": items, "key": key, "state": dict(state), "init": init,

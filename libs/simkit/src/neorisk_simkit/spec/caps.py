@@ -67,7 +67,25 @@ def _table_rows(plan: Plan, name: str) -> int:
         if pop.table == name:
             return pop.n
     t = plan.table(name)
-    return t.source.n if t.source is not None and t.source.n is not None else 0
+    if t.source is not None and t.source.n is not None:
+        return t.source.n
+    for pop in plan.populations:                 # tables built by a recipe (std.devices, ...)
+        for r in pop.refs.values():
+            bound = r.max_table_rows(name, pop.n) if hasattr(r, "max_table_rows") else None
+            if bound is not None:
+                return int(bound)
+    return 0
+
+
+def _extra_read_bytes(plan: Plan, table: str) -> int:
+    """Engine-added read columns of `table`: recipe columns, `local_index`, `cumw` (8 B each)."""
+    from neorisk_simkit.engine.layout import _recipes
+
+    n_cols = sum(len(r.read_column_names(table)) for r in _recipes(plan))
+    n_cols += any(p.items == table for p in plan.partitions)
+    t = plan.table(table)
+    n_cols += t.source is not None and getattr(t.source, "weight", None) is not None
+    return 8 * n_cols * _table_rows(plan, table)
 
 
 def _local_bytes(local) -> int:
@@ -110,7 +128,8 @@ def compute_caps(run) -> list[CapItem]:
     step = min(step_rows_bytes, bud.max_step_bytes) if bud.max_step_bytes else step_rows_bytes
 
     read_tables = {t for p in plan.processes for t in p.reads.values()}
-    read = sum(_table_rows(plan, t) * row_bytes(plan.table(t).cols) for t in read_tables)
+    read = sum(_table_rows(plan, t) * row_bytes(plan.table(t).cols) + _extra_read_bytes(plan, t)
+               for t in read_tables)
     read += sum(pop.n * 3 * 8 for pop in plan.populations if pop.refs)
 
     items = {

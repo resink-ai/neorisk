@@ -260,10 +260,11 @@ class World:
         self.pool = NodePool(eng.timer_nodes, self.threads)
         self._reserve_lock = threading.Lock()     # workers refill from one reserve list
         self.payload = PayloadPool(eng.payload_slots, self.threads)
+        self._build_populations()
+        self._build_recipes()
         self._build_tables()
         self._build_owners()
         self._build_shards()
-        self._build_populations()
         self._build_world_tuple()
         horizon = max(1, self.sim_end - self.sim_start)
         width = max(1, eng.step_min_us)
@@ -281,22 +282,36 @@ class World:
     def _recipes(self) -> list[Any]:
         return layout_recipes(self.plan)
 
+    def _build_recipes(self) -> None:
+        """Generate every population-refs recipe (the recipe protocol of `std.sources`): the
+        rows of the tables it builds and its owner CSR, keyed by population and refs name."""
+        times = {pop.table: pop.times for pop in self.populations}
+        for pop in self.plan.populations:
+            for name, r in pop.refs.items():
+                if hasattr(r, "generate"):
+                    stream = rng.mix(rng.name_key(pop.table), rng.name_key("refs"),
+                                     rng.name_key(name))
+                    r.generate(plan=self.plan, seed=self.seed, stream=stream,
+                               owner_times=times[pop.table])
+
     def _build_tables(self) -> None:
         """Rows of every read-only table: from its source, or from the recipe that builds it."""
         plan = self.plan
         self.tables: dict[str, dict[str, np.ndarray]] = {}
+        self.weights: dict[str, np.ndarray] = {}
         self.cumw: dict[str, np.ndarray] = {}
         for t in plan.tables:
             rows = None
             if t.source is not None:
                 stream = rng.name_key(t.name)
                 rows = t.source.generate(t.source.n, t, self.seed, stream)
-                weight = getattr(t.source, "weight", None)
-                if weight is not None:
-                    self.cumw[t.name] = self._cumw(weight, t.source.n, stream)
+                if getattr(t.source, "weight", None) is not None:
+                    w = np.asarray(t.source.row_weights(self.seed, stream), np.float64)
+                    self.weights[t.name] = w
+                    self.cumw[t.name] = self._cumw(w)
             else:
                 for r in self._recipes():
-                    built = r.table_rows(t.name) if hasattr(r, "table_rows") else None
+                    built = r.table_rows(t.name)
                     if built is not None:
                         rows = built
                         break
@@ -304,13 +319,11 @@ class World:
                 self.tables[t.name] = {c.name: np.asarray(rows[c.name], slab_dtype(c))
                                        for c in t.cols}
 
-    def _cumw(self, weight: Dist, n: int, stream: int) -> np.ndarray:
+    @staticmethod
+    def _cumw(w: np.ndarray) -> np.ndarray:
         """Normalised cumulative weight ending at exactly 1.0 (for `sample_by_weight`)."""
-        s = rng.mix(stream, rng.name_key("weight"))
-        w = _dist.sample_np(weight, rng.uniforms(self.seed, s, n),
-                            rng.uniforms(self.seed, s, n, offset=n)).astype(np.float64)
         cum = np.cumsum(w)
-        if n == 0 or not cum[-1] > 0:
+        if len(w) == 0 or not cum[-1] > 0:
             raise EngineError("source weights must have a positive sum")
         cum /= cum[-1]
         cum[-1] = 1.0
@@ -390,9 +403,9 @@ class World:
         init = part.init
         recipe_vals = None
         if init is not None and not isinstance(init, dict) and hasattr(init, "init"):
-            stream = rng.name_key(part.name)
+            stream = rng.mix(rng.name_key(part.name), rng.name_key("init"))
             recipe_vals = init.init(n_items=len(order), n_shards=part.n, seed=self.seed,
-                                    stream=stream)
+                                    stream=stream, item_weights=self.weights.get(part.items))
         arrays = []
         for field, decl in part.state.items():
             m = _STATE_RE.match(decl)

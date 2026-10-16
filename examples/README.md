@@ -10,6 +10,7 @@ spec an agent writes and a human reviews, plus three folders that `datagen` fill
 | Project | What it simulates | Partitions | Overlays |
 |---|---|---|---|
 | [`ecommerce/`](ecommerce/) | Shoppers, carts, multi-SKU checkout, fulfillment, returns, referrals | owner `user` · shards `inventory`, `referral_pool` | `bounty_hunters`, `flash_sale` |
+| [`ecommerce_s1/`](ecommerce_s1/) | S1 slice; superseded by `ecommerce/` at M3. Sessions, one-line carts, single-SKU checkout | owner `user` · shard `inventory` | — |
 | [`payments/`](payments/) | Card payments (acquirer view): risk, 3-D Secure, auth, capture, refund, dispute, ledger | owners `cardholder`, `payment` · shard `merchant_risk` | `card_testing`, `friendly_fraud` |
 | [`crypto_exchange/`](crypto_exchange/) | Spot CEX: KYC, deposits, per-symbol order books, trades, withdrawals | owner `trader` · shard `book` per symbol | `wash_traders`, `pump_and_dump` |
 | [`layer1/`](layer1/) | Account-based L1: wallets, EIP-1559 blocks, reverts, token/DEX/NFT logs, airdrop | owner `wallet` · shard `chain` (one, global) | `airdrop_sybils`, `mint_rush` |
