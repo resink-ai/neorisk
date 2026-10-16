@@ -139,6 +139,8 @@ def sample_us(code, p1, p2, p3, u1, u2):
         v = pareto_us(p1, p2, u1)
     else:
         raise ValueError("not a duration distribution")
+    if math.isnan(v):                           # NaN -> 0
+        v = 0.0
     return np.int64(np.rint(min(max(v, 0.0), _MAX_US)))
 
 

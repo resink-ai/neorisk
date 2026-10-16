@@ -158,18 +158,27 @@ def _normal_np(u: np.ndarray, u2: np.ndarray) -> np.ndarray:
     return np.sqrt(-2.0 * np.log1p(-u)) * np.cos(2.0 * np.pi * u2)
 
 
+_NEGBINOM_MAX_TABLE = 5_000_000
+
+
 def _negbinom_np(mean: float, disp: float, u: np.ndarray) -> np.ndarray:
-    """Exact inverse transform of the gamma-Poisson mixture (negative binomial), log-space cdf."""
-    sd = np.sqrt(mean + mean * mean / disp)
-    top = int(mean + 12.0 * sd + 20.0)
-    if top > 50_000_000:
-        raise ValueError(f"negbinom(mean={mean}, disp={disp}) is too large to sample")
+    """Exact inverse transform of the gamma-Poisson mixture (negative binomial), log-space cdf.
+
+    The cdf table grows until it covers max(u); a table that cannot is an error, never a clamp.
+    """
     q = mean / (mean + disp)
-    k = np.arange(1, top + 1, dtype=np.float64)
-    logp = disp * np.log1p(-q) + np.concatenate(
-        ([0.0], np.cumsum(np.log(k - 1.0 + disp) - np.log(k) + np.log(q))))
-    cdf = np.cumsum(np.exp(logp))
-    return np.minimum(np.searchsorted(cdf, u, side="right"), top).astype(np.int64)
+    umax = float(u.max()) if len(u) else 0.0
+    top = int(mean + 12.0 * np.sqrt(mean + mean * mean / disp) + 20.0)
+    while True:
+        if top > _NEGBINOM_MAX_TABLE:
+            raise ValueError(f"negbinom(mean={mean}, disp={disp}) is too large to sample")
+        k = np.arange(1, top + 1, dtype=np.float64)
+        logp = disp * np.log1p(-q) + np.concatenate(
+            ([0.0], np.cumsum(np.log(k - 1.0 + disp) - np.log(k) + np.log(q))))
+        cdf = np.cumsum(np.exp(logp))
+        if cdf[-1] > umax:
+            return np.searchsorted(cdf, u, side="right").astype(np.int64)
+        top *= 2
 
 
 def sample_np(d: Dist, u: np.ndarray, u2: np.ndarray) -> np.ndarray:

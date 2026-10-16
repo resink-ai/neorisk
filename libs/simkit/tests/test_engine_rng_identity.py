@@ -143,3 +143,24 @@ def test_feistel_rejects_out_of_domain():
             getattr(ident.feistel63, "py_func", ident.feistel63)(bad, keys)
     with pytest.raises(ValueError, match="domain"):
         ident.feistel63_array(np.array([0, -5], np.int64), keys)
+
+
+@pytest.mark.parametrize("mean,disp", [(1000, 0.01), (50, 0.05)])
+def test_negbinom_small_disp_is_not_clamped(mean, disp):
+    n = 200_000
+    u = rng.uniforms(9, 1, n)
+    x = dist.sample_np(dist.negbinom(mean=mean, disp=disp), u, u)
+    assert x.max() < 5_000_000 and (x == x.max()).sum() <= 2
+    assert abs(x.mean() - mean) < 0.1 * mean
+
+
+def test_negbinom_tail_beyond_cap_raises():
+    u = rng.uniforms(9, 2, 1000)
+    with pytest.raises(ValueError, match="too large"):
+        dist.sample_np(dist.negbinom(mean=1e4, disp=0.001), u, u)
+
+
+def test_sample_us_nan_is_zero():
+    c, _a, b, d = dist.encode(dist.normal(mean_h=1, sd_h=1))
+    for f in (rng.sample_us, getattr(rng.sample_us, "py_func", rng.sample_us)):
+        assert f(c, float("nan"), b, d, 0.3, 0.7) == 0
