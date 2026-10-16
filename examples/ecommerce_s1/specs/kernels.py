@@ -5,23 +5,40 @@ Each random draw has its own site number.
 """
 
 from neorisk_simkit import std
-from neorisk_simkit.engine import COMMIT, PRIO_TIMER, RETRY, START, Local, Res, kernel, reject
+from neorisk_simkit.engine import (
+    COMMIT,
+    PRIO_EXPIRY,
+    PRIO_TIMER,
+    RETRY,
+    START,
+    Local,
+    Res,
+    kernel,
+    reject,
+)
 
 C_SESSION, C_VIEW, C_CHECKOUT, C_AUTH, R_GRANTED, R_REJECTED = 1, 2, 3, 4, 5, 6
-SHOPPER_COMMANDS = (START, C_SESSION, C_VIEW, C_CHECKOUT, C_AUTH, R_GRANTED, R_REJECTED)
+C_KYC_REDEEM, C_KYC_EXPIRE, C_KYC_FACE = 7, 8, 9
+SHOPPER_COMMANDS = (START, C_SESSION, C_VIEW, C_CHECKOUT, C_AUTH, R_GRANTED, R_REJECTED,
+                    C_KYC_REDEEM, C_KYC_EXPIRE, C_KYC_FACE)
 C_RESERVE, C_COMMIT, C_RELEASE = 1, 2, 3
 
-REJ_DORMANT, REJ_NO_CART, REJ_STALE, REJ_BUSY = 1, 2, 3, 4
+REJ_DORMANT, REJ_NO_CART, REJ_STALE, REJ_BUSY, REJ_KYC_STATE = 1, 2, 3, 4, 5
 
 SHOPPER_LOCAL = Local(session="ref", device="ref", views_left="i16", cart_sku="ref",
-                      cart_qty="i16", cart_price="i64", cart_n="i8", checkout="ref")
+                      cart_qty="i16", cart_price="i64", cart_n="i8", checkout="ref",
+                      kyc_flow="ref", kyc_session="ref", kyc_desktop="ref", kyc_phone="ref",
+                      kyc_expires="i64", kyc_status="i8")
 
 
 @kernel(state="user", local=SHOPPER_LOCAL, commands=SHOPPER_COMMANDS,
         max=Res(records={"user_signed_up": 1, "session_started": 1, "product_viewed": 1,
                          "cart_item_added": 1, "checkout_started": 1, "checkout_failed": 1,
-                         "payment_authorized": 1, "payment_failed": 1, "order_placed": 1},
-                creates={"order": 1, "session": 1, "checkout": 1}, timers=2, requests=1))
+                         "payment_authorized": 1, "payment_failed": 1, "order_placed": 1,
+                         "kyc_started": 1, "kyc_handoff_redeemed": 1, "kyc_handoff_rejected": 1,
+                         "kyc_handoff_expired": 1, "kyc_completed": 1, "user_kyc": 1},
+                creates={"order": 1, "session": 1, "checkout": 1, "flow": 1}, timers=5,
+                requests=1))
 def shopper(ctx, s, loc, cmd, out):
     cfg = ctx.cfg
     if cmd.kind == START:
@@ -36,6 +53,12 @@ def shopper(ctx, s, loc, cmd, out):
         return _granted(ctx, loc, cmd, out, cfg)
     if cmd.kind == R_REJECTED:
         return _rejected(ctx, loc, cmd, out, cfg)
+    if cmd.kind == C_KYC_REDEEM:
+        return _kyc_redeem(ctx, loc, cmd, out, cfg)
+    if cmd.kind == C_KYC_EXPIRE:
+        return _kyc_expire(ctx, loc, cmd, out)
+    if cmd.kind == C_KYC_FACE:
+        return _kyc_face(ctx, s, loc, cmd, out)
     return _auth(ctx, loc, cmd, out, cfg)
 
 
@@ -64,7 +87,20 @@ def _session(ctx, s, loc, out, cfg):
     views = min(ctx.rng.geometric(site=3, mean=cfg.views_mean), 30)   # 1-30 views
     gap = ctx.rng.pareto_us(site=4, alpha=cfg.session_gap_alpha, min_h=cfg.session_gap_min_h)
     first = ctx.rng.dist_us(site=5, d=cfg.view_gap)
-    if not out.reserve(records={"session_started": 1}, creates={"session": 1}, timers=2):
+    phone = _first_phone(ctx)
+    kyc = (s.kyc_level == 0 and loc.kyc_status == std.handoff.NONE
+           and ctx.reads.device.kind[dev] == "desktop" and phone != std.NULL
+           and ctx.rng.bernoulli(site=50, p=cfg.kyc_start_p))
+    expires = ctx.t + cfg.kyc_expiry_s * 1_000_000
+    redeem_at = expires
+    again_at = std.NULL                                    # NULL: no duplicate scan
+    if kyc:                                                # draws only for a flow that starts
+        if not ctx.rng.bernoulli(site=51, p=cfg.kyc_late_scan_p):
+            redeem_at = ctx.t + ctx.rng.dist_us(site=52, d=cfg.kyc_redeem_delay)
+        if ctx.rng.bernoulli(site=53, p=cfg.kyc_duplicate_p):
+            again_at = redeem_at + ctx.rng.dist_us(site=54, d=cfg.kyc_duplicate_gap)
+    if not out.reserve(records={"session_started": 1, "kyc_started": 1},
+                       creates={"session": 1, "flow": 1}, timers=5):
         return RETRY
     loc.session = out.new_id("session")
     loc.device = dev
@@ -73,6 +109,86 @@ def _session(ctx, s, loc, out, cfg):
                              channel=_channel(ctx, dev))
     out.timer(ctx.t + first, C_VIEW, prio=PRIO_TIMER)
     out.timer(ctx.t + gap, C_SESSION, prio=PRIO_TIMER)
+    if kyc:
+        _kyc_start(ctx, loc, out, dev, phone, expires, redeem_at, again_at)
+    return COMMIT
+
+
+def _first_phone(ctx):
+    """The user's first device of kind phone, or NULL."""
+    for i in range(ctx.refs.device.count(ctx.self_id)):
+        d = ctx.refs.device.get(ctx.self_id, i)
+        if ctx.reads.device.kind[d] == "phone":
+            return d
+    return std.NULL
+
+
+def _kyc_start(ctx, loc, out, desktop, phone, expires, redeem_at, again_at):
+    """Open a handoff flow on the desktop session (D28); runs after _session's reserve.
+
+    A scan at `redeem_at == expires` runs after the expiry (PRIO_EXPIRY < PRIO_TIMER) and is
+    rejected as expired (§06)."""
+    loc.kyc_flow = out.new_id("flow")
+    loc.kyc_session = loc.session
+    loc.kyc_desktop = desktop
+    loc.kyc_phone = phone
+    loc.kyc_expires = expires
+    loc.kyc_status = std.handoff.OPEN
+    out.emit_kyc_started(ctx.t, user_id=ctx.self_id, flow_id=loc.kyc_flow,
+                         session_id=loc.session, device_id=desktop, expires_at=expires)
+    out.timer(expires, C_KYC_EXPIRE, prio=PRIO_EXPIRY, tag=loc.kyc_flow)
+    out.timer(redeem_at, C_KYC_REDEEM, prio=PRIO_TIMER, tag=loc.kyc_flow)
+    if again_at != std.NULL:
+        out.timer(again_at, C_KYC_REDEEM, prio=PRIO_TIMER, tag=loc.kyc_flow)
+
+
+def _kyc_expire(ctx, loc, cmd, out):
+    if cmd.tag != loc.kyc_flow:
+        return reject(REJ_STALE)
+    status = std.handoff.expire(loc.kyc_status)
+    if status == loc.kyc_status:                           # already redeemed: nothing expires
+        return reject(REJ_KYC_STATE)
+    if not out.reserve(records={"kyc_handoff_expired": 1}):
+        return RETRY
+    loc.kyc_status = status
+    out.emit_kyc_handoff_expired(ctx.t, user_id=ctx.self_id, flow_id=loc.kyc_flow)
+    return COMMIT
+
+
+def _kyc_redeem(ctx, loc, cmd, out, cfg):
+    outcome = std.handoff.redeem(loc.kyc_status, loc.kyc_expires, ctx.t, loc.kyc_flow, cmd.tag)
+    if outcome == std.handoff.REJ_UNKNOWN:
+        return reject(REJ_STALE)
+    delay = ctx.rng.dist_us(site=55, d=cfg.kyc_face_delay)
+    if not out.reserve(records={"kyc_handoff_redeemed": 1, "kyc_handoff_rejected": 1},
+                       timers=1):
+        return RETRY
+    if outcome == std.handoff.OK:
+        loc.kyc_status = std.handoff.REDEEMED
+        out.emit_kyc_handoff_redeemed(ctx.t, user_id=ctx.self_id, flow_id=loc.kyc_flow,
+                                      device_id=loc.kyc_phone)
+        out.timer(ctx.t + delay, C_KYC_FACE, prio=PRIO_TIMER, tag=loc.kyc_flow)
+    elif outcome == std.handoff.REJ_EXPIRED:
+        out.emit_kyc_handoff_rejected(ctx.t, user_id=ctx.self_id, flow_id=loc.kyc_flow,
+                                      device_id=loc.kyc_phone, reason="expired")
+    else:
+        out.emit_kyc_handoff_rejected(ctx.t, user_id=ctx.self_id, flow_id=loc.kyc_flow,
+                                      device_id=loc.kyc_phone, reason="already_redeemed")
+    return COMMIT
+
+
+def _kyc_face(ctx, s, loc, cmd, out):
+    if cmd.tag != loc.kyc_flow:
+        return reject(REJ_STALE)
+    if loc.kyc_status != std.handoff.REDEEMED:
+        return reject(REJ_KYC_STATE)
+    if not out.reserve(records={"kyc_completed": 1, "user_kyc": 1}):
+        return RETRY
+    loc.kyc_status = std.handoff.DONE
+    out.emit_kyc_completed(ctx.t, user_id=ctx.self_id, flow_id=loc.kyc_flow,
+                           session_id=loc.kyc_session, device_id=loc.kyc_desktop,
+                           scan_device_id=loc.kyc_phone)
+    out.change_user_kyc(ctx.t, kyc_level=1, kyc_device=loc.kyc_phone)
     return COMMIT
 
 

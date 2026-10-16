@@ -8,6 +8,9 @@ Partitions
     owner  user        one shopper: profile, cart scratch, checkout in flight
     shard  inventory   one inventory group: on_hand and reserved per SKU
 
+Cross-device KYC (D28): a desktop session shows a handoff token, the shopper scans it on a
+phone before it expires (300 s), then a face check completes KYC (change group `user_kyc`).
+
 Boundaries (immutable, latency >= delta)
     user -> inventory  reserve (request, answered granted/rejected)   delta 150 ms
     user -> inventory  commit, release (one-way messages)             delta 150 ms
@@ -48,6 +51,13 @@ class Journey:
     substitute_p: float = 0.45              # after out-of-stock: browse for a substitute
     auth_fail_p: float = 0.03
     auth_latency: dist.Dist = dist.lognormal(median_s=2.5, sigma=0.6)
+    kyc_start_p: float = 0.05               # per eligible desktop session (D28)
+    kyc_expiry_s: int = 300                 # handoff token lifetime
+    kyc_redeem_delay: dist.Dist = dist.lognormal(median_s=90, sigma=0.8)
+    kyc_late_scan_p: float = 0.02           # scan lands exactly at expiry (counts as expired)
+    kyc_duplicate_p: float = 0.03           # the phone scans the same token twice
+    kyc_duplicate_gap: dist.Dist = dist.exp(mean_s=20)
+    kyc_face_delay: dist.Dist = dist.lognormal(median_s=40, sigma=0.5)
 
 
 @dataclass(frozen=True)
@@ -73,10 +83,12 @@ def define(p: Pack, cfg: Config) -> None:
         "kind": cat("phone", "tablet", "desktop"), "first_seen": ts()})
     user = p.table("user", key="user_id", mutable=True, doc="A shopper", cols={
         "age_band": cat("18-24", "25-34", "35-44", "45-54", "55+"),
-        "acquisition": cat(*ACQUISITION), "status": cat("active", "dormant")})
+        "acquisition": cat(*ACQUISITION), "status": cat("active", "dormant"),
+        "kyc_level": i16(), "kyc_device": opt(ref("device"))})
     p.table("order", key="order_id", mutable=True, child_of="user", cols={
         "sku_id": ref("sku"), "quantity": i16(), "amount": amount(asset="USD")})
-    p.ids("session", "checkout")
+    p.ids("session", "checkout", "flow")
+    p.change_group("user_kyc", table="user", cols=["kyc_level", "kyc_device"])
 
     p.owner("user", table=user, max_live=cfg.users, retire_when_idle=False)
     p.population(
@@ -131,6 +143,18 @@ def define(p: Pack, cfg: Config) -> None:
         **u, "order_id": ref("order"), "checkout_id": ref("checkout"), "device_id": ref("device"),
         "sku_id": ref("sku"), "quantity": i16(), "amount": amount(asset="USD"),
         "category": cat(*CATEGORIES)})
+    p.event("kyc_started", owner="user", doc="A desktop session shows a KYC handoff token",
+            cols={**u, "flow_id": ref("flow"), "session_id": ref("session"),
+                  "device_id": ref("device"), "expires_at": ts()})
+    p.event("kyc_handoff_redeemed", owner="user", doc="The token was scanned on the phone",
+            cols={**u, "flow_id": ref("flow"), "device_id": ref("device")})
+    p.event("kyc_handoff_rejected", owner="user", doc="A scan of an expired or used token",
+            cols={**u, "flow_id": ref("flow"), "device_id": ref("device"),
+                  "reason": cat("expired", "already_redeemed")})
+    p.event("kyc_handoff_expired", owner="user", cols={**u, "flow_id": ref("flow")})
+    p.event("kyc_completed", owner="user", doc="Face check passed; back on the desktop session",
+            cols={**u, "flow_id": ref("flow"), "session_id": ref("session"),
+                  "device_id": ref("device"), "scan_device_id": ref("device")})
     stock_cols = {"sku_group": i16(), "sku_id": ref("sku"), "checkout_id": ref("checkout"),
                   "quantity": i16()}
     p.event("stock_reserved", shard="inventory", cols=stock_cols)
