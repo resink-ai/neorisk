@@ -72,6 +72,9 @@ class RowsSource(Source):
         missing = sorted(set(kinds) - set(self.cols))
         if missing:
             raise ValueError(f"table {table.name}: rows() gives no values for columns {missing}")
+        extra = sorted(set(self.cols) - set(kinds))
+        if extra:
+            raise ValueError(f"table {table.name}: rows() gives values for unknown columns {extra}")
         out: dict[str, np.ndarray] = {}
         for name, values in self.cols.items():
             lt = kinds[name]
