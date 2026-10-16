@@ -1,3 +1,5 @@
+from collections.abc import Sequence
+
 import polars as pl
 
 from neorisk_simkit import rolling, rolling_asof
@@ -22,16 +24,22 @@ def feature_names(features: pl.DataFrame) -> list[str]:
     return [c for c in features.columns if c != "event_id"]
 
 
-def _raw_columns(events: pl.DataFrame) -> list[str]:
+def _raw_columns(events: pl.DataFrame, allowlist: Sequence[str] | None = None) -> list[str]:
     skip = {"label", "event_id", "event_time", *IDENTIFIER_LIKE}
+    allowed = None if allowlist is None else set(allowlist)
     return [
         c
         for c, t in events.schema.items()
-        if t.is_numeric() and c not in skip and not c.endswith("_id")
+        if t.is_numeric()
+        and c not in skip
+        and not c.endswith("_id")
+        and (allowed is None or c in allowed)
     ]
 
 
-def build_features(events: pl.DataFrame) -> pl.DataFrame:
+def build_features(
+    events: pl.DataFrame, allowlist: Sequence[str] | None = None
+) -> pl.DataFrame:
     """Observable point-in-time features from ``events`` only (no label, no golden columns).
 
     Output: ``event_id`` + numeric features, same row order as ``events``, nulls/NaN filled
@@ -115,7 +123,7 @@ def build_features(events: pl.DataFrame) -> pl.DataFrame:
         obs_amt_ratio_30d=pl.col("amount").fill_null(0.0) / (pl.col("obs_u_amt_mean_30d") + 1.0)
     ).drop("amount")
 
-    raw = _raw_columns(events)
+    raw = _raw_columns(events, allowlist)
     floats = [c for c in raw if events.schema[c].is_float()]
     raw_df = ev.select("event_id", *raw)
     if floats:

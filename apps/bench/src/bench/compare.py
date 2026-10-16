@@ -53,7 +53,7 @@ def run_compare(
     t_start = time.perf_counter()
     events, meta = load_events(data_dir)  # guards: label present, no golden leakage
     t0 = time.perf_counter()
-    feats = build_features(events)
+    feats = build_features(events, meta["_allowlist"])
     names = feature_names(feats)
     feature_seconds = time.perf_counter() - t0
     _log(verbose, f"features: {len(names)} columns in {feature_seconds:.1f}s")

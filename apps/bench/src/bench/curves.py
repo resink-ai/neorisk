@@ -30,8 +30,8 @@ LEAK_FLIP = 0.03  # share of rows where the leaked label echo disagrees with the
 
 def _prepare(data_dir, *, leak: bool = False, seed: int = 0):
     """Time-split features of one dataset. With ``leak`` two leaky columns are added to each split."""
-    events, _ = load_events(data_dir)
-    feats = build_features(events)
+    events, meta = load_events(data_dir)
+    feats = build_features(events, meta["_allowlist"])
     names = feature_names(feats)
     df = events.select("event_id", "event_time", "label").join(
         feats, on="event_id", how="left", maintain_order="left"

@@ -105,6 +105,14 @@ The split is chronological (60/20/20, ties broken by `event_id`). Raw features a
 non-`*_id` columns with NaN/null filled with -1. If the training split has a single class,
 each model still reports NaN metric rows for `valid` and `test`.
 
+## Feature allowlist
+
+`meta.json["feature_allowlist"]`, when present, is an upper bound on the raw model inputs: it
+must name existing event columns and none may be `label`, a golden column, an `*_id` column or
+an engine column (`lamport, partition_id, seq, cause_id, action_id`); otherwise loading fails.
+Without it the default is every numeric column except those. Legacy `datagen generate` writes
+the allowlist equal to its former raw set, so its bench results are unchanged.
+
 ## About `--oracle`
 
 `--oracle` trains XGBoost on the raw numeric columns plus all golden columns **except `score`**

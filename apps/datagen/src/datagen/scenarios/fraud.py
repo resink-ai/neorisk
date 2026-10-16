@@ -393,5 +393,11 @@ def generate(cfg: FraudConfig) -> Dataset:
         "seed": cfg.seed,
         "config": dataclasses.asdict(cfg),
         "versions": {"polars": pl.__version__, "xgboost": xgboost.__version__},
+        # upper bound on raw model inputs (bench D29): today's raw set
+        "feature_allowlist": [
+            c
+            for c, t in out.schema.items()
+            if t.is_numeric() and c != "label" and not c.endswith("_id")
+        ],
     }
     return Dataset(out, golden, meta)
