@@ -5,6 +5,10 @@ class AbiViolation(Exception):
     """A kernel broke the action ABI (e.g. write before reject/RETRY)."""
 
 
+class LoweringError(Exception):
+    """Kernel source uses something the AST lowering pass cannot translate (Task 6)."""
+
+
 class EngineError(Exception):
     """A run-level engine failure (bad addressing, invalid schedule)."""
 
