@@ -32,7 +32,22 @@ def main(argv: Sequence[str] | None = None) -> int:
     run.add_argument("--out", default=None, help="run folder (default <project>/out/<name>)")
     run.add_argument("--force", action="store_true", help="overwrite an existing run folder")
     run.add_argument("--checked", action="store_true", help="bounds-checked debug run")
+    sch = sub.add_parser("schema", help="print DDL or JSON schema of a project or dataset")
+    sch.add_argument("target", help="project folder or dataset folder")
+    sch.add_argument("--profile", default="sample")
+    sch.add_argument("--set", action="append", default=[], metavar="K=V")
+    sch.add_argument("--format", default="sql", help="sql (default) or json")
+    sch.add_argument("--dialect", default="postgres", help="postgres (default) or duckdb")
+    sch.add_argument("--tables", default=None, help="comma-separated table names")
+    sch.add_argument("--with-fks", action="store_true", help="emit REFERENCES clauses")
+    sch.add_argument("--out", default=None, help="write <table>.sql files into DIR")
     args = parser.parse_args(argv)
+
+    if args.cmd == "schema":
+        os.environ["NUMBA_NUM_THREADS"] = "1"
+        from datagen import schema_cmd
+
+        return schema_cmd.cmd_schema(args)
 
     if args.cmd in ("validate", "run"):
         os.environ["NUMBA_NUM_THREADS"] = "1"
