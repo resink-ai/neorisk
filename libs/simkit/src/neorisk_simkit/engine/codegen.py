@@ -66,9 +66,24 @@ DONE, NEED_SWAP, NEED_NODES = 0, 1, 2
 #   node_cap  int64: forced size of a worker's node free list (`force_capacity["timers"]`), or
 #             -1. A list above it makes the runner return NEED_NODES before the next dispatch,
 #             and `World` trims it back to the reserve.
+#   bnd_delta int64[boundaries]: minimum latency (delta) of each boundary; a commit that makes
+#             requests suspends its owner with susp_t = earliest request time and susp_delta =
+#             the smallest delta among those requests (the safe horizon reads both).
 WORLD_FIELDS = ("hid", "pool", "pay", "state", "args", "seed", "counters", "rejects", "occ_col",
-                "retire", "every", "jitter", "sim_start", "kc", "nopay", "node_cap")
-COUNTERS = ("retries", "continuations", "late_messages", "retry_streak")
+                "retire", "every", "jitter", "sim_start", "kc", "nopay", "node_cap", "bnd_delta")
+# `commands` counts executed commands (commits and rejects); rounds use it to measure progress.
+COUNTERS = ("retries", "continuations", "late_messages", "retry_streak", "commands")
+
+# ---------------------------------------------------------------- compiled rounds contract (D4)
+# `drain_small_rounds(W, out, R, run, n_run, t1, min_par, shard_lo, shard_hi, sbuf, log, rs)`
+# runs rounds on worker 0 until one of these (returned with the runnable count left in `run`):
+DR_CLOSED, DR_LARGE, DR_PYTHON, DR_LOG_FULL, DR_NO_PROGRESS = 0, 1, 2, 3, 4
+# On DR_PYTHON the current round stopped in phase rs[RS_PHASE] (one of PH_*); rs[RS_STATUS] is
+# the runner or route status that needs Python, rs[RS_H] the round's horizon (shard phase and
+# later) and rs[RS_C0] the command count when its shard phase began. rs[RS_NLOG] counts the
+# rounds finished in compiled code; log[i] = (owners run, shard commands) of each.
+PH_OWNERS, PH_ROUTE1, PH_SHARDS, PH_ROUTE2 = 0, 1, 2, 3
+RS_PHASE, RS_STATUS, RS_H, RS_C0, RS_NLOG = 0, 1, 2, 3, 4
 MAX_RETRIES = 8                # consecutive RETRYs of one command before the run fails
 PERIODIC_QUEUED = 1 << 62      # START tag bit: the next periodic occurrence is already queued
 PERIODIC_SITE = ENGINE_SITE_BASE + 10000         # phase draw of a periodic process (D26)
@@ -90,6 +105,9 @@ from neorisk_simkit.engine.errors import AbiViolation, EngineError
 from neorisk_simkit.engine.identity import make_handle
 from neorisk_simkit.engine.rng import (
     bernoulli, categorical, geometric, key_uniform, next_k, normal, sample_us, uniform_int,
+)
+from neorisk_simkit.engine.route import (
+    command_count, horizon, mark_all, note_suspended, route_outbox, shards_below, take_runnable,
 )
 from neorisk_simkit.spec.dist import EXP, PARETO
 '''
@@ -199,6 +217,13 @@ class _Gen:
                   f"_MAX_RETRIES = {MAX_RETRIES}", f"_PERIODIC_QUEUED = {PERIODIC_QUEUED}",
                   f"_PERIODIC_SITE = {PERIODIC_SITE}", f"_JITTER_SITE = {JITTER_SITE}",
                   f"_CAUSE_MASK = {(1 << 56) - 1}", f"_I64_MAX = {2 ** 63 - 1}"]
+        lines += [f"_DR_CLOSED = {DR_CLOSED}", f"_DR_LARGE = {DR_LARGE}",
+                  f"_DR_PYTHON = {DR_PYTHON}", f"_DR_LOG_FULL = {DR_LOG_FULL}",
+                  f"_DR_NO_PROGRESS = {DR_NO_PROGRESS}", f"_PH_OWNERS = {PH_OWNERS}",
+                  f"_PH_ROUTE1 = {PH_ROUTE1}", f"_PH_SHARDS = {PH_SHARDS}",
+                  f"_PH_ROUTE2 = {PH_ROUTE2}", f"_RS_PHASE = {RS_PHASE}",
+                  f"_RS_STATUS = {RS_STATUS}", f"_RS_H = {RS_H}", f"_RS_C0 = {RS_C0}",
+                  f"_RS_NLOG = {RS_NLOG}"]
         return "\n".join(lines) + "\n"
 
     # ------------------------------------------------------------------ rng / reads / refs
@@ -604,7 +629,7 @@ class _Gen:
     def run_partitions(self) -> None:
         disp = "_checked_dispatch" if self.checked else "dispatch"
         hid = ["pid", "clock", "occ", "pending", "qhead", "inst", "self_id", "cseq", "retire_at",
-               "susp_t", "ptype"]
+               "susp_t", "susp_delta", "ptype"]
         body = ["hid = W[_W_HID]"]
         body += [f"{n} = hid[_WH_{n.upper()}]" for n in hid]
         body += [
@@ -623,7 +648,10 @@ class _Gen:
             "kc = W[_W_KC][worker]",
             "nopay = W[_W_NOPAY]",
             "node_cap = W[_W_NODE_CAP]",
+            "bnd_delta = W[_W_BND_DELTA]",
             "reqc = out[OUT_REQC]",
+            "cnt = out[OUT_CNT]",
+            "obx = out[OUT_OUTBOX]",
             "miss = out[OUT_MISS]",
             "free_n = P[P_FREE_N]",
             "for i in range(start, slots.shape[0]):",
@@ -676,6 +704,7 @@ class _Gen:
             "        kc[0] = 0",
             "        reqc[0] = 0",
             "        miss[0] = -1",
+            "        ob0 = cnt[R_REQUESTS]",
             "        oc = occ_col[a]",
             ("        ctx = (t, self_id[g], pid[g], g, inst[g], a, np.int64(occ[g, oc]), kc, seed, "
              "args[0], args[1], args[2], lamport, np.int64(0))"),
@@ -691,6 +720,7 @@ class _Gen:
             "        if rc < RETRY:",
             '            raise EngineError("kernel returned an invalid code ", rc)',
             "        counters[_C_RETRY_STREAK] = 0",
+            "        counters[_C_COMMANDS] += 1",
             "        occ[g, oc] += 1",
             "        q_remove(P, qhead, g, node)",
             "        q_free(P, worker, node)",
@@ -704,7 +734,14 @@ class _Gen:
             "            clock[g] = lamport",
             "            if reqc[0] > 0:",
             "                pending[g] += reqc[0]",
-            "                susp_t[g] = t",
+            "                st_ = _I64_MAX",
+            "                sd_ = _I64_MAX",
+            "                for r_ in range(ob0, cnt[R_REQUESTS]):",
+            "                    if obx[OBX_KIND][r_] == OB_REQUEST:",
+            "                        st_ = min(st_, obx[OBX_TIME][r_])",
+            "                        sd_ = min(sd_, bnd_delta[obx[OBX_BND][r_]])",
+            "                susp_t[g] = st_",
+            "                susp_delta[g] = sd_",
             "                break",
             "        else:",
             "            rejects[a] += 1",
@@ -713,6 +750,53 @@ class _Gen:
             "        retire_at[g] = last_t",
             "return _DONE, slots.shape[0]"]
         self.fn("run_partitions", "W, out, worker, slots, start, limit_t, owners", body)
+
+    def drain_small_rounds(self) -> None:
+        """Whole rounds on worker 0 in compiled code (D4); see the contract at the top."""
+        py = ["        rs[_RS_STATUS] = st", "        return _DR_PYTHON, n_run"]
+        self.fn("drain_small_rounds",
+                "W, out, R, run, n_run, t1, min_par, shard_lo, shard_hi, sbuf, log, rs", [
+                    "counters = W[_W_COUNTERS]",
+                    "cnt = out[OUT_CNT]",
+                    "obx = out[OUT_OUTBOX]",
+                    "nlog = np.int64(0)",
+                    "while True:",
+                    "    rs[_RS_NLOG] = nlog",
+                    "    nsh = shards_below(R, shard_lo, shard_hi, t1, sbuf)",
+                    "    if n_run == 0 and nsh == 0:",
+                    "        return _DR_CLOSED, n_run",
+                    "    if n_run >= min_par:",
+                    "        return _DR_LARGE, n_run",
+                    "    if nlog >= log.shape[0]:",
+                    "        return _DR_LOG_FULL, n_run",
+                    "    rs[_RS_PHASE] = _PH_OWNERS",
+                    "    st, i_ = run_partitions(W, out, 0, run[:n_run], 0, t1, True)",
+                    "    if st != _DONE:", *py,
+                    "    note_suspended(R, run, n_run)",
+                    "    rs[_RS_PHASE] = _PH_ROUTE1",
+                    "    st, k_ = route_outbox(R, obx, cnt[R_REQUESTS], False)",
+                    "    if st != 0:", *py,
+                    "    cnt[R_REQUESTS] = 0",
+                    "    h = horizon(R, t1, _I64_MAX)",
+                    "    c0 = command_count(counters)",
+                    "    rs[_RS_H] = h",
+                    "    rs[_RS_C0] = c0",
+                    "    rs[_RS_PHASE] = _PH_SHARDS",
+                    "    nsh = shards_below(R, shard_lo, shard_hi, h, sbuf)",
+                    "    mark_all(R, sbuf, nsh)",
+                    "    st, i_ = run_partitions(W, out, 0, sbuf[:nsh], 0, h, False)",
+                    "    if st != _DONE:", *py,
+                    "    rs[_RS_PHASE] = _PH_ROUTE2",
+                    "    st, k_ = route_outbox(R, obx, cnt[R_REQUESTS], False)",
+                    "    if st != 0:", *py,
+                    "    cnt[R_REQUESTS] = 0",
+                    "    sc = command_count(counters) - c0",
+                    "    if n_run == 0 and sc == 0:",
+                    "        return _DR_NO_PROGRESS, n_run",
+                    "    log[nlog, 0] = n_run",
+                    "    log[nlog, 1] = sc",
+                    "    nlog += 1",
+                    "    n_run = take_runnable(R, t1, run)"])
 
     # ------------------------------------------------------------------ everything
     def generate(self) -> list[str]:
@@ -743,6 +827,7 @@ class _Gen:
         if self.checked:
             self.checked_dispatch()
         self.run_partitions()
+        self.drain_small_rounds()
         return self.funcs
 
 

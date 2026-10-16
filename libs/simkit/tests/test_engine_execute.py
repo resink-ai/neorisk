@@ -204,3 +204,13 @@ def test_unchecked_retry_cap_stops_a_kernel_that_never_progresses():
     slots = w.admit_population(run.start_us, run.start_us + 1)
     with pytest.raises(EngineError, match="command retried 8 times without progress"):
         w.run_slots(0, slots, run.start_us + H, owners=True)
+
+
+def test_clean_run_end_only_trims_a_forced_node_list():
+    """After DONE a forced list below its size is not topped up: an empty reserve is fine."""
+    run, w = _world(force={"timers": 4}, threads=2)
+    t0 = run.start_us - run.warmup_us
+    slots = w.admit_population(t0, t0 + 1)
+    w.pool.refill(1, int(w.pool.reserve_n[0]))       # reserve empty; worker 0 holds 0 < 4
+    w.run_slots(0, slots, t0, owners=True)            # nothing runs before t0: DONE at once
+    assert int(w.pool.free_n[0]) == 0 and int(w.pool.reserve_n[0]) == 0
