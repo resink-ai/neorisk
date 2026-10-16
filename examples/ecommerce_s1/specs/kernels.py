@@ -159,7 +159,9 @@ def _kyc_redeem(ctx, loc, cmd, out, cfg):
     outcome = std.handoff.redeem(loc.kyc_status, loc.kyc_expires, ctx.t, loc.kyc_flow, cmd.tag)
     if outcome == std.handoff.REJ_UNKNOWN:
         return reject(REJ_STALE)
-    delay = ctx.rng.dist_us(site=55, d=cfg.kyc_face_delay)
+    delay = 0
+    if outcome == std.handoff.OK:                          # the face check follows a good scan
+        delay = ctx.rng.dist_us(site=55, d=cfg.kyc_face_delay)
     if not out.reserve(records={"kyc_handoff_redeemed": 1, "kyc_handoff_rejected": 1},
                        timers=1):
         return RETRY

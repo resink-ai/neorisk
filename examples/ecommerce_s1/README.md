@@ -22,7 +22,8 @@ owns a phone, a `kyc_started` handoff token is shown; the phone scans it before 
 (300 s), a face check follows and `kyc_completed` lands back on the desktop session. A scan at
 exactly the expiry instant counts as expired, and a second scan of a used token is rejected as
 `already_redeemed`. Completion writes the `user_kyc` change group (`kyc_level`, `kyc_device`)
-to `history/user_kyc/`.
+to `history/user_kyc/`. In S1 a shopper gets one handoff flow: a flow that expires
+unredeemed leaves the shopper ineligible for another KYC attempt.
 
 **Events (19):** `user_signed_up`, `session_started`, `product_viewed` (12 property columns),
 `cart_item_added`, `checkout_started`, `checkout_failed`, `payment_authorized`,

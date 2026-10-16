@@ -24,15 +24,13 @@ REJ_UNKNOWN = 3
 @njit(cache=True)
 def redeem(status, expires_at, t, token, presented):
     """Outcome of presenting `presented` at time `t` to a flow whose token is `token`."""
-    if presented != token:
+    if presented != token or status == NONE:            # wrong token, or no flow was opened
         return REJ_UNKNOWN
     if status == REDEEMED or status == DONE:
         return REJ_ALREADY
     if status == EXPIRED or t >= expires_at:
         return REJ_EXPIRED
-    if status == OPEN:
-        return OK
-    return REJ_UNKNOWN                                     # no flow was ever opened
+    return OK                                              # OPEN, before expires_at
 
 
 @njit(cache=True)

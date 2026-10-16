@@ -3,8 +3,11 @@ from pathlib import Path
 import polars as pl
 import pytest
 
+from neorisk_simkit.engine.run import Simulation
 from neorisk_simkit.io.dataset import run_to_dataset
 from neorisk_simkit.io.read import read_events
+from neorisk_simkit.spec.project import load_project, resolve_run
+from neorisk_simkit.std import handoff
 
 EX = Path(__file__).resolve().parents[3] / "examples" / "ecommerce_s1"
 SMALL = ["users=2000", "skus=200", "sku_groups=4", "run.span=5d", "run.warmup=1d",
@@ -36,6 +39,7 @@ def test_cross_device_flow(base):
     j = done.join(started.select("flow_id", pl.col("session_id").alias("s0")), on="flow_id")
     assert (j["session_id"] == j["s0"]).all()                 # callback to the desktop session
     assert (j["device_id"] != j["scan_device_id"]).all()
+    assert done["flow_id"].n_unique() == done.height           # one completion per flow
 
 
 def test_change_group_written(base):
@@ -44,6 +48,31 @@ def test_change_group_written(base):
     assert hist.height == ev["kyc_completed"].height
     assert hist.columns[:5] == ["entity_id", "valid_from", "lamport", "partition_id", "seq"]
     assert (hist["kyc_level"] == 1).all()
+    h = hist.join(ev["kyc_completed"].select(pl.col("user_id").alias("entity_id"),
+                                             pl.col("event_time").alias("valid_from"),
+                                             "scan_device_id"),
+                  on=["entity_id", "valid_from"])
+    assert h.height == hist.height and (h["kyc_device"] == h["scan_device_id"]).all()
+
+
+def test_change_group_updates_owner_state():
+    # `out.change_user_kyc` writes the owner's state row (the arrays `s.kyc_level` reads), not
+    # only a history row: after the run, kyc_level == 1 exactly for users whose flow is DONE,
+    # and kyc_device is the phone that scanned the token.
+    run = resolve_run(load_project(EX), "sample", SMALL)
+    sim = Simulation(run, threads=2)
+    for _ in sim.steps():
+        pass
+    cols = [c.name for c in run.plan.table("user").cols]
+    state = sim.world.state["user"]
+    level, device = state[cols.index("kyc_level")], state[cols.index("kyc_device")]
+    fields = list(run.plan.process("shopper").kernel.local.fields)
+    loc = sim.world.locals["shopper"]
+    status, phone = loc[fields.index("kyc_status")], loc[fields.index("kyc_phone")]
+    done = status == handoff.DONE
+    assert done.sum() > 0
+    assert ((level == 1) == done).all()
+    assert (device[done] == phone[done]).all()
 
 
 def test_scan_exactly_at_expiry_counts_as_expired(tmp_path):

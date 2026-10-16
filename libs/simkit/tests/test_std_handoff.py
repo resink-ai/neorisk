@@ -10,6 +10,7 @@ def test_redeem_outcomes():
     assert h.redeem(h.REDEEMED, 1_000, 10, 7, 7) == h.REJ_ALREADY
     assert h.redeem(h.DONE, 1_000, 10, 7, 7) == h.REJ_ALREADY
     assert h.redeem(h.OPEN, 1_000, 10, 7, 8) == h.REJ_UNKNOWN          # token bound to the flow
+    assert h.redeem(h.NONE, 0, 10, 7, 7) == h.REJ_UNKNOWN              # no flow was opened
 
 
 def test_expire_only_from_open():
