@@ -22,7 +22,7 @@ cut down to what the S1 engine runs: handwritten kernels, one owner type and one
    signup records the age band, acquisition channel and first device. The first session
    follows about an hour later.
 2. **Session.** Starts on one of the shopper's devices (web on a desktop, app otherwise) and
-   views products (geometric, mean 6) about 40 s apart, picked by popularity.
+   views 1–30 products (geometric, mean 6) about 40 s apart, picked by popularity.
 3. **Cart.** Each view adds the product with probability 0.18. The cart holds one line in S1:
    adding a product replaces it.
 4. **Checkout.** When a session ends with a non-empty cart, the shopper checks out with

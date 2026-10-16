@@ -10,12 +10,18 @@ Recipe protocol (objects passed as `population(refs={...})` values or as a shard
   to `table`; `layout` puts them after the table's own columns.
 - `max_table_rows(table, n_owners) -> int | None` (plan time): an upper bound on the rows of a
   table the recipe builds (`None` for tables it does not build); `spec.caps` sizes with it.
+- refs recipes: `max_csr_entries(n_owners) -> int` (plan time): an upper bound on the int64
+  entries of its owner CSR (`offs` plus `idx`); `spec.caps` counts them as read inputs.
 - build time, called once by `World.build` before any of the accessors below:
   population refs: `generate(plan=, seed=, stream=, owner_times=)`;
   shard init: `init(n_items=, n_shards=, seed=, stream=, item_weights=) -> {field: values}`
   (per-item fields in items-table row order).
 - `extra_read_columns(table) -> {column: array}` and `table_rows(table) -> {column: array} | None`
   (build time, after generation); refs recipes also give `csr() -> (offs, idx)`.
+
+Sources (`Source` objects of a table) that set a non-None `weight` attribute make `layout` add
+the read column `cumw` to that table, so they must implement `row_weights(seed, stream) ->
+float64[n]` (positive view weight per row); `World` builds `cumw` from it.
 """
 
 from __future__ import annotations
@@ -131,6 +137,10 @@ class DevicesRecipe:
 
     def max_table_rows(self, table: str, n_owners: int) -> int | None:
         return n_owners * self.max_per_user if table == self.table else None
+
+    def max_csr_entries(self, n_owners: int) -> int:
+        """`offs` (n + 1) plus `idx` (own devices and at most one shared device per owner)."""
+        return (n_owners + 1) + n_owners * (self.max_per_user + 1)
 
     # build time
     def generate(self, *, plan: Any, seed: int, stream: int, owner_times: np.ndarray) -> None:

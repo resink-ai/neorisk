@@ -77,6 +77,13 @@ def _table_rows(plan: Plan, name: str) -> int:
     return 0
 
 
+def _csr_entries(recipe, n_owners: int) -> int:
+    """int64 entries of a population refs CSR: the recipe's bound, else 3 per owner."""
+    if hasattr(recipe, "max_csr_entries"):
+        return int(recipe.max_csr_entries(n_owners))
+    return 3 * n_owners
+
+
 def _extra_read_bytes(plan: Plan, table: str) -> int:
     """Engine-added read columns of `table`: recipe columns, `local_index`, `cumw` (8 B each)."""
     from neorisk_simkit.engine.layout import _recipes
@@ -130,7 +137,8 @@ def compute_caps(run) -> list[CapItem]:
     read_tables = {t for p in plan.processes for t in p.reads.values()}
     read = sum(_table_rows(plan, t) * row_bytes(plan.table(t).cols) + _extra_read_bytes(plan, t)
                for t in read_tables)
-    read += sum(pop.n * 3 * 8 for pop in plan.populations if pop.refs)
+    read += sum(8 * _csr_entries(r, pop.n) for pop in plan.populations
+                for r in pop.refs.values())
 
     items = {
         "output_slabs": (bud.threads * slabs_per_worker(plan) * eng.slab_bytes, ""),

@@ -61,7 +61,7 @@ def _session(ctx, s, loc, out, cfg):
         return reject(REJ_DORMANT)
     n_dev = ctx.refs.device.count(ctx.self_id)
     dev = ctx.refs.device.get(ctx.self_id, ctx.rng.uniform_int(site=2, lo=0, hi=n_dev - 1))
-    views = 1 + ctx.rng.geometric(site=3, mean=cfg.views_mean - 1.0)
+    views = min(ctx.rng.geometric(site=3, mean=cfg.views_mean), 30)   # 1-30 views
     gap = ctx.rng.pareto_us(site=4, alpha=cfg.session_gap_alpha, min_h=cfg.session_gap_min_h)
     first = ctx.rng.dist_us(site=5, d=cfg.view_gap)
     if not out.reserve(records={"session_started": 1}, creates={"session": 1}, timers=2):
@@ -90,7 +90,7 @@ def _view(ctx, loc, out, cfg):
     sku = ctx.reads.sku.sample_by_weight(ctx.rng.uniform(site=12))
     add = ctx.rng.bernoulli(site=13, p=cfg.add_to_cart_p)
     qty = ctx.rng.geometric(site=14, mean=1.25)          # >= 1, mean 1.25
-    pos = 1 + ctx.rng.geometric(site=15, mean=4.0)
+    pos = ctx.rng.geometric(site=15, mean=5.0)
     src = ctx.rng.categorical(site=16, p=(0.25, 0.35, 0.2, 0.2))
     referrer = ctx.rng.categorical(site=17, p=(0.7, 0.1, 0.12, 0.08))
     page_ms = 200 + ctx.rng.geometric(site=18, mean=800.0)
@@ -143,7 +143,7 @@ def _rejected(ctx, loc, cmd, out, cfg):
     if cmd.tag != loc.checkout:
         return reject(REJ_STALE)
     substitute = ctx.rng.bernoulli(site=31, p=cfg.substitute_p)
-    more = 1 + ctx.rng.geometric(site=32, mean=2.0)
+    more = ctx.rng.geometric(site=32, mean=3.0)
     nxt = ctx.rng.dist_us(site=33, d=cfg.view_gap)
     if not out.reserve(records={"checkout_failed": 1}, timers=1):
         return RETRY
