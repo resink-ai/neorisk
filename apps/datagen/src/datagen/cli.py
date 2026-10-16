@@ -41,7 +41,28 @@ def main(argv: Sequence[str] | None = None) -> int:
     sch.add_argument("--tables", default=None, help="comma-separated table names")
     sch.add_argument("--with-fks", action="store_true", help="emit REFERENCES clauses")
     sch.add_argument("--out", default=None, help="write <table>.sql files into DIR")
+    rep = sub.add_parser("replay", help="replay a dataset's events to sinks in canonical order")
+    rep.add_argument("dataset", help="dataset (run) folder")
+    sel = rep.add_argument_group("selection")
+    sel.add_argument("--first", type=int, default=None, metavar="N")
+    sel.add_argument("--last", type=int, default=None, metavar="N")
+    sel.add_argument("--from", dest="t_from", default=None, metavar="T",
+                     help="inclusive, RFC 3339 or a date")
+    sel.add_argument("--to", dest="t_to", default=None, metavar="T", help="exclusive")
+    sel.add_argument("--types", default=None, help="comma-separated event types")
+    rep.add_argument("--sink", action="append", default=[], metavar="URI",
+                     help="stdout[:?format=jsonl|table|csv] or "
+                          "file:PATH[?format=jsonl|json-array|csv|parquet] (repeatable)")
+    rep.add_argument("--numbers", action="store_true", default=None,
+                     help="emit ids and amounts as JSON numbers")
+    rep.add_argument("--batch-rows", type=int, default=None, metavar="N")
+    rep.add_argument("--preset", default=None, help="[replay.presets.NAME] of datagen.toml")
     args = parser.parse_args(argv)
+
+    if args.cmd == "replay":
+        from datagen import replay_cmd
+
+        return replay_cmd.cmd_replay(args)
 
     if args.cmd == "schema":
         os.environ["NUMBA_NUM_THREADS"] = "1"

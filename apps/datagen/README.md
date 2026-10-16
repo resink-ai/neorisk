@@ -53,3 +53,24 @@ uv run datagen run examples/ecommerce_s1 [--profile sample] [--set K=V]... \
 seconds. `--force` replaces an existing folder; the old one is deleted only after the new one is
 in place. Exit codes: 0 ok, 2 validation/usage error or folder exists, 3 a hard memory cap was
 hit (the item is named on stderr).
+
+## Replay: `datagen replay`
+
+```bash
+uv run datagen replay DATASET [--first N | --last N] [--from T] [--to T] [--types a,b] \
+    [--sink URI]... [--numbers] [--batch-rows N] [--preset NAME]
+```
+
+Reads a dataset's Parquet (never reruns the simulation) in canonical order and tees every batch
+to each sink. `T` is RFC 3339 or a date (`2026-03-01`); `--from` is inclusive, `--to` exclusive.
+Sinks: `stdout[:?format=jsonl|table|csv]` (default `stdout`, jsonl; a closed pipe ends the
+replay without error) and `file:PATH[?format=jsonl|json-array|csv|parquet]` (format defaults from
+the extension: `.jsonl`, `.json` = json-array, `.csv`, `.parquet`). A file is written to
+`PATH.tmp` and renamed when complete; a sink that fails midway leaves no file and no `.tmp`.
+`kafka://` arrives in M4. IDs and amounts are JSON strings unless `--numbers`. An empty selection
+exits 0 with zero rows (`json-array` writes `[]`).
+
+Presets come from `[replay.presets.<name>]` in the project's `datagen.toml`
+(`DATASET/../../datagen.toml`; keys `first last from to types sink numbers batch_rows`);
+explicit flags override preset keys. The report goes to stderr: per sink rows, rate, first/last
+canonical key and error. Exit codes: 0 ok, 1 a sink failed, 2 bad arguments or unavailable sink.
