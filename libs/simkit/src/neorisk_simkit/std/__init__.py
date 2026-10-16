@@ -1,7 +1,7 @@
 """Standard library for kernels and packs (checked arithmetic, sources, handoff)."""
 
 from neorisk_simkit.spec import law
-from neorisk_simkit.spec.sources import generated
+from neorisk_simkit.spec.sources import generated, rows
 from neorisk_simkit.std import handoff
 from neorisk_simkit.std.checked import (
     I64_MAX,
@@ -29,5 +29,6 @@ __all__ = [
     "generated",
     "handoff",
     "law",
+    "rows",
     "stock",
 ]
