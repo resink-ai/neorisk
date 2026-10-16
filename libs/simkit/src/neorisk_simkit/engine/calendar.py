@@ -2,6 +2,9 @@
 
 Entries are (slot, time) pairs. A slot may have several entries; only the one matching the
 slot's current `next_t` is valid, the rest are stale and dropped lazily during collection.
+
+Callers collect contiguous windows `[t0, t1)` and never push a time below the end of the last
+collected window (such an entry would never be emitted). A checked calendar enforces both.
 """
 
 from __future__ import annotations
@@ -9,9 +12,12 @@ from __future__ import annotations
 import numpy as np
 from numba import njit
 
+from neorisk_simkit.engine.errors import EngineError
+
 _I64_MAX = np.iinfo(np.int64).max
-# params layout
-_ORIGIN, _WIDTH, _NB = 0, 1, 2
+_I64_MIN = np.iinfo(np.int64).min
+# params layout: origin, bucket width, bucket count, checked flag, end of the last collected window
+_ORIGIN, _WIDTH, _NB, _CHECKED, _FLOOR = 0, 1, 2, 3, 4
 
 
 @njit(cache=True, nogil=True)
@@ -34,6 +40,8 @@ def _bucket(params, t):
 def cal_push(C, g, t):
     """Add an entry for slot g at time t; False when the entry pool is exhausted."""
     e_slot, e_time, e_next, free, bhead, _stamp, _epoch, params = C
+    if params[3] != 0 and t < params[4]:
+        raise EngineError("calendar push at ", t, " below the collected horizon ", params[4])
     e = free[0]
     if e < 0:
         return False
@@ -52,6 +60,10 @@ def cal_collect(C, next_t, t0, t1, out):
     e_slot, e_time, e_next, free, bhead, stamp, epoch, params = C
     if t1 <= t0:
         return 0
+    if params[3] != 0 and params[4] != _I64_MIN and t0 != params[4]:
+        raise EngineError("calendar collect windows must be contiguous: [", t0, ", ", t1,
+                          ") after a window ending at ", params[4])
+    params[4] = t1
     epoch[0] += 1
     ep = epoch[0]
     n = 0
@@ -106,7 +118,7 @@ def _rebuild(C, next_t):
 
 class Calendar:
     def __init__(self, n_slots: int, origin_us: int, width_us: int, n_buckets: int,
-                 capacity: int):
+                 capacity: int, checked: bool = False):
         if width_us <= 0 or n_buckets <= 0:
             raise ValueError("calendar width and bucket count must be positive")
         self.n_slots = n_slots
@@ -118,7 +130,8 @@ class Calendar:
         self.bhead = np.full(n_buckets, -1, np.int32)
         self.stamp = np.zeros(n_slots, np.int64)
         self.epoch = np.zeros(1, np.int64)
-        self.params = np.array([origin_us, width_us, n_buckets], np.int64)
+        self.params = np.array([origin_us, width_us, n_buckets, int(checked), _I64_MIN],
+                               np.int64)
 
     def as_tuple(self) -> tuple:
         return (self.e_slot, self.e_time, self.e_next, self.free, self.bhead, self.stamp,

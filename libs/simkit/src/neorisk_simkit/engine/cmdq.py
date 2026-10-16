@@ -180,6 +180,22 @@ def q_pop(P, qhead, g):
 
 
 @njit(cache=True, nogil=True)
+def q_remove(P, qhead, g, node):
+    """Unlink `node` from slot g's queue wherever it sits (usually the head)."""
+    nxt = P[4]
+    cur = qhead[g]
+    if cur == node:
+        qhead[g] = nxt[node]
+    else:
+        while cur >= 0 and nxt[cur] != node:
+            cur = nxt[cur]
+        if cur < 0:
+            raise ValueError("q_remove: node is not in the queue")
+        nxt[cur] = nxt[node]
+    nxt[node] = -1
+
+
+@njit(cache=True, nogil=True)
 def q_free(P, w, node):
     P[4][node] = P[P_FREE_HEAD][w]
     P[P_FREE_HEAD][w] = node
