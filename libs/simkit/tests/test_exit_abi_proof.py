@@ -47,6 +47,7 @@ def test_baseline_exercises_every_path(baseline):
     assert stats["rejects"]["prove"] > 0
     ev = read_events(baseline)
     assert ev["e_gamma"]["note"].null_count() < ev["e_gamma"].height
+    assert 0 < ev["e_gamma"]["note"].null_count()
 
 
 @pytest.fixture

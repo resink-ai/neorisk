@@ -109,3 +109,28 @@ def test_every_on_an_owner_process_is_an_error(run):
     bad = dataclasses.replace(run, plan=dataclasses.replace(plan, processes=ps))
     assert any("user_main: every= is only for shard processes (D26)" in e
                for e in validate(bad).errors)
+
+
+def _with_table_col(run, table, col, ltype):
+    plan = run.plan
+    ts = tuple(
+        dataclasses.replace(t, cols=tuple(
+            dataclasses.replace(c, ltype=ltype) if c.name == col else c for c in t.cols))
+        if t.name == table else t for t in plan.tables)
+    return dataclasses.replace(run, plan=dataclasses.replace(plan, tables=ts))
+
+
+@pytest.mark.parametrize("maker,name", [("i32", "i32"), ("i16", "i16")])
+def test_nullable_narrow_int_owner_state_is_an_error(run, maker, name):
+    from neorisk_simkit.spec import types
+    bad = _with_table_col(run, "user", "balance", types.opt(getattr(types, maker)()))
+    assert f"user.balance: nullable {name} state is not supported; use opt(i64)" in \
+        validate(bad).errors
+
+
+def test_nullable_i64_and_non_null_narrow_owner_state_are_fine(run):
+    from neorisk_simkit.spec import types
+    ok1 = _with_table_col(run, "user", "balance", types.opt(types.i64()))
+    ok2 = _with_table_col(run, "user", "balance", types.i32())
+    for r in (ok1, ok2):
+        assert not any("nullable" in e for e in validate(r).errors)

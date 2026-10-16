@@ -52,6 +52,15 @@ def validate(run) -> ValidationReport:
                 errs.append(f"event {e.name}: column {c.name} is text; "
                             "S1 kernels can only write opt(text)")
 
+    owner_tables = {p.table for p in plan.partitions if p.kind == "owner" and p.table}
+    for t in plan.tables:
+        if t.name not in owner_tables:
+            continue
+        for c in t.cols:
+            if c.ltype.nullable and c.ltype.kind in ("i16", "i32"):
+                errs.append(f"{t.name}.{c.name}: nullable {c.ltype.kind} state is not "
+                            "supported; use opt(i64)")
+
     slab_rows = {n: eng.slab_bytes // max(1, rb) for n, rb in row_bytes.items()}
     forced_timers = eng.force_capacity.get("timers")
     for p in plan.processes:
