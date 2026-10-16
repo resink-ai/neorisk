@@ -34,18 +34,18 @@ def row_dicts(batch: pa.RecordBatch, doc: dict, numbers: bool = False) -> list[d
     """One flat object per row: the common columns, then that row's own type columns."""
     tables = {t["name"]: t["columns"] for t in doc["tables"] if t["kind"] == "event"}
     have = set(batch.schema.names)
-    cache: dict[str, list] = {}
-    kinds: dict[str, str] = {}
-    for cols in tables.values():
-        for c in cols:
-            kinds.setdefault(c["name"], c["type"])
-    for name in batch.schema.names:
-        cache[name] = _column_values(batch, name, kinds.get(name, "text"), numbers)
-    types = cache["event_type"]
+    cache: dict[tuple[str, str], list] = {}
+    types = batch.column(batch.schema.get_field_index("event_type")).to_pylist()
     out = []
     for i in range(batch.num_rows):
-        cols = tables[types[i]]
-        out.append({c["name"]: cache[c["name"]][i] for c in cols if c["name"] in have})
+        row = {}
+        for c in tables[types[i]]:
+            if c["name"] in have:
+                key = (c["name"], c["type"])
+                if key not in cache:
+                    cache[key] = _column_values(batch, c["name"], c["type"], numbers)
+                row[c["name"]] = cache[key][i]
+        out.append(row)
     return out
 
 

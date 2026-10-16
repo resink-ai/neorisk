@@ -131,3 +131,40 @@ def test_csv_and_table(ds):
     assert to_csv(batch, p.doc, header=False).splitlines() == lines[1:]
     tab = to_table(row_dicts(batch, p.doc)).splitlines()
     assert tab[0].startswith("event_id") and len(tab) == 6
+
+
+def _doc(**cols):
+    head = [{"name": n, "type": t} for n, t in (
+        ("event_id", "i64"), ("event_type", "text"), ("event_time", "ts"), ("lamport", "i64"),
+        ("partition_id", "i64"), ("seq", "i32"), ("cause_id", "i64"), ("action_id", "i16"))]
+    return {"tables": [{"name": n, "kind": "event",
+                        "columns": head + [{"name": c, "type": t} for c, t in cs]}
+                       for n, cs in cols.items()]}
+
+
+def test_cross_type_int_widths_widen_and_incompatible_types_raise():
+    from neorisk_simkit.io.replay.planner import unified_schema
+    doc = _doc(a=[("quantity", "i16")], b=[("quantity", "i32")], c=[("quantity", "i64")])
+    assert unified_schema(doc, ["a", "b"]).field("quantity").type == pa.int32()
+    assert unified_schema(doc, ["a", "b", "c"]).field("quantity").type == pa.int64()
+    bad = _doc(a=[("x", "i16")], b=[("x", "bool")])
+    with pytest.raises(ReplayError, match="'x'"):
+        unified_schema(bad, ["a", "b"])
+
+
+def test_row_kind_follows_the_rows_own_type():
+    doc = _doc(a=[("v", "i64")], b=[("v", "i32")])
+    for order in (("a", "b"), ("b", "a")):
+        d = {"tables": [t for n in order for t in doc["tables"] if t["name"] == n]}
+        batch = pa.RecordBatch.from_pylist(
+            [{"event_id": 1, "event_type": "a", "event_time": 0, "lamport": 1, "partition_id": 2, "seq": 3,
+                  "cause_id": None, "action_id": 1, "v": 7},
+             {"event_id": 2, "event_type": "b", "event_time": 0, "lamport": 1, "partition_id": 2, "seq": 4,
+                  "cause_id": None, "action_id": 1, "v": 8}],
+            schema=pa.schema([("event_id", pa.int64()), ("event_type", pa.string()),
+                              ("event_time", pa.timestamp("us", tz="UTC")),
+                              ("lamport", pa.int64()), ("partition_id", pa.int64()),
+                              ("seq", pa.int32()), ("cause_id", pa.int64()),
+                              ("action_id", pa.int16()), ("v", pa.int64())]))
+        rows = row_dicts(batch, d)
+        assert rows[0]["v"] == "7" and rows[1]["v"] == 8

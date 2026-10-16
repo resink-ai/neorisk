@@ -49,6 +49,17 @@ def _unified_type(kind: str) -> pa.DataType:
     return pa.string() if pa.types.is_dictionary(t) else t
 
 
+_INT_WIDTH = {pa.int16(): 16, pa.int32(): 32, pa.int64(): 64}
+
+
+def _common_type(name: str, a: pa.DataType, b: pa.DataType) -> pa.DataType:
+    """Widest of two integer types; any other mismatch has no common type."""
+    if a in _INT_WIDTH and b in _INT_WIDTH:
+        return a if _INT_WIDTH[a] >= _INT_WIDTH[b] else b
+    raise ReplayError(f"column {name!r} has incompatible types across the selected event "
+                      f"types ({a} vs {b}); narrow --types")
+
+
 def unified_schema(doc: dict, types: list[str]) -> pa.Schema:
     """Common columns, then the union of the selected types' columns (all nullable, D23)."""
     tables = {t["name"]: t for t in doc["tables"] if t["kind"] == "event"}
@@ -59,9 +70,9 @@ def unified_schema(doc: dict, types: list[str]) -> pa.Schema:
     for tname in types:
         for c in tables[tname]["columns"]:
             ty = _unified_type(c["type"])
-            if fields.setdefault(c["name"], ty) != ty:
-                raise ReplayError(f"column {c['name']!r} has different types across the selected "
-                                  f"event types ({fields[c['name']]} vs {ty}); narrow --types")
+            have = fields.setdefault(c["name"], ty)
+            if have != ty:
+                fields[c["name"]] = _common_type(c["name"], have, ty)
     return pa.schema([pa.field(n, t, nullable=True) for n, t in fields.items()])
 
 
