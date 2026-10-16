@@ -24,6 +24,13 @@ CMD_FIELDS = ("kind", "tag", "time", "cursor", "sender")
 CMD_PAY = 5
 CMD_PAY_ROW = 6
 
+
+def make_ctx(t, self_id, pid, g, inst, action, occ, kc, seed, cfg, reads, refs, lamport,
+             flags) -> tuple:
+    """The `ctx` tuple passed to lowered kernels, in `CTX_FIELDS` order."""
+    return (t, self_id, pid, g, inst, action, occ, kc, seed, cfg, reads, refs, lamport, flags)
+
+
 # Owner state tuple: (lslot, col_0, ...). Shard state tuple: (index, off, n, items, field_0, ...).
 OWNER_STATE_BASE = 1
 SHARD_INDEX, SHARD_OFF, SHARD_N, SHARD_ITEMS, SHARD_STATE_BASE = range(5)

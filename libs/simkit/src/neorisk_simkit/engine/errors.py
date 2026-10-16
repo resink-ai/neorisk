@@ -10,7 +10,14 @@ class LoweringError(Exception):
 
 
 class EngineError(Exception):
-    """A run-level engine failure (bad addressing, invalid schedule)."""
+    """A run-level engine failure (bad addressing, invalid schedule).
+
+    Generated code raises it with constant strings and runtime scalars mixed in `args` (Numba
+    exceptions take no formatted strings), so the message is the arguments joined as text.
+    """
+
+    def __str__(self) -> str:
+        return "".join(str(a) for a in self.args)
 
 
 class CapExceeded(Exception):
