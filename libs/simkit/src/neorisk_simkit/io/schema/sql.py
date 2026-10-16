@@ -7,22 +7,34 @@ from collections.abc import Sequence
 from typing import Any
 
 _PLAIN = re.compile(r"[a-z_][a-z0-9_]*")
+_PG_MAX_IDENT = 63
 DIALECTS = ("postgres", "duckdb")
 
-_RESERVED = frozenset({
-    "user", "order", "group", "select", "table", "column", "default", "check", "primary",
-    "references", "constraint", "index", "where", "from", "to", "end", "all", "and", "or",
-    "not", "null", "limit", "offset", "union", "using", "when", "with", "case", "create",
-    "desc", "asc", "do", "analyse", "analyze", "array", "as", "both", "cast", "current_user",
-    "distinct", "else", "fetch", "for", "foreign", "grant", "having", "in", "initially",
-    "into", "leading", "localtime", "only", "placing", "returning", "session_user", "some",
-    "symmetric", "then", "left", "right", "inner", "outer", "full", "join", "cross", "natural",
-    "on", "is", "like", "ilike", "between", "exists", "any", "by", "except", "intersect",
-    "isnull", "notnull", "similar", "verbose", "binary", "collate", "freeze", "lateral",
-    "overlaps", "unnest", "pivot", "unpivot", "qualify", "sample", "tablesample",
-    "current_date", "current_time", "current_timestamp", "current_role", "current_catalog",
-    "current_schema", "authorization", "deferrable", "collation", "concurrently",
-    "trailing", "unique", "variadic", "window", "true", "false",
+# Static keyword set (the library cannot import duckdb at runtime): every DuckDB 1.5.6 keyword
+# not categorised 'unreserved' in duckdb_keywords(), plus the PostgreSQL reserved and
+# reserved-(can be function or type) keywords. A test compares it with the installed DuckDB.
+RESERVED = frozenset({
+    "all", "analyse", "analyze", "and", "anti", "any", "array", "as", "asc", "asof",
+    "asymmetric", "at", "authorization", "between", "bigint", "binary", "bit", "boolean",
+    "both", "by", "case", "cast", "char", "character", "check", "coalesce", "collate",
+    "collation", "column", "columns", "concurrently", "constraint", "create", "cross",
+    "current_catalog", "current_date", "current_role", "current_schema", "current_time",
+    "current_timestamp", "current_user", "dec", "decimal", "default", "deferrable", "desc",
+    "describe", "distinct", "do", "else", "end", "except", "exists", "extract", "false",
+    "fetch", "float", "for", "foreign", "freeze", "from", "full", "generated", "glob", "grant",
+    "group", "grouping", "grouping_id", "having", "ilike", "in", "initially", "inner", "inout",
+    "int", "integer", "intersect", "interval", "into", "is", "isnull", "join", "lambda",
+    "lateral", "leading", "left", "like", "limit", "localtime", "localtimestamp", "map",
+    "national", "natural", "nchar", "none", "not", "notnull", "null", "nullif", "numeric",
+    "offset", "on", "only", "or", "order", "out", "outer", "overlaps", "overlay", "pivot",
+    "pivot_longer", "pivot_wider", "placing", "position", "positional", "precision", "primary",
+    "qualify", "real", "references", "returning", "right", "row", "select", "semi",
+    "session_user", "setof", "show", "similar", "smallint", "some", "struct", "substring",
+    "summarize", "symmetric", "system_user", "table", "tablesample", "then", "time",
+    "timestamp", "to", "trailing", "treat", "trim", "true", "try_cast", "union", "unique",
+    "unpack", "unpivot", "user", "using", "values", "varchar", "variadic", "verbose", "when",
+    "where", "window", "with", "xmlattributes", "xmlconcat", "xmlelement", "xmlexists",
+    "xmlforest", "xmlnamespaces", "xmlparse", "xmlpi", "xmlroot", "xmlserialize", "xmltable",
 })
 _TYPES = {
     "postgres": {"i16": "SMALLINT", "i32": "INTEGER", "i64": "BIGINT", "ref": "BIGINT",
@@ -40,7 +52,7 @@ class SqlError(Exception):
 
 
 def quote_ident(name: str, dialect: str) -> str:
-    if name in _RESERVED or not _PLAIN.fullmatch(name):
+    if name in RESERVED or not _PLAIN.fullmatch(name):
         return '"' + name.replace('"', '""') + '"'
     return name
 
@@ -107,6 +119,19 @@ def _render_table(doc: dict[str, Any], table: dict[str, Any], dialect: str,
     return "\n".join(lines) + "\n"
 
 
+def _check_lengths(doc: dict[str, Any], rendered: dict[str, str]) -> None:
+    """Postgres truncates identifiers beyond 63 bytes: refuse instead."""
+    for t in doc["tables"]:
+        if t["name"] not in rendered:
+            continue
+        names = [t["name"], *(c["name"] for c in t["columns"])]
+        if t["kind"] == "event":
+            names.append(t["name"] + "_time")
+        for n in names:
+            if len(n.encode()) > _PG_MAX_IDENT:
+                raise SqlError(f"identifier {n!r} exceeds Postgres' {_PG_MAX_IDENT}-byte limit")
+
+
 def render_sql(doc: dict[str, Any], dialect: str, tables: Sequence[str] | None = None,
                with_fks: bool = False) -> dict[str, str]:
     """Table name -> DDL text, in schema order."""
@@ -117,5 +142,8 @@ def render_sql(doc: dict[str, Any], dialect: str, tables: Sequence[str] | None =
         if name not in known:
             raise SqlError(f"unknown table {name!r}")
     entity_tables = {t["name"] for t in doc["tables"] if t["kind"] == "entity"}
-    return {t["name"]: _render_table(doc, t, dialect, entity_tables, with_fks)
-            for t in doc["tables"] if tables is None or t["name"] in tables}
+    out = {t["name"]: _render_table(doc, t, dialect, entity_tables, with_fks)
+           for t in doc["tables"] if tables is None or t["name"] in tables}
+    if dialect == "postgres":
+        _check_lengths(doc, out)
+    return out

@@ -91,3 +91,44 @@ def test_dataset_and_pack_give_the_same_sql(tmp_path):
     plan = resolve_run(load_project(FIXTURES / "mini"), "sample", ["users=40"]).plan
     assert render_sql(load_schema(r.out_dir), "postgres") == render_sql(
         schema_document(plan), "postgres")
+
+
+def _doc_with_column(name: str, table: str = "t") -> dict:
+    col = {"name": name, "type": "i64", "nullable": False, "ref": None, "values": None,
+           "asset": None, "quantum": None, "minimum": None, "doc": ""}
+    return {"pack": "p", "revision": "r", "schema_version": 1,
+            "tables": [{"name": table, "kind": "history", "doc": "", "columns": [col]}]}
+
+
+def _duckdb_keywords() -> set[str]:
+    rows = duckdb.sql("SELECT keyword_name, keyword_category FROM duckdb_keywords()").fetchall()
+    return {k for k, c in rows if c != "unreserved"}
+
+
+def test_every_duckdb_keyword_works_as_column_and_table_name():
+    for kw in sorted(_duckdb_keywords()):
+        ddl = render_sql(_doc_with_column(kw, kw), "duckdb")[kw]
+        duckdb.connect().execute(ddl)
+
+
+def test_keyword_set_covers_installed_duckdb():
+    from neorisk_simkit.io.schema.sql import RESERVED
+
+    assert _duckdb_keywords() <= RESERVED, "duckdb added keywords: refresh sql.RESERVED"
+
+
+def test_plain_names_stay_unquoted():
+    from neorisk_simkit.io.schema.sql import quote_ident
+
+    assert quote_ident("order_id", "postgres") == "order_id"
+    assert quote_ident("order", "postgres") == '"order"'
+
+
+def test_identifier_over_63_bytes_is_rejected(doc):
+    long = _doc_with_column("x", "t" * 64)
+    with pytest.raises(SqlError, match="63"):
+        render_sql(long, "postgres")
+    long["tables"][0]["kind"] = "event"
+    long["tables"][0]["name"] = "e" * 60  # index name e..._time is 65 bytes
+    with pytest.raises(SqlError, match="63"):
+        render_sql(long, "postgres")
