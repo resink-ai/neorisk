@@ -1,9 +1,16 @@
 import argparse
+import os
 from collections.abc import Sequence
 
 from datagen.config import FraudConfig
 from datagen.scenarios import SCENARIOS
 from neorisk_simkit import export
+
+
+def _project_args(p: argparse.ArgumentParser) -> None:
+    p.add_argument("project")
+    p.add_argument("--profile", default="sample")
+    p.add_argument("--set", action="append", default=[], metavar="K=V")
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -16,7 +23,22 @@ def main(argv: Sequence[str] | None = None) -> int:
     gen.add_argument("--span-days", type=int, default=FraudConfig.span_days)
     gen.add_argument("--bad-rate", type=float, default=FraudConfig.target_bad_rate)
     gen.add_argument("--out", required=True)
+    val = sub.add_parser("validate", help="validate a project folder and print memory caps")
+    _project_args(val)
+    run = sub.add_parser("run", help="run a project profile into a dataset folder")
+    _project_args(run)
+    run.add_argument("--seed", type=int, default=None)
+    run.add_argument("--threads", type=int, default=None)
+    run.add_argument("--out", default=None, help="run folder (default <project>/out/<name>)")
+    run.add_argument("--force", action="store_true", help="overwrite an existing run folder")
+    run.add_argument("--checked", action="store_true", help="bounds-checked debug run")
     args = parser.parse_args(argv)
+
+    if args.cmd in ("validate", "run"):
+        os.environ["NUMBA_NUM_THREADS"] = "1"
+        from datagen import run_cmds
+
+        return run_cmds.cmd_validate(args) if args.cmd == "validate" else run_cmds.cmd_run(args)
 
     cfg = FraudConfig(
         n_events=args.n_events,

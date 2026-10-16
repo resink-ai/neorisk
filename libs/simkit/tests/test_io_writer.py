@@ -153,3 +153,26 @@ def test_exact_instants_across_start_step_ends_and_midnight(tmp_path):
     assert step_of[5][0] == step_of[6][0]
     assert (step_of[5][1], step_of[6][1]) == ("date=2026-03-01", "date=2026-03-02")
     assert read_step_index(r.out_dir)["rows__mark"].to_pylist()[:2] == [0, 0]   # warm-up steps
+
+
+def test_force_keeps_the_old_folder_until_the_new_one_is_in_place(tmp_path, monkeypatch):
+    out = tmp_path / "run"
+    run_to_dataset(FIXTURES / "mini", "sample", ["users=20"], out_dir=out)
+    (out / "marker.txt").write_text("old")
+    real_rename = type(out).rename
+
+    def failing(self, target):
+        if self.name.endswith(".partial"):
+            raise OSError("disk full")
+        return real_rename(self, target)
+
+    monkeypatch.setattr(type(out), "rename", failing)
+    with pytest.raises(OSError, match="disk full"):
+        run_to_dataset(FIXTURES / "mini", "sample", ["users=20"], out_dir=out, force=True)
+    monkeypatch.undo()
+    assert (out / "marker.txt").read_text() == "old"
+    assert (out / "manifest.json").exists()
+    assert sorted(p.name for p in tmp_path.iterdir()) == ["run"]
+    run_to_dataset(FIXTURES / "mini", "sample", ["users=20"], out_dir=out, force=True)
+    assert not (out / "marker.txt").exists()
+    assert sorted(p.name for p in tmp_path.iterdir()) == ["run"]

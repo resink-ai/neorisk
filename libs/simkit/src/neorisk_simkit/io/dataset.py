@@ -121,13 +121,29 @@ def run_to_dataset(project_dir: str | Path, profile: str = "sample",
         sim, manifest, timing = _simulate(run, project.dir, work, threads, checked)
         stats = _run_stats(sim, manifest, timing, threads)
         write_run_stats(work, stats)
-        if out_dir.exists():
-            shutil.rmtree(out_dir)
-        work.rename(out_dir)
+        _install(work, out_dir)
     except BaseException:
         shutil.rmtree(work, ignore_errors=True)
         raise
     return RunResult(out_dir, manifest, stats)
+
+
+def _install(work: Path, out_dir: Path) -> None:
+    """Move `work` to `out_dir`; an existing `out_dir` is set aside first and deleted only
+    after the new folder is in place (restored if the final rename fails)."""
+    if not out_dir.exists():
+        work.rename(out_dir)
+        return
+    old = out_dir.with_name(out_dir.name + ".old")
+    if old.exists():
+        shutil.rmtree(old)
+    out_dir.rename(old)
+    try:
+        work.rename(out_dir)
+    except BaseException:
+        old.rename(out_dir)
+        raise
+    shutil.rmtree(old)
 
 
 def _run_stats(sim: Simulation, manifest: dict[str, Any], timing: dict[str, float],

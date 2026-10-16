@@ -38,3 +38,18 @@ uv run datagen generate --scenario fraud --n-events 100000 --seed 42 --out data/
    (use `neorisk_simkit` primitives; keep entities as integer `idx` and let `export` attach UUIDs).
 2. Register it in `datagen.scenarios.SCENARIOS`: `{"fraud": fraud.generate, "<name>": <name>.generate}`.
 3. Add tests with a unique file basename.
+
+## Project folders: `validate` and `run`
+
+```bash
+uv run datagen validate examples/ecommerce_s1 [--profile sample] [--set K=V]...
+uv run datagen run examples/ecommerce_s1 [--profile sample] [--set K=V]... \
+    [--seed N] [--threads N] [--out DIR] [--force] [--checked]
+```
+
+`validate` prints the pack, partitions, events, processes, warnings and the memory caps table
+(hard cap and estimate in MiB), then `OK` or the errors. `run` writes
+`<project>/<paths.out>/<profile>-s<seed>` (or `--out`) and prints rows per table, rounds and
+seconds. `--force` replaces an existing folder; the old one is deleted only after the new one is
+in place. Exit codes: 0 ok, 2 validation/usage error or folder exists, 3 a hard memory cap was
+hit (the item is named on stderr).
