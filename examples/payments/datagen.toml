@@ -1,0 +1,77 @@
+# datagen project file. Paths are relative to this file.
+# `datagen run examples/payments --profile <name>` merges [defaults] <- [profiles.<name>] <- --set.
+
+[project]
+name = "payments"
+pack = "specs/pack.py"                 # define(p, cfg) and Config
+expectations = "specs/expectations.yaml"
+overlays = "specs/overlays"            # one module per overlay; apply(o, **params)
+
+[paths]
+out = "out"                            # out/<run>/          datasets
+reports = "reports"                    # reports/<run>/      report.html, checks.json, extracts
+logs = "logs"                          # logs/<run>-<utc>.jsonl
+
+[defaults]
+seed = 42
+start = "2026-01-01T00:00:00Z"
+mode = "time"                          # time | population
+span = "120d"                          # one full dispute window after the first exported month
+warmup = "30d"                         # generated, not exported; opening snapshot at the end
+drain = "0d"                           # open disputes and refunds at the horizon are censored
+
+[budget]                               # validate refuses a run whose hard caps exceed this
+threads = 16
+memory = "32GB"                        # up to 8M live payment owners during the dispute window
+max_step_rows = 4_000_000
+max_spawn_depth = 3                    # cardholder -> payment -> dispute
+max_admissions_per_step = 400_000      # payment creations per step
+
+[writer]                               # pinned: affects bytes
+compression = "zstd"
+compression_level = 3
+row_group_rows = 131_072
+
+[profiles.sample]                      # the authoring loop: seconds, not minutes
+span = "21d"
+warmup = "3d"
+set = { cardholders = 20_000, merchants = 2_000, merchant_groups = 32, max_live_payments = 200_000 }
+
+[profiles.full]                        # roughly the S2 benchmark shape
+set = { cardholders = 2_000_000, merchants = 40_000, merchant_groups = 256 }
+
+[profiles.abuse]                       # base + both overlays, for fraud benchmarks
+set = { cardholders = 2_000_000 }
+overlays = ["card_testing", "friendly_fraud"]
+
+[profiles.abuse.overlay.card_testing]
+size = 150
+live_card_share = 0.3
+target_merchants = 4
+
+[profiles.abuse.overlay.friendly_fraud]
+share = 0.005
+skip_refunds = true
+
+[export]
+golden = ["card_distinct_merchants_24h", "device_distinct_cards_1h",
+          "merchant_decline_rate_1h", "card_auths_7d"]     # written to golden/, never events/
+postings = true                        # postings/: double-entry ledger rows
+accumulators = ["settlement"]          # settlement/: per (merchant, batch_date) totals
+snapshots = true
+cases = true
+
+[replay.presets.peek]
+first = 100
+sink = "stdout:?format=table"
+
+[replay.presets.last_json]
+last = 100
+sink = "file:last100.json?format=json-array"
+
+[replay.presets.kafka_dev]
+first = 10_000
+sink = "kafka://localhost:9092/payments.{event_type}?key=payment_id&format=avro"
+schema_registry = "http://localhost:8081"
+pace = "x60"
+rebase = "now"

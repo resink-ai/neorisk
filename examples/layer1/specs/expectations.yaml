@@ -1,0 +1,160 @@
+# Statistical expectations and laws for the layer1 pack.
+# Every entry cites where its target comes from. Changes to this file need a second
+# reviewer (CODEOWNERS). Exact laws are declared in pack.py with p.check and listed
+# here only by id, so the report shows one table.
+# Native amounts are in quanta: 1 quantum = 1e6 wei = 0.001 gwei.
+pack: layer1
+schema_version: 1
+
+defaults:
+  min_sample: 2000          # cases; smaller samples make a check inconclusive
+  confidence: 0.95
+  sample_by: owner_hash     # stratified; rare cohorts get at least min_sample cases
+
+laws:                       # declared in pack.py; required means CI fails if missing
+  - {id: chk.nonce_sequence,          required: true}
+  - {id: chk.balance_never_negative,  required: true}
+  - {id: chk.token_never_negative,    required: true}
+  - {id: chk.value_conservation,      required: true}
+  - {id: chk.token_conservation,      required: true}
+  - {id: chk.gas_within_limit,        required: true}
+  - {id: chk.block_gas_consistent,    required: true}
+  - {id: chk.base_fee_eip1559,        required: true}   # EIP-1559, Specification
+  - {id: chk.fee_bounds,              required: true}
+  - {id: chk.reverted_no_effects,     required: true}
+  - {id: chk.tx_resolved,             required: true}
+  - {id: chk.tx_once,                 required: true}
+  - {id: chk.tx_lifecycle,            required: true}
+  - {id: chk.nft_supply,              required: true}
+  - {id: chk.airdrop_once,            required: true}
+
+expectations:
+  - id: exp.txs_per_block
+    metric: stat.quantiles("block_produced.tx_count")
+    target: {mean: {between: ["${gas_limit} / 300000", "${gas_limit} / 150000"]}}   # 100-200 at 30M
+    source: "brief: Rates we know, row 1"
+    required: true
+
+  - id: exp.gas_utilization
+    metric: stat.mean_ratio("block_produced.gas_used", "block_produced.gas_limit")
+    target: {between: [0.45, 0.55]}
+    source: "brief: Rates we know, row 2; EIP-1559 (target = limit / 2)"
+    required: true
+
+  - id: exp.gas_per_tx
+    metric: stat.quantiles("tx_included.gas_used")
+    target: {mean: {between: [80000, 130000]}}
+    source: "brief: Rates we know, row 3"
+
+  - id: exp.revert_rate
+    metric: stat.share("tx_included", of=["tx_included"], where="status == 'reverted'")
+    target: {between: [0.02, 0.05]}
+    source: "brief: Rates we know, row 4"
+    required: true
+
+  - id: exp.drop_rate
+    metric: stat.share("tx_dropped", of=["tx_submitted"])
+    target: {between: [0.005, 0.02]}
+    source: "brief: Rates we know, row 5"
+    required: true
+
+  - id: exp.daily_active_wallets
+    metric: stat.active_share("tx_submitted", per="sender", of="wallet", window="1d",
+                              where="kind != 'exchange'", funded_only=true)
+    target: {between: [0.08, 0.14]}
+    source: "brief: Rates we know, row 6"
+    required: true
+
+  - id: exp.txs_per_active_wallet
+    metric: stat.quantiles("tx_submitted", per="sender", window="1d", active_only=true)
+    target: {p50: {between: [1, 1]}, p90: {between: [4, 8]}}
+    source: "brief: Rates we know, row 7"
+
+  - id: exp.type_mix
+    metric: stat.mix("tx_submitted.tx_kind", where="tx_kind != 'airdrop_claim'")
+    target:
+      native_transfer: {between: [0.35, 0.45]}
+      token_transfer:  {between: [0.25, 0.35]}
+      swap:            {between: [0.12, 0.22]}
+      nft_mint:        {between: [0.03, 0.08]}
+      bridge_deposit:  {between: [0.02, 0.05]}
+    source: "brief: Rates we know, row 8"
+    required: true
+
+  - id: exp.priority_fee
+    metric: stat.quantiles("tx_included.priority_fee_per_gas")
+    target: {p50: {between: [30, 1000]}, p99: {gt: 5000}}          # quanta: 0.03-1 gwei; > 5 gwei
+    source: "brief: Rates we know, row 9"
+
+  - id: exp.receipt_latency
+    metric: stat.distribution(between=["tx_submitted", "receipt_received"], unit="tx_id")
+    target: {median_s: {between: [4, 15]}, p95_s: {lt: 120}}
+    source: "brief: Rates we know, row 10"
+    required: true
+
+  - id: exp.balance_concentration
+    metric: stat.top_share("snapshot:chain.balance", by="account", top=0.01,
+                           where="account.kind == 'wallet' and wallet.kind != 'exchange'")
+    target: {between: [0.70, 0.90]}
+    source: "brief: Rates we know, row 11; Actors (heavy-tailed balances)"
+
+  - id: exp.base_fee_step
+    metric: stat.quantiles("block_produced.base_fee_per_gas", change=true, relative=true)
+    target: {p01: {gte: -0.125}, p99: {lte: 0.125}}
+    source: "EIP-1559 (max change 1/8 per block); redundant with chk.base_fee_eip1559 by design"
+
+  - id: exp.reverts_by_bots
+    metric: stat.share("tx_included", of=["tx_included"], where="wallet.kind == 'bot'",
+                       among="status == 'reverted'")
+    target: {gt: 0.5}
+    source: "brief: Actors (bots: most reverts come from them)"
+
+  - id: exp.slot_miss_rate
+    metric: stat.gap_share("block_produced.slot", step=1)
+    target: {between: [0.004, 0.012]}
+    source: "brief: Actors, Chain (about 0.8% of slots missed)"
+
+# Applied only when the overlay is enabled.
+overlays:
+  airdrop_sybils:
+    - id: exp.as.cohort_share
+      metric: stat.cohort_share("airdrop_farm", of="wallet")
+      target: {around: "${airdrop_sybils.size} * 62 / ${wallets}", tolerance: 0.25}
+      source: "overlay config (mean 60 sybils + funder + collector per campaign)"
+      required: true
+    - id: exp.as.funder_fanout
+      metric: stat.quantiles("golden.sender_distinct_recipients_24h",
+                             where="label.role == 'funder'", per="from_account", agg="max")
+      target: {p50: {gte: 10}}
+      source: "brief: Abuse, airdrop sybils (fan-out funding)"
+    - id: exp.as.claim_success
+      metric: stat.funnel(start="tx_submitted", step="airdrop_claimed", unit="tx_id",
+                          where="tx_kind == 'airdrop_claim' and label.role == 'sybil'")
+      target: {between: [0.6, 1.0]}
+      source: "brief: Abuse, airdrop sybils"
+    - id: exp.as.consolidation
+      metric: stat.funnel(start="airdrop_claimed", step="transfer", unit="sender", within="7d",
+                          where="label.role == 'sybil' and to_account.label.role == 'collector'")
+      target: {gt: 0.8}
+      source: "brief: Abuse, airdrop sybils (consolidate into one collector)"
+    - id: exp.as.interference_reported
+      metric: stat.interference(base="airdrop_claimed", cause="chain")
+      target: {reported: true}
+      source: "design: overlay regression rule"
+      required: true
+  mint_rush:
+    - id: exp.mr.base_fee_lift
+      metric: stat.ratio("block_produced.base_fee_per_gas", window="${mint_rush.at} +1h",
+                         baseline="7d_before", agg="p50")
+      target: {between: [3, 40]}
+      source: "brief: Abuse, mint rush (blocks fill, +12.5% per block)"
+    - id: exp.mr.mostly_sold_out
+      metric: stat.share("tx_included", of=["tx_included"], where="revert_reason == 'sold_out'",
+                         among="tx_kind == 'nft_mint'", window="${mint_rush.at} +2h")
+      target: {gt: 0.5}
+      source: "brief: Abuse, mint rush"
+    - id: exp.mr.interference_reported
+      metric: stat.interference(base="tx_dropped", cause="chain")
+      target: {reported: true}
+      source: "design: overlay regression rule"
+      required: true

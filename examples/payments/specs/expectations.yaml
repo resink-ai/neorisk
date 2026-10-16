@@ -1,0 +1,191 @@
+# Statistical expectations and laws for the payments pack.
+# Every entry cites where its target comes from. Changes to this file need a second
+# reviewer (CODEOWNERS). Exact laws are declared in pack.py with p.check and listed
+# here only by id, so the report shows one table.
+pack: payments
+schema_version: 1
+
+defaults:
+  min_sample: 2000          # cases; smaller samples make a check inconclusive
+  confidence: 0.95
+  sample_by: owner_hash     # stratified; rare cohorts get at least min_sample cases
+  censoring: report         # disputes run up to 120 days; open cases at the horizon are censored
+
+laws:                       # declared in pack.py; required means CI fails if missing
+  - {id: chk.capture_le_authorized,     required: true}
+  - {id: chk.refund_le_captured,        required: true}
+  - {id: chk.no_capture_after_expiry,   required: true}
+  - {id: chk.payment_lifecycle,         required: true}
+  - {id: chk.dispute_lifecycle,         required: true}
+  - {id: chk.no_refund_while_disputed,  required: true}
+  - {id: chk.refund_hold_resolved,      required: true}
+  - {id: chk.holds_never_negative,      required: true}
+  - {id: chk.one_dispute_per_payment,   required: true}
+  - {id: chk.postings_balance,          required: true}
+  - {id: chk.settlement_matches_events, required: true}
+  - {id: chk.idempotency,               required: true}
+  - {id: chk.one_risk_decision,         required: true}
+  - {id: chk.risk_counters_consistent,  required: true}
+
+expectations:
+  - id: exp.auth_approval_rate
+    metric: stat.share("authorization_approved",
+                       of=["authorization_approved", "authorization_declined"])
+    target: {between: [0.85, 0.91]}
+    source: "brief: Rates we know, row 1"
+    required: true
+
+  - id: exp.three_ds_challenge_rate
+    metric: stat.funnel(start="authorization_requested", step="three_ds_challenged",
+                        unit="payment_id")
+    target: {between: [0.04, 0.10]}
+    source: "brief: Rates we know, row 2"
+    required: true
+
+  - id: exp.three_ds_success
+    metric: stat.share("three_ds_completed", of=["three_ds_completed"],
+                       where="result == 'authenticated'")
+    target: {between: [0.75, 0.88]}
+    source: "brief: Rates we know, row 3 (public EMV 3DS success-rate reports)"
+    required: true
+
+  - id: exp.capture_rate
+    metric: stat.funnel(start="authorization_approved", step="capture_succeeded",
+                        unit="payment_id", within="7d")
+    target: {between: [0.92, 0.96]}
+    source: "brief: Rates we know, row 4"
+    required: true
+
+  - id: exp.void_rate
+    metric: stat.funnel(start="authorization_approved", step="authorization_voided",
+                        unit="payment_id", within="7d")
+    target: {between: [0.02, 0.05]}
+    source: "brief: Rates we know, row 4"
+
+  - id: exp.expiry_rate
+    metric: stat.funnel(start="authorization_approved", step="authorization_expired",
+                        unit="payment_id")
+    target: {between: [0.01, 0.04]}
+    source: "brief: Rates we know, row 4; Flows 3 (7-day authorization validity)"
+
+  - id: exp.refund_rate
+    metric: stat.funnel(start="capture_succeeded", step="refund_succeeded", unit="payment_id",
+                        within="90d")
+    target: {between: [0.03, 0.06]}
+    source: "brief: Rates we know, row 5"
+    required: true
+
+  - id: exp.dispute_rate
+    metric: stat.funnel(start="capture_succeeded", step="dispute_opened", unit="payment_id",
+                        within="120d")
+    target: {between: [0.003, 0.007]}
+    source: "brief: Rates we know, row 6; card network monitoring thresholds (Visa/Mastercard)"
+    required: true
+
+  - id: exp.dispute_win_rate
+    metric: stat.funnel(start="dispute_evidence_submitted", step="dispute_won",
+                        unit="dispute_id", within="75d")
+    target: {between: [0.30, 0.45]}
+    source: "brief: Rates we know, row 7"
+
+  - id: exp.dispute_lag
+    metric: stat.distribution(between=["capture_succeeded", "dispute_opened"], unit="payment_id")
+    target: {median_days: {between: [15, 35]}, max_days: {le: 120}}
+    source: "brief: Rates we know, row 8; card network dispute timelines (Visa/Mastercard rules, 120 days)"
+    required: true
+
+  - id: exp.payments_per_card
+    metric: stat.quantiles("authorization_requested", per="card_id", window="30d",
+                           active_only=true)
+    target: {p50: {between: [1, 3]}, p90: {between: [7, 13]}}
+    source: "brief: Rates we know, row 9"
+
+  - id: exp.client_retry_rate
+    metric: stat.share("idempotent_replay", of=["authorization_requested"],
+                       where="operation == 'authorization'")
+    target: {between: [0.01, 0.03]}
+    source: "brief: Rates we know, row 10"
+
+  - id: exp.auth_latency
+    metric: stat.distribution(between=["authorization_requested",
+                                       ["authorization_approved", "authorization_declined"]],
+                              unit="payment_id", where="three_ds == false")
+    target: {median_s: {between: [0.5, 1.5]}}
+    source: "brief: Rates we know, row 11"
+
+  - id: exp.merchant_concentration
+    metric: stat.top_share("capture_succeeded.amount", by="merchant_id", top=0.01)
+    target: {between: [0.35, 0.45]}
+    source: "brief: Merchants"
+
+  - id: exp.home_country_share
+    metric: stat.share("authorization_requested", of=["authorization_requested"],
+                       where="card_country == merchant_country")
+    target: {between: [0.90, 0.95]}
+    source: "brief: Cardholders (about 93% domestic)"
+
+  - id: exp.settlement_lag
+    metric: stat.distribution(between=["capture_succeeded", "payment_settled"], unit="payment_id")
+    target: {max_hours: {le: 24}}
+    source: "brief: Flows 4 (daily batch at 02:00 UTC)"
+
+# Applied only when the overlay is enabled.
+overlays:
+  card_testing:
+    - id: exp.ct.cohort_size
+      metric: stat.cohort_count("card_tester")
+      target: {around: "${card_testing.size}", tolerance: 0.1}
+      source: "overlay config"
+      required: true
+    - id: exp.ct.probe_decline_rate
+      metric: stat.share("authorization_declined",
+                         of=["authorization_approved", "authorization_declined"],
+                         where="label.role == 'probe'")
+      target: {between: [0.75, 0.97]}
+      source: "brief: Abuse, card testing (most attempts are declined)"
+    - id: exp.ct.probe_amounts
+      metric: stat.quantiles("authorization_requested.amount", where="label.role == 'probe'")
+      target: {p50: {between: [100, 250]}, p99: {le: 300}}   # cents
+      source: "brief: Abuse, card testing (50 cents to 3 dollars)"
+    - id: exp.ct.device_fanout
+      metric: stat.quantiles("golden.device_distinct_cards_1h", where="label.role == 'probe'")
+      target: {p50: {ge: 20}}
+      source: "brief: Abuse, card testing (a handful of devices)"
+    - id: exp.ct.cashout_disputes
+      metric: stat.funnel(start="capture_succeeded", step="dispute_opened", unit="payment_id",
+                          where="label.role == 'cashout'", within="120d")
+      target: {between: [0.55, 0.80]}
+      source: "brief: Abuse, card testing (real cardholders dispute most)"
+    - id: exp.ct.interference_reported
+      metric: stat.interference(base="three_ds_challenged", cause="merchant_risk")
+      target: {reported: true}
+      source: "design: overlay regression rule"
+      required: true
+  friendly_fraud:
+    - id: exp.ff.cohort_share
+      metric: stat.cohort_share("friendly_fraudster", of="cardholder", where="status == 'active'")
+      target: {around: "${friendly_fraud.share}", tolerance: 0.1}
+      source: "overlay config"
+      required: true
+    - id: exp.ff.dispute_rate
+      metric: stat.funnel(start="capture_succeeded", step="dispute_opened", unit="payment_id",
+                          where="cohort == 'friendly_fraudster' and amount >= ${friendly_fraud.min_amount}",
+                          within="120d")
+      target: {between: [0.18, 0.32]}
+      source: "overlay config (propensity mean 0.25)"
+    - id: exp.ff.no_refunds
+      metric: stat.share("refund_requested", of=["capture_succeeded"],
+                         where="cohort == 'friendly_fraudster' and amount >= ${friendly_fraud.min_amount}")
+      target: {le: 0.0}
+      source: "overlay config (skip_refunds)"
+      when: "${friendly_fraud.skip_refunds}"
+    - id: exp.ff.label_delay
+      metric: stat.distribution(between=["dispute_opened", "label_available"],
+                                where="label.role == 'friendly_fraud'")
+      target: {median_days: {between: [20, 60]}}
+      source: "brief: Abuse, friendly fraud (label known once the dispute resolves)"
+    - id: exp.ff.base_identical
+      metric: stat.regression(scope="base")
+      target: {identical: true}
+      source: "design: overlay regression rule (no shared decision state)"
+      required: true

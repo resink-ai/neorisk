@@ -1,0 +1,77 @@
+# datagen project file. Paths are relative to this file.
+# `datagen run examples/layer1 --profile <name>` merges [defaults] <- [profiles.<name>] <- --set.
+
+[project]
+name = "layer1"
+pack = "specs/pack.py"                 # define(p, cfg) and Config
+expectations = "specs/expectations.yaml"
+overlays = "specs/overlays"            # one module per overlay; apply(o, **params)
+
+[paths]
+out = "out"                            # out/<run>/          datasets
+reports = "reports"                    # reports/<run>/      report.html, checks.json, extracts
+logs = "logs"                          # logs/<run>-<utc>.jsonl
+
+[defaults]
+seed = 42
+start = "2026-01-01T00:00:00Z"         # genesis; slot 0
+mode = "time"                          # time | population
+span = "30d"                           # the airdrop timeline (snapshot day 18, claims day 21) fits
+warmup = "3d"                          # generated, not exported; opening snapshot at the end
+drain = "0d"                           # pending txs at the horizon are censored (chk.tx_resolved)
+
+[budget]                               # validate refuses a run whose hard caps exceed this
+threads = 16
+memory = "32GB"                        # chain state: ~4.2M accounts x (balance, nonce, 8 tokens)
+max_step_rows = 4_000_000
+max_spawn_depth = 3                    # campaign -> sybil -> peel-chain hop
+max_admissions_per_step = 200_000
+
+[writer]                               # pinned: affects bytes
+compression = "zstd"
+compression_level = 3
+row_group_rows = 131_072
+
+[profiles.sample]                      # the authoring loop: seconds, not minutes
+# A scaled chain: gas limit shrinks with the population so blocks still clear near the 50%
+# target and the fee market behaves; exp.txs_per_block scales through ${gas_limit}.
+set = { wallets = 40_000, exchanges = 4, collections = 12, gas_limit = 300_000, pool_capacity = 20_000 }
+
+[profiles.full]                        # shard-dominated, S2 scale: ~1.1M txs/day, ~1.2e8 events
+set = { wallets = 4_000_000, gas_limit = 30_000_000 }
+
+[profiles.abuse]                       # base + both overlays, for sybil and fee benchmarks
+set = { wallets = 4_000_000 }
+overlays = ["airdrop_sybils", "mint_rush"]
+
+[profiles.abuse.overlay.airdrop_sybils]
+size = 80
+peel_chain_share = 0.4
+
+[profiles.abuse.overlay.mint_rush]
+at = "day 12 17:00"
+supply = 8_000
+
+[export]
+golden = ["sender_distinct_recipients_24h", "account_first_funder", "sender_txs_1h"]   # golden/, never events/
+snapshots = true                       # opening chain state: balances, nonces, token balances
+cases = true
+
+[replay.presets.peek]
+first = 100
+sink = "stdout:?format=table"
+
+[replay.presets.last_json]
+last = 100
+sink = "file:last100.json?format=json-array"
+
+# One topic per event type. Keyed by `sender`: every tx-scoped event (tx_submitted,
+# tx_included, tx_dropped, logs, receipt_received) carries it, so one account's transactions
+# stay in nonce order in one Kafka partition. block_produced, wallet_created and
+# cex_withdrawal_requested have no sender and fall back to the default key (partition_id).
+[replay.presets.kafka_dev]
+first = 10_000
+sink = "kafka://localhost:9092/l1.{event_type}?key=sender&format=avro"
+schema_registry = "http://localhost:8081"
+pace = "x12"                           # one slot per wall-clock second
+rebase = "now"

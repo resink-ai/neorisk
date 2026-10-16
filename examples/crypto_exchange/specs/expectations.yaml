@@ -1,0 +1,175 @@
+# Statistical expectations and laws for the crypto_exchange pack.
+# Every entry cites where its target comes from. Changes to this file need a second
+# reviewer (CODEOWNERS). Exact laws are declared in pack.py with p.check and listed
+# here only by id, so the report shows one table.
+pack: crypto_exchange
+schema_version: 1
+
+defaults:
+  min_sample: 2000          # cases; smaller samples make a check inconclusive
+  confidence: 0.95
+  sample_by: owner_hash     # stratified; rare cohorts get at least min_sample cases
+
+laws:                       # declared in pack.py; required means CI fails if missing
+  - {id: chk.available_never_negative,  required: true}
+  - {id: chk.held_never_negative,       required: true}
+  - {id: chk.held_equals_locks,         required: true}
+  - {id: chk.locks_reconcile,           required: true}
+  - {id: chk.trade_conservation,        required: true}
+  - {id: chk.fill_le_order,             required: true}
+  - {id: chk.price_time_priority,       required: true}
+  - {id: chk.no_self_trade,             required: true}   # only while matching.stp_mode != off
+  - {id: chk.fok_all_or_nothing,        required: true}
+  - {id: chk.order_lifecycle,           required: true}
+  - {id: chk.withdrawal_le_available,   required: true}
+  - {id: chk.withdrawal_lifecycle,      required: true}
+  - {id: chk.deposit_credited_once,     required: true}
+
+expectations:
+  - id: exp.spread_majors
+    metric: stat.quantiles("book_ticker.spread_bps", where="symbol.tier == 'major'")
+    target: {p50: {between: [1, 4]}}
+    source: "brief: Rates we know, row 1"
+    required: true
+
+  - id: exp.spread_small_caps
+    metric: stat.quantiles("book_ticker.spread_bps", where="symbol.tier == 'small'")
+    target: {p50: {between: [20, 90]}}
+    source: "brief: Rates we know, row 2"
+
+  - id: exp.trades_per_symbol_day
+    metric: stat.quantiles("trade", per="symbol_id", window="1d")
+    target: {p50: {between: [2000, 20000]}, max: {between: [150000, 600000]}}
+    source: "brief: Rates we know, row 3"
+    profiles: [full, abuse]                     # absolute counts only hold at full scale
+
+  - id: exp.mm_maker_share
+    metric: stat.share("trade", weight="notional_usdt", where="maker_trader.segment == 'market_maker'",
+                       population="liquidity == 'book'")
+    target: {between: [0.60, 0.80]}
+    source: "brief: Rates we know, row 4"
+    required: true
+
+  - id: exp.cancel_ratio
+    metric: stat.share("order_cancelled", of=["order_accepted"], where="reason == 'user'")
+    target: {between: [0.85, 0.97]}
+    source: "brief: Rates we know, row 5"
+    required: true
+
+  - id: exp.cancel_ratio_retail
+    metric: stat.share("order_cancelled", of=["order_accepted"], where="reason == 'user'",
+                       population="trader.segment == 'retail'")
+    target: {between: [0.15, 0.35]}
+    source: "brief: Rates we know, row 5"
+
+  - id: exp.symbol_concentration
+    metric: stat.top_share("trade", by="symbol_id", top=0.125, weight="notional_usdt")   # 5 of 40
+    target: {between: [0.65, 0.85]}
+    source: "brief: Rates we know, row 6"
+    required: true
+
+  - id: exp.trader_concentration
+    metric: stat.top_share("trade", by=["maker_trader_id", "taker_trader_id"], top=0.01,
+                           weight="notional_usdt")
+    target: {between: [0.55, 0.80]}
+    source: "brief: Rates we know, row 7"
+
+  - id: exp.deposit_to_first_order
+    metric: stat.distribution(between=["deposit_credited", "order_submitted"], unit="trader_id",
+                              first=true)
+    target: {median_minutes: {between: [15, 90]}}
+    source: "brief: Rates we know, row 8"
+    required: true
+
+  - id: exp.first_deposit_trades_24h
+    metric: stat.funnel(start="deposit_credited", step="order_submitted", unit="trader_id",
+                        within="24h", first=true)
+    target: {between: [0.55, 0.75]}
+    source: "brief: Rates we know, row 8"
+
+  - id: exp.order_reject_rate
+    metric: stat.share("order_rejected", of=["order_submitted"])
+    target: {between: [0.003, 0.02]}
+    source: "brief: Rates we know, row 9"
+    required: true
+
+  - id: exp.retail_market_share
+    metric: stat.share("order_submitted", of=["order_submitted"], where="type == 'market'",
+                       population="trader.segment == 'retail'")
+    target: {between: [0.50, 0.65]}
+    source: "brief: Rates we know, row 10"
+
+  - id: exp.withdrawal_reject_rate
+    metric: stat.share("withdrawal_rejected", of=["withdrawal_requested"])
+    target: {between: [0.01, 0.03]}
+    source: "brief: Rates we know, row 11"
+    required: true
+
+  - id: exp.weekend_volume
+    metric: stat.ratio("trade", window="weekends", baseline="weekdays", weight="notional_usdt")
+    target: {between: [0.65, 0.90]}
+    source: "brief: Rates we know, row 12"
+
+  - id: exp.btc_confirmation_lag
+    metric: stat.distribution(between=["deposit_detected", "deposit_credited"], unit="deposit_id",
+                              where="asset.code == 'BTC'")
+    target: {median_minutes: {between: [15, 35]}}
+    source: "brief: Rates we know, row 13"
+
+  - id: exp.login_gap_heavy_tail
+    metric: stat.tail_index("login", per="trader_id", gap=true, population="trader.segment == 'retail'")
+    target: {between: [1.0, 1.4]}
+    source: "brief: Retail traders (heavy-tailed activity)"
+
+  - id: exp.mm_coverage
+    metric: stat.share("book_ticker", where="best_bid is not null and best_ask is not null")
+    target: {gt: 0.98}
+    source: "brief: Market makers (every symbol is quoted)"
+    profiles: [sample, full, abuse]             # not in external_liquidity runs
+
+# Applied only when the overlay is enabled.
+overlays:
+  wash_traders:
+    - id: exp.wt.cohort_share
+      metric: stat.cohort_share("wash_ring", of="trader")
+      target: {around: "${wash_traders.size} * (1 + mean(${wash_traders.accounts})) / ${traders}",
+               tolerance: 0.15}
+      source: "overlay config"
+      required: true
+    - id: exp.wt.target_volume_share
+      metric: stat.share("trade", weight="notional_usdt",
+                         where="maker_label.role == 'account' and taker_label.role == 'account'",
+                         population="symbol_id in overlay.wash_traders.targets")
+      target: {between: [0.30, 0.85]}
+      source: "brief: Abuse, wash traders"
+    - id: exp.wt.counterparty_concentration
+      metric: stat.quantiles("golden.counterparty_top_share_7d", where="label.role == 'account'")
+      target: {p50: {gt: 0.5}}
+      source: "brief: Abuse, wash traders (trade with each other)"
+    - id: exp.wt.interference_reported
+      metric: stat.interference(base="trade", cause="book")
+      target: {reported: true}
+      source: "design: overlay regression rule"
+      required: true
+  pump_and_dump:
+    - id: exp.pd.follower_share
+      metric: stat.cohort_share("pump_follower", of="trader",
+                                population="segment == 'retail' and status == 'active'")
+      target: {around: "${pump_and_dump.followers}", tolerance: 0.1}
+      source: "overlay config"
+      required: true
+    - id: exp.pd.trade_burst
+      metric: stat.ratio("trade", window="schedule.pump_at + 1h", baseline="7d_before",
+                         population="symbol_id in overlay.pump_and_dump.targets")
+      target: {between: [8, 60]}
+      source: "brief: Abuse, pump and dump (crowd piles in within minutes)"
+    - id: exp.pd.follower_lag
+      metric: stat.distribution(between=["schedule.pump_at", "order_submitted"], unit="trader_id",
+                                where="label.role == 'follower'", first=true)
+      target: {median_minutes: {between: [1, 10]}}
+      source: "brief: Abuse, pump and dump"
+    - id: exp.pd.interference_reported
+      metric: stat.interference(base="trade", cause="book")
+      target: {reported: true}
+      source: "design: overlay regression rule"
+      required: true
