@@ -24,6 +24,7 @@ MASK64 = 0xFFFF_FFFF_FFFF_FFFF
 _GOLD = np.uint64(0x9E3779B97F4A7C15)
 _MAX_SITES = 16
 _TWO_PI = 2.0 * math.pi
+_MAX_US = 4.611686018427388e18          # 2^62: keeps float -> int64 casts defined
 
 
 def u64(x):
@@ -65,9 +66,12 @@ def mix64(x):
     return x ^ (x >> uint64(31))
 
 
-def mix(x: int) -> int:
-    """Python-side mix64 of any int (masked to 64 bits first); returns an unsigned int."""
-    return int(mix64(np.uint64(x & MASK64)))
+def mix(*parts: int) -> int:
+    """Python-side keyed mix of any number of ints (each masked to 64 bits); unsigned result."""
+    h = 0
+    for p in parts:
+        h = int(mix64(np.uint64((h ^ (p & MASK64)) & MASK64)))
+    return h
 
 
 def name_key(name: str) -> int:
@@ -134,8 +138,8 @@ def sample_us(code, p1, p2, p3, u1, u2):
     elif code == PARETO:
         v = pareto_us(p1, p2, u1)
     else:
-        v = 0.0
-    return np.int64(np.rint(v))
+        raise ValueError("not a duration distribution")
+    return np.int64(np.rint(min(max(v, 0.0), _MAX_US)))
 
 
 @njit(cache=True, nogil=True)

@@ -47,6 +47,8 @@ def feistel_key(seed: int, name: str) -> np.ndarray:
 @njit(cache=True, nogil=True)
 def feistel63(dense, keys):
     """Bijection [0, 2^63 - 1) -> [1, 2^63 - 1]: 4-round Feistel on 64 bits with cycle walking."""
+    if dense < 0 or dense >= _DOMAIN:
+        raise ValueError("feistel63 input outside the domain [0, 2^63 - 1)")
     x = u64(dense)
     limit = uint64(_DOMAIN)
     while True:

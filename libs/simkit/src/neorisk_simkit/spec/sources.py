@@ -37,10 +37,9 @@ class GeneratedSource(Source):
 
         if n_rows != self.n:
             raise ValueError(f"row count {n_rows} does not match source n={self.n}")
-        base = rng.mix(stream)
         out: dict[str, np.ndarray] = {}
         for name, d in self.cols.items():
-            col_stream = rng.mix(base ^ rng.name_key(name))
+            col_stream = rng.mix(stream, rng.name_key(name))
             u = rng.uniforms(seed, col_stream, n_rows)
             u2 = rng.uniforms(seed, col_stream, n_rows, offset=n_rows)
             out[name] = sample_np(d, u, u2)

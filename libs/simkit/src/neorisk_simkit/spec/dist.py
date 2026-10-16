@@ -159,22 +159,17 @@ def _normal_np(u: np.ndarray, u2: np.ndarray) -> np.ndarray:
 
 
 def _negbinom_np(mean: float, disp: float, u: np.ndarray) -> np.ndarray:
-    """Exact inverse transform of the gamma-Poisson mixture (negative binomial)."""
+    """Exact inverse transform of the gamma-Poisson mixture (negative binomial), log-space cdf."""
+    sd = np.sqrt(mean + mean * mean / disp)
+    top = int(mean + 12.0 * sd + 20.0)
+    if top > 50_000_000:
+        raise ValueError(f"negbinom(mean={mean}, disp={disp}) is too large to sample")
     q = mean / (mean + disp)
-    pmf = np.full(len(u), (1.0 - q) ** disp)
-    cdf = pmf.copy()
-    out = np.zeros(len(u), np.int64)
-    k = 0
-    pending = u >= cdf
-    while pending.any() and k < 100_000:
-        pmf = pmf * (k + disp) / (k + 1) * q
-        cdf = cdf + pmf
-        k += 1
-        out[pending] = k
-        pending = u >= cdf
-        if pmf.max() == 0.0:
-            break
-    return out
+    k = np.arange(1, top + 1, dtype=np.float64)
+    logp = disp * np.log1p(-q) + np.concatenate(
+        ([0.0], np.cumsum(np.log(k - 1.0 + disp) - np.log(k) + np.log(q))))
+    cdf = np.cumsum(np.exp(logp))
+    return np.minimum(np.searchsorted(cdf, u, side="right"), top).astype(np.int64)
 
 
 def sample_np(d: Dist, u: np.ndarray, u2: np.ndarray) -> np.ndarray:
@@ -187,7 +182,7 @@ def sample_np(d: Dist, u: np.ndarray, u2: np.ndarray) -> np.ndarray:
         cum = np.cumsum(np.asarray(d.weights, np.float64))
         return np.minimum(np.searchsorted(cum, u, side="right"), len(cum) - 1).astype(np.int64)
     if d.kind == LOGNORMAL_MINOR:
-        v = np.rint(p[0] * np.exp(p[1] * _normal_np(u, u2))).astype(np.int64)
+        v = np.rint(np.clip(p[0] * np.exp(p[1] * _normal_np(u, u2)), 0.0, 2.0**62)).astype(np.int64)
         lo, hi = (int(w) for w in d.weights)
         if lo:
             v = np.maximum(v, lo)

@@ -103,3 +103,43 @@ def test_generated_source_is_keyed_and_bounded(fixture_project):
     assert cols["bin"].min() >= 0 and cols["bin"].max() <= 3
     with pytest.raises(ValueError, match="row count"):
         item.source.generate(41, item, seed=run.seed, stream=1)
+
+
+def test_negbinom_large_mean_and_no_truncation():
+    d = dist.negbinom(mean=1e5, disp=2000)
+    u = rng.uniforms(3, 4, 20_000)
+    x = dist.sample_np(d, u, rng.uniforms(3, 5, 20_000))
+    assert abs(x.mean() - 1e5) < 1e3 and x.std() > 1000
+    d = dist.negbinom(mean=500, disp=0.5)
+    x = dist.sample_np(d, rng.uniforms(3, 6, 200_000), u[:1].repeat(200_000))
+    assert abs(x.mean() - 500) < 25
+    with pytest.raises(ValueError, match="too large"):
+        dist.sample_np(dist.negbinom(mean=1e12, disp=1), u[:5], u[:5])
+
+
+def test_sample_us_is_finite_for_heavy_tails():
+    c, a, b, d = dist.encode(dist.pareto(alpha=0.3, min_h=1))
+    u = np.nextafter(1.0, 0.0)
+    for f in (rng.sample_us, getattr(rng.sample_us, "py_func", rng.sample_us)):
+        v = f(c, a, b, d, u, 0.5)
+        assert 0 <= v <= 2**62
+    with pytest.raises(ValueError, match="duration"):
+        rng.sample_us(dist.UNIFORM_INT, 0.0, 3.0, 0.0, 0.5, 0.5)
+
+
+def test_mix_is_variadic_and_order_sensitive():
+    assert rng.mix(5) == int(rng.mix64(5))
+    assert rng.mix(1, 2) == int(rng.mix64(int(rng.mix64(1)) ^ 2))
+    assert rng.mix(1, 2) != rng.mix(2, 1) and rng.mix(1, 2, 3) != rng.mix(1, 2)
+    assert 0 <= rng.mix(-1, 2**64 - 1, 7) < 2**64
+
+
+def test_feistel_rejects_out_of_domain():
+    keys = ident.feistel_key(1, "user")
+    for bad in (-1, 2**63 - 1):
+        with pytest.raises(ValueError, match="domain"):
+            ident.feistel63(bad, keys)
+        with pytest.raises(ValueError, match="domain"):
+            getattr(ident.feistel63, "py_func", ident.feistel63)(bad, keys)
+    with pytest.raises(ValueError, match="domain"):
+        ident.feistel63_array(np.array([0, -5], np.int64), keys)
