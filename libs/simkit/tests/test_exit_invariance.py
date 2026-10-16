@@ -15,6 +15,7 @@ from neorisk_simkit.engine.world import World
 from neorisk_simkit.io.dataset import run_to_dataset
 from neorisk_simkit.io.read import read_events
 from neorisk_simkit.io.schema.schema_json import load_schema
+from neorisk_simkit.spec.project import load_project, resolve_run
 
 EX = Path(__file__).resolve().parents[3] / "examples" / "ecommerce_s1"
 SMALL = ["users=1500", "skus=300", "sku_groups=8", "run.span=4d", "run.warmup=1d",
@@ -69,10 +70,20 @@ def runs(tmp_path_factory):
     return out, probes
 
 
+def created_namespaces() -> frozenset[str]:
+    """The ID namespaces the engine hands out at seal (creatable tables and `ids`): only their
+    dense indices legitimately depend on step boundaries (D13). Population and static IDs
+    (`user`, `sku`, `device`) and partition IDs are fixed before the run starts."""
+    return frozenset(resolve_run(load_project(EX), "sample", SMALL).plan.namespaces)
+
+
 def canonicalize_ids(d: Path) -> dict[str, list[dict]]:
-    """Rename every ID namespace by first appearance in global canonical order (D13)."""
+    """Rename every created ID namespace by first appearance in global canonical order and
+    number events by their canonical position (D13); every other column is kept as is."""
+    created = created_namespaces()
     schema, events = load_schema(d), read_events(d)
-    refs = {t["name"]: {c["name"]: c["ref"] for c in t["columns"] if c.get("ref")}
+    refs = {t["name"]: {c["name"]: c["ref"] for c in t["columns"]
+                        if c.get("ref") in created}
             for t in schema["tables"] if t["kind"] == "event"}
     merged = pl.concat([
         e.select(*KEY, pl.lit(name).alias("_t"), pl.int_range(pl.len()).alias("_i"))
@@ -93,8 +104,6 @@ def canonicalize_ids(d: Path) -> dict[str, list[dict]]:
             if v is not None:
                 row[col] = rename.setdefault(ns, {}).setdefault(v, len(rename[ns]))
         row["event_id"] = row.pop("_pos")
-        row["partition_id"] = rename.setdefault("_pid", {}).setdefault(
-            row["partition_id"], len(rename["_pid"]))
     return out
 
 
@@ -126,6 +135,8 @@ def test_threads_and_slabs_give_identical_records(runs, step):
 
 def test_step_lengths_give_identical_logical_records(runs):
     dirs, _ = runs
+    created = created_namespaces()
+    assert {"session", "checkout"} <= created and created.isdisjoint({"user", "sku", "device"})
     assert canonicalize_ids(dirs[(1, "8MB", "6h")]) == canonicalize_ids(dirs[(4, "16KB", "1d")])
 
 
