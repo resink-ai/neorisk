@@ -284,8 +284,14 @@ class _Gen:
         for v in head_values:
             body.append(f"b_[{j}][i] = {v}")
             j += 1
-        for a in args:
-            body.append(f"b_[{j}][i] = {a}")
+        for c, a in zip(spec.cols, args, strict=True):
+            dt = slabs.slab_dtype(c)
+            if c.ltype.nullable and dt.kind in "iu" and dt.itemsize < 8:
+                # std.NULL does not fit a narrow cell (numpy raises where numba truncates to 0);
+                # store 0 explicitly - the valid_<col> byte carries the null
+                body.append(f"b_[{j}][i] = {a} if {a} != _NULL else 0")
+            else:
+                body.append(f"b_[{j}][i] = {a}")
             j += 1
         for c, a in zip(spec.cols, args, strict=True):
             if c.ltype.nullable:
