@@ -13,6 +13,10 @@ from numba import njit
 PAYLOAD_W = 12          # cols 0..6 user payload, 7 src_g, 8 src_gen, 9 src_self_id, 10 src_action
 PAY_CONTINUE = -2       # n_pay marker: the node is a continuation and n_tag is its cursor
 
+# Positions in `NodePool.as_tuple()` that generated code reads (the worker free lists).
+P_FREE_HEAD = 8
+P_FREE_N = 9
+
 _PRIO_MAX = 63
 _CAUSE_LIMIT = 1 << 56
 
@@ -126,13 +130,13 @@ class PayloadPool(_FreeLists):
 def q_push(P, w, qhead, g, time, prio, cause, seq, kind, proc, tag, pay):
     """Insert a command into slot g's queue; -1 when worker w has no free node."""
     key = pack_key(prio, cause)
-    free_head = P[8]
+    free_head = P[P_FREE_HEAD]
     node = free_head[w]
     if node < 0:
         return np.int32(-1)
     nxt = P[4]
     free_head[w] = nxt[node]
-    P[9][w] -= 1
+    P[P_FREE_N][w] -= 1
     P[0][node] = time
     P[1][node] = key
     P[2][node] = seq
@@ -177,9 +181,9 @@ def q_pop(P, qhead, g):
 
 @njit(cache=True, nogil=True)
 def q_free(P, w, node):
-    P[4][node] = P[8][w]
-    P[8][w] = node
-    P[9][w] += 1
+    P[4][node] = P[P_FREE_HEAD][w]
+    P[P_FREE_HEAD][w] = node
+    P[P_FREE_N][w] += 1
 
 
 @njit(cache=True, nogil=True)

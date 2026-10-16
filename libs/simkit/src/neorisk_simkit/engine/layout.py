@@ -23,6 +23,9 @@ CTX_FIELDS = ("t", "self_id", "pid", "g", "inst", "action", "occ", "kc", "seed",
 CMD_FIELDS = ("kind", "tag", "time", "cursor", "sender")
 CMD_PAY = 5
 CMD_PAY_ROW = 6
+# rng sites >= this are reserved for engine draws (send/response latency keys 30000 + boundary);
+# kernel `site=` literals must lie in [0, ENGINE_SITE_BASE).
+ENGINE_SITE_BASE = 30000
 
 
 def make_ctx(t, self_id, pid, g, inst, action, occ, kc, seed, cfg, reads, refs, lamport,

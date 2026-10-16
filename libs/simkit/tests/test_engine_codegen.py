@@ -1,4 +1,5 @@
 import dataclasses
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -155,3 +156,61 @@ def test_dispatch_runs_the_kernels_end_to_end(run):
     chunk = slab.flush()
     assert chunk.records["item_taken"]["left"].tolist() == [0]
     assert [len(chunk.records[e]["time"]) for e in ("user_joined", "ping")] == [1, 1]
+
+
+# ---------------------------------------------------------------- fix round 1 regressions
+def test_module_name_tracks_the_runtime_library(run, monkeypatch):
+    from neorisk_simkit.engine import codegen
+    a = build_engine(run.plan)
+    monkeypatch.setattr(codegen, "runtime_fingerprint", lambda: "changed-library")
+    b = build_engine(run.plan)
+    assert a.__file__ != b.__file__ and "changed-library" in Path(b.__file__).read_text()
+
+
+def test_checked_dispatch_drops_leftover_reservations(run):
+    """A command that reserved more than it used must not let the next command emit freely."""
+    from neorisk_simkit.engine.codegen import generate_module
+    gen, hidden, _, _, out = _setup(run, checked=True)
+    hidden.lslot[:200] = np.arange(200)
+    user = (np.zeros(200, np.int16), np.zeros(200, np.int64), np.full(200, NULL, np.int64))
+    loc = (np.zeros(200, np.int32), np.zeros(200, np.int64))
+    ws = ((hidden.lslot, user, loc), (hidden.lslot, np.zeros(5, np.int64),
+                                      np.zeros(0, np.int64), (np.zeros(40, np.int32),)))
+    cfg = (((1, 3.6e9, 0.0, 0.0), 0.0, 0.0, 0), ())           # max_pings = 0: C_PING rejects
+    reads = (np.zeros(40, np.int32), np.zeros(40, np.int64), np.zeros(40, np.int64))
+    kc, nopay = np.zeros(33, np.int64), np.zeros((1, 12), np.int64)
+    plain = make_ctx(1_000, 3, 3, 3, 11, 0, 0, kc, 7, (), (), (), 5, 0)
+    assert gen._reserve_user_main(out, np.array([2, 0, 0, 0, 0, 0, 0, 0, 0], np.int64))
+    gen._emit_user_joined(out, plain, 1_000, 3, 0)            # command A leaves 1 unused
+    ctx = make_ctx(1_000, 3, 3, 3, 11, 0, 0, kc, 7, cfg, (reads, reads), ((), ()), 6, 0)
+    assert gen.dispatch(0, ctx, (1, 0, 1_000, 0, 0, nopay, 0), ws, out) == 2  # B: reject, no reserve
+    with pytest.raises(AbiViolation, match="emit beyond reservation: user_joined"):
+        gen._emit_user_joined(out, plain, 1_000, 3, 0)
+    assert "resv_d[" in generate_module(run.plan, checked=True)
+    assert "resv_d[" not in generate_module(run.plan, checked=False)
+
+
+def test_rng_sites_must_stay_below_the_engine_key_range(run):
+    import textwrap
+
+    from neorisk_simkit.engine.layout import kernel_layouts
+    from neorisk_simkit.engine.lower import LoweringError, lower_module
+    src = textwrap.dedent("""
+        def k(ctx, s, loc, cmd, out):
+            return ctx.rng.uniform(site=30000)
+    """)
+    with pytest.raises(LoweringError, match="site 30000 must be in"):
+        lower_module(src, kernel_layouts(run.plan), {"k": "user_main"})
+
+
+def test_generation_rejects_unhandled_responses_and_ambiguous_handlers(run):
+    from neorisk_simkit.engine.codegen import generate_module
+    from neorisk_simkit.engine.lower import LoweringError
+    plan = run.plan
+    user, bin_ = plan.processes
+    partial = dataclasses.replace(user, on_response={("take", "ok"): 2})
+    with pytest.raises(LoweringError, match="no on_response for take.none"):
+        generate_module(dataclasses.replace(plan, processes=(partial, bin_)), checked=False)
+    twin = dataclasses.replace(bin_, name="bin_twin", action_id=2)
+    with pytest.raises(LoweringError, match="boundary take is handled by 2 processes"):
+        generate_module(dataclasses.replace(plan, processes=(user, bin_, twin)), checked=False)

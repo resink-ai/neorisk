@@ -24,6 +24,7 @@ from neorisk_simkit.engine.layout import (
     CTX_REFS,
     CTX_SELF_ID,
     CTX_T,
+    ENGINE_SITE_BASE,
     SHARD_ITEMS,
     SHARD_N,
     SHARD_OFF,
@@ -493,6 +494,9 @@ class _Lowerer(ast.NodeTransformer):
         site = kw.pop("site", None)
         if not (isinstance(site, ast.Constant) and type(site.value) is int):
             self.err(node, f"{what}: site= must be an int literal")
+        if not 0 <= site.value < ENGINE_SITE_BASE:
+            self.err(node, f"site {site.value} must be in [0, {ENGINE_SITE_BASE}) (higher sites "
+                           "are reserved for engine draws)")
         if site.value in self.sites:
             self.err(node, f"site {site.value} used twice in {self.proc}")
         self.sites[site.value] = node.lineno

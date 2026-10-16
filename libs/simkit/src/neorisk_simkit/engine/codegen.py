@@ -24,8 +24,12 @@ process, in plan (action id) order:
 from __future__ import annotations
 
 import ast
+import functools
+import hashlib
 from collections.abc import Callable
 from pathlib import Path
+
+import numba
 
 from neorisk_simkit.engine import slabs
 from neorisk_simkit.engine.cmdq import PAYLOAD_W
@@ -34,13 +38,14 @@ from neorisk_simkit.engine.layout import (
     CMD_PAY,
     CMD_PAY_ROW,
     CTX_FIELDS,
+    ENGINE_SITE_BASE,
     kernel_layouts,
     resource_names,
 )
 from neorisk_simkit.engine.lower import lower_module
 from neorisk_simkit.spec.plan import Plan, ProcessDef
 
-SEND_KEY_BASE = 30000          # latency draws: key_uniform(seed, inst, 30000 + b, lamport, j, k)
+SEND_KEY_BASE = ENGINE_SITE_BASE   # latency: key_uniform(seed, inst, 30000 + b, lamport, j, k)
 ORDINAL_LIMIT = 1 << 24        # per-step create ordinal field of a provisional handle (D11)
 _PER_ACTION = ("cfg", "reads", "refs")   # dispatch's ctx holds these per action id
 
@@ -55,7 +60,7 @@ from neorisk_simkit import std
 from neorisk_simkit.engine.abi import (
     COMMIT, PRIO_CONTINUE, PRIO_EXPIRY, PRIO_MESSAGE, PRIO_TIMER, RETRY, START, reject,
 )
-from neorisk_simkit.engine.cmdq import PAY_CONTINUE, q_push
+from neorisk_simkit.engine.cmdq import P_FREE_N, PAY_CONTINUE, q_push
 from neorisk_simkit.engine.errors import AbiViolation, EngineError
 from neorisk_simkit.engine.identity import make_handle
 from neorisk_simkit.engine.rng import (
@@ -65,6 +70,25 @@ from neorisk_simkit.spec.dist import EXP, PARETO
 '''
 
 _JIT = "@njit(cache=True, nogil=True, boundscheck=CHECKED)"
+
+_PKG = Path(__file__).resolve().parents[1]           # neorisk_simkit/
+# Library code the generated module runs. Numba's cache=True only notices edits to the file of the
+# function it compiles, so the generated source (hence its name and cache) carries this hash.
+_RUNTIME_SOURCES = ("engine/*.py", "std/*.py", "spec/dist.py")
+
+
+@functools.cache
+def _library_hash() -> str:
+    h = hashlib.sha256(f"numba {numba.__version__}\n".encode())
+    for pattern in _RUNTIME_SOURCES:
+        for f in sorted(_PKG.glob(pattern)):
+            h.update(f.relative_to(_PKG).as_posix().encode() + b"\0" + f.read_bytes() + b"\0")
+    return h.hexdigest()[:16]
+
+
+def runtime_fingerprint() -> str:
+    """Hash of the runtime library (engine, std, spec.dist sources) and the Numba version."""
+    return _library_hash()
 
 
 def _q(s: str) -> str:
@@ -184,7 +208,7 @@ class _Gen:
         body = ["cnt = out[OUT_CNT]", "cap = out[OUT_CAP]", "miss = out[OUT_MISS]"]
         for i, res in enumerate(self.resources):
             if res == "timers":
-                cond = f"out[OUT_POOL][9][out[OUT_W]] < vec[{i}]"
+                cond = f"out[OUT_POOL][P_FREE_N][out[OUT_W]] < vec[{i}]"
             else:
                 cond = f"cap[{i}] - cnt[{i}] < vec[{i}]"
             body += [f"if vec[{i}] > 0 and {cond}:", f"    miss[0] = {i}", "    return False"]
@@ -368,13 +392,13 @@ class _Gen:
             "return sample_us(np.int64(lat[b, 0]), lat[b, 1], lat[b, 2], lat[b, 3], u1, u2)"])
 
     def _handler(self, b: str) -> tuple[int, int]:
-        """(command kind, action) of the process that receives boundary b, or (-1, -1)."""
-        for p in self.plan.processes:
-            if b in p.on_request:
-                return p.on_request[b], p.action_id
-            if b in p.on_message:
-                return p.on_message[b], p.action_id
-        return -1, -1
+        """(command kind, action) of the one process that receives boundary b."""
+        found = [(p.on_request[b] if b in p.on_request else p.on_message[b], p.action_id)
+                 for p in self.plan.processes if b in p.on_request or b in p.on_message]
+        if len(found) != 1:
+            raise LoweringError(f"boundary {b} is handled by {len(found)} processes; "
+                                "it needs exactly one")
+        return found[0]
 
     def outbound(self, bd, verb: str) -> None:
         """`_request_<b>` (verb "request") or `_send_<b>` (verb "send")."""
@@ -417,8 +441,10 @@ class _Gen:
         body.append("rk = -1")
         for p in requesters:
             k = p.on_response.get((bd.name, resp))
-            if k is not None:
-                body += [f"if target == {p.action_id}:", f"    rk = {k}"]
+            if k is None:
+                raise LoweringError(f"process {p.name} requests {bd.name} but has no "
+                                    f"on_response for {bd.name}.{resp}")
+            body += [f"if target == {p.action_id}:", f"    rk = {k}"]
         body += [(f"i = _outbox_row(out, ctx, OB_RESPONSE, {bd.code}, "
                   f"ctx[CTX_T] + _latency(out, ctx, {bd.code}), src[row, 7], cmd[1], rk, "
                   "target)"),
@@ -430,6 +456,10 @@ class _Gen:
     # ------------------------------------------------------------------ dispatch
     def dispatch(self) -> None:
         body = ["out[OUT_CMD_KIND][0] = cmd[0]", "g = ctx[CTX_G]"]
+        if self.checked:                 # a reservation never outlives the command that made it
+            body += ["resv_d = out[OUT_RESV]",
+                     "for r_ in range(resv_d.shape[0]):",
+                     "    resv_d[r_] = 0"]
         for p in self.plan.processes:
             a = p.action_id
             part = self.plan.partition(p.partition)
@@ -537,7 +567,8 @@ def generate_module(plan: Plan, *, checked: bool) -> str:
                                 "engine name or another kernel module")
         seen |= names
         kernels.append(_decorate(src))
-    return "\n\n".join([_HEADER, consts, *kernels, *funcs])
+    header = f"{_HEADER}# runtime: {runtime_fingerprint()}\n"
+    return "\n\n".join([header, consts, *kernels, *funcs])
 
 
 _ABI_NAMES = ("COMMIT", "RETRY", "START", "PRIO_CONTINUE", "PRIO_MESSAGE", "PRIO_EXPIRY",
