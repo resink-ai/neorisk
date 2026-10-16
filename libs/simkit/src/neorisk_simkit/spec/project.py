@@ -1,0 +1,343 @@
+"""Project loading: `datagen.toml`, the pack module, and resolution of a run (`RunSpec`).
+
+`resolve_run` merges `[defaults]` <- `[profiles.<p>]` <- `profiles.<p>.set` <- overrides.
+Override keys prefixed `engine.` / `budget.` / `writer.` route to those tables, `run.` to the
+run keys (`start`, `span`, `warmup`, `seed`), and everything else walks the pack's `Config`
+dataclass by dotted path (D21)."""
+
+from __future__ import annotations
+
+import dataclasses
+import hashlib
+import importlib
+import importlib.machinery
+import importlib.util
+import re
+import sys
+import tomllib
+from collections.abc import Callable, Iterable, Mapping
+from dataclasses import dataclass, field
+from datetime import UTC, datetime, timedelta
+from pathlib import Path
+from types import MappingProxyType, ModuleType
+from typing import Any
+
+from neorisk_simkit.spec.plan import Plan, build_plan
+
+
+class ProjectError(Exception):
+    """The project file, a profile or an override is invalid."""
+
+
+# ---------------------------------------------------------------------------- units
+_DURATION_RE = re.compile(r"^(\d+)(us|ms|s|m|h|d)$")
+_DURATION_US = {"us": 1, "ms": 1_000, "s": 1_000_000, "m": 60_000_000, "h": 3_600_000_000,
+                "d": 86_400_000_000}
+_SIZE_RE = re.compile(r"^(\d+)(B|KB|MB|GB)$")
+_SIZE_B = {"B": 1, "KB": 1024, "MB": 1024**2, "GB": 1024**3}
+_EPOCH = datetime(1970, 1, 1, tzinfo=UTC)
+
+
+def parse_duration(s: str) -> int:
+    """`"300ms"` -> 300_000 (µs). Units: us ms s m h d."""
+    m = _DURATION_RE.match(s) if isinstance(s, str) else None
+    if m is None:
+        raise ProjectError(f"invalid duration {s!r} (expected e.g. 300ms, 15m, 90d)")
+    return int(m.group(1)) * _DURATION_US[m.group(2)]
+
+
+def parse_size(s: str | int) -> int:
+    """`"8MB"` -> 8 * 1024**2 (bytes). Units: B KB MB GB (powers of 1024); an int is bytes."""
+    if isinstance(s, int) and not isinstance(s, bool) and s >= 0:
+        return s
+    m = _SIZE_RE.match(s) if isinstance(s, str) else None
+    if m is None:
+        raise ProjectError(f"invalid size {s!r} (expected e.g. 256KB, 64MB, 2GB)")
+    return int(m.group(1)) * _SIZE_B[m.group(2)]
+
+
+def parse_time(v: str | datetime) -> int:
+    """RFC 3339 with an offset (e.g. `2026-03-01T00:00:00Z`) -> epoch µs."""
+    if isinstance(v, str):
+        try:
+            v = datetime.fromisoformat(v)
+        except ValueError:
+            raise ProjectError(f"invalid start time {v!r}") from None
+    if not isinstance(v, datetime) or v.tzinfo is None:
+        raise ProjectError(f"start time {v!r} must be RFC 3339 with an offset, e.g. ...Z")
+    return (v - _EPOCH) // timedelta(microseconds=1)
+
+
+# ---------------------------------------------------------------------------- settings
+@dataclass(frozen=True)
+class Budget:
+    threads: int
+    memory_bytes: int
+    max_step_rows: int
+    max_step_bytes: int | None
+    max_spawn_depth: int
+    max_admissions_per_step: int
+
+
+@dataclass(frozen=True)
+class WriterSettings:
+    compression: str
+    compression_level: int
+    row_group_rows: int
+
+
+@dataclass(frozen=True)
+class EngineSettings:
+    step_us: int
+    step_min_us: int
+    step_max_us: int
+    adapt: bool
+    slab_bytes: int
+    timer_nodes: int
+    payload_slots: int
+    max_messages_per_step: int
+    parallel_min_partitions: int
+    force_capacity: Mapping[str, int] = field(default_factory=lambda: MappingProxyType({}))
+
+
+@dataclass(frozen=True)
+class Project:
+    dir: Path
+    name: str
+    pack_path: Path
+    toml: Mapping[str, Any]
+
+
+@dataclass(frozen=True)
+class RunSpec:
+    name: str
+    profile: str
+    seed: int
+    start_us: int
+    span_us: int
+    warmup_us: int
+    mode: str
+    budget: Budget
+    writer: WriterSettings
+    engine: EngineSettings
+    cfg: Any
+    plan: Plan
+    overrides: tuple[str, ...]
+
+
+def _int(key: str, v: Any) -> int:
+    if isinstance(v, bool) or not isinstance(v, int):
+        raise ProjectError(f"setting {key!r} expects an integer, got {v!r}")
+    return v
+
+
+def _bool(key: str, v: Any) -> bool:
+    if not isinstance(v, bool):
+        raise ProjectError(f"setting {key!r} expects true or false, got {v!r}")
+    return v
+
+
+def _str(key: str, v: Any) -> str:
+    if not isinstance(v, str):
+        raise ProjectError(f"setting {key!r} expects a string, got {v!r}")
+    return v
+
+
+def _dur(key: str, v: Any) -> int:
+    return parse_duration(v)
+
+
+def _size(key: str, v: Any) -> int:
+    return parse_size(v)
+
+
+def _opt_size(key: str, v: Any) -> int | None:
+    return None if v is None else parse_size(v)
+
+
+Conv = Callable[[str, Any], Any]
+
+# toml key -> (dataclass field, converter, default raw value); defaults match the mini fixture
+_BUDGET: dict[str, tuple[str, Conv, Any]] = {
+    "threads": ("threads", _int, 1),
+    "memory": ("memory_bytes", _size, "4GB"),
+    "max_step_rows": ("max_step_rows", _int, 1_000_000),
+    "max_step_bytes": ("max_step_bytes", _opt_size, None),
+    "max_spawn_depth": ("max_spawn_depth", _int, 3),
+    "max_admissions_per_step": ("max_admissions_per_step", _int, 100_000),
+}
+_WRITER: dict[str, tuple[str, Conv, Any]] = {
+    "compression": ("compression", _str, "zstd"),
+    "compression_level": ("compression_level", _int, 3),
+    "row_group_rows": ("row_group_rows", _int, 131_072),
+}
+_ENGINE: dict[str, tuple[str, Conv, Any]] = {
+    "step": ("step_us", _dur, "1d"),
+    "step_min": ("step_min_us", _dur, "1h"),
+    "step_max": ("step_max_us", _dur, "7d"),
+    "adapt": ("adapt", _bool, False),
+    "slab_bytes": ("slab_bytes", _size, "1MB"),
+    "timer_nodes": ("timer_nodes", _int, 1_000_000),
+    "payload_slots": ("payload_slots", _int, 100_000),
+    "max_messages_per_step": ("max_messages_per_step", _int, 1_000_000),
+    "parallel_min_partitions": ("parallel_min_partitions", _int, 64),
+}
+_TABLES = {"budget": _BUDGET, "writer": _WRITER, "engine": _ENGINE}
+_RUN_KEYS = ("seed", "start", "mode", "span", "warmup")
+_RUN_OVERRIDABLE = ("start", "span", "warmup", "seed")
+
+
+def _settings(cls, table: str, spec: dict[str, tuple[str, Conv, Any]], raw: dict[str, Any]):
+    for k in raw:
+        if k not in spec:
+            raise ProjectError(f"unknown setting '{table}.{k}'")
+    kw = {f: conv(f"{table}.{k}", raw.get(k, default)) for k, (f, conv, default) in spec.items()}
+    return cls(**kw)
+
+
+# ---------------------------------------------------------------------------- project
+def load_project(dir: str | Path) -> Project:
+    d = Path(dir).resolve()
+    f = d / "datagen.toml"
+    if not f.is_file():
+        raise ProjectError(f"no datagen.toml in {d}")
+    try:
+        toml = tomllib.loads(f.read_text())
+    except tomllib.TOMLDecodeError as e:
+        raise ProjectError(f"{f}: {e}") from None
+    proj = toml.get("project", {})
+    name = proj.get("name")
+    if not isinstance(name, str) or not name:
+        raise ProjectError(f"{f}: [project].name is required")
+    pack_path = d / proj.get("pack", "specs/pack.py")
+    if not pack_path.is_file():
+        raise ProjectError(f"pack file {pack_path} not found")
+    return Project(dir=d, name=name, pack_path=pack_path, toml=toml)
+
+
+def import_pack(project: Project) -> ModuleType:
+    """Import the pack as `<synthetic package>.<stem>`; the specs folder needs no __init__.py."""
+    specs_dir = project.pack_path.parent
+    tag = hashlib.sha256(str(project.dir).encode()).hexdigest()[:8]
+    safe = re.sub(r"\W", "_", project.name)
+    pkg = f"neorisk_project_{safe}_{tag}"
+    modname = f"{pkg}.{project.pack_path.stem}"
+    if modname in sys.modules:
+        return sys.modules[modname]
+    if pkg not in sys.modules:
+        init = specs_dir / "__init__.py"
+        if init.is_file():
+            spec = importlib.util.spec_from_file_location(
+                pkg, init, submodule_search_locations=[str(specs_dir)])
+        else:
+            spec = importlib.machinery.ModuleSpec(pkg, None, is_package=True)
+            spec.submodule_search_locations = [str(specs_dir)]
+        mod = importlib.util.module_from_spec(spec)
+        sys.modules[pkg] = mod
+        if spec.loader is not None:
+            spec.loader.exec_module(mod)
+    module = importlib.import_module(modname)
+    for attr in ("PACK", "SCHEMA_VERSION", "define"):
+        if not hasattr(module, attr):
+            raise ProjectError(f"pack {project.pack_path} does not define {attr}")
+    return module
+
+
+# ---------------------------------------------------------------------------- resolution
+def _parse_value(raw: str) -> Any:
+    try:
+        return tomllib.loads(f"v = {raw}")["v"]
+    except tomllib.TOMLDecodeError:
+        return raw
+
+
+def _flatten(d: Mapping[str, Any], prefix: str = "") -> Iterable[tuple[str, Any]]:
+    for k, v in d.items():
+        if isinstance(v, Mapping):
+            yield from _flatten(v, f"{prefix}{k}.")
+        else:
+            yield f"{prefix}{k}", v
+
+
+def _coerce(key: str, cur: Any, value: Any) -> Any:
+    if isinstance(cur, bool):
+        return _bool(key, value)
+    if isinstance(cur, int):
+        return _int(key, value)
+    if isinstance(cur, float):
+        if isinstance(value, bool) or not isinstance(value, int | float):
+            raise ProjectError(f"setting {key!r} expects a number, got {value!r}")
+        return float(value)
+    if isinstance(cur, str):
+        return _str(key, value)
+    return value
+
+
+def _set_config(cfg: Any, path: list[str], value: Any, key: str) -> Any:
+    if not dataclasses.is_dataclass(cfg) or path[0] not in {
+            f.name for f in dataclasses.fields(cfg)}:
+        raise ProjectError(f"unknown setting {key!r}")
+    cur = getattr(cfg, path[0])
+    new = (_set_config(cur, path[1:], value, key) if len(path) > 1
+           else _coerce(key, cur, value))
+    return dataclasses.replace(cfg, **{path[0]: new})
+
+
+def resolve_run(project: Project, profile: str, overrides: Iterable[str] = (),
+                seed: int | None = None) -> RunSpec:
+    toml = project.toml
+    profiles = toml.get("profiles", {})
+    if profile not in profiles:
+        raise ProjectError(f"unknown profile {profile!r} (have: {', '.join(profiles) or '-'})")
+    prof = dict(profiles[profile])
+
+    run_raw = dict(toml.get("defaults", {}))
+    for k in run_raw:
+        if k not in _RUN_KEYS:
+            raise ProjectError(f"unknown setting 'defaults.{k}'")
+    tables: dict[str, dict[str, Any]] = {t: dict(toml.get(t, {})) for t in _TABLES}
+    sets = prof.pop("set", {})
+    for k, v in prof.items():
+        if k not in _RUN_KEYS:
+            raise ProjectError(f"unknown setting 'profiles.{profile}.{k}'")
+        run_raw[k] = v
+
+    overrides = tuple(overrides)
+    pairs = list(_flatten(sets))
+    for item in overrides:
+        key, eq, raw = item.partition("=")
+        if not eq or not key.strip():
+            raise ProjectError(f"expected key=value, got {item!r}")
+        pairs.append((key.strip(), _parse_value(raw.strip())))
+
+    module = import_pack(project)
+    config_cls = getattr(module, "Config", None)
+    cfg = config_cls() if config_cls is not None else None
+    for key, value in pairs:
+        head, _, rest = key.partition(".")
+        if head in _TABLES and rest:
+            tables[head][rest] = value
+        elif head == "run" and rest:
+            if rest not in _RUN_OVERRIDABLE:
+                raise ProjectError(f"unknown setting {key!r}")
+            run_raw[rest] = value
+        else:
+            cfg = _set_config(cfg, key.split("."), value, key)
+
+    mode = _str("mode", run_raw.get("mode", "time"))
+    if mode != "time":
+        raise ProjectError(f"mode {mode!r} arrives later")
+    for k in ("seed", "start", "span"):
+        if k not in run_raw:
+            raise ProjectError(f"[defaults].{k} is required")
+    seed = _int("seed", run_raw["seed"]) if seed is None else int(seed)
+
+    plan = build_plan(module, cfg, project.pack_path.parent)
+    return RunSpec(
+        name=f"{profile}-s{seed}", profile=profile, seed=seed,
+        start_us=parse_time(run_raw["start"]), span_us=parse_duration(run_raw["span"]),
+        warmup_us=parse_duration(run_raw.get("warmup", "0s")), mode=mode,
+        budget=_settings(Budget, "budget", _BUDGET, tables["budget"]),
+        writer=_settings(WriterSettings, "writer", _WRITER, tables["writer"]),
+        engine=_settings(EngineSettings, "engine", _ENGINE, tables["engine"]),
+        cfg=cfg, plan=plan, overrides=overrides)
