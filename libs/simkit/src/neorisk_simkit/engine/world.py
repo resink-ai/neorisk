@@ -242,6 +242,14 @@ class _Population:
 class World:
     """Everything one run holds in memory, plus the partition executor (`run_slots`)."""
 
+    def allocated_slab_bytes(self) -> int:
+        """Sum of `nbytes` of every output buffer of every worker's `SlabSet`."""
+        total = 0
+        for slab in self.slabs:
+            total += sum(a.nbytes for cols in slab.buffers.values() for a in cols.values())
+            total += sum(a.nbytes for a in slab.outbox.values()) + slab.outbox_pay.nbytes
+        return total
+
     # ------------------------------------------------------------------ build
     @classmethod
     def build(cls, run: Any, *, threads: int, checked: bool = False) -> World:
