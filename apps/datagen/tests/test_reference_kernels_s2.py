@@ -25,6 +25,12 @@ STRESS = ["users=3000", "skus=600", "sku_groups=4", "run.span=6d", "run.warmup=0
           f"pay.refund_gap.params=[{0.5 * DAY}, 0.0, 0.0]",
           f"pay.dispute_delay.params=[{1.0 * DAY}, 2.0, 0.0]",
           f"pay.dispute_resolve.params=[{1.0 * DAY}, 2.0, 0.0]", *POOLS]
+# forced paths (Review Focus #2), the Task 12 configs: a full hold table, commits after the TTL
+BUSY = ["users=3000", "skus=600", "sku_groups=2", "journey.session_gap_min_h=0.5",
+        "journey.checkout_p=1.0", "journey.abandon_p=1.0", "run.span=1d", "run.warmup=0s",
+        *POOLS]
+LATE = ["users=800", "skus=300", "sku_groups=4", "desk.hold_ttl_s=0", "run.span=3d",
+        "run.warmup=0s", *POOLS]
 
 
 @pytest.fixture(scope="module")
@@ -34,8 +40,13 @@ def ev(tmp_path_factory):
     return read_events(r.out_dir)
 
 
-def _on_hand0():
-    run = resolve_run(load_project(EX), "sample", STRESS)
+def _events(over, tmp_path):
+    return read_events(run_to_dataset(EX, "sample", over, out_dir=tmp_path / "run",
+                                      threads=4).out_dir)
+
+
+def _on_hand0(over):
+    run = resolve_run(load_project(EX), "sample", over)
     w = World.build(run, threads=1)
     items = w.items["inventory"]                         # dense SKU ids in CSR order
     on_hand = w.state["inventory"][0]                    # initial on_hand, CSR order
@@ -45,7 +56,20 @@ def _on_hand0():
 
 def test_inventory_reference(ev):
     assert ev["stock_reserved"].height > 500 and ev["stock_expired"].height > 0
-    assert replay_inventory(ev, _on_hand0(), slots=64) == []
+    assert replay_inventory(ev, _on_hand0(STRESS), slots=64) == []
+
+
+def test_inventory_reference_full_hold_table(tmp_path):
+    ev = _events(BUSY, tmp_path)
+    reasons = ev["stock_rejected"]["reason"]
+    assert (reasons == "busy").sum() > 0 and (reasons == "out_of_stock").sum() > 0
+    assert replay_inventory(ev, _on_hand0(BUSY), slots=64) == []
+
+
+def test_inventory_reference_commit_after_ttl(tmp_path):
+    ev = _events(LATE, tmp_path)
+    assert ev["stock_commit_late"].height > 0
+    assert replay_inventory(ev, _on_hand0(LATE), slots=64) == []
 
 
 def test_pool_reference(ev):
