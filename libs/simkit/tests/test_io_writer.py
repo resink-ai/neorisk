@@ -176,3 +176,74 @@ def test_force_keeps_the_old_folder_until_the_new_one_is_in_place(tmp_path, monk
     run_to_dataset(FIXTURES / "mini", "sample", ["users=20"], out_dir=out, force=True)
     assert not (out / "marker.txt").exists()
     assert sorted(p.name for p in tmp_path.iterdir()) == ["run"]
+
+
+def _reference_bytes(tmp_path, parts, run):
+    """What the one-shot writer produces for the concatenation of `parts`."""
+    import pyarrow as pa
+
+    from neorisk_simkit.io.writer import plan_columns, write_parquet, writer_options
+    table = pa.concat_tables(parts) if len(parts) > 1 else parts[0]
+    write_parquet(tmp_path, "ref.parquet", table,
+                  writer_options(run.writer, *plan_columns(run.plan)))
+    return (tmp_path / "ref.parquet").read_bytes()
+
+
+def test_entities_stream_per_step_in_full_row_groups(tmp_path):
+    """Entity rows are written as they are sealed: at most one partial row group per table
+    stays in memory, and every file is byte-identical to writing the whole table at the end."""
+    from conftest import make_run
+
+    from neorisk_simkit.engine.run import Simulation
+    from neorisk_simkit.io.entities import EntityWriter
+
+    run = make_run("mini", ["writer.row_group_rows=64"])
+    sim = Simulation(run, threads=1)
+    ew = EntityWriter(tmp_path / "run", run.writer, run.plan)
+    parts: dict[str, list] = {}
+
+    def add(tables):
+        ew.add(tables)
+        for name, t in tables.items():
+            if t.num_rows or name not in parts:
+                parts.setdefault(name, []).append(t)
+        assert all(ew.buffered_rows(name) < 64 for name in parts)
+
+    add(sim.static_entities())
+    for sealed in sim.steps():
+        add(sealed.entities)
+    assert len([t for t in parts["note"] if t.num_rows]) > 3
+    assert sum(t.num_rows for t in parts["note"]) > 3 * 64
+    assert ew.counts() == {n: sum(t.num_rows for t in ts) for n, ts in sorted(parts.items())}
+    entries = ew.close()
+    assert [e.path for e in entries] == [f"entities/{n}/part-00000.parquet" for n in sorted(parts)]
+    for e in entries:
+        name = e.path.split("/")[1]
+        data = (tmp_path / "run" / e.path).read_bytes()
+        assert data == _reference_bytes(tmp_path, parts[name], run), name
+        assert e.sha256 == hashlib.sha256(data).hexdigest()
+        assert e.rows == sum(t.num_rows for t in parts[name])
+
+
+@pytest.mark.parametrize("sizes", [[0], [0, 0], [0, 64], [64, 64], [30, 40, 0, 58], [200, 1]])
+def test_entity_stream_edges_match_the_one_shot_writer(tmp_path, sizes):
+    import pyarrow as pa
+    from conftest import make_run
+
+    from neorisk_simkit.io.entities import EntityWriter
+
+    run = make_run("mini", ["writer.row_group_rows=64"])
+    cats = pa.array(["a", "b"], pa.string())
+    parts, start = [], 0
+    for n in sizes:
+        idx = pa.array([i % 2 for i in range(start, start + n)], pa.int16())
+        parts.append(pa.table({"id": pa.array(range(start, start + n), pa.int64()),
+                               "tier": pa.DictionaryArray.from_arrays(idx, cats)}))
+        start += n
+    ew = EntityWriter(tmp_path / "run", run.writer, run.plan)
+    for t in parts:
+        ew.add({"user": t})
+        assert ew.buffered_rows("user") < 64
+    (entry,) = ew.close()
+    kept = [t for i, t in enumerate(parts) if t.num_rows or i == 0]
+    assert (tmp_path / "run" / entry.path).read_bytes() == _reference_bytes(tmp_path, kept, run)

@@ -76,8 +76,8 @@ def _by_date(table: pa.Table, time_col: str):
 
 
 def write_step(run_dir: Path, sealed: SealedStep, writer: Any, plan: Any) -> list[FileEntry]:
-    """Write every non-empty event and history table of `sealed`; entities are written at the
-    end of the run (`io.entities`)."""
+    """Write every non-empty event and history table of `sealed`; entities are streamed
+    separately (`io.entities.EntityWriter`)."""
     options = writer_options(writer, *plan_columns(plan))
     out: list[FileEntry] = []
     for kind, tables, time_col in (("events", sealed.events, "event_time"),

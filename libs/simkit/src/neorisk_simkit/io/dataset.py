@@ -15,7 +15,7 @@ from typing import Any
 import pyarrow as pa
 
 from neorisk_simkit.engine.run import Simulation
-from neorisk_simkit.io.entities import EntityCollector
+from neorisk_simkit.io.entities import EntityWriter
 from neorisk_simkit.io.manifest import write_manifest
 from neorisk_simkit.io.schema.schema_json import write_schema
 from neorisk_simkit.io.stats import machine, peak_rss_bytes, write_run_stats
@@ -53,26 +53,32 @@ def _simulate(run: Any, project_dir: Path, work: Path, threads: int, checked: bo
     plan = run.plan
     files: list[FileEntry] = []
     index_rows: list[dict] = []
-    entities = EntityCollector()
-    entities.add(sim.static_entities())
+    entities = EntityWriter(work, run.writer, plan)
     counts = {e.name: 0 for e in plan.events}
     history_counts = {g.name: 0 for g in plan.change_groups}
     checks: dict[str, int] = {}
     write_s = 0.0
-    for sealed in sim.steps():
+    try:
         w0 = time.perf_counter()
-        files.extend(write_step(work, sealed, run.writer, plan))
+        entities.add(sim.static_entities())
         write_s += time.perf_counter() - w0
-        index_rows.append(step_index_row(sealed, plan))
-        entities.add(sealed.entities)
-        for name, t in sealed.events.items():
-            counts[name] += t.num_rows
-        for name, t in sealed.history.items():
-            history_counts[name] += t.num_rows
-        for name, n in sealed.stats.get("checks", {}).items():
-            checks[name] = checks.get(name, 0) + n
+        for sealed in sim.steps():
+            w0 = time.perf_counter()
+            files.extend(write_step(work, sealed, run.writer, plan))
+            entities.add(sealed.entities)
+            write_s += time.perf_counter() - w0
+            index_rows.append(step_index_row(sealed, plan))
+            for name, t in sealed.events.items():
+                counts[name] += t.num_rows
+            for name, t in sealed.history.items():
+                history_counts[name] += t.num_rows
+            for name, n in sealed.stats.get("checks", {}).items():
+                checks[name] = checks.get(name, 0) + n
+    except BaseException:
+        entities.abort()
+        raise
     w0 = time.perf_counter()
-    files.extend(entities.write(work, run.writer, plan))
+    files.extend(entities.close())
     write_step_index(work, index_rows, writer_options(run.writer, *plan_columns(plan)))
     files.append(_file_entry(work, INDEX_PATH, len(index_rows)))
     write_schema(work, plan)
