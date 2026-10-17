@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 
 import numpy as np
@@ -23,10 +24,17 @@ class Dist:
     weights: tuple[float, ...] = ()
 
 
+def _finite(name: str, v: float) -> float:
+    """NaN or an infinite parameter would sample garbage silently; refuse it up front."""
+    if not math.isfinite(v):
+        raise ValueError(f"{name} must be finite, got {v}")
+    return float(v)
+
+
 def _pos(name: str, v: float) -> float:
     if not v > 0:
         raise ValueError(f"{name} must be > 0, got {v}")
-    return float(v)
+    return _finite(name, v)
 
 
 def _one(what: str, **kw: float | None) -> tuple[str, float]:
@@ -38,6 +46,7 @@ def _one(what: str, **kw: float | None) -> tuple[str, float]:
 
 def constant(ms: float | None = None, s: float | None = None) -> Dist:
     k, v = _one("constant", ms=ms, s=s)
+    _finite(k, v)
     if v < 0:
         raise ValueError("constant must be >= 0")
     return Dist(CONST, (v * (_MS if k == "ms" else _S), 0.0, 0.0))
@@ -58,6 +67,8 @@ def lognormal(median_s: float | None = None, median_ms: float | None = None,
 
 
 def shifted_lognormal(min_ms: float, median_ms: float, sigma: float = 0.5) -> Dist:
+    _finite("min_ms", min_ms)
+    _finite("median_ms", median_ms)
     if min_ms < 0:
         raise ValueError("min_ms must be >= 0")
     if not median_ms > min_ms:
@@ -79,6 +90,7 @@ def gamma(mean_days: float | None = None, mean_s: float | None = None, shape: fl
 
 
 def normal(mean_h: float = 0.0, sd_h: float = 1.0) -> Dist:
+    _finite("mean_h", mean_h)
     _pos("sd_h", sd_h)
     return Dist(NORMAL, (mean_h * _H, sd_h * _H, 0.0))
 
@@ -92,6 +104,7 @@ def pareto(alpha: float, min_h: float) -> Dist:
 def geometric(mean: float, max: int | None = None) -> Dist:
     if not mean >= 1:
         raise ValueError("geometric mean must be >= 1")
+    _finite("mean", mean)
     return Dist(GEOMETRIC, (float(mean), float(max or 0), 0.0))
 
 
@@ -102,6 +115,8 @@ def negbinom(mean: float, disp: float) -> Dist:
 
 
 def uniform_int(lo: int, hi: int) -> Dist:
+    _finite("lo", lo)
+    _finite("hi", hi)
     if hi < lo:
         raise ValueError("uniform_int needs lo <= hi")
     return Dist(UNIFORM_INT, (float(lo), float(hi), 0.0))
@@ -110,7 +125,7 @@ def uniform_int(lo: int, hi: int) -> Dist:
 def categorical(probs: dict) -> Dist:
     if not probs:
         raise ValueError("categorical needs at least one label")
-    w = tuple(float(p) for p in probs.values())
+    w = tuple(_finite(f"categorical probability of {k!r}", p) for k, p in probs.items())
     if any(p < 0 for p in w):
         raise ValueError("categorical probabilities must be >= 0")
     if abs(sum(w) - 1.0) > 1e-9:
@@ -126,6 +141,8 @@ def zipf(s: float) -> Dist:
 def poisson_daily(weekly: tuple[float, ...] = (1,) * 7, trend: float = 0.0) -> Dist:
     if len(weekly) != 7:
         raise ValueError("weekly needs 7 values")
+    for x in (*weekly, trend):
+        _finite("poisson_daily weekly weight / trend", x)
     if any(x < 0 for x in weekly):
         raise ValueError("weekly weights must be >= 0")
     return Dist(POISSON_DAILY, (float(trend), 0.0, 0.0),

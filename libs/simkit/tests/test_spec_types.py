@@ -97,3 +97,27 @@ def test_dist_validation():
         dist.shifted_lognormal(min_ms=300, median_ms=200)
     c = dist.categorical({"x": 0.25, "y": 0.75})
     assert c.labels == ("x", "y") and c.weights == (0.25, 0.75)
+
+
+NAN, INF = float("nan"), float("inf")
+
+
+@pytest.mark.parametrize("make", [
+    lambda: dist.constant(ms=NAN), lambda: dist.constant(s=INF),
+    lambda: dist.normal(mean_h=NAN), lambda: dist.normal(mean_h=INF),
+    lambda: dist.normal(sd_h=NAN), lambda: dist.normal(sd_h=INF),
+    lambda: dist.categorical({"a": NAN, "b": 1.0}), lambda: dist.categorical({"a": NAN}),
+    lambda: dist.categorical({"a": INF, "b": 0.0}),
+    lambda: dist.exp(mean_s=INF), lambda: dist.lognormal(median_s=1, sigma=INF),
+    lambda: dist.shifted_lognormal(min_ms=NAN, median_ms=200),
+    lambda: dist.shifted_lognormal(min_ms=0, median_ms=INF),
+    lambda: dist.gamma(mean_days=1, max_days=INF), lambda: dist.pareto(alpha=INF, min_h=1),
+    lambda: dist.geometric(mean=INF), lambda: dist.negbinom(mean=1, disp=INF),
+    lambda: dist.uniform_int(lo=NAN, hi=3), lambda: dist.zipf(s=INF),
+    lambda: dist.poisson_daily(weekly=(1, 1, 1, NAN, 1, 1, 1)),
+    lambda: dist.poisson_daily(trend=NAN), lambda: dist.lognormal_minor(median=NAN, sigma=1),
+], ids=lambda f: "")
+def test_dist_rejects_non_finite_parameters(make):
+    """A NaN (or meaningless infinite) parameter is refused, never sampled into garbage."""
+    with pytest.raises(ValueError, match="finite|> 0|>= 1"):
+        make()
