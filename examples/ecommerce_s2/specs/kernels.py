@@ -28,7 +28,7 @@ WHY_STOCK, WHY_BUSY = 0, 1                # stock_rejected.reason codes
 SHOPPER_LOCAL = Local(session="ref", device="ref", views_left="i16", cart_n="i8",
                       cart_sku="ref[4]", cart_qty="i16[4]", cart_price="i64[4]",
                       checkout="ref", subtotal="i64", pending="i8", granted="u8",
-                      rejected_sku="ref", hold="ref[4]", slot="i32[4]", ordered="u8")
+                      rejected_sku="ref", hold="ref[4]", slot="i32[4]")
 DESK_LOCAL = Local(**std.reservations.fields(HOLD_SLOTS))
 
 

@@ -136,7 +136,12 @@ def test_holds_outlive_their_step(run, tmp_path):
     a = json.loads((r.out_dir / "manifest.json").read_text())
     b = json.loads((run.out_dir / "manifest.json").read_text())
     assert a["counts"] == b["counts"] and a["accumulators"] == b["accumulators"]
-    assert all(v["violations"] == 0 for v in a["laws"].values())
+    assert a["laws"].keys() == b["laws"].keys()
+    for name, law in a["laws"].items():                    # D47: a state law's `checked` counts
+        other = dict(b["laws"][name])                      # live rows per seal, so it depends on
+        if law["law"] == "never_negative":                 # the step length
+            other["checked"] = law["checked"]
+        assert law == other and law["violations"] == 0, name
     ev = read_events(r.out_dir)
     r0 = ev["stock_reserved"].select("hold_id", pl.col("event_time").alias("t0"))
     assert _fates(ev).join(r0, on="hold_id").height == _fates(ev).height > 0

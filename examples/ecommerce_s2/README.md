@@ -37,9 +37,9 @@ released or expired within 15 minutes).
 ## Run
 
 ```bash
-datagen validate examples/ecommerce_s2
-uv run --all-packages datagen run examples/ecommerce_s2 --profile sample
-datagen schema   examples/ecommerce_s2 --format sql --dialect postgres
+uv run --all-packages datagen validate examples/ecommerce_s2
+uv run --all-packages datagen run      examples/ecommerce_s2 --profile sample
+uv run --all-packages datagen schema   examples/ecommerce_s2 --format sql --dialect postgres
 ```
 
 ## Profiles
