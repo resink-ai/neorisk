@@ -51,8 +51,9 @@ def _walk(P, qhead, g):
 
 @pytest.mark.parametrize("seed", [0, 1, 2])
 def test_queue_order_at_scale_matches_sorted_canonical_keys(seed):
-    """Thousands of inserts (in-order tail appends, random ones, exact ties on time and key),
-    interleaved with pops and removals: the queue always equals the sorted (time, key, seq)."""
+    """Thousands of inserts (in-order tail appends, random ones, exact ties on time, key and
+    sender key), interleaved with pops and removals: the queue always equals the sorted
+    (time, key, sender key, seq) (D61); self-queued commands (`q_push`) carry SELF_SENDER."""
     rng = np.random.default_rng(seed)
     cap = 6000
     pool = cmdq.NodePool(cap, 1)
@@ -80,12 +81,20 @@ def test_queue_order_at_scale_matches_sorted_canonical_keys(seed):
         else:
             continue
         prio, cause = int(rng.integers(0, 3)), int(rng.integers(0, 3))
-        n = cmdq.q_push(P, 0, qhead, 1, t, prio, cause, seq, 1, 0, 0, -1)
+        if rng.random() < 0.3:
+            sk = (cmdq.SELF_SENDER, 0, 0, 0, 0)
+            n = cmdq.q_push(P, 0, qhead, 1, t, prio, cause, seq, 1, 0, 0, -1)
+        else:                             # few distinct values per part: many exact ties
+            sk = (int(rng.integers(0, 3)), *(int(v) for v in rng.integers(-2, 2, 3)),
+                  int(rng.integers(0, 2)))
+            n = cmdq.q_push_from(P, 0, qhead, 1, t, prio, cause, seq, 1, 0, 0, -1, *sk)
         assert n >= 0
-        live[int(n)] = (t, (prio << 56) | cause, seq)
+        live[int(n)] = (t, (prio << 56) | cause, *sk, seq)
         seq += 1
         if step % 500 == 0 or step == 4999:
-            got = [(int(P[0][x]), int(P[1][x]), int(P[2][x])) for x in _walk(P, qhead, 1)]
+            got = [(int(P[0][x]), int(P[1][x]),
+                    *(int(P[cmdq.P_SK0 + j][x]) for j in range(5)), int(P[2][x]))
+                   for x in _walk(P, qhead, 1)]
             assert got == sorted(live.values())
     assert qhead[0] == -1
 
@@ -173,3 +182,11 @@ def test_caps_agree_with_payload_width():
     from neorisk_simkit.spec import caps
     assert caps.PAYLOAD_W == cmdq.PAYLOAD_W
     assert caps.OUTBOX_ROW_BYTES == 8 * 12 + 8 * cmdq.PAYLOAD_W
+
+
+def test_node_bytes_follow_the_pool_arrays():
+    pool = cmdq.NodePool(10, 1)
+    arrays = [getattr(pool, f) for f, _ in cmdq.NODE_FIELDS]
+    assert sum(a.nbytes for a in arrays) == 10 * cmdq.NODE_BYTES
+    assert all(a is b for a, b in zip(arrays[:8], pool.as_tuple()[:8], strict=True))
+    assert all(a is b for a, b in zip(arrays[8:], pool.as_tuple()[cmdq.P_SK0:], strict=True))

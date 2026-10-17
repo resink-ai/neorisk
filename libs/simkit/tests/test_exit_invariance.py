@@ -250,3 +250,54 @@ def test_created_dense_indices_follow_creator_partition_order(creator_runs):
     # higher account did
     t = rows["created_at"].to_list()
     assert any(t[i] > t[j] for i in range(len(t)) for j in range(i + 1, len(t)))
+
+
+# ---------------------------------------------------------------------------- D61
+RELAY = Path(__file__).resolve().parent / "fixtures" / "relay"
+
+
+@pytest.fixture(scope="module")
+def relay_runs(tmp_path_factory):
+    root = tmp_path_factory.mktemp("relay")
+    out = {}
+    for step in ("30m", "6h", "1d"):
+        d = root / step
+        run_to_dataset(RELAY, "sample", [f"engine.step={step!r}"], out_dir=d, threads=1)
+        out[step] = d
+    return out
+
+
+def test_tied_requests_from_new_owners_route_step_invariantly(relay_runs):
+    """A pay asks at 01:00 while provisional (6h, 1d) or dense (30m); its requests tie with
+    the peers' at (time, prio, cause) and must reach the desk in the same order."""
+    orders = {}
+    for step, d in relay_runs.items():
+        asked = read_events(d)["asked"].sort("event_time", "lamport", "partition_id", "seq")
+        assert asked.height == 4 and asked["event_time"].dt.hour().to_list() == [1] * 4, step
+        orders[step] = asked["v"].to_list()
+    assert orders["30m"] == orders["6h"] == orders["1d"] == [0, 0, 1, 1]   # pay type first
+
+
+LATECOMER = Path(__file__).resolve().parent / "fixtures" / "latecomer"
+
+
+@pytest.fixture(scope="module")
+def latecomer_runs(tmp_path_factory):
+    root = tmp_path_factory.mktemp("latecomer")
+    out = {}
+    for step in ("1h", "6h", "1d"):
+        d = root / step
+        run_to_dataset(LATECOMER, "sample", [f"engine.step={step!r}"], out_dir=d, threads=1)
+        out[step] = d
+    return out
+
+
+def test_tied_requests_arriving_in_different_rounds_run_step_invariantly(latecomer_runs):
+    """Population owners only: with 6h or 1d steps the peer's 01:00 ask reaches the desk a
+    round before the asker's tied one; the desk must still run them in sender-key order."""
+    orders = {}
+    for step, d in latecomer_runs.items():
+        asked = read_events(d)["asked"].sort("event_time", "lamport", "partition_id", "seq")
+        assert asked.height == 2 and asked["event_time"].dt.hour().to_list() == [1] * 2, step
+        orders[step] = asked["v"].to_list()
+    assert orders["1h"] == orders["6h"] == orders["1d"] == [0, 1]   # asker type first

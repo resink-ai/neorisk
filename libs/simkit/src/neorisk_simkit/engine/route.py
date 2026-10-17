@@ -23,6 +23,8 @@ Route tuple `R` (indices `RT_*`):
   bnd_resp  int64[boundaries]: responses routed per boundary code over the run (D40)
   shard_req int64[max(1, G - shard_lo)]: requests delivered per shard slot over the run
   shard_lo  int64[1]: the first shard slot
+  hid       (ptype, pid, ckey): views of the hidden arrays the sender keys read (D61)
+  created_type uint8[32]: 1 for each partition type whose owners are created (not a population)
 """
 
 from __future__ import annotations
@@ -30,13 +32,14 @@ from __future__ import annotations
 import numpy as np
 from numba import njit
 
-from neorisk_simkit.engine.cmdq import P_FREE_N, PAY_KIND, PAYLOAD_W, pay_alloc, q_push
+from neorisk_simkit.engine.cmdq import P_FREE_N, PAY_KIND, PAYLOAD_W, pay_alloc, q_push_from
 from neorisk_simkit.engine.codegen import COUNTERS
 from neorisk_simkit.engine.slabs import OB_CREATE, OB_REQUEST, OB_RESPONSE, OUTBOX_COLS
 
 (RT_QHEAD, RT_CSEQ, RT_GEN, RT_ALIVE, RT_PENDING, RT_SUSP_T, RT_SUSP_DELTA, RT_POOL, RT_PAY,
  RT_BND_BASE, RT_COUNTERS, RT_MSG, RT_WOKEN, RT_WOKEN_N, RT_TMASK, RT_TLIST, RT_TN, RT_SUSP,
- RT_SUSP_N, RT_SMASK, RT_BND_REQ, RT_SPOS, RT_BND_RESP, RT_SHARD_REQ, RT_SHARD_LO) = range(25)
+ RT_SUSP_N, RT_SMASK, RT_BND_REQ, RT_SPOS, RT_BND_RESP, RT_SHARD_REQ, RT_SHARD_LO, RT_HID,
+ RT_CREATED_TYPE) = range(27)
 
 # route_outbox statuses
 ROUTED, NEED_MESSAGES, NEED_NODES, NEED_PAYLOAD, HAS_CREATE = 0, 1, 2, 3, 4
@@ -44,7 +47,7 @@ ROUTED, NEED_MESSAGES, NEED_NODES, NEED_PAYLOAD, HAS_CREATE = 0, 1, 2, 3, 4
 _OB = {c: i for i, c in enumerate(OUTBOX_COLS)}
 _KIND, _BND, _TIME, _PRIO, _CAUSE = (_OB["kind"], _OB["bnd"], _OB["time"], _OB["prio"],
                                      _OB["cause"])
-_SRC_PID, _SRC_SEQ, _DST, _TAG = _OB["src_pid"], _OB["src_seq"], _OB["dst"], _OB["tag"]
+_SRC_G, _SRC_SEQ, _DST, _TAG = _OB["src_g"], _OB["src_seq"], _OB["dst"], _OB["tag"]
 _RESP_KIND, _TARGET = _OB["resp_kind"], _OB["target_action"]
 _PAYC = len(OUTBOX_COLS)
 _LATE = COUNTERS.index("late_messages")
@@ -212,21 +215,22 @@ def resume_owner(P, pay_rows, qhead, g):
     """Blocking suspension: the owner resumes at T_r, the latest time among its delivered
     responses, and runs nothing dated before it. Its queue becomes: the responses, then the
     other commands dated before T_r, then those dated exactly T_r (each group in its (time,
-    key, seq) order), all re-dated to T_r — the effective time max(time, T_r) — then the rest.
-    The queue stays sorted by time.
+    key, sender key, seq) order), all re-dated to T_r — the effective time max(time, T_r) —
+    then the rest. The queue stays sorted by time.
 
     A node is a response iff its payload row carries the delivered kind `OB_RESPONSE` in
     column `PAY_KIND` (D39); timers, continuations and delivered messages are not.
 
     Commands pushed at T_r while that re-dated prefix is still queued (a `continue_at`, or a
     timer at `ctx.t` from the response handler): `q_push` walks the queue and inserts before
-    the first node with the same time and a greater `(key, seq)`. The prefix is not sorted by
-    key (it keeps the group order above), so the new command lands before the first remaining
-    prefix node with a greater key: a `PRIO_CONTINUE` continuation runs before every deferred
-    command still queued, a timer at priority p before the first deferred command of priority
-    > p (or of equal priority and a later cause). This depends only on the queue's contents,
-    never on step boundaries, workers or slabs, so it is invariant; it equals the canonical
-    `(time, key, seq)` order whenever the remaining prefix happens to be sorted by key.
+    the first node with the same time and a greater `(key, sender key, seq)`. The prefix is
+    not sorted by key (it keeps the group order above), so the new command lands before the
+    first remaining prefix node with a greater key: a `PRIO_CONTINUE` continuation runs before
+    every deferred command still queued, a timer at priority p before the first deferred
+    command of priority > p (or of equal priority and a later cause). This depends only on the
+    queue's contents, never on step boundaries, workers or slabs, so it is invariant; it
+    equals the canonical `(time, key, sender key, seq)` order whenever the remaining prefix
+    happens to be sorted by key.
     """
     ptime, nxt, ppay = P[0], P[4], P[7]
     t_r = np.int64(-(2 ** 63))
@@ -257,13 +261,59 @@ def resume_owner(P, pay_rows, qhead, g):
 
 
 @njit(cache=True, nogil=True)
-def route_order(ob, n):
-    """Row order by (time, prio, cause, src_pid, src_seq): stable sorts, last key first."""
+def sender_keys(R, src_g, n):
+    """The step-invariant sender key of each of the first n rows, from the sender's slot (D61).
+
+    A partition of a non-created type (population owner, shard) keys as `(ptype, 0, pid, 0, 0,
+    0)`; its `pid` never changes. A created owner keys as `(ptype, 1, created_at, creator
+    commit lamport, creator inst, k)` from `ckey`, written at its admission: its `pid` is a
+    provisional handle in its creation step and a per-step dense index afterwards, so it
+    would order the owner differently under different step lengths."""
+    ptype, pid, ckey = R[RT_HID]
+    created = R[RT_CREATED_TYPE]
+    k0, k1, k2 = np.zeros(n, np.int64), np.zeros(n, np.int64), np.zeros(n, np.int64)
+    k3, k4, k5 = np.zeros(n, np.int64), np.zeros(n, np.int64), np.zeros(n, np.int64)
+    for i in range(n):
+        g = src_g[i]
+        t = ptype[g]
+        k0[i] = t
+        if created[t]:
+            k1[i] = 1
+            k2[i], k3[i], k4[i], k5[i] = ckey[g, 0], ckey[g, 1], ckey[g, 2], ckey[g, 3]
+        else:
+            k2[i] = pid[g]
+    return k0, k1, k2, k3, k4, k5
+
+
+@njit(cache=True, nogil=True)
+def _then_by(order, key):
+    """`order` stably re-sorted by `key` (the next more significant key)."""
+    return order[np.argsort(key[order], kind="mergesort")]
+
+
+@njit(cache=True, nogil=True)
+def route_order(ob, n, R):
+    """Row order by (time, prio, cause, sender key, src_seq) (D61): stable sorts, last key
+    first. The sender's slot is still alive when its outbox is routed (routing runs in the
+    phase that committed the rows), so `sender_keys` describe the sender."""
+    return _route_order(ob, n, sender_keys(R, ob[_SRC_G][:n], n))
+
+
+@njit(cache=True, nogil=True)
+def _route_order(ob, n, keys):
+    k0, k1, k2, k3, k4, k5 = keys
     order = np.argsort(ob[_SRC_SEQ][:n], kind="mergesort")
-    order = order[np.argsort(ob[_SRC_PID][:n][order], kind="mergesort")]
-    order = order[np.argsort(ob[_CAUSE][:n][order], kind="mergesort")]
-    order = order[np.argsort(ob[_PRIO][:n][order], kind="mergesort")]
-    return order[np.argsort(ob[_TIME][:n][order], kind="mergesort")]
+    if k1.any():                          # k3..k5 are zero unless a created owner sent a row
+        order = _then_by(order, k5)
+        order = _then_by(order, k4)
+        order = _then_by(order, k3)
+    order = _then_by(order, k2)
+    if k1.any():
+        order = _then_by(order, k1)
+    order = _then_by(order, k0)
+    order = _then_by(order, ob[_CAUSE][:n])
+    order = _then_by(order, ob[_PRIO][:n])
+    return _then_by(order, ob[_TIME][:n])
 
 
 @njit(cache=True, nogil=True)
@@ -274,8 +324,9 @@ def route_outbox(R, ob, n, skip_creates):
     delivery time, responses to the requesting owner if its slot generation still matches
     (then `pending -= 1`; otherwise `late_messages += 1`). Every delivered command gets a
     payload row copied from the outbox, with the delivered kind written into its `PAY_KIND`
-    column once a response's generation check has read it (D39), and the receiver's next
-    command seq. Responses routed and requests delivered are counted per boundary
+    column once a response's generation check has read it (D39). The receiver queues it under
+    the sender's key and `src_seq` (D61), so its tie order does not depend on the routing
+    round. Responses routed and requests delivered are counted per boundary
     (`RT_BND_RESP`, `RT_BND_REQ`) and per shard slot (`RT_SHARD_REQ`). `OB_CREATE` rows
     are left to the caller (`skip_creates`), or make the call return `HAS_CREATE` untouched.
     Nothing is delivered unless the step's message budget and both reserves cover every row.
@@ -297,15 +348,16 @@ def route_outbox(R, ob, n, skip_creates):
     if PA[3][0] < k:
         return NEED_PAYLOAD, k
     msg[0] += k
-    qhead, cseq, gen, alive, pending = (R[RT_QHEAD], R[RT_CSEQ], R[RT_GEN], R[RT_ALIVE],
-                                        R[RT_PENDING])
+    qhead, gen, alive, pending = R[RT_QHEAD], R[RT_GEN], R[RT_ALIVE], R[RT_PENDING]
     bnd_base, counters = R[RT_BND_BASE], R[RT_COUNTERS]
     woken, wn = R[RT_WOKEN], R[RT_WOKEN_N]
     bnd_req, bnd_resp, shard_req = R[RT_BND_REQ], R[RT_BND_RESP], R[RT_SHARD_REQ]
     shard_lo = R[RT_SHARD_LO][0]
     src = ob[_PAYC]
     rows = PA[0]
-    order = route_order(ob, n)
+    keys = sender_keys(R, ob[_SRC_G][:n], n)
+    k0, k1, k2, k3, k4, k5 = keys
+    order = _route_order(ob, n, keys)
     for j in range(n):
         i = order[j]
         kind = kinds[i]
@@ -327,10 +379,11 @@ def route_outbox(R, ob, n, skip_creates):
         rows[row, PAY_KIND] = kind             # the delivered kind (D39)
         if kind == OB_RESPONSE:
             bnd_resp[ob[_BND][i]] += 1
-        sq = cseq[g]
-        cseq[g] = sq + 1
-        q_push(P, 0, qhead, g, ob[_TIME][i], ob[_PRIO][i], ob[_CAUSE][i], sq, ob[_RESP_KIND][i],
-               ob[_TARGET][i], ob[_TAG][i], row)
+        # the receiver orders tied commands by the sender's key and seq, never by arrival, so
+        # the round a command arrives in (which depends on step length) cannot reorder it (D61)
+        q_push_from(P, 0, qhead, g, ob[_TIME][i], ob[_PRIO][i], ob[_CAUSE][i], ob[_SRC_SEQ][i],
+                    ob[_RESP_KIND][i], ob[_TARGET][i], ob[_TAG][i], row, 2 * k0[i] + k1[i],
+                    k2[i], k3[i], k4[i], k5[i])
         mark_touched(R, g)
         if kind == OB_RESPONSE:
             pending[g] -= 1

@@ -60,6 +60,9 @@ HIDDEN_DTYPES: tuple[tuple[str, str, int | str], ...] = (
     ("susp_t", "int64", 1),
     ("susp_delta", "int64", 1),
     ("last_t", "int64", 1),        # time of the last executed command (monotonic-time guard)
+    # a created owner's step-invariant sender key (created_at, creator commit lamport, creator
+    # inst, k), written at admission; 0 for population owners and shards (D61)
+    ("ckey", "int64", 4),
 )
 
 
@@ -94,6 +97,8 @@ def hidden_dims(plan: Any) -> dict[str, int]:
 
 def allocate_hidden(plan: Any, run: Any = None) -> tuple[Hidden, dict[str, int]]:
     """Allocate every hidden array for G = sum(owner max_live) + sum(shard n) global slots.
+
+    A multiplicity that is a plain int > 1 gives a 2-D array `(G, mult)` (`ckey`).
 
     Owner slot ranges come first in plan order, then shards; returns `slot_base` per type.
     """
@@ -160,7 +165,6 @@ class _Creation:
     time: int
     prio: int
     cause: int                                 # the creator's commit lamport
-    src_pid: int
     src_seq: int
     ns: int                                    # namespace code of the created table
     handle: int                                # provisional handle of the created row
@@ -570,7 +574,9 @@ class World:
                   self._bnd_array(lambda b: 0), np.zeros(G, np.int64),
                   self._bnd_array(lambda b: 0),                      # RT_BND_RESP
                   np.zeros(max(1, G - self.shard_lo), np.int64),     # RT_SHARD_REQ
-                  np.array([self.shard_lo], np.int64))               # RT_SHARD_LO
+                  np.array([self.shard_lo], np.int64),               # RT_SHARD_LO
+                  (hid.ptype, hid.pid, hid.ckey),                    # RT_HID
+                  self._created_types())                             # RT_CREATED_TYPE
         self.pending_creates: list[_Creation] = []
         self.admissions = 0                               # created owners admitted this step
         self.run_buf = np.zeros(G, np.int64)              # runnable slots (compiled rounds)
@@ -578,10 +584,18 @@ class World:
         self.round_log = np.zeros((256, 2), np.int64)
         self.round_state = np.zeros(8, np.int64)
 
+    def _created_types(self) -> np.ndarray:
+        """uint8[32]: 1 for each owner partition type whose table is created, not a population."""
+        out = np.zeros(32, np.uint8)
+        for part in self.plan.partitions:
+            if part.kind == "owner" and self.plan.table(part.table).creatable:
+                out[part.ptype_code] = 1
+        return out
+
     # ------------------------------------------------------------------ admission
     def _reserve_pool(self) -> tuple:
         """The node pool tuple with the reserve list in place of the worker free lists."""
-        return self.pool.as_tuple()[:8] + (self.pool.reserve_head, self.pool.reserve_n)
+        return self.pool.with_free_lists(self.pool.reserve_head, self.pool.reserve_n)
 
     def _take_reserve_nodes(self, need: int) -> None:
         """Ensure the reserve holds `need` nodes (called between phases, never concurrently)."""
@@ -646,6 +660,7 @@ class World:
         hid.last_t[g] = _FILL["last_t"]
         hid.inst[g] = inst
         hid.self_id[g] = self_id
+        hid.ckey[g] = 0                     # a created owner's key is written by admit_created
         lslots = hid.lslot[g]
         for p in self.plan.processes:
             if p.partition == part.name and p.kernel.local is not None:
@@ -656,10 +671,12 @@ class World:
     def admit_created(self, limit_t: int) -> np.ndarray:
         """Admit every pending creation with time < `limit_t`; returns their global slots.
 
-        In routing-key order, each created owner gets a free slot, the created row's columns as
-        state (from the creation message's payload, D43; create slabs are never read),
-        `self_id = pid = handle` (provisional; D12), `inst = mix(creator inst, lamport, ns, k)`
-        and a `START` at the creation time per process started by `on_created`.
+        In routing-key order (time, prio, cause, the creator's sender key, src_seq; D61), each
+        created owner gets a free slot, the created row's columns as state (from the creation
+        message's payload, D43; create slabs are never read), `self_id = pid = handle`
+        (provisional; D12), `inst = mix(creator inst, lamport, ns, k)`, `ckey = (created_at,
+        lamport, creator inst, k)` (its sender key for its whole life, D61) and a `START` at
+        the creation time per process started by `on_created`.
 
         `k` is the row's ordinal among the rows of its namespace created by the same commit: the
         handle's per-step ordinal minus the commit's first one. A commit's creations share its
@@ -667,10 +684,14 @@ class World:
         commit. The per-step ordinal itself would make `inst` (every draw of the created owner)
         depend on whether an earlier commit of the creator fell in the same step (spec §12).
         """
-        due = sorted((c for c in self.pending_creates if c.time < limit_t),
-                     key=lambda c: (c.time, c.prio, c.cause, c.src_pid, c.src_seq))
+        due = [c for c in self.pending_creates if c.time < limit_t]
         if not due:
             return np.zeros(0, np.int64)
+        src_g = np.array([c.src_g for c in due], np.int64)
+        skeys = np.stack(rt.sender_keys(self.R, src_g, len(due)), axis=1).tolist()
+        order = sorted(range(len(due)), key=lambda i: (due[i].time, due[i].prio, due[i].cause,
+                                                       *skeys[i], due[i].src_seq))
+        due = [due[i] for i in order]
         self.pending_creates = [c for c in self.pending_creates if c.time >= limit_t]
         plan, hid = self.plan, self.hidden
         first: dict[tuple[int, int, int], int] = {}          # (creator, lamport, ns) -> ordinal
@@ -693,8 +714,10 @@ class World:
             ls, self.free_lslots[part.name] = int(free[0]), free[1:]
             g = self.slot_base[part.name] + ls
             k = handle_ordinal(c.handle) - first[(c.src_g, c.cause, c.ns)]
-            inst = _as_i64(rng.mix(int(hid.inst[c.src_g]), c.cause, c.ns, k))
+            creator_inst = int(hid.inst[c.src_g])
+            inst = _as_i64(rng.mix(creator_inst, c.cause, c.ns, k))
             self._reset_slots(part, np.array([g]), c.handle, c.handle, inst)
+            hid.ckey[g] = (c.time, c.cause, creator_inst, k)
             for j, arr in enumerate(self.state[part.name]):  # table columns, in order
                 arr[ls] = c.pay[j]
             procs = [p.action_id for p in plan.processes if p.partition == part.name
@@ -873,7 +896,7 @@ class World:
         """Route every worker's outbox rows (live and moved aside) and empty those outboxes.
 
         Creation rows join `pending_creates`; the rest go through `engine.route.route_outbox`,
-        which delivers them in (time, prio, cause, src_pid, src_seq) order.
+        which delivers them in (time, prio, cause, sender key, src_seq) order (D61).
         """
         parts: list[dict[str, np.ndarray]] = []
         for w, slab in enumerate(self.slabs):
@@ -892,7 +915,7 @@ class World:
         for i in creates:
             self.pending_creates.append(_Creation(
                 int(ob["time"][i]), int(ob["prio"][i]), int(ob["cause"][i]),
-                int(ob["src_pid"][i]), int(ob["src_seq"][i]), int(ob["bnd"][i]),
+                int(ob["src_seq"][i]), int(ob["bnd"][i]),
                 int(ob["dst"][i]), int(ob["pay"][i, 7]), int(ob["pay"][i, 10]),
                 tuple(int(v) for v in ob["pay"][i, :7])))
         tup = tuple(np.ascontiguousarray(ob[c]) for c in cols)

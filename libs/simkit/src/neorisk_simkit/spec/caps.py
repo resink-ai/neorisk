@@ -7,6 +7,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
+from neorisk_simkit.engine import cmdq as _cmdq
 from neorisk_simkit.spec.plan import Column, Plan
 from neorisk_simkit.spec.types import storage_dtype
 
@@ -14,8 +15,9 @@ CAP_ITEMS = ("output_slabs", "step_output", "merge_working_space", "live_partiti
              "timer_heaps", "requests_and_inboxes", "fanout_bursts", "read_inputs",
              "checker_state", "scorer", "entity_buffers")
 
-# D8: 40 B per command node (spec section 10 says 24 B); memory caps use the real size.
-NODE_BYTES = 40
+# D8 (amended by D61: the sender key): bytes per command node, from the node pool's own field
+# table (spec section 10 says 24 B); memory caps use the real size.
+NODE_BYTES = _cmdq.NODE_BYTES
 # engine.cmdq does not exist yet; Task 7's test asserts these match cmdq.PAYLOAD_W.
 PAYLOAD_W = 12
 OUTBOX_ROW_BYTES = 8 * 12 + 8 * PAYLOAD_W

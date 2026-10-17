@@ -216,20 +216,27 @@ def test_requests_must_be_dated_ctx_t():
 
 
 def test_route_order_sorts_equal_keys_by_partition_id_then_seq():
+    """D61 on dense senders: key (ptype, 0, pid, 0, 0, 0) orders tied rows by partition_id."""
     from neorisk_simkit.engine.route import route_order
     from neorisk_simkit.engine.slabs import OUTBOX_COLS
+    run = make_run("mini")
+    w = World.build(run, threads=1)
+    g = w.admit_population(run.start_us - run.warmup_us, run.start_us)
+    senders = g[np.argsort(w.hidden.pid[g], kind="stable")][:10]   # ascending partition_id
+    assert len(senders) == 10
     rng_ = np.random.default_rng(3)
     n = 40
     cols = {c: np.zeros(n, np.int64) for c in OUTBOX_COLS}
     cols["time"][:] = rng_.integers(0, 2, n)          # many rows tie on (time, prio, cause)
     cols["prio"][:] = 1
     cols["cause"][:] = rng_.integers(0, 2, n)
-    cols["src_pid"][:] = rng_.permutation(n) // 4     # four rows per partition...
+    rank = rng_.permutation(n) // 4                   # four rows per partition...
+    cols["src_g"][:] = senders[rank]
+    cols["src_pid"][:] = w.hidden.pid[senders[rank]]
     cols["src_seq"][:] = rng_.permutation(n)          # ...told apart by seq
     ob = (*cols.values(), np.zeros((n, 12), np.int64))
-    want = np.lexsort((cols["src_seq"], cols["src_pid"], cols["cause"], cols["prio"],
-                       cols["time"]))
-    assert route_order(ob, n).tolist() == want.tolist()
+    want = np.lexsort((cols["src_seq"], rank, cols["cause"], cols["prio"], cols["time"]))
+    assert route_order(ob, n, w.R).tolist() == want.tolist()
 
 
 def test_creations_inside_compiled_rounds_return_to_python(monkeypatch):

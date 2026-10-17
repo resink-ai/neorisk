@@ -1,8 +1,18 @@
 """Per-partition command queues over a shared node pool, plus the payload arena.
 
-A command node is 40 B (D8). Each partition's queue is a singly linked list sorted by
-(time, key, seq) with key = priority << 56 | cause_lamport (D9). Free nodes live in per-worker
-lists so hot-path pushes and frees never contend; a global reserve list feeds worker refills.
+A command node is `NODE_BYTES` (D8 amended by D61). Each partition's queue is a singly linked
+list sorted by (time, key, sender key, seq) with key = priority << 56 | cause_lamport (D9).
+
+The sender key (D61) makes a shard's order of tied commands independent of the round in which
+they arrived (spec section 12, canonical processing in shards). A delivered request, message or
+response carries its sender's step-invariant key `(ptype << 1 | created, pid or created_at,
+creator lamport, creator inst, k)` (`engine.route.sender_keys`) and, in `seq`, the sender's own
+command seq (`src_seq`). A command a partition queues for itself (timer, continuation, START)
+carries `SELF_SENDER` (-1, so it runs before tied delivered commands) and its own `cseq` value.
+The sender key plus seq is unique within a queue, so the order is total and exact.
+
+Free nodes live in per-worker lists so hot-path pushes and frees never contend; a global reserve
+list feeds worker refills.
 """
 
 from __future__ import annotations
@@ -20,6 +30,16 @@ PAY_CONTINUE = -2       # n_pay marker: the node is a continuation and n_tag is 
 # Positions in `NodePool.as_tuple()` that generated code reads (the worker free lists).
 P_FREE_HEAD = 8
 P_FREE_N = 9
+P_SK0, P_SK1, P_SK2, P_SK3, P_SK4 = 10, 11, 12, 13, 14     # the sender key fields
+
+SELF_SENDER = -1        # sender key part 0 of a command a partition queues for itself
+
+# (field, dtype) of a command node, in `NodePool.as_tuple()` order (free lists excluded)
+NODE_FIELDS = (("time", "int64"), ("key", "int64"), ("seq", "int64"), ("tag", "int64"),
+               ("next", "int32"), ("kind", "int16"), ("proc", "int16"), ("pay", "int32"),
+               ("sk0", "int16"), ("sk1", "int64"), ("sk2", "int64"), ("sk3", "int64"),
+               ("sk4", "int32"))
+NODE_BYTES = sum(np.dtype(dt).itemsize for _, dt in NODE_FIELDS)
 
 _PRIO_MAX = 63
 _CAUSE_LIMIT = 1 << 56
@@ -121,11 +141,20 @@ class NodePool(_FreeLists):
         self.kind = np.zeros(capacity, np.int16)
         self.proc = np.zeros(capacity, np.int16)
         self.pay = np.full(capacity, -1, np.int32)
+        self.sk0 = np.zeros(capacity, np.int16)
+        self.sk1 = np.zeros(capacity, np.int64)
+        self.sk2 = np.zeros(capacity, np.int64)
+        self.sk3 = np.zeros(capacity, np.int64)
+        self.sk4 = np.zeros(capacity, np.int32)
         self._init_lists(self.next, capacity, workers)
 
     def as_tuple(self) -> tuple:
+        return self.with_free_lists(self.free_head, self.free_n)
+
+    def with_free_lists(self, head: np.ndarray, n: np.ndarray) -> tuple:
+        """The pool tuple with `(head, n)` as the free lists (the reserve, for routing)."""
         return (self.time, self.key, self.seq, self.tag, self.next, self.kind, self.proc,
-                self.pay, self.free_head, self.free_n)
+                self.pay, head, n, self.sk0, self.sk1, self.sk2, self.sk3, self.sk4)
 
 
 class PayloadPool(_FreeLists):
@@ -140,7 +169,34 @@ class PayloadPool(_FreeLists):
 
 @njit(cache=True, nogil=True)
 def q_push(P, w, qhead, g, time, prio, cause, seq, kind, proc, tag, pay):
-    """Insert a command into slot g's queue; -1 when worker w has no free node."""
+    """Queue a command slot g issues for itself (sender `SELF_SENDER`); see `q_push_from`."""
+    return q_push_from(P, w, qhead, g, time, prio, cause, seq, kind, proc, tag, pay,
+                       SELF_SENDER, 0, 0, 0, 0)
+
+
+@njit(cache=True, nogil=True)
+def _after(P, cur, key, s0, s1, s2, s3, s4, seq):
+    """Whether node `cur` (same time) sorts after (key, s0..s4, seq): lexicographic, exact."""
+    if P[1][cur] != key:
+        return P[1][cur] > key
+    if P[P_SK0][cur] != s0:
+        return P[P_SK0][cur] > s0
+    if P[P_SK1][cur] != s1:
+        return P[P_SK1][cur] > s1
+    if P[P_SK2][cur] != s2:
+        return P[P_SK2][cur] > s2
+    if P[P_SK3][cur] != s3:
+        return P[P_SK3][cur] > s3
+    if P[P_SK4][cur] != s4:
+        return P[P_SK4][cur] > s4
+    return P[2][cur] > seq
+
+
+@njit(cache=True, nogil=True)
+def q_push_from(P, w, qhead, g, time, prio, cause, seq, kind, proc, tag, pay, s0, s1, s2, s3,
+                s4):
+    """Insert a command into slot g's queue in (time, key, sender key s0..s4, seq) order; -1
+    when worker w has no free node. `seq` is the sender's own command seq."""
     key = pack_key(prio, cause)
     free_head = P[P_FREE_HEAD]
     node = free_head[w]
@@ -156,16 +212,19 @@ def q_push(P, w, qhead, g, time, prio, cause, seq, kind, proc, tag, pay):
     P[5][node] = kind
     P[6][node] = proc
     P[7][node] = pay
+    P[P_SK0][node] = s0
+    P[P_SK1][node] = s1
+    P[P_SK2][node] = s2
+    P[P_SK3][node] = s3
+    P[P_SK4][node] = s4
     prev = np.int32(-1)
     cur = qhead[g]
     while cur >= 0:
         ct = P[0][cur]
         if ct > time:
             break
-        if ct == time:
-            ck = P[1][cur]
-            if ck > key or (ck == key and P[2][cur] > seq):
-                break
+        if ct == time and _after(P, cur, key, s0, s1, s2, s3, s4, seq):
+            break
         prev = cur
         cur = nxt[cur]
     nxt[node] = cur
