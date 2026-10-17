@@ -53,3 +53,15 @@ def test_cap_exceeded_exits_3(mini, capsys):
 def test_budget_refusal_exits_2(mini, capsys):
     assert main(["run", str(mini), "--set", "budget.memory='1MB'"]) == 2
     assert "exceed the memory budget" in capsys.readouterr().err
+
+
+def test_threads_override_beyond_the_budget_exits_2(mini, capsys):
+    from neorisk_simkit.spec.caps import compute_caps
+    from neorisk_simkit.spec.project import load_project, resolve_run
+
+    run = resolve_run(load_project(mini), "sample", [])
+    fits = f"budget.memory={sum(c.hard_bytes for c in compute_caps(run))}"
+    assert main(["run", str(mini), "--set", fits, "--threads", "64"]) == 2
+    err = capsys.readouterr().err
+    assert "exceed the memory budget" in err and "output_slabs" in err
+    assert not (mini / "out" / "sample-s7").exists()

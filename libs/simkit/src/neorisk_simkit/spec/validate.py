@@ -32,7 +32,9 @@ def _narrow_int(t) -> bool:
     return dt.kind in "iu" and dt.itemsize < 8
 
 
-def validate(run) -> ValidationReport:
+def validate(run, threads: int | None = None) -> ValidationReport:
+    """Every structural error of `run`, and its caps for `threads` workers (default
+    `budget.threads`; pass the worker count the run will allocate)."""
     plan, eng = run.plan, run.engine
     errs: list[str] = []
     warns: list[str] = []
@@ -111,7 +113,7 @@ def validate(run) -> ValidationReport:
     if run.budget.max_spawn_depth < 1:
         errs.append("budget.max_spawn_depth must be >= 1")
 
-    caps = compute_caps(run)
+    caps = compute_caps(run, threads)
     try:
         check_budget(caps, run.budget)
     except BudgetError as e:

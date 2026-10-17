@@ -101,7 +101,8 @@ def run_to_dataset(project_dir: str | Path, profile: str = "sample",
     if engine_overrides:
         run = dataclasses.replace(run, engine=dataclasses.replace(run.engine,
                                                                   **engine_overrides))
-    report = validate(run)
+    threads = int(threads if threads is not None else run.budget.threads)
+    report = validate(run, threads)               # caps for the workers actually allocated
     if not report.ok:
         raise ValidationFailed(report)
     if out_dir is None:
@@ -110,7 +111,6 @@ def run_to_dataset(project_dir: str | Path, profile: str = "sample",
     if out_dir.exists() and not force:
         raise FileExistsError(f"{out_dir} already exists (use force to overwrite)")
 
-    threads = int(threads if threads is not None else run.budget.threads)
     pa.set_cpu_count(threads)
     os.environ.setdefault("POLARS_MAX_THREADS", str(threads))
 

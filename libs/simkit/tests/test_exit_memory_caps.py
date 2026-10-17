@@ -82,3 +82,17 @@ def test_step_output_counts_id_allocations():
         next(Simulation(capped, threads=1).steps())
     assert e.value.item == "step_output" and e.value.attempted > first["rows"]
 
+
+def test_threads_override_is_validated_against_the_budget(tmp_path):
+    """Caps are computed for the worker count the run allocates, not `budget.threads`."""
+    run = make_run("mini")
+    total = sum(c.hard_bytes for c in compute_caps(run))
+    fits = [f"budget.memory={total}"]
+    out = tmp_path / "over"
+    with pytest.raises(ValidationFailed, match="exceed the memory budget") as e:
+        run_to_dataset(MINI, "sample", fits, out_dir=out, threads=run.budget.threads + 8)
+    assert "output_slabs" in str(e.value)
+    assert not out.exists() and not out.with_suffix(".partial").exists()
+    ok = run_to_dataset(MINI, "sample", fits, out_dir=tmp_path / "ok",
+                        threads=run.budget.threads - 1)
+    assert ok.stats["threads"] == run.budget.threads - 1

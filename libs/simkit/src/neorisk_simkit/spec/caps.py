@@ -126,8 +126,10 @@ def _live_state(plan: Plan) -> int:
     return total
 
 
-def compute_caps(run) -> list[CapItem]:
+def compute_caps(run, threads: int | None = None) -> list[CapItem]:
+    """Every item's hard cap and estimate for `threads` workers (default `budget.threads`)."""
     plan, eng, bud = run.plan, run.engine, run.budget
+    workers = bud.threads if threads is None else int(threads)
     rb = record_row_bytes(plan)
     max_row = max(rb.values(), default=0)
 
@@ -141,7 +143,7 @@ def compute_caps(run) -> list[CapItem]:
                 for r in pop.refs.values())
 
     items = {
-        "output_slabs": (bud.threads * slabs_per_worker(plan) * eng.slab_bytes, ""),
+        "output_slabs": (workers * slabs_per_worker(plan) * eng.slab_bytes, ""),
         "step_output": (step, "estimate is 25% of the cap (adaptive target)"),
         "merge_working_space": (2 * step, ""),
         "live_partition_state": (_live_state(plan), ""),
