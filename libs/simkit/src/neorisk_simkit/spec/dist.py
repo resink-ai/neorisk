@@ -31,6 +31,19 @@ def _finite(name: str, v: float) -> float:
     return float(v)
 
 
+_INT_LIMIT = 2**62                     # sampled integers are clipped to [0, 2**62] (sample_np)
+
+
+def _int_bound(name: str, v: float, lo: float = 0) -> float:
+    """An integer-valued bound: finite, whole and in `[lo, 2**62]`."""
+    _finite(name, v)
+    if float(v) != math.floor(v):
+        raise ValueError(f"{name} must be an integer, got {v}")
+    if not lo <= v <= _INT_LIMIT:
+        raise ValueError(f"{name} must be in [{lo}, 2**62], got {v}")
+    return float(v)
+
+
 def _pos(name: str, v: float) -> float:
     if not v > 0:
         raise ValueError(f"{name} must be > 0, got {v}")
@@ -105,6 +118,8 @@ def geometric(mean: float, max: int | None = None) -> Dist:
     if not mean >= 1:
         raise ValueError("geometric mean must be >= 1")
     _finite("mean", mean)
+    if max is not None:
+        _int_bound("max", max)                  # 0 = unbounded
     return Dist(GEOMETRIC, (float(mean), float(max or 0), 0.0))
 
 
@@ -115,8 +130,8 @@ def negbinom(mean: float, disp: float) -> Dist:
 
 
 def uniform_int(lo: int, hi: int) -> Dist:
-    _finite("lo", lo)
-    _finite("hi", hi)
+    _int_bound("lo", lo, -_INT_LIMIT)
+    _int_bound("hi", hi, -_INT_LIMIT)
     if hi < lo:
         raise ValueError("uniform_int needs lo <= hi")
     return Dist(UNIFORM_INT, (float(lo), float(hi), 0.0))
@@ -153,7 +168,7 @@ def lognormal_minor(median: float, sigma: float, min: int | None = None,
                     max: int | None = None) -> Dist:
     _pos("median", median)
     _pos("sigma", sigma)
-    lo, hi = float(min or 0), float(max or 0)
+    lo, hi = (_int_bound(k, v or 0) for k, v in (("min", min), ("max", max)))
     if hi and hi < lo:
         raise ValueError("lognormal_minor needs min <= max")
     # bounds do not fit the 3 numeric params; carried in weights as (min, max), 0 = unbounded

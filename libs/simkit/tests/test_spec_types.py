@@ -116,8 +116,30 @@ NAN, INF = float("nan"), float("inf")
     lambda: dist.uniform_int(lo=NAN, hi=3), lambda: dist.zipf(s=INF),
     lambda: dist.poisson_daily(weekly=(1, 1, 1, NAN, 1, 1, 1)),
     lambda: dist.poisson_daily(trend=NAN), lambda: dist.lognormal_minor(median=NAN, sigma=1),
+    lambda: dist.geometric(2, max=NAN), lambda: dist.geometric(2, max=INF),
+    lambda: dist.lognormal_minor(100, 1, min=NAN), lambda: dist.lognormal_minor(100, 1, max=INF),
+    lambda: dist.uniform_int(lo=0, hi=INF),
 ], ids=lambda f: "")
 def test_dist_rejects_non_finite_parameters(make):
     """A NaN (or meaningless infinite) parameter is refused, never sampled into garbage."""
     with pytest.raises(ValueError, match="finite|> 0|>= 1"):
         make()
+
+
+@pytest.mark.parametrize("make", [
+    lambda: dist.geometric(2, max=2.5), lambda: dist.geometric(2, max=-1),
+    lambda: dist.geometric(2, max=2**63),
+    lambda: dist.lognormal_minor(100, 1, min=1.5), lambda: dist.lognormal_minor(100, 1, min=-1),
+    lambda: dist.lognormal_minor(100, 1, max=2**63), lambda: dist.uniform_int(lo=0.5, hi=3),
+    lambda: dist.uniform_int(lo=0, hi=2**63), lambda: dist.uniform_int(lo=-(2**63), hi=0),
+], ids=lambda f: "")
+def test_dist_rejects_bounds_outside_the_integer_range(make):
+    """Optional bounds are integers that sampling can hold (Codex CX4)."""
+    with pytest.raises(ValueError, match="integer|2\\*\\*62"):
+        make()
+
+
+def test_dist_integer_bounds_in_range_are_kept():
+    assert dist.geometric(2, max=5).params[1] == 5.0
+    assert dist.lognormal_minor(100, 1, min=0, max=2**62).weights == (0.0, float(2**62))
+    assert dist.uniform_int(-3, 3).params[:2] == (-3.0, 3.0)
