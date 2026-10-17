@@ -67,12 +67,14 @@ def replay_inventory(events: dict[str, pl.DataFrame], on_hand0: dict[int, int],
     initial stock; `slots` is the hold-table size. A reserve is granted iff
     `on_hand - reserved >= quantity` and fewer than `slots` holds are live; a rejection says
     `out_of_stock` when stock is short, else `busy`. Commits, releases and expiries name a live
-    hold of that SKU, checkout and quantity and free it; `stock_commit_late` names a hold that is
-    not live and moves nothing; `on_hand_after` matches the model's stock."""
+    hold of that SKU, checkout and quantity and free it; `stock_commit_late` names a hold of this
+    group, SKU, checkout and quantity that its TTL expired, and moves nothing; `on_hand_after`
+    matches the model's stock."""
     out: list[str] = []
     on_hand = dict(on_hand0)
     reserved: dict[int, int] = {}
     live: dict[int, dict[int, tuple[int, int, int]]] = {}     # group -> hold -> (sku, ckt, qty)
+    dead: dict[int, tuple[int, tuple[int, int, int], str]] = {}   # hold -> (group, hold, how)
     for r in _rows(events, _INVENTORY, "sku_group"):
         ev, sku, qty = r["_ev"], r["sku_id"], r["quantity"]
         holds = live.setdefault(r["sku_group"], {})
@@ -106,14 +108,20 @@ def replay_inventory(events: dict[str, pl.DataFrame], on_hand0: dict[int, int],
                 holds[hold] = (sku, r["checkout_id"], qty)
                 reserved[sku] = reserved.get(sku, 0) + qty
         elif ev == "stock_commit_late":
-            if r["hold_id"] in holds:
-                out.append(_miss(r, "hold", "a hold no longer live", r["hold_id"]))
+            hold = r["hold_id"]
+            want = (r["sku_group"], (sku, r["checkout_id"], qty), "stock_expired")
+            if dead.get(hold) != want:
+                got = dead.get(hold) or ("live" if any(hold in h for h in live.values())
+                                         else "never issued")
+                out.append(_miss(r, f"hold {hold} (group, (sku_id, checkout_id, quantity), "
+                                 "ended by)", want, got))
         else:                                       # committed, released, expired
             hold = r["hold_id"]
             h = holds.pop(hold, None)
             if h is None:
                 out.append(_miss(r, "hold", "a live hold", hold))
                 continue
+            dead[hold] = (r["sku_group"], h, ev)
             if h != (sku, r["checkout_id"], qty):
                 out.append(_miss(r, "(sku_id, checkout_id, quantity)", h,
                                  (sku, r["checkout_id"], qty)))
