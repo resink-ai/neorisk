@@ -577,7 +577,6 @@ class World:
                   np.zeros(G, np.int64), np.zeros(1, np.int64), np.zeros(G, np.uint8),
                   self._bnd_array(lambda b: 0), np.zeros(G, np.int64))
         self.pending_creates: list[_Creation] = []
-        self.created_causes: list[tuple[int, int]] = []    # (handle, lamport) admitted this step
         self.admissions = 0                               # created owners admitted this step
         self.run_buf = np.zeros(G, np.int64)              # runnable slots (compiled rounds)
         self.shard_buf = np.zeros(max(1, G - self.shard_lo), np.int64)
@@ -698,7 +697,6 @@ class World:
                                   process=proc)
             ls, self.free_lslots[part.name] = int(free[0]), free[1:]
             g = self.slot_base[part.name] + ls
-            self.created_causes.append((c.handle, c.cause))
             k = handle_ordinal(c.handle) - first[(c.src_g, c.cause, c.ns)]
             inst = _as_i64(rng.mix(int(hid.inst[c.src_g]), c.cause, c.ns, k))
             self._reset_slots(part, np.array([g]), c.handle, c.handle, inst)
@@ -716,12 +714,6 @@ class World:
             rt.mark_touched(self.R, g)
             admitted.append(g)
         return np.array(admitted, np.int64)
-
-    def take_created_causes(self) -> tuple[np.ndarray, np.ndarray]:
-        """(handles, creator commit lamports) of the owners admitted this step; clears them."""
-        got = np.array(self.created_causes, np.int64).reshape(-1, 2)
-        self.created_causes = []
-        return got[:, 0].copy(), got[:, 1].copy()
 
     def _created_rows(self, namespaces: set[str]) -> dict[str, Any]:
         """Per namespace, a lookup `handle -> create-slab row` over every worker's live create

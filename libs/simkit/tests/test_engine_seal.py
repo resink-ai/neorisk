@@ -109,25 +109,3 @@ def test_retired_slots_are_reused_after_seal():
     freed = sum(s.stats["freed_slots"] for s in sim.steps())
     assert freed >= 50 and sim.stats["rejects"]["user_main"] == freed
 
-
-def test_owner_dense_ranks_by_creation_key_and_solves_provisional_creators():
-    """Created owners rank by (created_at, commit lamport, creator pid, ordinal), whatever the
-    row order; a creator created this step (provisional pid) ranks by its final pid, which
-    `_owner_dense` solves for (here row order is the reverse of the final order)."""
-    from neorisk_simkit.engine.identity import make_handle
-    from neorisk_simkit.io.seal import _owner_dense
-
-    pop = (1 << 56) | 4                                   # a population creator (dense pid)
-    p0, p1 = make_handle(0, 7, 0), make_handle(0, 7, 1)   # two pays, one commit of `pop`
-    r0, r1 = make_handle(1, 9, 0), make_handle(1, 3, 0)   # one refund per pay, same lamport
-    i64 = lambda *v: np.array(v, np.int64)
-    creates = {
-        "pay": {"handle": i64(p1, p0), "pid": i64(pop, pop), "ordinal": i64(1, 0),
-                "created_at": i64(10, 10)},
-        "refund": {"handle": i64(r1, r0), "pid": i64(p1, p0), "ordinal": i64(0, 0),
-                   "created_at": i64(10, 10)},
-    }
-    causes = (i64(p0, p1, r0, r1), i64(5, 5, 6, 6))
-    dense = _owner_dense(creates, {"pay": 2, "refund": 3}, causes, {"pay": 100})
-    assert dense["pay"].tolist() == [101, 100]
-    assert dense["refund"].tolist() == [1, 0]           # r0 (creator p0 = 100) ranks first
