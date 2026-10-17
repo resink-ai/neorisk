@@ -225,15 +225,24 @@ def test_creation_messages_count_toward_the_outbox(fixture_project):
 
 
 def test_laws_must_resolve_and_count_checker_state(fixture_project):
-    """D47: every law path and table resolves; `checker_state` is 24 B per key once any check
-    is declared."""
+    """D47: every law path and table resolves; `checker_state` is 24 B per key, reserved only
+    when a keyed law (`at_most_once`, `sum_le`, `resolved`) is declared."""
     from neorisk_simkit.spec import law
     from neorisk_simkit.spec.plan import CheckDef
 
     led = resolve_run(load_project(fixture_project("ledger")), "sample", [])
-    assert validate(led).ok
+    assert validate(led).ok                       # row and state laws only: no keys carried
     caps = {c.name: c for c in compute_caps(led)}
-    assert caps["checker_state"].hard_bytes == 24 * led.budget.max_checker_keys == 24_000
+    assert caps["checker_state"].hard_bytes == 0
+    small = dataclasses.replace(led, budget=dataclasses.replace(led.budget,
+                                                                memory_bytes=64 * 2**20))
+    check_budget(compute_caps(small), small.budget)
+    keyed = dataclasses.replace(led, plan=dataclasses.replace(led.plan, checks=(
+        *led.plan.checks, CheckDef("once", law.at_most_once("opened", key="acct_id"), True))))
+    caps = {c.name: c for c in compute_caps(keyed)}
+    assert caps["checker_state"].hard_bytes == 24 * keyed.budget.max_checker_keys
+    with pytest.raises(BudgetError, match="checker_state"):
+        check_budget(compute_caps(keyed), small.budget)
     checks = (("a", law.never_negative("acct.nope")), ("b", law.total_le("acct.bal", 5)),
               ("c", law.at_most_once("opened", key="nope")), ("d", law.balanced("nope")),
               ("e", law.balanced("entry", side="account")))

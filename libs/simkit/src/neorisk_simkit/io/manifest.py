@@ -84,8 +84,9 @@ def write_manifest(run_dir: Path, run: Any, files: list[FileEntry], counts: dict
     counted apart in `posting_counts`, `history_counts` and `entity_counts`.
     `pairing` is `{request boundary: {"requests": delivered, "responses": routed}}` (D40).
     `accumulators` is each accumulator's total over exported steps (D46).
-    `laws` is `LawBook.report()`: per check, rows checked, violations and the first citation
-    (D47)."""
+    `laws` is `LawBook.report()` (D47): per check, values checked, violations and the first
+    citation. A non-required `total_le` counts one violation per row that leaves the running
+    total above its limit; `at_most_once` skips rows with a null key."""
     plan = run.plan
     options = writer_options(run.writer, *plan_columns(plan))
     writer = {k: (sorted(v) if isinstance(v, list) else v) for k, v in options.items()}

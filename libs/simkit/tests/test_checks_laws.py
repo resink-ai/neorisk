@@ -191,3 +191,40 @@ def test_an_empty_run_checks_nothing(tmp_path):
     laws = json.loads((r.out_dir / "manifest.json").read_text())["laws"]
     for k in ("chk.opened_positive", "chk.entries_balance"):
         assert (laws[k]["checked"], laws[k]["violations"]) == (0, 0), k
+
+
+def test_null_keys_are_skipped():
+    """Review M5: a row with a null key column has no key; it is neither judged nor kept."""
+    book = LawBook(_plan(("chk.once", law.at_most_once("opened", key="acct_id"), True),
+                         ("chk.pair", law.at_most_once("opened", key=("acct_id", "amount")),
+                          True)), max_keys=10)
+    t = _table([{"t": 1, "acct_id": None, "amount": 1}, {"t": 2, "acct_id": None, "amount": 1},
+                {"t": 3, "acct_id": 4, "amount": 1}])
+    assert book.step(_sealed(0, 10, {"opened": t}), None) == {"chk.once": 1, "chk.pair": 1}
+    assert book.keys == 2
+    with pytest.raises(LawViolation, match=r"\(partition_id 1, seq 1\).*acct_id 4 seen before"):
+        book.step(_sealed(10, 20, {"opened": _table([
+            {"t": 11, "acct_id": None, "amount": 1}, {"t": 12, "acct_id": 4, "amount": 1}])}),
+            None)
+
+
+def test_an_owner_retired_in_its_step_is_judged_on_its_final_state():
+    """Review M2: every ledger account opens (bal < 0 with `bad=1`) and retires idle in the
+    same step, so it is never live at a seal; state laws still judge the slots freed at the
+    seal and cite the account's partition_id."""
+    from neorisk_simkit.engine.run import Simulation
+
+    run = make_run("ledger", ["bad=1"])
+    run = dataclasses.replace(run, plan=dataclasses.replace(run.plan, checks=tuple(
+        c for c in run.plan.checks if c.id == "chk.bal_positive")))
+    sim = Simulation(run, threads=1)
+    opened = []
+    for s in sim.steps():
+        if s.exported:
+            assert not sim.world.hidden.alive[s.retired].any()
+            assert s.stats["laws"]["chk.bal_positive"] == len(s.retired)
+            opened += s.events["opened"].column("partition_id").to_pylist()
+    r = sim.stats["laws"]["chk.bal_positive"]
+    assert opened and r["checked"] == r["violations"] == len(opened)
+    assert r["first"]["partition_id"] == opened[0] and r["first"]["seq"] == -1
+    assert r["first"]["table"] == "state acct.bal" and r["first"]["detail"].startswith("bal = -")

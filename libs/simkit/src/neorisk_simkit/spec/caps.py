@@ -22,6 +22,7 @@ PAYLOAD_W = _cmdq.PAYLOAD_W
 OUTBOX_ROW_BYTES = 8 * 12 + 8 * PAYLOAD_W
 
 CHECKER_KEY_BYTES = 24              # spec section 10: keyed aggregates x bytes per key (D47)
+KEYED_LAWS = ("at_most_once", "sum_le", "resolved")   # laws carrying keys across steps
 
 _LOCAL_TYPE_BYTES = {"i8": 1, "u8": 1, "i16": 2, "i32": 4, "u32": 4, "i64": 8, "f64": 8, "ref": 8}
 _ORDERING_COLS_BYTES = 5 * 8        # entity_id, valid_from, lamport, partition_id, seq
@@ -207,8 +208,9 @@ def compute_caps(run, threads: int | None = None) -> list[CapItem]:
         "fanout_bursts": (sum(p.kernel.substep * max_row for p in plan.processes
                               if p.kernel.substep), ""),
         "read_inputs": (read, ""),
-        "checker_state": ((CHECKER_KEY_BYTES * bud.max_checker_keys if plan.checks else 0),
-                          "law reducer keys x 24 B (D47)"),
+        "checker_state": ((CHECKER_KEY_BYTES * bud.max_checker_keys
+                           if any(c.law.kind in KEYED_LAWS for c in plan.checks) else 0),
+                          "keyed law reducers x 24 B per key (D47)"),
         "scorer": (0, "not used in S1"),
         "entity_buffers": (sum(entity_buffer_bytes(plan, run.writer.row_group_rows)),
                            "row groups buffered by the entity writer, plus one being written"),

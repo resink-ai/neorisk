@@ -33,13 +33,17 @@ def sum_le(lhs: str, rhs: str, *, by: str) -> LawSpec:
 
 
 def at_most_once(event: str, *, key: tuple[str, ...] | str) -> LawSpec:
-    """`event` occurs at most once per `key`."""
+    """`event` occurs at most once per `key`; a row with a null key column is skipped."""
     key = (key,) if isinstance(key, str) else tuple(key)
     return LawSpec("at_most_once", (("event", event), ("key", key)))
 
 
 def total_le(lhs: str, limit: int) -> LawSpec:
-    """The running total of `lhs` (`event.column`) over the whole run never exceeds `limit`."""
+    """The running total of `lhs` (`event.column`) over the whole run never exceeds `limit`.
+
+    Warm-up rows count toward the total but are never judged. Each exported row that leaves the
+    total above `limit` is one violation, so a non-required law that is exceeded keeps
+    counting every later row until the total falls back to `limit`."""
     return LawSpec("total_le", (("lhs", lhs), ("limit", int(limit))))
 
 

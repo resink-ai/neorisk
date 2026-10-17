@@ -83,14 +83,20 @@ def _mix64(x: np.ndarray) -> np.ndarray:
     return x ^ (x >> np.uint64(31))
 
 
-def row_keys(t: pa.Table, cols: tuple[str, ...]) -> np.ndarray:
-    """int64 key per row: the column itself for one column, else `rng.mix` of the columns."""
-    if len(cols) == 1:
-        return np.asarray(_column(t, cols[0])[0], np.int64)
+def row_keys(t: pa.Table, cols: tuple[str, ...]) -> tuple[np.ndarray, np.ndarray]:
+    """(int64 key per row, indices of the rows whose key columns are all non-null). The key is
+    the column itself for one column, else `rng.mix` of the columns."""
+    keep = np.ones(t.num_rows, bool)
     h = np.zeros(t.num_rows, np.uint64)
     for c in cols:
-        h = _mix64(h ^ np.asarray(_column(t, c)[0], np.int64).view(np.uint64))
-    return h.view(np.int64)
+        v, valid = _column(t, c)
+        if valid is not None:
+            keep &= valid
+        v = np.asarray(v, np.int64)
+        if len(cols) == 1:
+            return v, np.flatnonzero(keep)
+        h = _mix64(h ^ v.view(np.uint64))
+    return h.view(np.int64), np.flatnonzero(keep)
 
 
 def _cite(t: pa.Table, i: int) -> tuple[int, int, int]:
@@ -161,8 +167,9 @@ class _NeverNegativeRows(_Law):
 
 
 class _TotalLe(_Law):
-    """Running total over the run (warm-up rows included); every row that leaves the total
-    above the limit is a violation."""
+    """Running total over the run (warm-up rows included). Every judged row that leaves the
+    total above the limit is one violation (a non-required law keeps counting each such row,
+    zero or negative amounts included, until the total drops back to the limit)."""
 
     def __init__(self, cdef: Any, table: str, col: str, limit: int):
         super().__init__(cdef)
@@ -200,7 +207,8 @@ class _TotalLe(_Law):
 
 
 class _AtMostOnce(_Law):
-    """Keys seen across the run, carried as a sorted int64 array."""
+    """Keys seen across the run, carried as a sorted int64 array. A row with a null key column
+    has no key: it is neither judged nor remembered."""
 
     def __init__(self, cdef: Any, table: str, key: tuple[str, ...]):
         super().__init__(cdef)
@@ -214,13 +222,15 @@ class _AtMostOnce(_Law):
     def warm(self, rows):
         t = rows.get(self.table)
         if t is not None and t.num_rows:
-            self.seen = np.union1d(self.seen, row_keys(t, self.key))
+            k, keyed = row_keys(t, self.key)
+            self.seen = np.union1d(self.seen, k[keyed])
 
     def judge(self, rows, world, retired):
         t = rows.get(self.table)
         if t is None or not t.num_rows:
             return 0
-        k = row_keys(t, self.key)
+        k_all, keyed = row_keys(t, self.key)
+        k = k_all[keyed]
         pos = np.searchsorted(self.seen, k)
         bad = (pos < len(self.seen)) & (self.seen[np.minimum(pos, len(self.seen) - 1)] == k) \
             if len(self.seen) else np.zeros(len(k), bool)
@@ -229,11 +239,11 @@ class _AtMostOnce(_Law):
         bad[order[1:][ks[1:] == ks[:-1]]] = True
         n_bad = int(bad.sum())
         if n_bad:
-            i = int(np.argmax(bad))
+            i = int(keyed[np.argmax(bad)])
             first = int(_column(t, self.key[0])[0][i])
             self._fail(self.table, _cite(t, i), f"{self.key[0]} {first} seen before", n_bad)
         self.seen = np.union1d(self.seen, k)
-        return t.num_rows
+        return len(keyed)
 
 
 class _Balanced(_Law):
