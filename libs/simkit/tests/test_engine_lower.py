@@ -245,3 +245,29 @@ def test_lowering_is_byte_identical_on_repeat(plan):
     a = lower_module(src, kernel_layouts(plan), funcs)
     b = lower_module(src, kernel_layouts(plan), funcs)
     assert a == b
+
+
+@pytest.mark.parametrize("body, cycle", [
+    ("""
+        def fact(n):
+            return 1 if n <= 1 else n * fact(n - 1)
+
+        def k(ctx, s, loc, cmd, out):
+            return fact(3)
+    """, "fact -> fact"),
+    ("""
+        def even(n):
+            return True if n == 0 else odd(n - 1)
+
+        def odd(n):
+            return False if n == 0 else even(n - 1)
+
+        def k(ctx, s, loc, cmd, out):
+            return even(4)
+    """, "even -> odd -> even"),
+], ids=["self", "mutual"])
+def test_recursive_helpers_are_rejected(plan, body, cycle):
+    """Helpers are compiled `inline='always'`, so recursion cannot compile; lowering says so
+    instead of an opaque Numba error."""
+    with pytest.raises(LoweringError, match=f"recursive.*{cycle}"):
+        _lower(plan, body)

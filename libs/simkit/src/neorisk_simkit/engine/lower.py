@@ -179,6 +179,7 @@ class _Analysis:
                 if c.func.id not in self.graph:
                     self.graph.append(c.func.id)
             i += 1
+        self._reject_recursion(root)
         self.param_alias: dict[str, dict[str, tuple[str, ...]]] = {f: {} for f in self.graph}
         self.aliases: dict[str, dict[str, tuple[str, ...]]] = {}
         for _ in range(len(self.graph) + 2):
@@ -198,6 +199,26 @@ class _Analysis:
                 if len(paths) > 1 and any(x is not None for x in paths):
                     mod.err(mod.funcs[h], f"helper {h}: parameter {p!r} is a config alias at "
                                           "some call sites but not at others")
+
+    def _reject_recursion(self, root: str) -> None:
+        """Helpers are compiled `inline='always'`, so a call cycle cannot compile: name it."""
+        path: list[str] = []
+        done: set[str] = set()
+
+        def visit(f: str) -> None:
+            path.append(f)
+            for c in _module_calls(self.mod.funcs[f], self.mod):
+                h = c.func.id
+                if h in path:
+                    cycle = " -> ".join([*path[path.index(h):], h])
+                    self.mod.err(c, f"helper {h} is recursive ({cycle}); kernel helpers are "
+                                    "inlined, so recursion is not supported")
+                if h not in done:
+                    visit(h)
+            path.pop()
+            done.add(f)
+
+        visit(root)
 
     def cfg_path(self, node: ast.AST, aliases: Mapping[str, tuple[str, ...]]
                  ) -> tuple[str, ...] | None:
