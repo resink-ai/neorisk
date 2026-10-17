@@ -17,6 +17,7 @@ class Config:
     bad_shard: int = 0                 # 1: address the request to a shard index past n
     request_delay: int = 0             # > 0: date the request after ctx.t (an error)
     create_on_answer: int = 0          # 1: create the payment when the answer arrives
+    bad_ref: int = 0                   # 1: emit `spawned` with an acct_id past every account
     rounds: int = 1                    # request/answer round trips per account
 
 

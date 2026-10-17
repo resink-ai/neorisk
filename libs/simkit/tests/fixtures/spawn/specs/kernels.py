@@ -14,7 +14,7 @@ def acct_main(ctx, s, cmd, out):
             return RETRY
         if ctx.cfg.create_on_answer == 0:
             pay = out.create_pay(acct_id=ctx.self_id, amt=100 + ctx.self_id)
-            out.emit_spawned(ctx.t, acct_id=ctx.self_id, pay_id=pay)
+            out.emit_spawned(ctx.t, acct_id=ctx.self_id + 1000 * ctx.cfg.bad_ref, pay_id=pay)
         out.send_tick(ctx.t, to=ctx.self_id % 2, v=ctx.self_id)
         out.request_ask(ctx.t + ctx.cfg.request_delay,
                         shard=ctx.self_id % 2 + 5 * ctx.cfg.bad_shard, v=ctx.self_id)
@@ -25,7 +25,7 @@ def acct_main(ctx, s, cmd, out):
     out.emit_answered(ctx.t, acct_id=ctx.self_id)
     if ctx.cfg.create_on_answer == 1:
         pay = out.create_pay(acct_id=ctx.self_id, amt=100 + ctx.self_id)
-        out.emit_spawned(ctx.t, acct_id=ctx.self_id, pay_id=pay)
+        out.emit_spawned(ctx.t, acct_id=ctx.self_id + 1000 * ctx.cfg.bad_ref, pay_id=pay)
     s.n += 1
     if s.n < ctx.cfg.rounds:                 # ask again: one more round trip and creation
         out.request_ask(ctx.t, shard=ctx.self_id % 2, v=ctx.self_id)

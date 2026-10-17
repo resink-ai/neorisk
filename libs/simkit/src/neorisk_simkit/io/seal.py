@@ -417,6 +417,9 @@ def seal_step(world: Any, step: int, t0: int, t1: int, exported: bool,
         for c in (tables[ns].cols if ns in tables else ()):
             if c.ltype.kind == "ref":
                 remap.apply(creates[ns][c.name], f"created {ns}.{c.name}")
+    if exported:                                 # D48: dense range check, before public IDs
+        from neorisk_simkit.checks.structural import check_refs, ref_bounds
+        n_refs = check_refs(plan, records, creates, ref_bounds(world, id_bases))
     owners = _remap_world(world, remap)
 
     # 4. free retired slots
@@ -458,4 +461,5 @@ def seal_step(world: Any, step: int, t0: int, t1: int, exported: bool,
                         warmup_rows=warmup_rows, retired=freed)
     if exported:
         stats["checks"] = check_step(sealed, plan)                # 9.
+        stats["checks"]["ref_in_range"] = n_refs
     return sealed

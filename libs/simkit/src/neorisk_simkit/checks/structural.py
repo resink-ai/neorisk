@@ -11,9 +11,11 @@ import pyarrow.compute as pc
 
 from neorisk_simkit.engine.errors import EngineError
 from neorisk_simkit.engine.identity import FLAG
+from neorisk_simkit.io.consts import NULL
 from neorisk_simkit.spec.types import COMMON_COLUMNS
 
-CHECKS = ("canonical_order", "required_not_null", "cat_codes", "no_provisional", "time_in_step")
+CHECKS = ("canonical_order", "required_not_null", "cat_codes", "no_provisional", "time_in_step",
+          "ref_in_range")
 
 
 def _i64(col: pa.ChunkedArray) -> np.ndarray:
@@ -66,6 +68,62 @@ def _check_table(where: str, t: pa.Table, time_col: str, cols, sealed: Any,
         raise EngineError(f"{where}: {time_col} outside the step [{sealed.t_start}, "
                           f"{sealed.t_end})")
     counts["time_in_step"] += t.num_rows
+
+
+def ref_bounds(world: Any, id_bases: dict[str, int]) -> dict[str, int]:
+    """Rows known per ref target (D48): population tables count the owners admitted so far
+    (`pop.next`, not `n`, F-05), static / recipe tables their rows, created namespaces
+    `id_bases[ns]` (after this step's assignment)."""
+    bounds = {name: len(next(iter(cols.values()))) if cols else 0
+              for name, cols in world.tables.items()}
+    for pop in world.populations:
+        bounds[pop.table] = max(bounds.get(pop.table, 0), int(pop.next))
+    for ns in world.plan.namespaces:
+        if ns in id_bases:
+            bounds[ns] = max(bounds.get(ns, 0), int(id_bases[ns]))
+    return bounds
+
+
+def check_ref_range(where: str, values: np.ndarray, target: str, bound: int) -> int:
+    """Check that every non-`NULL` dense ref lies in `[0, bound)`; returns the values checked."""
+    v = np.asarray(values, np.int64)
+    v = v[v != NULL]
+    bad = np.flatnonzero((v < 0) | (v >= bound))
+    if len(bad):
+        raise EngineError(f"{where}: ref {int(v[bad[0]])} outside [0, {bound}) of {target}")
+    return len(v)
+
+
+def check_refs(plan: Any, records: dict[str, dict[str, np.ndarray]],
+               creates: dict[str, dict[str, np.ndarray]], bounds: dict[str, int]) -> int:
+    """Range-check every ref column of the step's events, postings, history and created rows
+    (dense values, after the remap and before public IDs are drawn)."""
+    n = 0
+
+    def one(where: str, rows: dict[str, np.ndarray], c: Any) -> int:
+        lt = c.ltype
+        if lt.target not in bounds:
+            return 0                              # not a table this run knows rows of
+        v = rows[c.name]
+        if lt.nullable:
+            v = v[np.asarray(rows[f"valid_{c.name}"], bool)]
+        return check_ref_range(f"{where}.{c.name}", v, lt.target, bounds[lt.target])
+
+    for e in plan.events:
+        for c in e.cols[len(COMMON_COLUMNS):]:
+            if c.ltype.kind == "ref":
+                n += one(f"{'posting' if e.group == 'postings' else 'event'} {e.name}",
+                         records[e.name], c)
+    for g in plan.change_groups:
+        for c in g.cols:
+            if c.ltype.kind == "ref":
+                n += one(f"history {g.name}", records[g.name], c)
+    tables = {t.name: t for t in plan.tables}
+    for ns in plan.namespaces:
+        for c in (tables[ns].cols if ns in tables else ()):
+            if c.ltype.kind == "ref":
+                n += one(f"created {ns}", creates[ns], c)
+    return n
 
 
 def check_step(sealed: Any, plan: Any) -> dict[str, int]:
