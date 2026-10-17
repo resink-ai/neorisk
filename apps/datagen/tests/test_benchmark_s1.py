@@ -44,3 +44,25 @@ def test_scaled_smoke_run(tmp_path):
     reserves = rep["requests_by_boundary"]["reserve"]
     assert 0 < reserves < rep["proposals"]
     assert rep["inventory_share_of_proposals"] == reserves / rep["proposals"]
+
+
+def test_failing_child_keeps_its_exit_code(tmp_path, monkeypatch):
+    """D35: a validation error in the benchmark child exits 2 (not 1), CapExceeded exits 3."""
+    import datagen.benchmark as bm
+
+    wl = tmp_path / "bad.toml"
+    wl.write_text(f'[workload]\nname = "bad"\nproject = "{S1.parent / "../examples/ecommerce_s1"}"\n'
+                  'profile = "sample"\nset = ["no_such_knob=1"]\n[gate]\nwarm_seconds = 60\n')
+    assert main(["benchmark", str(wl), "--out", str(tmp_path / "r.json")]) == 2
+
+    def cap_exceeded(cmd, env):
+        raise bm.ChildFailed(3, cmd)
+
+    monkeypatch.setattr(bm, "_run_child", cap_exceeded)
+    assert main(["benchmark", str(S1), "--out", str(tmp_path / "r.json")]) == 3
+
+
+def test_memory_is_reported_in_gib():
+    r = evaluate(_stats(peak_rss_bytes=8 * 1024**3), load_workload(S1), scale=1.0)
+    rss = next(c for c in r["checks"] if c["name"] == "peak_rss_gib")
+    assert rss["value"] == 8.0 and rss["limit"] == 16.0

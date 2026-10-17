@@ -14,6 +14,10 @@ must not change with it (the child asserts it), and the verdict is then `skipped
 
 Expectations are `{around, tolerance}`: for a count (`around > 1`) the tolerance is relative
 (10⁷ ± 5%), for a share (`around <= 1`) it is absolute (8% ± 2 points).
+
+Memory is reported in GiB (2³⁰ bytes): the gate's `peak_rss_gb` limit is read as GiB and the
+report's check is named `peak_rss_gib`. A failing child keeps its exit code (D35: 2 validation,
+3 `CapExceeded`); any other failure is 1.
 """
 
 from __future__ import annotations
@@ -48,6 +52,14 @@ class Workload:
     gate: dict[str, Any]
     shape: dict[str, Any] = field(default_factory=dict)
     path: Path | None = None
+
+
+class ChildFailed(RuntimeError):
+    """A benchmark subprocess exited non-zero; `code` is its exit code."""
+
+    def __init__(self, code: int, cmd: list[str]):
+        super().__init__(f"benchmark child failed with exit code {code}: " + " ".join(cmd))
+        self.code = code
 
 
 def load_workload(path: str | Path) -> Workload:
@@ -87,8 +99,8 @@ def evaluate(stats: dict[str, Any], wl: Workload, *, scale: float) -> dict[str, 
         v, lim = float(stats["engine_seconds"]), float(gate["warm_seconds"])
         checks.append({"name": "warm_seconds", "value": v, "limit": lim, "ok": v <= lim})
     if "peak_rss_gb" in gate:
-        v, lim = stats["peak_rss_bytes"] / _GIB, float(gate["peak_rss_gb"])
-        checks.append({"name": "peak_rss_gb", "value": v, "limit": lim, "ok": v <= lim})
+        v, lim = stats["peak_rss_bytes"] / _GIB, float(gate["peak_rss_gb"])     # GiB
+        checks.append({"name": "peak_rss_gib", "value": v, "limit": lim, "ok": v <= lim})
     values = stats | derived(stats)
     for name, spec in wl.expect.items():
         v = float(values[name])
@@ -122,8 +134,7 @@ def _run_child(cmd: list[str], env: dict[str, str]) -> float:
     proc = subprocess.run(cmd, env=env, check=False)
     elapsed = time.perf_counter() - t0
     if proc.returncode != 0:
-        raise RuntimeError(f"benchmark child failed with exit code {proc.returncode}: "
-                           + " ".join(cmd))
+        raise ChildFailed(proc.returncode, cmd)
     return elapsed
 
 
@@ -143,11 +154,20 @@ def _child_main(argv: list[str]) -> int:
     os.environ["POLARS_MAX_THREADS"] = str(a.threads)
 
     from neorisk_simkit.engine.build import build_engine
-    from neorisk_simkit.io.dataset import run_to_dataset
-    from neorisk_simkit.spec.project import load_project, resolve_run
+    from neorisk_simkit.engine.errors import CapExceeded
+    from neorisk_simkit.io.dataset import ValidationFailed, run_to_dataset
+    from neorisk_simkit.spec.caps import BudgetError
+    from neorisk_simkit.spec.project import ProjectError, load_project, resolve_run
 
-    run_to_dataset(a.project, a.profile, a.set, seed=a.seed, threads=a.threads,
-                   out_dir=Path(a.out), force=True)
+    try:
+        run_to_dataset(a.project, a.profile, a.set, seed=a.seed, threads=a.threads,
+                       out_dir=Path(a.out), force=True)
+    except (ValidationFailed, BudgetError, ProjectError) as e:       # D35, as `datagen run`
+        print(e, file=sys.stderr)
+        return 2
+    except CapExceeded as e:
+        print(e, file=sys.stderr)
+        return 3
     plan = resolve_run(load_project(a.project), a.profile, a.set, seed=a.seed).plan
     module = build_engine(plan).__file__
     if a.expect_module is not None and module != a.expect_module:
@@ -205,7 +225,7 @@ def summary(rep: dict[str, Any]) -> str:
     rows = [
         ("workload", f"{rep['workload']} (scale {rep['scale']})"),
         ("machine", f"{m.get('arch')} · {m.get('cpus')} cores · "
-                    f"{(m.get('ram_bytes') or 0) / _GIB:.0f} GB"
+                    f"{(m.get('ram_bytes') or 0) / _GIB:.0f} GiB"
                     + ("" if rep["reference_hardware"] else " (not reference hardware)")),
         ("threads", rep.get("threads")),
         ("exported events", f"{rep['exported_events']:,}"),
@@ -215,7 +235,7 @@ def summary(rep: dict[str, Any]) -> str:
         ("cold compile s", f"{rep['cold_compile_seconds']:.2f}"
                            + (" (cold cache)" if rep["cold"] else " (cache as found)")),
         ("stages s", " · ".join(f"{k} {v:.2f}" for k, v in st.items())),
-        ("peak RSS GB", f"{rep['peak_rss_bytes'] / _GIB:.2f}"),
+        ("peak RSS GiB", f"{rep['peak_rss_bytes'] / _GIB:.2f}"),
         ("rounds/step max", max(rep.get("rounds_per_step") or [0])),
     ]
     lines = [f"{k:<18}{v}" for k, v in rows]
@@ -230,6 +250,9 @@ def cmd_benchmark(args: argparse.Namespace) -> int:
     try:
         rep = run_benchmark(args.workload, scale=args.scale, cold=args.cold,
                             threads=args.threads, out_json=args.out)
+    except ChildFailed as e:
+        print(e, file=sys.stderr)
+        return e.code if e.code in (2, 3) else 1
     except (OSError, KeyError, RuntimeError, tomllib.TOMLDecodeError) as e:
         print(e, file=sys.stderr)
         return 1
