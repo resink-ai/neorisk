@@ -71,3 +71,9 @@ def test_zero_threads_exits_2(mini, capsys):
     assert main(["run", str(mini), "--threads", "0"]) == 2
     assert "threads must be >= 1" in capsys.readouterr().err
     assert not (mini / "out" / "sample-s7").exists()
+
+
+def test_required_law_violation_exits_4(tmp_path):
+    assert main(["run", str(FIXTURES / "ledger"), "--profile", "sample", "--set", "bad=1",
+                 "--out", str(tmp_path / "x")]) == 4
+    assert not (tmp_path / "x").exists()

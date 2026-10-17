@@ -1,4 +1,5 @@
-"""Inert law builders for `p.check(...)`; stored in the plan, evaluated from S2 on."""
+"""Law builders for `p.check(...)`: inert specs stored in the plan, evaluated at seal by
+`checks.laws.LawBook` (D47)."""
 
 from __future__ import annotations
 
@@ -35,3 +36,16 @@ def at_most_once(event: str, *, key: tuple[str, ...] | str) -> LawSpec:
     """`event` occurs at most once per `key`."""
     key = (key,) if isinstance(key, str) else tuple(key)
     return LawSpec("at_most_once", (("event", event), ("key", key)))
+
+
+def total_le(lhs: str, limit: int) -> LawSpec:
+    """The running total of `lhs` (`event.column`) over the whole run never exceeds `limit`."""
+    return LawSpec("total_le", (("lhs", lhs), ("limit", int(limit))))
+
+
+def balanced(table: str, *, amount: str = "amount", side: str = "side",
+             by: tuple[str, ...] = ("partition_id", "lamport")) -> LawSpec:
+    """Per `by` group of `table` (default: one commit), Σ `amount` of `side == "debit"` rows
+    equals Σ `amount` of `side == "credit"` rows."""
+    return LawSpec("balanced", (("table", table), ("amount", amount), ("side", side),
+                                ("by", tuple(by))))

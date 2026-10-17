@@ -121,6 +121,59 @@ def _spawn_errors(run) -> list[str]:
     return []
 
 
+def _law_reason(plan, law) -> str | None:
+    """Why a declared law cannot be evaluated (D47), or None."""
+    from neorisk_simkit.checks.laws import resolve_path
+
+    events = {e.name: {c.name: c.ltype for c in e.cols} for e in plan.events}
+
+    def event_cols(name: str, cols) -> str | None:
+        if name not in events:
+            return f"unknown event or posting table '{name}'"
+        missing = [c for c in cols if c not in events[name]]
+        return f"{name} has no column {missing[0]}" if missing else None
+
+    def event_path(path: str) -> str | None:
+        try:
+            kind = resolve_path(plan, path)[0]
+        except ValueError as e:
+            return str(e)
+        return None if kind == "event" else f"{path!r} is not an event or posting column"
+
+    k = law.kind
+    if k == "never_negative":
+        try:
+            resolve_path(plan, law.arg("path"))
+        except ValueError as e:
+            return str(e)
+        return None
+    if k == "total_le":
+        return event_path(law.arg("lhs"))
+    if k == "sum_le":
+        return event_path(law.arg("lhs")) or event_path(law.arg("rhs"))
+    if k == "at_most_once":
+        return event_cols(law.arg("event"), law.arg("key"))
+    if k == "resolved":
+        key = (law.arg("key"),)
+        return next((r for r in (event_cols(e, key) for e in (law.arg("event"), *law.arg("by")))
+                     if r), None)
+    if k == "balanced":
+        t = law.arg("table")
+        bad = event_cols(t, (law.arg("amount"), law.arg("side"), *law.arg("by")))
+        if bad:
+            return bad
+        side = events[t][law.arg("side")]
+        if side.kind != "cat" or not {"debit", "credit"} <= set(side.values):
+            return f"{t}.{law.arg('side')} must be a cat holding 'debit' and 'credit'"
+        return None
+    return f"unknown law {k!r}"
+
+
+def _law_errors(plan) -> list[str]:
+    return [f"check {c.id}: {r}" for c in plan.checks
+            if (r := _law_reason(plan, c.law)) is not None]
+
+
 def validate(run, threads: int | None = None) -> ValidationReport:
     """Every structural error of `run`, and its caps for `threads` workers (default
     `budget.threads`; pass the worker count the run will allocate)."""
@@ -229,7 +282,5 @@ def validate(run, threads: int | None = None) -> ValidationReport:
         except BudgetError as e:
             errs.append(str(e))
 
-    if plan.checks:
-        warns.append("checks declared but not evaluated until S2: "
-                     + ", ".join(c.id for c in plan.checks))
+    errs += _law_errors(plan)
     return ValidationReport(errs, warns, caps)

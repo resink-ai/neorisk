@@ -3,7 +3,7 @@ from neorisk_simkit.engine import COMMIT, RETRY, START, Res, kernel, reject
 
 @kernel(state="acct", commands=(START,), max=Res(records={"opened": 1, "entry": 2}))
 def acct_main(ctx, s, cmd, out):
-    amt = 100 + ctx.self_id
+    amt = 100 + ctx.self_id - 1000 * ctx.cfg.bad
     if not out.reserve(records={"opened": 1, "entry": 2}):
         return RETRY
     if ctx.cfg.add_then_reject == 1:

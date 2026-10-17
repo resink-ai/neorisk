@@ -42,13 +42,15 @@ def test_totals_do_not_depend_on_threads_or_step_length(tmp_path, threads, step_
 def test_an_empty_run_writes_zeros(tmp_path):
     """Review Focus #5: `accts=1` opens its single account in warm-up (initial 0.5 of 1 rounds
     to 1; no arrivals are left), so nothing is exported: zero counts, zero postings and every
-    accumulator at 0 (Task 9 adds the laws' `checked = 0`)."""
+    accumulator at 0, and the row laws pass vacuously (`checked = 0`)."""
     r = run_to_dataset(FIXTURES / "ledger", "sample", ["accts=1"], out_dir=tmp_path / "empty",
                        threads=1)
     m = json.loads((r.out_dir / "manifest.json").read_text())
     assert sum(m["counts"].values()) == 0
     assert m["posting_counts"] == {"entry": 0}
     assert m["accumulators"] == {"fees": 0}
+    for k in ("chk.opened_positive", "chk.entries_balance"):
+        assert (m["laws"][k]["checked"], m["laws"][k]["violations"]) == (0, 0), k
 
 
 def test_an_add_before_reject_is_a_write_in_checked_mode(tmp_path):

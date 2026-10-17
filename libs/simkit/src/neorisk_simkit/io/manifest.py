@@ -76,13 +76,16 @@ def write_manifest(run_dir: Path, run: Any, files: list[FileEntry], counts: dict
                    project_dir: Path | None = None,
                    pairing: dict[str, dict[str, int]] | None = None,
                    posting_counts: dict[str, int] | None = None,
-                   accumulators: dict[str, int] | None = None) -> dict[str, Any]:
+                   accumulators: dict[str, int] | None = None,
+                   laws: dict[str, dict] | None = None) -> dict[str, Any]:
     """Build and write `manifest.json`.
 
     `counts` is rows per event type; posting tables (D45), history groups and entity tables are
     counted apart in `posting_counts`, `history_counts` and `entity_counts`.
     `pairing` is `{request boundary: {"requests": delivered, "responses": routed}}` (D40).
-    `accumulators` is each accumulator's total over exported steps (D46)."""
+    `accumulators` is each accumulator's total over exported steps (D46).
+    `laws` is `LawBook.report()`: per check, rows checked, violations and the first citation
+    (D47)."""
     plan = run.plan
     options = writer_options(run.writer, *plan_columns(plan))
     writer = {k: (sorted(v) if isinstance(v, list) else v) for k, v in options.items()}
@@ -104,6 +107,7 @@ def write_manifest(run_dir: Path, run: Any, files: list[FileEntry], counts: dict
         "accumulators": dict(sorted((accumulators or {}).items())),
         "entity_counts": dict(sorted((entity_counts or {}).items())),
         "checks": dict(checks),
+        "laws": dict(sorted((laws or {}).items())),
         "late_messages": int(late_messages),
         "pairing": dict(sorted((pairing or {}).items())),
         "files": [{"path": f.path, "rows": f.rows, "sha256": f.sha256}

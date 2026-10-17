@@ -77,6 +77,7 @@ class Budget:
     max_step_bytes: int | None
     max_spawn_depth: int
     max_admissions_per_step: int
+    max_checker_keys: int = 50_000_000             # keys carried by law reducers (D47)
 
 
 @dataclass(frozen=True)
@@ -165,6 +166,7 @@ _BUDGET: dict[str, tuple[str, Conv, Any]] = {
     "max_step_bytes": ("max_step_bytes", _opt_size, None),
     "max_spawn_depth": ("max_spawn_depth", _int, 3),
     "max_admissions_per_step": ("max_admissions_per_step", _int, 100_000),
+    "max_checker_keys": ("max_checker_keys", _int, 50_000_000),
 }
 _WRITER: dict[str, tuple[str, Conv, Any]] = {
     "compression": ("compression", _str, "zstd"),

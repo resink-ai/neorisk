@@ -42,7 +42,7 @@ def cmd_validate(args: argparse.Namespace) -> int:
 
 
 def cmd_run(args: argparse.Namespace) -> int:
-    from neorisk_simkit.engine.errors import CapExceeded
+    from neorisk_simkit.engine.errors import CapExceeded, LawViolation
     from neorisk_simkit.io.dataset import ValidationFailed, run_to_dataset
     from neorisk_simkit.spec.caps import BudgetError
     from neorisk_simkit.spec.project import ProjectError
@@ -58,6 +58,9 @@ def cmd_run(args: argparse.Namespace) -> int:
     except CapExceeded as e:
         print(e, file=sys.stderr)
         return 3
+    except LawViolation as e:                       # D58
+        print(e, file=sys.stderr)
+        return 4
     m, st = res.manifest, res.stats
     print(f"wrote {res.out_dir}")
     for key, label in (("counts", "event"), ("history_counts", "history"),

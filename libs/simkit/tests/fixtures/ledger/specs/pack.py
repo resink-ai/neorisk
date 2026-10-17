@@ -1,9 +1,10 @@
 """Postings (D45) and accumulators (D46): each account opens with an amount and books two
-postings per opening; tasks 7 and 9 extend it."""
+postings per opening. Task 9 adds laws on them; `bad=1` makes every opening amount
+negative, so the required `chk.opened_positive` fails."""
 
 from dataclasses import dataclass
 
-from neorisk_simkit.spec import Pack, dist
+from neorisk_simkit.spec import Pack, dist, law
 from neorisk_simkit.spec.types import amount, cat, ref
 
 from . import kernels as k
@@ -16,6 +17,7 @@ SCHEMA_VERSION = 1
 class Config:
     accts: int = 6
     add_then_reject: int = 0
+    bad: int = 0
 
 
 def define(p: Pack, cfg: Config) -> None:
@@ -30,3 +32,6 @@ def define(p: Pack, cfg: Config) -> None:
     p.accumulator("fees", amount(asset="USD"))
     p.process("acct_main", owner="acct", kernel=k.acct_main, config=cfg,
               start=p.on_created("acct"), commands=(0,))
+    p.check("chk.opened_positive", law.never_negative("opened.amount"), required=True)
+    p.check("chk.entries_balance", law.balanced("entry"), required=True)
+    p.check("chk.bal_positive", law.never_negative("acct.bal"))

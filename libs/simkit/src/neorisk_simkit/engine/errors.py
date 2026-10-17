@@ -32,3 +32,20 @@ class CapExceeded(Exception):
         if process is not None:
             msg += f" in process {process}"
         super().__init__(msg)
+
+
+class LawViolation(Exception):
+    """A required law failed (D47, exit code 4); cites the first offending row.
+
+    State laws cite `table = "state <path>"`, `seq = -1` and `action_id = -1`."""
+
+    def __init__(self, check_id: str, table: str, partition_id: int, seq: int, action_id: int,
+                 detail: str):
+        self.check_id = check_id
+        self.table = table
+        self.partition_id = partition_id
+        self.seq = seq
+        self.action_id = action_id
+        self.detail = detail
+        super().__init__(f"law {check_id} violated in {table} at (partition_id {partition_id}, "
+                         f"seq {seq}), action {action_id}: {detail}")

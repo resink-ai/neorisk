@@ -3,7 +3,9 @@
 `Simulation(run, threads=…)` builds the `World` and yields one `SealedStep` per frontier step
 over `[start − warmup, start + span)`, with a step boundary forced at `start`; steps that end
 at or before `start` are warm-up (not exported). With `engine.adapt` the next step length
-follows `next_step_length` (deterministic: it depends only on row counts).
+follows `next_step_length` (deterministic: it depends only on row counts). Every sealed step,
+warm-up included (F-01), is fed to the run's `LawBook` (D47); a required law that fails raises
+`LawViolation`.
 """
 
 from __future__ import annotations
@@ -15,6 +17,7 @@ from typing import Any
 import numpy as np
 import pyarrow as pa
 
+from neorisk_simkit.checks.laws import LawBook
 from neorisk_simkit.engine.rounds import run_step
 from neorisk_simkit.engine.world import World
 from neorisk_simkit.io.seal import SealedStep, entity_table, seal_step
@@ -43,11 +46,13 @@ class Simulation:
         plan = run.plan
         self.id_bases: dict[str, int] = {ns: 0 for ns in plan.namespaces}
         self.id_bases.update({f"event:{e.name}": 0 for e in plan.events})
+        self.laws = LawBook(plan, max_keys=run.budget.max_checker_keys)
         self._started = False
         self.stats: dict[str, Any] = {
             "steps": 0, "rows_per_table": {}, "late_messages": 0,
             "rejects": {p.name: 0 for p in plan.processes}, "retries": 0, "continuations": 0,
             "rounds_per_step": [], "round_detail": [], "generate_s": 0.0, "seal_s": 0.0,
+            "check_s": 0.0, "laws": self.laws.report(),
             "proposals": 0, "requests_by_boundary": {}, "pairing": {},
             "accumulators": {a.name: 0 for a in plan.accumulators}}   # exported totals (D46)
         self._shard_commands = 0
@@ -106,17 +111,24 @@ class Simulation:
             c0 = time.perf_counter()
             rounds = run_step(w, t, t1)
             c1 = time.perf_counter()
-            sealed = seal_step(w, step, t, t1, t >= start, self.id_bases)
+            sealed = seal_step(w, step, t, t1, t >= start, self.id_bases,
+                               law_tables=self.laws.tables)
             c2 = time.perf_counter()
+            sealed.stats["laws"] = self.laws.step(sealed, w, exported=sealed.exported)
+            sealed.warmup_rows.clear()                   # law input only, never written
+            c3 = time.perf_counter()
+            self.stats["check_s"] += c3 - c2
             sealed.stats.update(rounds=rounds.rounds, owners_run=list(rounds.owners_run),
                                 shard_cmds=list(rounds.shard_cmds), generate_s=c1 - c0,
-                                seal_s=c2 - c1)
+                                seal_s=c2 - c1, check_s=c3 - c2)
             self._account(sealed, rounds, c1 - c0, c2 - c1)
             yield sealed
             step += 1
             t = t1
             if eng.adapt:
                 length = next_step_length(length, sealed.stats["counted_rows"], eng, budget)
+        self.laws.finish(end)
+        self.stats["laws"] = self.laws.report()
 
     def _account(self, sealed: SealedStep, rounds: Any, gen_s: float, seal_s: float) -> None:
         st = self.stats

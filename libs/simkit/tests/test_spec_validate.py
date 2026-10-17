@@ -222,3 +222,26 @@ def test_creation_messages_count_toward_the_outbox(fixture_project):
     fits = dataclasses.replace(run, engine=dataclasses.replace(
         run.engine, force_capacity={"requests": 4}))
     assert not any("creation message(s)" in e for e in validate(fits).errors)
+
+
+def test_laws_must_resolve_and_count_checker_state(fixture_project):
+    """D47: every law path and table resolves; `checker_state` is 24 B per key once any check
+    is declared."""
+    from neorisk_simkit.spec import law
+    from neorisk_simkit.spec.plan import CheckDef
+
+    led = resolve_run(load_project(fixture_project("ledger")), "sample", [])
+    assert validate(led).ok
+    caps = {c.name: c for c in compute_caps(led)}
+    assert caps["checker_state"].hard_bytes == 24 * led.budget.max_checker_keys == 24_000
+    checks = (("a", law.never_negative("acct.nope")), ("b", law.total_le("acct.bal", 5)),
+              ("c", law.at_most_once("opened", key="nope")), ("d", law.balanced("nope")),
+              ("e", law.balanced("entry", side="account")))
+    bad = dataclasses.replace(led, plan=dataclasses.replace(
+        led.plan, checks=tuple(CheckDef(i, lw, True) for i, lw in checks)))
+    assert [e for e in validate(bad).errors if e.startswith("check ")] == [
+        "check a: unknown path 'acct.nope'",
+        "check b: 'acct.bal' is not an event or posting column",
+        "check c: opened has no column nope",
+        "check d: unknown event or posting table 'nope'",
+        "check e: entry.account must be a cat holding 'debit' and 'credit'"]

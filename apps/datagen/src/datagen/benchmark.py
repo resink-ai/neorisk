@@ -17,7 +17,7 @@ Expectations are `{around, tolerance}`: for a count (`around > 1`) the tolerance
 
 Memory is reported in GiB (2³⁰ bytes): the gate's `peak_rss_gb` limit is read as GiB and the
 report's check is named `peak_rss_gib`. A failing child keeps its exit code (D35: 2 validation,
-3 `CapExceeded`); any other failure is 1.
+3 `CapExceeded`; D58: 4 `LawViolation`); any other failure is 1.
 """
 
 from __future__ import annotations
@@ -154,7 +154,7 @@ def _child_main(argv: list[str]) -> int:
     os.environ["POLARS_MAX_THREADS"] = str(a.threads)
 
     from neorisk_simkit.engine.build import build_engine
-    from neorisk_simkit.engine.errors import CapExceeded
+    from neorisk_simkit.engine.errors import CapExceeded, LawViolation
     from neorisk_simkit.io.dataset import ValidationFailed, run_to_dataset
     from neorisk_simkit.spec.caps import BudgetError
     from neorisk_simkit.spec.project import ProjectError, load_project, resolve_run
@@ -168,6 +168,9 @@ def _child_main(argv: list[str]) -> int:
     except CapExceeded as e:
         print(e, file=sys.stderr)
         return 3
+    except LawViolation as e:                                         # D58
+        print(e, file=sys.stderr)
+        return 4
     plan = resolve_run(load_project(a.project), a.profile, a.set, seed=a.seed).plan
     module = build_engine(plan).__file__
     if a.expect_module is not None and module != a.expect_module:
@@ -252,7 +255,7 @@ def cmd_benchmark(args: argparse.Namespace) -> int:
                             threads=args.threads, out_json=args.out)
     except ChildFailed as e:
         print(e, file=sys.stderr)
-        return e.code if e.code in (2, 3) else 1
+        return e.code if e.code in (2, 3, 4) else 1
     except (OSError, KeyError, RuntimeError, tomllib.TOMLDecodeError) as e:
         print(e, file=sys.stderr)
         return 1

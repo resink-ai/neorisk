@@ -17,6 +17,9 @@
 7. count the step's output rows and bytes (the cap, `CapExceeded("step_output", ...)`, is
    enforced earlier, on every slab flush, over all buffers including `p.ids` allocations);
 8. warm-up steps keep their created entities but drop event, posting and history rows (D20);
+   the event and posting tables named in `law_tables` are kept apart in `warmup_rows` first
+   (F-01: law reducers start from the opening snapshot), numbered from a throwaway copy of
+   `id_bases`, so exported IDs do not change;
 9. run the structural checks on exported steps.
 """
 
@@ -65,6 +68,12 @@ class SealedStep:
     postings: dict[str, pa.Table] = dataclasses.field(default_factory=dict)  # D45
     # this step's delta per accumulator (D46), warm-up steps included
     accumulators: dict[str, int] = dataclasses.field(default_factory=dict)
+    # warm-up steps only: the rows of the tables the laws read, before D20 drops them (F-01);
+    # fed to `LawBook.step(..., exported=False)` and cleared, never written
+    warmup_rows: dict[str, pa.Table] = dataclasses.field(default_factory=dict)
+    # owner slots freed at this seal; their state stays intact until a later admission, so
+    # state laws still see each retired owner's final values (D47)
+    retired: np.ndarray = dataclasses.field(default_factory=lambda: np.zeros(0, np.int64))
 
 
 # ---------------------------------------------------------------------------- Arrow columns
@@ -326,13 +335,13 @@ def _remap_shards(world: Any, remap: _Remap, shards: np.ndarray) -> None:
                     remap.apply_copy(arr, idx, f"local {p.name}.{fname}")
 
 
-def _free_retired(world: Any, owners: np.ndarray) -> int:
+def _free_retired(world: Any, owners: np.ndarray) -> np.ndarray:
     """Free owners that retired idle this step; an owner that got new commands after retiring
-    (or waits on a response) stays live. Returns how many slots were freed."""
+    (or waits on a response) stays live. Returns the freed global slots."""
     hid = world.hidden
     r = owners[hid.retire_at[owners] != I64_MAX]
     if not len(r):
-        return 0
+        return np.zeros(0, np.int64)
     idle = (hid.qhead[r] < 0) & (hid.pending[r] == 0)
     hid.retire_at[r] = I64_MAX
     gone = r[idle]
@@ -346,12 +355,13 @@ def _free_retired(world: Any, owners: np.ndarray) -> int:
         mine = gone[(gone >= base) & (gone < base + part.max_live)]
         if len(mine):                       # to the back of the type's ring, sorted (D44)
             world.FS.give(world.owner_type[part.name], hid.lslot[mine])
-    return len(gone)
+    return gone
 
 
 # ---------------------------------------------------------------------------- seal
 def seal_step(world: Any, step: int, t0: int, t1: int, exported: bool,
-              id_bases: dict[str, int]) -> SealedStep:
+              id_bases: dict[str, int], *,
+              law_tables: frozenset[str] = frozenset()) -> SealedStep:
     """Seal the step `[t0, t1)` that `rounds.run_step` just ran (see the module docstring).
 
     `id_bases` (one base per namespace `<ns>` and per event table `event:<name>`) is advanced in
@@ -420,6 +430,11 @@ def seal_step(world: Any, step: int, t0: int, t1: int, exported: bool,
     n_rows = sum(len(next(iter(p.values()))) for p in parts)
     n_bytes = sum(a.nbytes for p in parts for a in p.values())
 
+    # 8. (F-01) a warm-up step keeps the rows the laws read, before `keep` drops them
+    warmup_rows = {} if exported else {
+        e.name: event_table(e, records[e.name], dict(id_bases), seed)
+        for e in plan.events if e.name in law_tables}
+
     # 5, 6, 8. events, postings and history (warm-up steps drop their rows), entities always
     def keep(rows: dict[str, np.ndarray]) -> dict[str, np.ndarray]:
         return rows if exported else {k: v[:0] for k, v in rows.items()}
@@ -433,13 +448,14 @@ def seal_step(world: Any, step: int, t0: int, t1: int, exported: bool,
     entities = {ns: entity_table(ns, tables[ns].cols, dense_of[ns], creates[ns]["created_at"],
                                  ORIGIN_CREATED, creates[ns], seed) for ns in entity_ns}
     stats = {"rows": int(n_rows), "counted_rows": counted, "bytes": int(n_bytes),
-             "freed_slots": freed,
+             "freed_slots": len(freed),
              "events": {k: t.num_rows for k, t in events.items()},
              "postings": {k: t.num_rows for k, t in postings.items()},
              "history": {k: t.num_rows for k, t in history.items()},
              "entities": {k: t.num_rows for k, t in entities.items()}}
     sealed = SealedStep(int(step), int(t0), int(t1), bool(exported), events, history, entities,
-                        stats, postings=postings, accumulators=accumulators)
+                        stats, postings=postings, accumulators=accumulators,
+                        warmup_rows=warmup_rows, retired=freed)
     if exported:
         stats["checks"] = check_step(sealed, plan)                # 9.
     return sealed
