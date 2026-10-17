@@ -15,10 +15,11 @@ from conftest import (
 )
 
 from neorisk_simkit.io.dataset import run_to_dataset
+from neorisk_simkit.io.read import read_events
 
 EX2 = Path(__file__).resolve().parents[3] / "examples" / "ecommerce_s2"
 SMALL2 = ["users=1500", "skus=400", "sku_groups=6", "journey.hot_skus=20",
-          "journey.abandon_p=0.2", "referred_share=0.5", "pool_cap=20_000", "hunt.share=0.05",
+          "journey.abandon_p=0.2", "referred_share=0.5", "pool_cap=191_000", "hunt.share=0.05",
           "run.span=4d", "run.warmup=1d", "engine.adapt=false",
           "engine.timer_nodes=400_000", "engine.payload_slots=100_000",
           "engine.max_messages_per_step=300_000", "budget.max_admissions_per_step=50_000",
@@ -27,6 +28,9 @@ THREADS = (1, 4, 16)
 SLABS = ("4MB", "16KB")
 STEPS = ("6h", "1d")
 ENGINE = {"parallel_min_partitions": 1}
+# pool_cap: 191 grants of 1,000 (98 of them exported) run the pool out at 2026-01-03 00:04:22,
+# inside the exported span and 4 min after a step boundary of both step lengths, so the race
+# for the last unit is exported (measured in all 10 runs, Task 18 fix round 1).
 
 
 @pytest.fixture(scope="module")
@@ -53,6 +57,16 @@ def test_the_slice_exercises_the_s2_paths(runs):
     assert m["entity_counts"]["payment"] > 200
 
 
+def test_the_pool_runs_out_inside_the_exported_span(runs):
+    """The cap edge is exported in every run: claims are granted and rejected after warm-up,
+    and the last grant leaves exactly nothing."""
+    for run, d in runs.items():
+        c = json.loads((d / "manifest.json").read_text())["counts"]
+        assert c["bonus_granted"] > 0 and c["bonus_rejected"] > 0, run
+        granted = read_events(d)["bonus_granted"].sort("event_time", "lamport")
+        assert granted["remaining_after"][-1] == 0, run
+
+
 @pytest.mark.parametrize("step", STEPS)
 def test_threads_and_slabs_give_identical_records(runs, step):
     base = event_dicts(runs[(1, "4MB", step)])
@@ -70,8 +84,9 @@ def test_step_lengths_give_identical_logical_records(runs):
     assert {"payment", "checkout", "hold", "claim"} <= created
     codes = created_owner_codes(EX2, SMALL2, created)
     assert len(codes) == 1                               # `payment`, the created owner type
-    assert canonicalize_ids(runs[(1, "4MB", "6h")], created, codes) == \
-        canonicalize_ids(runs[(4, "16KB", "1d")], created, codes)
+    for a, b in (((1, "4MB", "6h"), (4, "16KB", "1d")), ((16, "4MB", "6h"), (1, "4MB", "1d"))):
+        assert canonicalize_ids(runs[a], created, codes) == \
+            canonicalize_ids(runs[b], created, codes), (a, b)
 
 
 def test_identical_replay_is_byte_identical(runs, tmp_path):
