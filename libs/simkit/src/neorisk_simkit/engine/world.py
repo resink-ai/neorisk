@@ -6,8 +6,9 @@ holds in memory (read tables, owner/shard state, queues, slabs) plus the partiti
 slab into `World.chunks[worker]` or moves a full outbox aside into `World.pending_outbox[worker]`,
 `NEED_NODES` refills the worker's command-node free list from the reserve.
 
-Between phases `World` routes outboxes (`route`, over `engine.route`), admits created owners
-(`admit_created`) and keeps the per-step bookkeeping the round loop (`engine.rounds`) needs:
+Between phases `World` routes outboxes (`route`, over `engine.route`; creation rows join the
+pending-creation queue `CQ`), admits created owners (`admit_created`, over the generated
+`admit_created`, D44) and keeps the per-step bookkeeping the round loop (`engine.rounds`) needs:
 the touched slots, the calendar of owners' next command times and the message budget.
 """
 
@@ -23,6 +24,15 @@ from numba import njit
 from neorisk_simkit.engine import rng
 from neorisk_simkit.engine import route as rt
 from neorisk_simkit.engine.abi import PRIO_MESSAGE, START
+from neorisk_simkit.engine.admit import (
+    ADM_CAP,
+    ADM_LIVE,
+    ADM_NODES,
+    ADM_OK,
+    CreationQueue,
+    FreeSlots,
+    cq_min,
+)
 from neorisk_simkit.engine.calendar import Calendar, cal_collect, cal_push
 from neorisk_simkit.engine.cmdq import PAYLOAD_W, NodePool, PayloadPool, q_push
 from neorisk_simkit.engine.codegen import (
@@ -33,9 +43,8 @@ from neorisk_simkit.engine.codegen import (
     WORLD_FIELDS,
 )
 from neorisk_simkit.engine.errors import CapExceeded, EngineError
-from neorisk_simkit.engine.identity import handle_ordinal
 from neorisk_simkit.engine.layout import _recipes as layout_recipes
-from neorisk_simkit.engine.slabs import OB_CREATE, OUTBOX_COLS, SlabSet, StepChunk, slab_dtype
+from neorisk_simkit.engine.slabs import OUTBOX_COLS, SlabSet, StepChunk, slab_dtype
 from neorisk_simkit.spec import dist as _dist
 from neorisk_simkit.spec.dist import Dist
 
@@ -153,25 +162,6 @@ def _cal_push_all(C, gs, ts, start):
         if not cal_push(C, gs[i], ts[i]):
             return i
     return gs.shape[0]
-
-
-def _as_i64(v: int) -> int:
-    """An unsigned 64-bit key as the int64 stored in hidden arrays."""
-    return int(np.array([v & rng.MASK64], np.uint64).view(np.int64)[0])
-
-
-@dataclasses.dataclass(frozen=True)
-class _Creation:
-    """An `OB_CREATE` outbox row waiting for admission (sorted by the routing key)."""
-    time: int
-    prio: int
-    cause: int                                 # the creator's commit lamport
-    src_seq: int
-    ns: int                                    # namespace code of the created table
-    handle: int                                # provisional handle of the created row
-    src_g: int                                 # creator's global slot
-    action: int                                # creator's process (action id)
-    pay: tuple[int, ...]                       # the created row's columns (D43; 7 values)
 
 
 def instance_keys(name: str, ordinals: np.ndarray) -> np.ndarray:
@@ -351,7 +341,9 @@ class World:
         plan, hid = self.plan, self.hidden
         self.state: dict[str, tuple[np.ndarray, ...]] = {}
         self.state_init: dict[str, list[Any]] = {}
-        self.free_lslots: dict[str, np.ndarray] = {}
+        owners = [p for p in plan.partitions if p.kind == "owner"]
+        self.owner_type = {p.name: t for t, p in enumerate(owners)}      # FS ring per type
+        self.FS = FreeSlots([p.max_live for p in owners], [self.slot_base[p.name] for p in owners])
         for part in plan.partitions:
             if part.kind != "owner":
                 continue
@@ -362,7 +354,6 @@ class World:
             self.state[part.name] = tuple(np.full(part.max_live, v, dt)
                                           for v, dt in zip(init, dts, strict=True))
             self.state_init[part.name] = init
-            self.free_lslots[part.name] = np.arange(part.max_live, dtype=np.int32)
             base = self.slot_base[part.name]
             hid.ptype[base:base + part.max_live] = part.ptype_code
             hid.lslot[base:base + part.max_live] = np.arange(part.max_live)
@@ -539,7 +530,8 @@ class World:
             "retire": retire, "every": every, "jitter": jitter, "sim_start": self.sim_start,
             "kc": self.kc, "nopay": np.zeros((1, PAYLOAD_W), np.int64),
             "node_cap": int(self._node_cap()),
-            "bnd_delta": self._bnd_array(lambda b: b.min_latency_us)}
+            "bnd_delta": self._bnd_array(lambda b: b.min_latency_us),
+            "ostate": tuple(self.state[p.name] for p in plan.partitions if p.kind == "owner")}
         self._W = tuple(parts[f] for f in WORLD_FIELDS)
 
     def _bnd_array(self, value) -> np.ndarray:
@@ -560,6 +552,13 @@ class World:
             return self.slot_base[to.name] if to.kind == "shard" else 0
 
         self.msg = np.array([0, self.run.engine.max_messages_per_step], np.int64)
+        limit = int(self.run.budget.max_admissions_per_step)
+        self._adm = np.array([0, limit], np.int64)           # RT_ADM: admitted, limit
+        self.admissions = self._adm[:1]                       # created owners admitted this step
+        self.CQ = CreationQueue(limit)
+        self._cq = self.CQ.as_tuple()
+        self._fs = self.FS.as_tuple()
+        self.admit_buf = np.zeros(max(1, limit), np.int64)
         self.next_t = np.full(G, _I64_MAX, np.int64)      # calendar key per owner slot
         self._tmask = np.zeros(G, np.uint8)
         self._tlist = np.zeros(G, np.int64)
@@ -577,9 +576,8 @@ class World:
                   np.zeros(max(1, G - self.shard_lo), np.int64),     # RT_SHARD_REQ
                   np.array([self.shard_lo], np.int64),               # RT_SHARD_LO
                   (hid.ptype, hid.pid, hid.ckey),                    # RT_HID
-                  hid.created)                                       # RT_CREATED
-        self.pending_creates: list[_Creation] = []
-        self.admissions = 0                               # created owners admitted this step
+                  hid.created,                                       # RT_CREATED
+                  self._adm)                                         # RT_ADM
         self.run_buf = np.zeros(G, np.int64)              # runnable slots (compiled rounds)
         self.shard_buf = np.zeros(max(1, G - self.shard_lo), np.int64)
         self.round_log = np.zeros((256, 2), np.int64)
@@ -617,11 +615,11 @@ class World:
             if k <= 0:
                 continue
             part = pop.part
-            free = self.free_lslots[part.name]
-            if k > len(free):
-                live = part.max_live - len(free)
+            t = self.owner_type[part.name]
+            if k > self.FS.n(t):
+                live = part.max_live - self.FS.n(t)
                 raise CapExceeded("live_partition_state", part.max_live, live + k)
-            lslots, self.free_lslots[part.name] = free[:k], free[k:]
+            lslots = self.FS.take(t, k)
             ords = np.arange(lo, hi, dtype=np.int64)
             g = self.slot_base[part.name] + lslots.astype(np.int64)
             self._reset_slots(part, g, (part.ptype_code << 56) | ords, ords,
@@ -662,70 +660,43 @@ class World:
                                           strict=True):
                     arr[lslots] = _fill_value(arr.dtype) if kind == "ref" else 0
 
+    def pending_creations(self) -> int:
+        """Creations routed but not admitted yet."""
+        return int(self.CQ.n[0])
+
     def admit_created(self, limit_t: int) -> np.ndarray:
         """Admit every pending creation with time < `limit_t`; returns their global slots.
 
-        In routing-key order (time, prio, cause, the creator's sender key, src_seq; D61), each
-        created owner gets a free slot, the created row's columns as state (from the creation
-        message's payload, D43; create slabs are never read), `self_id = pid = handle`
-        (provisional; D12), `inst = mix(creator inst, lamport, ns, k)`, `ckey = (created_at,
-        lamport, creator inst, k)` (its sender key for its whole life, D61) and a `START` at
-        the creation time per process started by `on_created`.
-
-        `k` is the row's ordinal among the rows of its namespace created by the same commit: the
-        handle's per-step ordinal minus the commit's first one. A commit's creations share its
-        time, so they are routed and admitted together, and `(creator, lamport)` names the
-        commit. The per-step ordinal itself would make `inst` (every draw of the created owner)
-        depend on whether an earlier commit of the creator fell in the same step (spec §12).
+        Runs the generated `admit_created` (D44; the same function compiled rounds call): in
+        routing-key order (time, prio, cause, the creator's sender key, src_seq; D61) each
+        created owner gets the front free slot of its type, the created row's columns as state
+        (from the creation message, D43), `self_id = pid = handle` (provisional; D12),
+        `inst = mix(creator inst, lamport, ns, k)`, `ckey = (created_at, lamport, creator inst,
+        k)` (its sender key for its whole life, D61) and a `START` at the creation time per
+        process started by `on_created`. `k`, the row's ordinal within its creating commit, was
+        fixed when the row was routed (F-10). A short node reserve admits nothing; it is
+        refilled and the call repeated.
         """
-        due = [c for c in self.pending_creates if c.time < limit_t]
-        if not due:
-            return np.zeros(0, np.int64)
-        src_g = np.array([c.src_g for c in due], np.int64)
-        skeys = np.stack(rt.sender_keys(self.R, src_g, len(due)), axis=1).tolist()
-        order = sorted(range(len(due)), key=lambda i: (due[i].time, due[i].prio, due[i].cause,
-                                                       *skeys[i], due[i].src_seq))
-        due = [due[i] for i in order]
-        self.pending_creates = [c for c in self.pending_creates if c.time >= limit_t]
-        plan, hid = self.plan, self.hidden
-        first: dict[tuple[int, int, int], int] = {}          # (creator, lamport, ns) -> ordinal
-        for c in due:
-            key, o = (c.src_g, c.cause, c.ns), handle_ordinal(c.handle)
-            first[key] = min(first.get(key, o), o)
-        owner_of = {p.table: p for p in plan.partitions if p.kind == "owner"}
-        limit = int(self.run.budget.max_admissions_per_step)
-        admitted = []
-        for c in due:
-            ns = plan.namespaces[c.ns]
-            part, proc = owner_of[ns], plan.processes[c.action].name
-            self.admissions += 1
-            if self.admissions > limit:
-                raise CapExceeded("max_admissions_per_step", limit, self.admissions, process=proc)
-            free = self.free_lslots[part.name]
-            if not len(free):
+        while True:
+            st, v = self.eng.admit_created(self._W, self.R, self._cq, self._fs, int(limit_t),
+                                           self.admit_buf)
+            st, v = int(st), int(v)
+            if st == ADM_OK:
+                return self.admit_buf[:v].copy()
+            if st == ADM_NODES:
+                self._take_reserve_nodes(v)
+                continue
+            proc = self.plan.processes[int(self.CQ.action[v])].name
+            if st == ADM_CAP:
+                limit = int(self._adm[1])
+                raise CapExceeded("max_admissions_per_step", limit, limit + 1, process=proc)
+            if st == ADM_LIVE:
+                ns = self.plan.namespaces[int(self.CQ.ns[v])]
+                part = next(p for p in self.plan.partitions
+                            if p.kind == "owner" and p.table == ns)
                 raise CapExceeded("live_partition_state", part.max_live, part.max_live + 1,
                                   process=proc)
-            ls, self.free_lslots[part.name] = int(free[0]), free[1:]
-            g = self.slot_base[part.name] + ls
-            k = handle_ordinal(c.handle) - first[(c.src_g, c.cause, c.ns)]
-            creator_inst = int(hid.inst[c.src_g])
-            inst = _as_i64(rng.mix(creator_inst, c.cause, c.ns, k))
-            self._reset_slots(part, np.array([g]), c.handle, c.handle, inst)
-            hid.ckey[g] = (c.time, c.cause, creator_inst, k)
-            hid.created[g] = 1
-            for j, arr in enumerate(self.state[part.name]):  # table columns, in order
-                arr[ls] = c.pay[j]
-            procs = [p.action_id for p in plan.processes if p.partition == part.name
-                     and p.start is not None and p.start.table == ns]
-            self._take_reserve_nodes(len(procs))
-            P = self._reserve_pool()
-            for a in procs:
-                sq = int(hid.cseq[g])
-                hid.cseq[g] = sq + 1
-                q_push(P, 0, hid.qhead, g, c.time, PRIO_MESSAGE, c.cause, sq, START, a, 0, -1)
-            rt.mark_touched(self.R, g)
-            admitted.append(g)
-        return np.array(admitted, np.int64)
+            raise EngineError(f"admit_created returned unknown status {st}")
 
     def init_shards(self) -> None:
         """Queue occurrence 0 of every periodic shard process (D26)."""
@@ -820,7 +791,7 @@ class World:
         self._tmask[self._tlist[:n]] = 0
         self._tn[0] = 0
         self.msg[0] = 0
-        self.admissions = 0
+        self._adm[0] = 0
 
     @property
     def touched(self) -> np.ndarray:
@@ -865,8 +836,7 @@ class World:
 
     def horizon(self, t1: int) -> int:
         """The safe horizon of this round (D5): suspended owners and pending creations."""
-        create_min = min((c.time for c in self.pending_creates), default=_I64_MAX)
-        return int(rt.horizon(self.R, int(t1), int(create_min)))
+        return int(rt.horizon(self.R, int(t1), cq_min(self._cq)))
 
     def shards_below(self, limit: int) -> np.ndarray:
         n = rt.shards_below(self.R, self.shard_lo, self.G, int(limit), self.shard_buf)
@@ -890,8 +860,8 @@ class World:
     def route(self) -> None:
         """Route every worker's outbox rows (live and moved aside) and empty those outboxes.
 
-        Creation rows join `pending_creates`; the rest go through `engine.route.route_outbox`,
-        which delivers them in (time, prio, cause, sender key, src_seq) order (D61).
+        `engine.route.route_outbox` delivers them in (time, prio, cause, sender key, src_seq)
+        order (D61); creation rows join the pending-creation queue `CQ` (D44).
         """
         parts: list[dict[str, np.ndarray]] = []
         for w, slab in enumerate(self.slabs):
@@ -906,20 +876,17 @@ class World:
         ob = parts[0] if len(parts) == 1 else {c: np.concatenate([p[c] for p in parts])
                                                 for c in cols}
         n = len(ob["kind"])
-        creates = np.flatnonzero(ob["kind"] == OB_CREATE)
-        for i in creates:
-            self.pending_creates.append(_Creation(
-                int(ob["time"][i]), int(ob["prio"][i]), int(ob["cause"][i]),
-                int(ob["src_seq"][i]), int(ob["bnd"][i]),
-                int(ob["dst"][i]), int(ob["pay"][i, 7]), int(ob["pay"][i, 10]),
-                tuple(int(v) for v in ob["pay"][i, :7])))
         tup = tuple(np.ascontiguousarray(ob[c]) for c in cols)
         while True:
-            status, k = rt.route_outbox(self.R, tup, n, True)
+            status, k = rt.route_outbox(self.R, self._cq, tup, n)
             if status == rt.ROUTED:
                 break
             if status == rt.NEED_MESSAGES:
                 raise CapExceeded("requests_and_inboxes", int(self.msg[1]), int(k))
+            if status == rt.NEED_CREATES:
+                limit = int(self._adm[1])
+                proc = self.plan.processes[int(tup[-1][int(k), 10])].name
+                raise CapExceeded("max_admissions_per_step", limit, limit + 1, process=proc)
             if status == rt.NEED_NODES:
                 self._take_reserve_nodes(int(k))
             elif status == rt.NEED_PAYLOAD:

@@ -26,6 +26,8 @@ Route tuple `R` (indices `RT_*`):
   hid       (ptype, pid, ckey): views of the hidden arrays the sender keys read (D61)
   created   uint8[G]: the hidden `created` flag, 1 for a created owner's slot (D61); per slot,
             since one `child_of` owner type can hold both population and created owners
+  adm       int64[2]: created owners admitted this step, `budget.max_admissions_per_step`
+            (D44; queued creations count against the limit as they are routed)
 """
 
 from __future__ import annotations
@@ -33,6 +35,7 @@ from __future__ import annotations
 import numpy as np
 from numba import njit
 
+from neorisk_simkit.engine.admit import CQ_N, cq_push
 from neorisk_simkit.engine.cmdq import P_FREE_N, PAY_KIND, PAYLOAD_W, pay_alloc, q_push_from
 from neorisk_simkit.engine.codegen import COUNTERS
 from neorisk_simkit.engine.slabs import OB_CREATE, OB_REQUEST, OB_RESPONSE, OUTBOX_COLS
@@ -40,16 +43,16 @@ from neorisk_simkit.engine.slabs import OB_CREATE, OB_REQUEST, OB_RESPONSE, OUTB
 (RT_QHEAD, RT_CSEQ, RT_GEN, RT_ALIVE, RT_PENDING, RT_SUSP_T, RT_SUSP_DELTA, RT_POOL, RT_PAY,
  RT_BND_BASE, RT_COUNTERS, RT_MSG, RT_WOKEN, RT_WOKEN_N, RT_TMASK, RT_TLIST, RT_TN, RT_SUSP,
  RT_SUSP_N, RT_SMASK, RT_BND_REQ, RT_SPOS, RT_BND_RESP, RT_SHARD_REQ, RT_SHARD_LO, RT_HID,
- RT_CREATED) = range(27)
+ RT_CREATED, RT_ADM) = range(28)
 
 # route_outbox statuses
-ROUTED, NEED_MESSAGES, NEED_NODES, NEED_PAYLOAD, HAS_CREATE = 0, 1, 2, 3, 4
+ROUTED, NEED_MESSAGES, NEED_NODES, NEED_PAYLOAD, NEED_CREATES = 0, 1, 2, 3, 4
 
 _OB = {c: i for i, c in enumerate(OUTBOX_COLS)}
 _KIND, _BND, _TIME, _PRIO, _CAUSE = (_OB["kind"], _OB["bnd"], _OB["time"], _OB["prio"],
                                      _OB["cause"])
 _SRC_G, _SRC_SEQ, _DST, _TAG = _OB["src_g"], _OB["src_seq"], _OB["dst"], _OB["tag"]
-_RESP_KIND, _TARGET = _OB["resp_kind"], _OB["target_action"]
+_RESP_KIND, _TARGET, _OB_SRC_PID = _OB["resp_kind"], _OB["target_action"], _OB["src_pid"]
 _PAYC = len(OUTBOX_COLS)
 _LATE = COUNTERS.index("late_messages")
 _CMDS = COUNTERS.index("commands")
@@ -317,8 +320,30 @@ def _route_order(ob, n, keys):
 
 
 @njit(cache=True, nogil=True)
-def route_outbox(R, ob, n, skip_creates):
-    """Deliver the first n rows of outbox `ob` (`OUTBOX_COLS` then `pay`); (status, rows).
+def _commit_ordinal(ob, n, i):
+    """`k` of creation row i: its handle's per-step ordinal minus the smallest one among the
+    creation rows of its namespace in the same commit (contracts C1). A commit's outbox rows
+    are contiguous (the kernel reserved them all before writing any), so the commit is the
+    maximal run of rows around i from the same sender slot with the same cause lamport."""
+    kinds, bnd, cause, dst, src = ob[_KIND], ob[_BND], ob[_CAUSE], ob[_DST], ob[_PAYC]
+    sg, ca = src[i, 7], cause[i]
+    lo = i
+    while lo > 0 and src[lo - 1, 7] == sg and cause[lo - 1] == ca:
+        lo -= 1
+    hi = i
+    while hi + 1 < n and src[hi + 1, 7] == sg and cause[hi + 1] == ca:
+        hi += 1
+    o = dst[i] & 0xFFFFFF
+    m = o
+    for j in range(lo, hi + 1):
+        if kinds[j] == OB_CREATE and bnd[j] == bnd[i]:
+            m = min(m, dst[j] & 0xFFFFFF)
+    return o - m
+
+
+@njit(cache=True, nogil=True)
+def route_outbox(R, CQ, ob, n):
+    """Deliver the first n rows of outbox `ob` (`OUTBOX_COLS` then `pay`); (status, value).
 
     Requests go to the shard queue at the request time, messages to the shard queue at their
     delivery time, responses to the requesting owner if its slot generation still matches
@@ -327,37 +352,57 @@ def route_outbox(R, ob, n, skip_creates):
     column once a response's generation check has read it (D39). The receiver queues it under
     the sender's key and `src_seq` (D61), so its tie order does not depend on the routing
     round. Responses routed and requests delivered are counted per boundary
-    (`RT_BND_RESP`, `RT_BND_REQ`) and per shard slot (`RT_SHARD_REQ`). `OB_CREATE` rows
-    are left to the caller (`skip_creates`), or make the call return `HAS_CREATE` untouched.
-    Nothing is delivered unless the step's message budget and both reserves cover every row.
+    (`RT_BND_RESP`, `RT_BND_REQ`) and per shard slot (`RT_SHARD_REQ`). `OB_CREATE` rows join
+    the pending-creation queue `CQ` with their `k` (D44, F-10).
+
+    Nothing is delivered or queued unless every row fits: the step's message budget
+    (`NEED_MESSAGES`, value = messages needed), the admission limit (`NEED_CREATES`, value =
+    the outbox row of the first creation in routing order beyond `R[RT_ADM]`'s limit, counting
+    the creations admitted and queued already), and both reserves (`NEED_NODES`,
+    `NEED_PAYLOAD`, value = rows needed).
     """
     kinds = ob[_KIND]
     k = np.int64(0)
+    nc = np.int64(0)
     for i in range(n):
         if kinds[i] == OB_CREATE:
-            if not skip_creates:
-                return HAS_CREATE, k
+            nc += 1
         else:
             k += 1
     msg = R[RT_MSG]
     if msg[0] + k > msg[1]:
         return NEED_MESSAGES, msg[0] + k
+    keys = sender_keys(R, ob[_SRC_G][:n], n)
+    k0, k1, k2, k3, k4, k5 = keys
+    order = _route_order(ob, n, keys)
+    src = ob[_PAYC]
+    if nc > 0:
+        adm = R[RT_ADM]
+        have = adm[0] + CQ[CQ_N][0]
+        for j in range(n):
+            i = order[j]
+            if kinds[i] == OB_CREATE:
+                have += 1
+                if have > adm[1]:
+                    return NEED_CREATES, np.int64(i)
     P, PA = R[RT_POOL], R[RT_PAY]
     if P[P_FREE_N][0] < k:
         return NEED_NODES, k
     if PA[3][0] < k:
         return NEED_PAYLOAD, k
+    if nc > 0:
+        for i in range(n):
+            if kinds[i] == OB_CREATE:
+                cq_push(CQ, ob[_TIME][i], ob[_PRIO][i], ob[_CAUSE][i], ob[_OB_SRC_PID][i],
+                        ob[_SRC_SEQ][i], ob[_BND][i], ob[_DST][i], src[i, 7], src[i, 10],
+                        _commit_ordinal(ob, n, i), src, i)
     msg[0] += k
     qhead, gen, alive, pending = R[RT_QHEAD], R[RT_GEN], R[RT_ALIVE], R[RT_PENDING]
     bnd_base, counters = R[RT_BND_BASE], R[RT_COUNTERS]
     woken, wn = R[RT_WOKEN], R[RT_WOKEN_N]
     bnd_req, bnd_resp, shard_req = R[RT_BND_REQ], R[RT_BND_RESP], R[RT_SHARD_REQ]
     shard_lo = R[RT_SHARD_LO][0]
-    src = ob[_PAYC]
     rows = PA[0]
-    keys = sender_keys(R, ob[_SRC_G][:n], n)
-    k0, k1, k2, k3, k4, k5 = keys
-    order = _route_order(ob, n, keys)
     for j in range(n):
         i = order[j]
         kind = kinds[i]

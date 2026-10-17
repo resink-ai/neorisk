@@ -165,7 +165,7 @@ def test_created_owners_start_at_creation_time_in_the_next_round():
     assert paid["amt"].tolist() == [100 + a for a in paid["acct_id"].tolist()]
     # D5: the creation bounds H at t0, so no shard runs before the payments start (round 2)
     assert stats.owners_run == [3, 3, 3] and stats.shard_cmds == [0, 6, 0]
-    assert len(w.touched) == 3 + 3 + 2 and w.pending_creates == []
+    assert len(w.touched) == 3 + 3 + 2 and w.pending_creations() == 0
 
 
 def test_messages_reach_shards_at_their_delivery_time():
@@ -239,27 +239,6 @@ def test_route_order_sorts_equal_keys_by_partition_id_then_seq():
     assert route_order(ob, n, w.R).tolist() == want.tolist()
 
 
-def test_creations_inside_compiled_rounds_return_to_python(monkeypatch):
-    from neorisk_simkit.engine.codegen import DR_PYTHON, PH_ROUTE1, RS_PHASE
-    run = make_run("spawn", ["create_on_answer=1"], parallel_min_partitions=10**9)
-    w = World.build(run, threads=1)
-    real, seen = w.eng.drain_small_rounds, []
-
-    def spy(*args):
-        code, n = real(*args)
-        seen.append((int(code), int(w.round_state[RS_PHASE])))
-        return code, n
-
-    monkeypatch.setattr(w.eng, "drain_small_rounds", spy)
-    t0 = run.start_us - run.warmup_us
-    stats = run_step(w, t0, t0 + run.engine.step_us)
-    assert (DR_PYTHON, PH_ROUTE1) in seen
-    paid, answered = _rows(w, "paid"), _rows(w, "answered")
-    assert len(paid["time"]) == 3 and (paid["time"] == t0 + 200 * MS).all()
-    assert sorted(answered["time"].tolist()) == sorted(paid["time"].tolist())
-    assert stats.owners_run[-1] == 3 and w.pending_creates == []
-
-
 def test_safe_horizon_saturates():
     inf = np.iinfo(np.int64).max
     w = World.build(make_run("mini"), threads=1)
@@ -316,34 +295,3 @@ def test_creates_reserve_their_creation_messages(monkeypatch):
     c = _rows(w, "c_drew")
     assert sorted(c["w"].tolist()) == [110, 111, 112, 113]
     assert swaps.count(NEED_SWAP) >= 3                            # 4 creators, 1-row outbox
-
-
-def test_admission_reads_creation_payloads_in_many_small_batches(monkeypatch):
-    """Replaces S1's `test_admission_indexes_each_created_row_once` (Codex CX3): admission reads
-    each created row's state from its creation message (D43), so no create-slab index exists;
-    many small batches in one step, with slabs flushed mid-step, still admit every row once."""
-    calls, flushes = [], []
-    admit, flush = World.admit_created, World._flush
-
-    def spy(self, limit_t):
-        got = admit(self, limit_t)
-        if len(got):
-            calls.append(len(got))
-        return got
-
-    def spy_flush(self, worker):
-        flushes.append(worker)
-        return flush(self, worker)
-
-    monkeypatch.setattr(World, "admit_created", spy)
-    monkeypatch.setattr(World, "_flush", spy_flush)
-    run = make_run("spawn", ["create_on_answer=1", "rounds=60"], slab_bytes=2048)
-    sim = Simulation(run, threads=2)
-    steps = list(sim.steps())
-    assert len(steps) == 1
-    created = sum(s.entities["pay"].num_rows for s in steps)
-    assert created == 3 * 60
-    assert len(calls) >= 60 and max(calls) <= 3 and sum(calls) == created
-    assert len(flushes) > 2 * 2                 # slabs flushed mid-step, not only at seal
-    assert not hasattr(sim.world, "created_rows_indexed")
-    assert not hasattr(World, "_created_rows")

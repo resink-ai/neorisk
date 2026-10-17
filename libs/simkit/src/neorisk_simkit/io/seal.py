@@ -342,9 +342,8 @@ def _free_retired(world: Any, owners: np.ndarray) -> int:
             continue
         base = world.slot_base[part.name]
         mine = gone[(gone >= base) & (gone < base + part.max_live)]
-        if len(mine):
-            world.free_lslots[part.name] = np.concatenate(
-                [world.free_lslots[part.name], np.sort(hid.lslot[mine])]).astype(np.int32)
+        if len(mine):                       # to the back of the type's ring, sorted (D44)
+            world.FS.give(world.owner_type[part.name], hid.lslot[mine])
     return len(gone)
 
 

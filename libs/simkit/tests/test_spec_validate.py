@@ -69,6 +69,12 @@ def test_caps_formulas(run):
     assert caps["timer_heaps"].hard_bytes == run.engine.timer_nodes * NODE_BYTES == 100_000 * 74
     assert caps["checker_state"].hard_bytes == 0 and caps["scorer"].hard_bytes == 0
     assert all(c.estimate_bytes <= c.hard_bytes for c in caps.values())
+    from neorisk_simkit.engine.admit import CreationQueue
+    from neorisk_simkit.spec.caps import OUTBOX_ROW_BYTES, PAYLOAD_W
+    assert caps["requests_and_inboxes"].hard_bytes == (
+        run.engine.max_messages_per_step * OUTBOX_ROW_BYTES
+        + run.engine.payload_slots * 8 * PAYLOAD_W
+        + run.budget.max_admissions_per_step * CreationQueue.row_bytes)
 
 
 def test_hidden_bytes_follow_the_world_dtype_table(run):

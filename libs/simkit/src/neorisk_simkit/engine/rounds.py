@@ -7,14 +7,15 @@ the calendar, and repeats rounds until the step closes:
    (thread pool when the round is large, inline otherwise);
 2. route the owners' outboxes; `H = safe horizon` over suspended owners and pending creations;
 3. shard phase: every shard with a command below `H` runs to `H`; route the shards' outboxes;
-4. admit creations; the next round runs the owners whose responses have all been delivered and
-   the newly created owners.
+4. admit creations (the generated `admit_created`, D44); the next round runs the owners whose
+   responses have all been delivered and the newly created owners.
 
 The step closes when no owner is runnable, no shard command lies below `t1` and no creation is
 pending. Rounds smaller than `engine.parallel_min_partitions` after the first run inside the
-generated `drain_small_rounds` (one compiled loop on the calling thread, D4) until a round is
-large or a slab, pool or creation needs Python; Python then finishes that round from the phase
-where the compiled loop stopped, so both paths run the same rounds.
+generated `drain_small_rounds` (one compiled loop on the calling thread, D4; creations are
+admitted there too) until a round is large or a slab, pool, route or admission status needs
+Python; Python then finishes that round from the phase where the compiled loop stopped, so both
+paths run the same rounds.
 """
 
 from __future__ import annotations
@@ -32,6 +33,7 @@ from neorisk_simkit.engine.codegen import (
     DR_PYTHON,
     PH_OWNERS,
     PH_ROUTE1,
+    PH_ROUTE2,
     PH_SHARDS,
     RS_C0,
     RS_H,
@@ -97,8 +99,11 @@ def _python_round(world: Any, runnable: np.ndarray, t1: int, pool: ThreadPoolExe
         _run_phase(world, shards, h, False, pool)
     else:
         c0 = resume.c0
-    world.route()
+    if phase <= PH_ROUTE2:
+        world.route()
     shard_cmds = world.command_count() - c0
+    # from PH_ADMIT the compiled admission changed nothing (all or nothing, F-10): admit again,
+    # which refills a short node reserve or raises the cap error itself
     admitted = world.admit_created(t1)
     if not len(runnable) and not shard_cmds and not len(admitted):
         raise EngineError(f"no progress in round {stats.rounds + 1}")
@@ -115,9 +120,9 @@ def _drain(world: Any, runnable: np.ndarray, t1: int,
     world.run_buf[:n] = runnable
     rs = world.round_state
     code, n = world.eng.drain_small_rounds(
-        world._W, world._outs[0], world.R, world.run_buf, n, int(t1),
+        world._W, world._outs[0], world.R, world._cq, world._fs, world.run_buf, n, int(t1),
         int(world.run.engine.parallel_min_partitions), world.shard_lo, world.G,
-        world.shard_buf, world.round_log, rs)
+        world.shard_buf, world.round_log, rs, world.admit_buf)
     done = int(rs[RS_NLOG])
     for owners_run, shard_cmds in world.round_log[:done].tolist():
         stats.owners_run.append(owners_run)
@@ -133,7 +138,7 @@ def _drain(world: Any, runnable: np.ndarray, t1: int,
 
 
 def _closed(world: Any, runnable: np.ndarray, t1: int) -> bool:
-    return (not len(runnable) and not world.pending_creates
+    return (not len(runnable) and world.pending_creations() == 0
             and not len(world.shards_below(t1)))
 
 
@@ -151,7 +156,7 @@ def run_step(world: Any, t0: int, t1: int) -> RoundStats:
             resume = None
             if _closed(world, runnable, t1):
                 break
-            if stats.rounds > 0 and len(runnable) < small and not world.pending_creates:
+            if stats.rounds > 0 and len(runnable) < small:
                 code, runnable, resume = _drain(world, runnable, t1, stats)
                 if code == DR_CLOSED:
                     break

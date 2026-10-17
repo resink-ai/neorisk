@@ -7,7 +7,7 @@ import hashlib
 import math
 
 import numpy as np
-from numba import njit, uint64
+from numba import int64, njit, uint64
 from numba.extending import overload
 
 from neorisk_simkit.spec.dist import (
@@ -72,6 +72,26 @@ def mix(*parts: int) -> int:
     for p in parts:
         h = int(mix64(np.uint64((h ^ (p & MASK64)) & MASK64)))
     return h
+
+
+@njit(cache=True, nogil=True)
+def mix4(a, b, c, d):
+    """`mix(a, b, c, d)` in compiled code (int64 parts; their two's-complement bits)."""
+    h = mix64(u64(0) ^ u64(a))
+    h = mix64(h ^ u64(b))
+    h = mix64(h ^ u64(c))
+    return mix64(h ^ u64(d))
+
+
+def as_i64(x):
+    """Wrap-around cast of a uint64 to int64; used as-is when NUMBA_DISABLE_JIT=1."""
+    v = int(x) & MASK64
+    return np.int64(v - (1 << 64) if v >= (1 << 63) else v)
+
+
+@overload(as_i64)
+def _as_i64_jit(x):
+    return lambda x: int64(x)
 
 
 def name_key(name: str) -> int:

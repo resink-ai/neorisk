@@ -47,6 +47,13 @@ def hidden_bytes(plan: Plan) -> int:
     return world_hidden_bytes(a, len(plan.namespaces))
 
 
+def _cq_row_bytes() -> int:
+    """Bytes per pending-creation queue row (D44)."""
+    from neorisk_simkit.engine.admit import CreationQueue
+
+    return CreationQueue.row_bytes
+
+
 def row_bytes(cols: Iterable[Column]) -> int:
     return sum(storage_dtype(c.ltype).itemsize + (1 if c.ltype.nullable else 0) for c in cols)
 
@@ -193,7 +200,8 @@ def compute_caps(run, threads: int | None = None) -> list[CapItem]:
         "live_partition_state": (_live_state(plan), ""),
         "timer_heaps": (eng.timer_nodes * NODE_BYTES, ""),
         "requests_and_inboxes": (eng.max_messages_per_step * OUTBOX_ROW_BYTES
-                                 + eng.payload_slots * 8 * PAYLOAD_W, ""),
+                                 + eng.payload_slots * 8 * PAYLOAD_W
+                                 + bud.max_admissions_per_step * _cq_row_bytes(), ""),
         "fanout_bursts": (sum(p.kernel.substep * max_row for p in plan.processes
                               if p.kernel.substep), ""),
         "read_inputs": (read, ""),

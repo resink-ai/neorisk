@@ -32,6 +32,7 @@ from pathlib import Path
 import numba
 
 from neorisk_simkit.engine import slabs
+from neorisk_simkit.engine.admit import ADM_CAP, ADM_LIVE, ADM_NODES, ADM_OK
 from neorisk_simkit.engine.cmdq import PAYLOAD_W
 from neorisk_simkit.engine.errors import LoweringError
 from neorisk_simkit.engine.layout import (
@@ -69,20 +70,26 @@ DONE, NEED_SWAP, NEED_NODES = 0, 1, 2
 #   bnd_delta int64[boundaries]: minimum latency (delta) of each boundary; a commit that makes
 #             requests suspends its owner with susp_t = earliest request time and susp_delta =
 #             the smallest delta among those requests (the safe horizon reads both).
+#   ostate    one entry per owner partition type (plan order): its state column arrays in table
+#             order (admission writes a created owner's columns there, D44)
 WORLD_FIELDS = ("hid", "pool", "pay", "state", "args", "seed", "counters", "rejects", "occ_col",
-                "retire", "every", "jitter", "sim_start", "kc", "nopay", "node_cap", "bnd_delta")
+                "retire", "every", "jitter", "sim_start", "kc", "nopay", "node_cap", "bnd_delta",
+                "ostate")
 # `commands` counts executed commands (commits and rejects); rounds use it to measure progress.
 COUNTERS = ("retries", "continuations", "late_messages", "retry_streak", "commands")
 
 # ---------------------------------------------------------------- compiled rounds contract (D4)
-# `drain_small_rounds(W, out, R, run, n_run, t1, min_par, shard_lo, shard_hi, sbuf, log, rs)`
-# runs rounds on worker 0 until one of these (returned with the runnable count left in `run`):
+# `drain_small_rounds(W, out, R, CQ, FS, run, n_run, t1, min_par, shard_lo, shard_hi, sbuf, log,
+# rs, adm_buf)` runs rounds on worker 0 until one of these (returned with the runnable count left
+# in `run`):
 DR_CLOSED, DR_LARGE, DR_PYTHON, DR_LOG_FULL, DR_NO_PROGRESS = 0, 1, 2, 3, 4
 # On DR_PYTHON the current round stopped in phase rs[RS_PHASE] (one of PH_*); rs[RS_STATUS] is
-# the runner or route status that needs Python, rs[RS_H] the round's horizon (shard phase and
-# later) and rs[RS_C0] the command count when its shard phase began. rs[RS_NLOG] counts the
-# rounds finished in compiled code; log[i] = (owners run, shard commands) of each.
-PH_OWNERS, PH_ROUTE1, PH_SHARDS, PH_ROUTE2 = 0, 1, 2, 3
+# the runner, route or admission status that needs Python, rs[RS_H] the round's horizon (shard
+# phase and later) and rs[RS_C0] the command count when its shard phase began. rs[RS_NLOG]
+# counts the rounds finished in compiled code; log[i] = (owners run, shard commands) of each.
+# Phase PH_ADMIT admits the round's due creations (`admit_created`, D44) into `adm_buf`; a
+# non-OK admission status changed nothing (all or nothing), so Python simply admits again.
+PH_OWNERS, PH_ROUTE1, PH_SHARDS, PH_ROUTE2, PH_ADMIT = 0, 1, 2, 3, 4
 RS_PHASE, RS_STATUS, RS_H, RS_C0, RS_NLOG = 0, 1, 2, 3, 4
 MAX_RETRIES = 8                # consecutive RETRYs of one command before the run fails
 PERIODIC_QUEUED = 1 << 62      # START tag bit: the next periodic occurrence is already queued
@@ -100,16 +107,22 @@ from neorisk_simkit import std
 from neorisk_simkit.engine.abi import (
     COMMIT, PRIO_CONTINUE, PRIO_EXPIRY, PRIO_MESSAGE, PRIO_TIMER, RETRY, START, reject,
 )
+from neorisk_simkit.engine.admit import (
+    CQ_ACTION, CQ_CAUSE, CQ_HANDLE, CQ_K, CQ_N, CQ_NS, CQ_PAYLOAD, CQ_SRC_G, CQ_TIME, FS_BASE,
+    FS_N, cq_due, cq_min, cq_order, cq_remove, fs_take1,
+)
 from neorisk_simkit.engine.cmdq import (
     P_FREE_N, PAY_CONTINUE, PAY_KIND, pay_free, q_free, q_push, q_remove,
 )
 from neorisk_simkit.engine.errors import AbiViolation, EngineError
 from neorisk_simkit.engine.identity import make_handle
 from neorisk_simkit.engine.rng import (
-    bernoulli, categorical, geometric, key_uniform, next_k, normal, sample_us, uniform_int,
+    as_i64, bernoulli, categorical, geometric, key_uniform, mix4, next_k, normal, sample_us,
+    uniform_int,
 )
 from neorisk_simkit.engine.route import (
-    command_count, horizon, mark_all, note_suspended, route_outbox, shards_below, take_runnable,
+    RT_ADM, RT_POOL, RT_WOKEN, RT_WOKEN_N, command_count, horizon, mark_all, mark_touched,
+    note_suspended, route_outbox, sender_keys, shards_below, take_runnable,
 )
 from neorisk_simkit.spec.dist import EXP, PARETO
 '''
@@ -122,7 +135,8 @@ _JIT = "@njit(cache=True, nogil=True, boundscheck=CHECKED)"
 _JIT_INLINE = "@njit(cache=True, nogil=True, boundscheck=CHECKED, inline='always')"
 # Generated functions that stay real calls (everything else is inlined into its caller).
 _NOT_INLINED = frozenset({"dispatch", "periodic_time", "_out_of_order", "_unpaired",
-                          "run_partitions", "drain_small_rounds", "_same", "_checked_dispatch"})
+                          "run_partitions", "drain_small_rounds", "_same", "_checked_dispatch",
+                          "admit_created"})
 _NOT_INLINED_PREFIXES = ("_snap_", "_unchanged_")
 
 _PKG = Path(__file__).resolve().parents[1]           # neorisk_simkit/
@@ -233,9 +247,14 @@ class _Gen:
                   f"_DR_PYTHON = {DR_PYTHON}", f"_DR_LOG_FULL = {DR_LOG_FULL}",
                   f"_DR_NO_PROGRESS = {DR_NO_PROGRESS}", f"_PH_OWNERS = {PH_OWNERS}",
                   f"_PH_ROUTE1 = {PH_ROUTE1}", f"_PH_SHARDS = {PH_SHARDS}",
-                  f"_PH_ROUTE2 = {PH_ROUTE2}", f"_RS_PHASE = {RS_PHASE}",
+                  f"_PH_ROUTE2 = {PH_ROUTE2}", f"_PH_ADMIT = {PH_ADMIT}",
+                  f"_RS_PHASE = {RS_PHASE}",
                   f"_RS_STATUS = {RS_STATUS}", f"_RS_H = {RS_H}", f"_RS_C0 = {RS_C0}",
-                  f"_RS_NLOG = {RS_NLOG}"]
+                  f"_RS_NLOG = {RS_NLOG}", f"_I64_MIN = {-(2 ** 63)}",
+                  f"_ADM_OK = {ADM_OK}", f"_ADM_CAP = {ADM_CAP}", f"_ADM_LIVE = {ADM_LIVE}",
+                  f"_ADM_NODES = {ADM_NODES}"]
+        ns_type, ns_nstart = self._admission_tables()
+        lines += [f"_NS_TYPE = {tuple(ns_type)!r}", f"_NS_NSTART = {tuple(ns_nstart)!r}"]
         return "\n".join(lines) + "\n"
 
     # ------------------------------------------------------------------ rng / reads / refs
@@ -860,11 +879,134 @@ class _Gen:
             "return _DONE, slots.shape[0]"]
         self.fn("run_partitions", "W, out, worker, slots, start, limit_t, owners", body)
 
+    # ------------------------------------------------------------------ admission (D44)
+    def _owner_parts(self) -> list:
+        return [p for p in self.plan.partitions if p.kind == "owner"]
+
+    def _started(self, part, ns: str) -> list[int]:
+        """Actions started by `on_created(ns)` on owner partition `part`, in plan order."""
+        return [p.action_id for p in self.plan.processes if p.partition == part.name
+                and p.start is not None and p.start.table == ns]
+
+    def _admission_tables(self) -> tuple[list[int], list[int]]:
+        """Per namespace code: owner partition type (index in plan order, -1 if the namespace
+        is not an owner table) and the number of STARTs an admission queues (at least one
+        entry each, so the generated tuples are never empty)."""
+        owners = self._owner_parts()
+        by_table = {p.table: (t, p) for t, p in enumerate(owners)}
+        ns_type, ns_nstart = [], []
+        for ns in self.plan.namespaces:
+            t, part = by_table.get(ns, (-1, None))
+            ns_type.append(t)
+            ns_nstart.append(0 if part is None else len(self._started(part, ns)))
+        return (ns_type or [-1]), (ns_nstart or [0])
+
+    def admit(self) -> None:
+        """`admit_created(W, R, CQ, FS, limit_t, out_slots) -> (status, value)` (D44).
+
+        Admits every queued creation with time < limit_t in routing order (time, prio, cause,
+        the creator's sender key, src_seq; D61) with the records S1's Python admission made.
+        All or nothing: before touching anything it checks the admission limit (`_ADM_CAP`),
+        free local slots per owner type (`_ADM_LIVE`; both return the CQ row that does not
+        fit) and the reserve's command nodes for every START (`_ADM_NODES`, value = nodes
+        needed), so a retry after any non-OK status sees `CQ` exactly as before (F-10)."""
+        hid = ["pid", "alive", "clock", "rseq", "cseq", "pending", "susp_delta", "occ", "ordn",
+               "retire_at", "susp_t", "last_t", "inst", "self_id", "ckey", "created", "qhead"]
+        body = ["due = cq_due(CQ, limit_t)",
+                "nd = due.shape[0]",
+                "if nd == 0:",
+                "    return np.int64(_ADM_OK), np.int64(0)",
+                "due = cq_order(CQ, due, sender_keys(R, CQ[CQ_SRC_G][due], nd))",
+                "adm = R[RT_ADM]",
+                "free = FS[FS_N]",
+                "taken = np.zeros(free.shape[0], np.int64)",
+                "need = np.int64(0)",
+                "for j in range(nd):",
+                "    i = due[j]",
+                "    if adm[0] + j + 1 > adm[1]:",
+                "        return np.int64(_ADM_CAP), np.int64(i)",
+                "    ns = CQ[CQ_NS][i]",
+                "    t = _NS_TYPE[ns]",
+                "    taken[t] += 1",
+                "    if taken[t] > free[t]:",
+                "        return np.int64(_ADM_LIVE), np.int64(i)",
+                "    need += _NS_NSTART[ns]",
+                "P = R[RT_POOL]",
+                "if P[P_FREE_N][0] < need:",
+                "    return np.int64(_ADM_NODES), need",
+                "hid = W[_W_HID]"]
+        body += [f"{n} = hid[_WH_{n.upper()}]" for n in hid]
+        body += ["pay = CQ[CQ_PAYLOAD]",
+                 "woken = R[RT_WOKEN]",
+                 "wn = R[RT_WOKEN_N]",
+                 "for j in range(nd):",
+                 "    i = due[j]",
+                 "    ns = CQ[CQ_NS][i]",
+                 "    t = _NS_TYPE[ns]",
+                 "    ls = np.int64(fs_take1(FS, t))",
+                 "    adm[0] += 1",
+                 "    g = FS[FS_BASE][t] + ls",
+                 "    h = CQ[CQ_HANDLE][i]",
+                 "    cause = CQ[CQ_CAUSE][i]",
+                 "    k = CQ[CQ_K][i]",
+                 "    ci = inst[CQ[CQ_SRC_G][i]]",
+                 # fresh hidden fields, as S1's `World._reset_slots` (pid = self_id = handle)
+                 "    pid[g] = h",
+                 "    self_id[g] = h",
+                 "    alive[g] = 1",
+                 "    clock[g] = 0",
+                 "    rseq[g] = 0",
+                 "    cseq[g] = 0",
+                 "    pending[g] = 0",
+                 "    susp_delta[g] = 0",
+                 "    occ[g, :] = 0",
+                 "    ordn[g, :] = 0",
+                 "    retire_at[g] = _I64_MAX",
+                 "    susp_t[g] = _I64_MAX",
+                 "    last_t[g] = _I64_MIN",
+                 "    inst[g] = as_i64(mix4(ci, cause, ns, k))",
+                 # its sender key for life (D61): (created_at, creator lamport, creator inst, k)
+                 "    ckey[g, 0] = CQ[CQ_TIME][i]",
+                 "    ckey[g, 1] = cause",
+                 "    ckey[g, 2] = ci",
+                 "    ckey[g, 3] = k",
+                 "    created[g] = 1"]
+        owners = self._owner_parts()
+        for code, ns in enumerate(self.plan.namespaces):
+            t = next((t for t, p in enumerate(owners) if p.table == ns), None)
+            if t is None:
+                continue
+            part = owners[t]
+            body += [f"    if ns == {code}:", f"        st_ = W[_W_OSTATE][{t}]"]
+            body += [f"        st_[{j}][ls] = pay[i, {j}]"
+                     for j in range(len(self.plan.table(part.table).cols))]
+            for p in self.procs_of_partition(part.name):
+                if p.kernel.local is None:
+                    continue
+                body.append(f"        lc_ = W[_W_STATE][{p.action_id}][2]")
+                for f, (kind, width) in enumerate(p.kernel.local.fields.values()):
+                    v = "_NULL" if kind == "ref" else "0"
+                    body.append(f"        lc_[{f}][ls] = {v}" if width == 1
+                                else f"        lc_[{f}][ls, :] = {v}")
+            for a in self._started(part, ns):
+                body += ["        sq_ = cseq[g]",
+                         "        cseq[g] = sq_ + 1",
+                         (f"        q_push(P, 0, qhead, g, CQ[CQ_TIME][i], PRIO_MESSAGE, cause, "
+                          f"sq_, START, {a}, 0, -1)")]
+        body += ["    mark_touched(R, g)",
+                 "    woken[wn[0]] = g",
+                 "    wn[0] += 1",
+                 "    out_slots[j] = g",
+                 "cq_remove(CQ, due, nd)",
+                 "return np.int64(_ADM_OK), np.int64(nd)"]
+        self.fn("admit_created", "W, R, CQ, FS, limit_t, out_slots", body)
+
     def drain_small_rounds(self) -> None:
         """Whole rounds on worker 0 in compiled code (D4); see the contract at the top."""
         py = ["        rs[_RS_STATUS] = st", "        return _DR_PYTHON, n_run"]
         self.fn("drain_small_rounds",
-                "W, out, R, run, n_run, t1, min_par, shard_lo, shard_hi, sbuf, log, rs", [
+                ("W, out, R, CQ, FS, run, n_run, t1, min_par, shard_lo, shard_hi, sbuf, log, rs, "
+                 "adm_buf"), [
                     "counters = W[_W_COUNTERS]",
                     "cnt = out[OUT_CNT]",
                     "obx = out[OUT_OUTBOX]",
@@ -872,7 +1014,7 @@ class _Gen:
                     "while True:",
                     "    rs[_RS_NLOG] = nlog",
                     "    nsh = shards_below(R, shard_lo, shard_hi, t1, sbuf)",
-                    "    if n_run == 0 and nsh == 0:",
+                    "    if n_run == 0 and nsh == 0 and CQ[CQ_N][0] == 0:",
                     "        return _DR_CLOSED, n_run",
                     "    if n_run >= min_par:",
                     "        return _DR_LARGE, n_run",
@@ -883,10 +1025,10 @@ class _Gen:
                     "    if st != _DONE:", *py,
                     "    note_suspended(R, run, n_run)",
                     "    rs[_RS_PHASE] = _PH_ROUTE1",
-                    "    st, k_ = route_outbox(R, obx, cnt[R_REQUESTS], False)",
+                    "    st, k_ = route_outbox(R, CQ, obx, cnt[R_REQUESTS])",
                     "    if st != 0:", *py,
                     "    cnt[R_REQUESTS] = 0",
-                    "    h = horizon(R, t1, _I64_MAX)",
+                    "    h = horizon(R, t1, cq_min(CQ))",
                     "    c0 = command_count(counters)",
                     "    rs[_RS_H] = h",
                     "    rs[_RS_C0] = c0",
@@ -896,11 +1038,14 @@ class _Gen:
                     "    st, i_ = run_partitions(W, out, 0, sbuf[:nsh], 0, h, False)",
                     "    if st != _DONE:", *py,
                     "    rs[_RS_PHASE] = _PH_ROUTE2",
-                    "    st, k_ = route_outbox(R, obx, cnt[R_REQUESTS], False)",
+                    "    st, k_ = route_outbox(R, CQ, obx, cnt[R_REQUESTS])",
                     "    if st != 0:", *py,
                     "    cnt[R_REQUESTS] = 0",
+                    "    rs[_RS_PHASE] = _PH_ADMIT",
+                    "    st, na_ = admit_created(W, R, CQ, FS, t1, adm_buf)",
+                    "    if st != _ADM_OK:", *py,
                     "    sc = command_count(counters) - c0",
-                    "    if n_run == 0 and sc == 0:",
+                    "    if n_run == 0 and sc == 0 and na_ == 0:",
                     "        return _DR_NO_PROGRESS, n_run",
                     "    log[nlog, 0] = n_run",
                     "    log[nlog, 1] = sc",
@@ -938,6 +1083,7 @@ class _Gen:
         self.out_of_order()
         self.unpaired()
         self.run_partitions()
+        self.admit()
         self.drain_small_rounds()
         return self.funcs
 
