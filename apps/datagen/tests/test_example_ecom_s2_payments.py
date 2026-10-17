@@ -1,5 +1,5 @@
 import json
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import polars as pl
@@ -101,3 +101,30 @@ def test_payments_retire_after_their_window_and_slots_are_reused(tmp_path):
     ev = read_events(r.out_dir)
     made = ev["checkout_succeeded"].height + ev["bill_payment_started"].height
     assert made > 1_000                     # more payments than the 1,000 live slots (D43)
+    # more captured payments than slots: each held its slot through a 1-day window, so slots
+    # freed when windows closed were reused; nothing of a payment happens after its window
+    cap = ev["payment_captured"].select("payment_id", pl.col("event_time").alias("tc"))
+    assert cap.height > 1_000
+    last = pl.concat([ev[n].select("payment_id", "event_time") for n in
+                      ("payment_authorized", "payment_captured", "payment_expired")])
+    late = last.join(cap, on="payment_id").filter(
+        pl.col("event_time") > pl.col("tc") + timedelta(days=1))
+    assert late.height == 0
+
+
+def test_expiry_wins_a_capture_due_at_the_same_instant(tmp_path):
+    # Review minor 1: a constant capture delay equal to the auth expiry ties every capture with
+    # its expiry; PRIO_EXPIRY (2) runs before PRIO_TIMER (5), so no payment is ever captured
+    tie = ["users=1000", "skus=300", "sku_groups=4", "run.span=3d", "run.warmup=0s",
+           "pay.auth_expiry_s=7200", "pay.capture_delay.kind=0",
+           "pay.capture_delay.params=[7_200_000_000.0, 0.0, 0.0]",
+           "journey.bill_gap.params=[172_800_000_000.0, 0.0, 0.0]", *POOLS]
+    r = run_to_dataset(EX, "sample", tie, out_dir=tmp_path / "tie", threads=2)
+    ev = read_events(r.out_dir)
+    auth = ev["payment_authorized"].select("payment_id", pl.col("event_time").alias("t0"))
+    exp = ev["payment_expired"].join(auth, on="payment_id")
+    end = datetime(2026, 1, 4, tzinfo=UTC)                         # start + 3 d span
+    due = auth.filter(pl.col("t0") + timedelta(hours=2) < end)     # later expiries: censored
+    assert due.height > 100 and ev["payment_captured"].height == 0
+    assert exp.height == due.height
+    assert ((exp["event_time"] - exp["t0"]) == timedelta(hours=2)).all()
