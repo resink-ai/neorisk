@@ -360,6 +360,7 @@ def seal_step(world: Any, step: int, t0: int, t1: int, exported: bool,
 
     plan, seed = world.plan, world.seed
     world.flush_all()
+    counted = int(world.step_rows)        # everything the step cap counts, p.ids included (D41)
     chunks = world.take_chunks()
     specs = buffer_specs(plan)
     records = {s.name: _merge(chunks, s) for s in specs if s.kind != "create"}
@@ -410,7 +411,8 @@ def seal_step(world: Any, step: int, t0: int, t1: int, exported: bool,
     freed = _free_retired(world, owners)
 
     # 7. output size (the step cap itself is enforced as slabs are flushed: `World._flush`);
-    # `rows` (records + created entity rows, warm-up included) drives the step length
+    # `rows` = records + created entity rows (warm-up included); `counted_rows` (rows plus
+    # `p.ids` allocations, what the cap counts) drives the step length (D41)
     entity_ns = [ns for ns in plan.namespaces if ns in tables]
     parts = [*records.values(), *(creates[ns] for ns in entity_ns)]
     n_rows = sum(len(next(iter(p.values()))) for p in parts)
@@ -426,7 +428,8 @@ def seal_step(world: Any, step: int, t0: int, t1: int, exported: bool,
                for g in plan.change_groups}
     entities = {ns: entity_table(ns, tables[ns].cols, dense_of[ns], creates[ns]["created_at"],
                                  ORIGIN_CREATED, creates[ns], seed) for ns in entity_ns}
-    stats = {"rows": int(n_rows), "bytes": int(n_bytes), "freed_slots": freed,
+    stats = {"rows": int(n_rows), "counted_rows": counted, "bytes": int(n_bytes),
+             "freed_slots": freed,
              "events": {k: t.num_rows for k, t in events.items()},
              "history": {k: t.num_rows for k, t in history.items()},
              "entities": {k: t.num_rows for k, t in entities.items()}}

@@ -109,3 +109,23 @@ def test_retired_slots_are_reused_after_seal():
     freed = sum(s.stats["freed_slots"] for s in sim.steps())
     assert freed >= 50 and sim.stats["rejects"]["user_main"] == freed
 
+
+
+def test_step_length_adapts_on_the_rows_the_cap_counts(monkeypatch):
+    """D41: the step cap counts p.ids allocations, so the adaptive length must too."""
+    from neorisk_simkit.engine import run as run_mod
+
+    _, sim = _sim(["behavior.take_p=0.0"], adapt=True, step_us=4 * H)
+    seen = []
+    real = run_mod.next_step_length
+
+    def spy(prev, rows, eng, bud):
+        seen.append(rows)
+        return real(prev, rows, eng, bud)
+
+    monkeypatch.setattr(run_mod, "next_step_length", spy)
+    steps = list(sim.steps())
+    assert seen == [s.stats["counted_rows"] for s in steps][:len(seen)] and seen
+    for s in steps:
+        if s.exported:                       # one `visit` id per ping is counted, not exported
+            assert s.stats["counted_rows"] == s.stats["rows"] + s.stats["events"]["ping"]

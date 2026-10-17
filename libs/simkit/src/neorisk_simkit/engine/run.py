@@ -24,8 +24,9 @@ ENGINE_COUNTERS = ("rejects", "retries", "late_messages", "continuations")   # r
 
 
 def next_step_length(prev_len: int, rows: int, engine: Any, budget: Any) -> int:
-    """Step length targeting 25% of `max_step_rows` from the previous step's rows, clamped to
-    `[step_min, step_max]` and floored to whole seconds."""
+    """Step length targeting 25% of `max_step_rows` from the previous step's counted rows
+    (everything the step cap counts, D41), clamped to `[step_min, step_max]` and floored to
+    whole seconds."""
     target = budget.max_step_rows // 4
     new = engine.step_max_us if rows == 0 else prev_len * target // rows
     new = min(max(new, engine.step_min_us), engine.step_max_us)
@@ -114,7 +115,7 @@ class Simulation:
             step += 1
             t = t1
             if eng.adapt:
-                length = next_step_length(length, sealed.stats["rows"], eng, budget)
+                length = next_step_length(length, sealed.stats["counted_rows"], eng, budget)
 
     def _account(self, sealed: SealedStep, rounds: Any, gen_s: float, seal_s: float) -> None:
         st = self.stats
