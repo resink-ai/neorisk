@@ -2,12 +2,13 @@
 holds run against the real kernels on fixtures in CI").
 
 Each model is plain Python over one dataset's event tables (`io.read.read_events`). It merges
-the tables one partition (or owner) writes, steps through them in execution order
-`(event_time, lamport, seq)` with its own state, and predicts every decision the compiled kernel
-made (`partition_id` in the sort key keeps the order canonical; every replayed stream is one
-partition). A model returns one line per disagreement, naming the event, `partition_id`, `seq` and
-the expected vs observed value; an empty list means the kernel agrees. The models assume the
-stream holds the whole history (warm-up 0), so their state starts from the world's initial one.
+the tables one partition (or owner) writes, steps through them in canonical order
+`(event_time, lamport, partition_id, seq)` (every replayed stream is one partition, so this is
+its execution order) with its own state, and predicts every decision the compiled kernel made.
+A model returns one line per disagreement, naming the event, `partition_id`, `seq` and the
+expected vs observed value; an empty list means the kernel agrees. The models assume the stream
+holds the whole history (a run with warm-up 0), so their state starts from the world's initial
+one; on a dataset with a warm-up they report spurious lines for state built before export.
 
 - `replay_inventory`: the hold table and stock of each inventory group (D49, `std.reservations`).
 - `replay_pool`: the capped bonus pool (§07, `std.capped_pool`).
@@ -77,7 +78,7 @@ def replay_inventory(events: dict[str, pl.DataFrame], on_hand0: dict[int, int],
     `out_of_stock` when stock is short, else `busy`. Commits, releases and expiries name a live
     hold of that SKU, checkout and quantity and free it; `stock_commit_late` names a hold of this
     group, SKU, checkout and quantity that its TTL expired, and moves nothing; `on_hand_after`
-    matches the model's stock."""
+    matches the model's stock. Needs the whole history (warm-up 0)."""
     out: list[str] = []
     on_hand = dict(on_hand0)
     reserved: dict[int, int] = {}
@@ -170,7 +171,8 @@ _POOL = {"bonus_granted": ("claim_id", "amount", "remaining_after"),
 
 def replay_pool(events: dict[str, pl.DataFrame], cap: int) -> list[str]:
     """Replay the pool's claims from `cap`: a claim is granted whole iff
-    `0 < amount <= remaining`, else rejected; `remaining_after` matches the model."""
+    `0 < amount <= remaining`, else rejected; `remaining_after` matches the model. Needs the
+    whole history (warm-up 0): `cap` is the pool at the start of the stream."""
     out: list[str] = []
     remaining = int(cap)
     for r in _rows(events, _POOL, None):
@@ -237,6 +239,8 @@ def replay_refunds(events: dict[str, pl.DataFrame],
     - a dispute opens once on a captured payment for `captured - refunded - held > 0` and
       resolves once for that amount; with `dispute_window_us` it opens before
       `capture time + dispute_window_us`.
+
+    Needs the whole history (warm-up 0): a payment authorized before export would be reported.
     """
     out: list[str] = []
     pays: dict[int, _Pay] = {}

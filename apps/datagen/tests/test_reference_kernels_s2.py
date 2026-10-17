@@ -1,6 +1,7 @@
 """§11: reference models replay the real kernels' decisions and agree with every one."""
 
 import functools
+import json
 from pathlib import Path
 
 import numpy as np
@@ -34,16 +35,16 @@ LATE = ["users=800", "skus=300", "sku_groups=4", "desk.hold_ttl_s=0", "run.span=
         "run.warmup=0s", *POOLS]
 
 
+def _events(over, tmp_path):
+    out = run_to_dataset(EX, "sample", over, out_dir=tmp_path / "run", threads=4).out_dir
+    manifest = json.loads((out / "manifest.json").read_text())
+    assert manifest["config"]["run"]["warmup_us"] == 0      # the models need the whole history
+    return read_events(out)
+
+
 @pytest.fixture(scope="module")
 def ev(tmp_path_factory):
-    r = run_to_dataset(EX, "sample", STRESS, out_dir=tmp_path_factory.mktemp("ref") / "run",
-                       threads=4)
-    return read_events(r.out_dir)
-
-
-def _events(over, tmp_path):
-    return read_events(run_to_dataset(EX, "sample", over, out_dir=tmp_path / "run",
-                                      threads=4).out_dir)
+    return _events(STRESS, tmp_path_factory.mktemp("ref"))
 
 
 @functools.cache
