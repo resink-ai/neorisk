@@ -4,7 +4,8 @@
 
 1. collect every worker's `StepChunk`s;
 2. give the rows created this step dense indices per namespace (`id_bases[<ns>]` + rank by
-   `(pid, ordinal)`); created owners get `pid = ptype_code << 56 | dense`;
+   `(pid, ordinal)`; owner tables rank by creation key instead, see `_owner_dense`); created
+   owners get `pid = ptype_code << 56 | dense`;
 3. remap provisional handles (D11) in records, created rows, the state, local `ref` fields and
    `self_id`/`pid` of touched owners, and the tag and user payload of every command queued at a
    touched slot; a provisional value that matches no row of this step fails the run;
@@ -303,6 +304,62 @@ def _free_retired(world: Any, owners: np.ndarray) -> int:
     return len(gone)
 
 
+def _owner_dense(creates: dict[str, dict[str, np.ndarray]], owner_ptype: dict[str, int],
+                 causes: tuple[np.ndarray, np.ndarray],
+                 id_bases: dict[str, int]) -> dict[str, np.ndarray]:
+    """Dense indices of the owner rows created this step, ranked by the creation key
+    `(created_at, creator commit lamport, creator partition_id, ordinal)`.
+
+    Every part of the key is step-invariant: steps split time, a commit is named by its
+    creator and lamport, and within one commit the per-step ordinal follows creation order.
+    Since `created_at` leads, each step's ranks continue the previous steps' ones, so a created
+    owner's dense index, and with it its `partition_id` (the canonical tiebreak at an equal
+    `(event_time, lamport)`), is the same for every step length (spec §12). A creator created
+    this step has a provisional pid; its final one is solved by iteration: the creator's own
+    creation has a strictly smaller `(created_at, lamport)`, so each pass fixes one more level
+    of nesting. `causes` = (handles, commit lamports) of this step's owner creations.
+    """
+    owned = [ns for ns in creates if ns in owner_ptype and len(creates[ns]["handle"])]
+    if not owned:
+        return {}
+    c_handles, c_causes = causes
+    order = np.argsort(c_handles, kind="stable")
+    c_handles, c_causes = c_handles[order], c_causes[order]
+    cause = {}
+    for ns in owned:
+        h = creates[ns]["handle"]
+        pos = np.minimum(np.searchsorted(c_handles, h), max(len(c_handles) - 1, 0))
+        if not len(c_handles) or (c_handles[pos] != h).any():
+            raise EngineError(f"a created {ns} row was never admitted as an owner")
+        cause[ns] = c_causes[pos]
+    creator = {ns: creates[ns]["pid"].copy() for ns in owned}
+    provisional = {ns: (v >= 0) & ((v & FLAG) != 0) for ns, v in creator.items()}
+    for ns in owned:
+        creator[ns][provisional[ns]] = 0
+    dense: dict[str, np.ndarray] = {}
+    for _ in range(sum(len(creates[ns]["handle"]) for ns in owned) + 1):
+        for ns in owned:
+            rows = creates[ns]
+            dense[ns] = np.empty(len(rows["handle"]), np.int64)
+            rank = np.lexsort((rows["ordinal"], creator[ns], cause[ns], rows["created_at"]))
+            dense[ns][rank] = id_bases.get(ns, 0) + np.arange(len(rank), dtype=np.int64)
+        if not any(provisional[ns].any() for ns in owned):
+            return dense
+        remap = _Remap(np.concatenate([creates[ns]["handle"] for ns in owned]),
+                       np.concatenate([dense[ns] for ns in owned]),
+                       np.concatenate([(np.int64(owner_ptype[ns]) << np.int64(56)) | dense[ns]
+                                       for ns in owned]))
+        changed = False
+        for ns in owned:
+            v = creates[ns]["pid"][provisional[ns]].copy()
+            remap.apply(v, f"creator of created {ns}", pid=True)
+            changed |= bool((creator[ns][provisional[ns]] != v).any())
+            creator[ns][provisional[ns]] = v
+        if not changed:
+            return dense
+    raise EngineError("created owners' creation order did not converge")
+
+
 # ---------------------------------------------------------------------------- seal
 def seal_step(world: Any, step: int, t0: int, t1: int, exported: bool,
               id_bases: dict[str, int]) -> SealedStep:
@@ -322,14 +379,15 @@ def seal_step(world: Any, step: int, t0: int, t1: int, exported: bool,
 
     # 2. dense indices per namespace
     owner_ptype = {p.table: p.ptype_code for p in plan.partitions if p.kind == "owner"}
-    dense_of: dict[str, np.ndarray] = {}
+    dense_of = _owner_dense(creates, owner_ptype, world.take_created_causes(), id_bases)
     pids = []
     for ns in plan.namespaces:
         rows = creates[ns]
         base = id_bases.get(ns, 0)
-        d = assign_dense(rows["pid"], rows["ordinal"], base)
+        if ns not in dense_of:
+            dense_of[ns] = assign_dense(rows["pid"], rows["ordinal"], base)
+        d = dense_of[ns]
         id_bases[ns] = base + len(d)
-        dense_of[ns] = d
         pt = owner_ptype.get(ns)
         pids.append((np.int64(pt) << np.int64(56)) | d if pt is not None else d)
     if plan.namespaces:

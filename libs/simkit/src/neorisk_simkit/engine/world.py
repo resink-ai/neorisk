@@ -567,6 +567,7 @@ class World:
                   np.zeros(G, np.int64), np.zeros(1, np.int64), np.zeros(G, np.uint8),
                   self._bnd_array(lambda b: 0), np.zeros(G, np.int64))
         self.pending_creates: list[_Creation] = []
+        self.created_causes: list[tuple[int, int]] = []    # (handle, lamport) admitted this step
         self.admissions = 0                               # created owners admitted this step
         self.run_buf = np.zeros(G, np.int64)              # runnable slots (compiled rounds)
         self.shard_buf = np.zeros(max(1, G - self.shard_lo), np.int64)
@@ -653,7 +654,13 @@ class World:
 
         In routing-key order, each created owner gets a free slot, the created row's columns as
         state, `self_id = pid = handle` (provisional; D12), `inst = mix(creator inst, lamport,
-        ordinal)` and a `START` at the creation time per process started by `on_created`.
+        ns, k)` and a `START` at the creation time per process started by `on_created`.
+
+        `k` is the row's ordinal among the rows of its namespace created by the same commit: the
+        handle's per-step ordinal minus the commit's first one. A commit's creations share its
+        time, so they are routed and admitted together, and `(creator, lamport)` names the
+        commit. The per-step ordinal itself would make `inst` (every draw of the created owner)
+        depend on whether an earlier commit of the creator fell in the same step (spec §12).
         """
         due = sorted((c for c in self.pending_creates if c.time < limit_t),
                      key=lambda c: (c.time, c.prio, c.cause, c.src_pid, c.src_seq))
@@ -661,6 +668,10 @@ class World:
             return np.zeros(0, np.int64)
         self.pending_creates = [c for c in self.pending_creates if c.time >= limit_t]
         plan, hid = self.plan, self.hidden
+        first: dict[tuple[int, int, int], int] = {}          # (creator, lamport, ns) -> ordinal
+        for c in due:
+            key, o = (c.src_g, c.cause, c.ns), handle_ordinal(c.handle)
+            first[key] = min(first.get(key, o), o)
         owner_of = {p.table: p for p in plan.partitions if p.kind == "owner"}
         limit = int(self.run.budget.max_admissions_per_step)
         admitted = []
@@ -676,7 +687,9 @@ class World:
                                   process=proc)
             ls, self.free_lslots[part.name] = int(free[0]), free[1:]
             g = self.slot_base[part.name] + ls
-            inst = _as_i64(rng.mix(int(hid.inst[c.src_g]), c.cause, handle_ordinal(c.handle)))
+            self.created_causes.append((c.handle, c.cause))
+            k = handle_ordinal(c.handle) - first[(c.src_g, c.cause, c.ns)]
+            inst = _as_i64(rng.mix(int(hid.inst[c.src_g]), c.cause, c.ns, k))
             self._reset_slots(part, np.array([g]), c.handle, c.handle, inst)
             row = self._created_row(ns, c.handle)
             for col, arr in zip(plan.table(ns).cols, self.state[part.name], strict=True):
@@ -692,6 +705,12 @@ class World:
             rt.mark_touched(self.R, g)
             admitted.append(g)
         return np.array(admitted, np.int64)
+
+    def take_created_causes(self) -> tuple[np.ndarray, np.ndarray]:
+        """(handles, creator commit lamports) of the owners admitted this step; clears them."""
+        got = np.array(self.created_causes, np.int64).reshape(-1, 2)
+        self.created_causes = []
+        return got[:, 0].copy(), got[:, 1].copy()
 
     def _created_row(self, ns: str, handle: int) -> dict[str, Any]:
         """The create-slab row of `handle` (live in a worker slab, or in a flushed chunk)."""

@@ -1,5 +1,6 @@
 """Spec §10/§12 exit test: identical logical records across 1, 4 and 16 threads, two slab sizes
-and two step lengths; identical replay is byte-identical."""
+and two step lengths; identical replay is byte-identical. The `creators` fixture adds owners that
+create owners (which draw randomness and tie in canonical order) across step boundaries."""
 
 import itertools
 import json
@@ -18,6 +19,7 @@ from neorisk_simkit.io.schema.schema_json import load_schema
 from neorisk_simkit.spec.project import load_project, resolve_run
 
 EX = Path(__file__).resolve().parents[3] / "examples" / "ecommerce_s1"
+CREATORS = Path(__file__).resolve().parent / "fixtures" / "creators"
 SMALL = ["users=1500", "skus=300", "sku_groups=8", "run.span=4d", "run.warmup=1d",
          "journey.kyc_start_p=0.3", "engine.adapt=false",
          # engine pools sized for 1.5k users (the project's are sized for the 2M-user full run)
@@ -70,17 +72,17 @@ def runs(tmp_path_factory):
     return out, probes
 
 
-def created_namespaces() -> frozenset[str]:
+def created_namespaces(project: Path = EX, overrides: list[str] = SMALL) -> frozenset[str]:
     """The ID namespaces the engine hands out at seal (creatable tables and `ids`): only their
     dense indices legitimately depend on step boundaries (D13). Population and static IDs
     (`user`, `sku`, `device`) and partition IDs are fixed before the run starts."""
-    return frozenset(resolve_run(load_project(EX), "sample", SMALL).plan.namespaces)
+    return frozenset(resolve_run(load_project(project), "sample", overrides).plan.namespaces)
 
 
-def canonicalize_ids(d: Path) -> dict[str, list[dict]]:
+def canonicalize_ids(d: Path, created: frozenset[str] | None = None) -> dict[str, list[dict]]:
     """Rename every created ID namespace by first appearance in global canonical order and
     number events by their canonical position (D13); every other column is kept as is."""
-    created = created_namespaces()
+    created = created_namespaces() if created is None else created
     schema, events = load_schema(d), read_events(d)
     refs = {t["name"]: {c["name"]: c["ref"] for c in t["columns"]
                         if c.get("ref") in created}
@@ -146,3 +148,56 @@ def test_identical_replay_is_byte_identical(runs, tmp_path):
     run_to_dataset(EX, "sample", SMALL + ["engine.slab_bytes='8MB'", "engine.step='6h'"],
                    out_dir=again, threads=4, engine_overrides=ENGINE)
     assert dataset_tree(dirs[(4, "8MB", "6h")]) == dataset_tree(again)
+
+
+# ---------------------------------------------------------------------------- created owners
+CREATOR_RUNS = ((1, "30m"), (1, "6h"), (4, "6h"), (1, "1d"))
+
+
+@pytest.fixture(scope="module")
+def creator_runs(tmp_path_factory):
+    root = tmp_path_factory.mktemp("creators")
+    out = {}
+    for threads, step in CREATOR_RUNS:
+        d = root / f"t{threads}-{step}"
+        run_to_dataset(CREATORS, "sample", [f"engine.step={step!r}"], out_dir=d,
+                       threads=threads, engine_overrides=ENGINE)
+        out[(threads, step)] = d
+    return out
+
+
+def test_creators_fixture_crosses_steps_and_ties(creator_runs):
+    """Guard against a vacuous pass: the step lengths really split one account's creations
+    over different steps, payments draw randomness, and payments of different accounts tie
+    at an equal (event_time, lamport)."""
+    steps = {s: json.loads((creator_runs[(1, s)] / "run_stats.json").read_text())["steps"]
+             for s in ("30m", "6h", "1d")}
+    assert steps == {"30m": 48, "6h": 4, "1d": 1}
+    ev = read_events(creator_runs[(1, "6h")])
+    spawned, paid, ticked = ev["spawned"], ev["paid"], ev["ticked"]
+    assert spawned.height == paid.height == ticked.height == 6 * 4
+    per_acct = spawned.group_by("acct_id").agg(pl.col("event_time").n_unique().alias("n"))
+    assert (per_acct["n"] == 3).all()               # three separate creating commits each
+    assert paid["draw"].n_unique() == paid.height    # every payment draws its own value
+    ties = ticked.group_by("event_time", "lamport").agg(pl.col("acct_id").n_unique().alias("a"))
+    assert (ties["a"] > 1).any()                     # cross-account canonical-order ties
+    refunded = ev["refunded"]                        # owners created by created owners
+    assert refunded.height == 2 * 2 * 6 and refunded["draw"].n_unique() == refunded.height
+    first = refunded.filter(pl.col("phase") == 0).join(paid, on="pay_id")
+    assert (first["event_time"] == first["event_time_right"]).all()
+    ties = refunded.group_by("event_time", "lamport").len()
+    assert (ties["len"] > 1).any()
+
+
+def test_created_owners_identical_across_threads(creator_runs):
+    assert event_dicts(creator_runs[(1, "6h")]) == event_dicts(creator_runs[(4, "6h")])
+
+
+def test_created_owners_identical_across_step_lengths(creator_runs):
+    """A created owner's draws and its place in canonical order do not depend on where the
+    step boundaries fall (C1/I2 of the S1 final review)."""
+    created = created_namespaces(CREATORS, [])
+    assert created == {"pay", "refund"}
+    base = canonicalize_ids(creator_runs[(1, "1d")], created)
+    for step in ("30m", "6h"):
+        assert canonicalize_ids(creator_runs[(1, step)], created) == base, step
