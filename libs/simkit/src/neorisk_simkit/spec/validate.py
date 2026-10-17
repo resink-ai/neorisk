@@ -113,11 +113,16 @@ def validate(run, threads: int | None = None) -> ValidationReport:
     if run.budget.max_spawn_depth < 1:
         errs.append("budget.max_spawn_depth must be >= 1")
 
-    caps = compute_caps(run, threads)
-    try:
-        check_budget(caps, run.budget)
-    except BudgetError as e:
-        errs.append(str(e))
+    workers = run.budget.threads if threads is None else threads
+    if workers < 1:
+        errs.append(f"threads must be >= 1 (got {workers})")
+        caps = compute_caps(run, 1)               # estimates only; the run is refused anyway
+    else:
+        caps = compute_caps(run, threads)
+        try:
+            check_budget(caps, run.budget)
+        except BudgetError as e:
+            errs.append(str(e))
 
     if plan.checks:
         warns.append("checks declared but not evaluated until S2: "

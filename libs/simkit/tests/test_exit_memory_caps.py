@@ -96,3 +96,11 @@ def test_threads_override_is_validated_against_the_budget(tmp_path):
     ok = run_to_dataset(MINI, "sample", fits, out_dir=tmp_path / "ok",
                         threads=run.budget.threads - 1)
     assert ok.stats["threads"] == run.budget.threads - 1
+
+
+@pytest.mark.parametrize("threads", [0, -2])
+def test_non_positive_threads_are_refused_at_validation(tmp_path, threads):
+    out = tmp_path / "zero"
+    with pytest.raises(ValidationFailed, match="threads must be >= 1"):
+        run_to_dataset(MINI, "sample", [], out_dir=out, threads=threads)
+    assert not out.exists() and not out.with_suffix(".partial").exists()

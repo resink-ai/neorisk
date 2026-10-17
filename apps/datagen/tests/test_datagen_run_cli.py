@@ -65,3 +65,9 @@ def test_threads_override_beyond_the_budget_exits_2(mini, capsys):
     err = capsys.readouterr().err
     assert "exceed the memory budget" in err and "output_slabs" in err
     assert not (mini / "out" / "sample-s7").exists()
+
+
+def test_zero_threads_exits_2(mini, capsys):
+    assert main(["run", str(mini), "--threads", "0"]) == 2
+    assert "threads must be >= 1" in capsys.readouterr().err
+    assert not (mini / "out" / "sample-s7").exists()
