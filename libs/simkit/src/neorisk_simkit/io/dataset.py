@@ -151,7 +151,7 @@ def _install(work: Path, out_dir: Path) -> None:
     except BaseException:
         old.rename(out_dir)
         raise
-    shutil.rmtree(old)
+    shutil.rmtree(old, ignore_errors=True)        # the new dataset is installed; best effort
 
 
 def _run_stats(sim: Simulation, manifest: dict[str, Any], timing: dict[str, float],

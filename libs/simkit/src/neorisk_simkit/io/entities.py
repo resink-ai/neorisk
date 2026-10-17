@@ -12,6 +12,7 @@ every part would use, so the file bytes are identical to writing the whole table
 
 from __future__ import annotations
 
+import contextlib
 import hashlib
 from pathlib import Path
 from typing import Any
@@ -106,10 +107,17 @@ class EntityWriter:
         return f"entities/{name}/part-00000.parquet"
 
     def close(self) -> list[FileEntry]:
-        """Finish every file; entries in table-name order."""
+        """Finish every file; entries in table-name order. If one fails, the files not yet
+        finished are aborted and the failure is raised."""
         out = []
-        for name, stream in sorted(self._streams.items()):
-            stream.close()
+        streams = sorted(self._streams.items())
+        for i, (name, stream) in enumerate(streams):
+            try:
+                stream.close()
+            except BaseException:
+                for _, rest in streams[i:]:
+                    _quiet_abort(rest)
+                raise
             digest = hashlib.sha256()
             with open(stream.path, "rb") as f:
                 for block in iter(lambda: f.read(1 << 20), b""):
@@ -118,6 +126,12 @@ class EntityWriter:
         return out
 
     def abort(self) -> None:
-        """Close open files after a failure (the run folder is discarded)."""
+        """Close open files after a failure (the run folder is discarded). Tries every stream
+        and never raises, so the failure being handled is the one the caller sees."""
         for stream in self._streams.values():
-            stream.abort()
+            _quiet_abort(stream)
+
+
+def _quiet_abort(stream: _TableStream) -> None:
+    with contextlib.suppress(Exception):           # best effort: the folder is discarded
+        stream.abort()

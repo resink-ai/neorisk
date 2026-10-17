@@ -178,6 +178,31 @@ def test_force_keeps_the_old_folder_until_the_new_one_is_in_place(tmp_path, monk
     assert sorted(p.name for p in tmp_path.iterdir()) == ["run"]
 
 
+def test_failed_cleanup_of_the_old_folder_does_not_fail_the_run(tmp_path, monkeypatch):
+    """Once the new dataset is in place, failing to delete the set-aside `.old` folder is not
+    a failed run."""
+    import shutil
+
+    from neorisk_simkit.io import dataset
+
+    out = tmp_path / "run"
+    run_to_dataset(FIXTURES / "mini", "sample", ["users=20"], out_dir=out)
+    (out / "marker.txt").write_text("old")
+    real_rmtree = shutil.rmtree
+
+    def failing(path, ignore_errors=False, **kw):
+        if str(path).endswith(".old"):
+            if ignore_errors:
+                return None
+            raise OSError("busy")
+        return real_rmtree(path, ignore_errors=ignore_errors, **kw)
+
+    monkeypatch.setattr(dataset.shutil, "rmtree", failing)
+    r = run_to_dataset(FIXTURES / "mini", "sample", ["users=20"], out_dir=out, force=True)
+    assert r.out_dir == out and (out / "manifest.json").exists()
+    assert not (out / "marker.txt").exists()
+
+
 def _reference_bytes(tmp_path, parts, run):
     """What the one-shot writer produces for the concatenation of `parts`."""
     import pyarrow as pa
@@ -247,3 +272,41 @@ def test_entity_stream_edges_match_the_one_shot_writer(tmp_path, sizes):
     (entry,) = ew.close()
     kept = [t for i, t in enumerate(parts) if t.num_rows or i == 0]
     assert (tmp_path / "run" / entry.path).read_bytes() == _reference_bytes(tmp_path, kept, run)
+
+
+def _three_streams(tmp_path):
+    import pyarrow as pa
+    from conftest import make_run
+
+    from neorisk_simkit.io.entities import EntityWriter
+
+    run = make_run("mini")
+    ew = EntityWriter(tmp_path / "run", run.writer, run.plan)
+    ew.add({n: pa.table({"id": pa.array([1, 2], pa.int64())}) for n in ("a", "b", "c")})
+    return ew
+
+
+def test_entity_abort_tries_every_stream_and_never_raises(tmp_path, monkeypatch):
+    ew = _three_streams(tmp_path)
+    called = []
+    for name, stream in ew._streams.items():
+        def abort(name=name):
+            called.append(name)
+            if name == "b":
+                raise OSError("disk gone")
+        monkeypatch.setattr(stream, "abort", abort)
+    ew.abort()                                       # must not mask the run's own failure
+    assert sorted(called) == ["a", "b", "c"]
+
+
+def test_entity_close_failure_aborts_the_other_streams(tmp_path, monkeypatch):
+    ew = _three_streams(tmp_path)
+    aborted = []
+    for name, stream in ew._streams.items():
+        monkeypatch.setattr(stream, "abort", lambda name=name: aborted.append(name))
+    def boom():
+        raise OSError("disk full")
+    monkeypatch.setattr(ew._streams["b"], "close", boom)
+    with pytest.raises(OSError, match="disk full"):
+        ew.close()
+    assert sorted(aborted) == ["b", "c"]             # "a" closed cleanly before the failure
