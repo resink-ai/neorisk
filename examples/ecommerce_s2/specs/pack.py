@@ -11,7 +11,7 @@ Boundaries (immutable, latency >= delta)
 Created owners
     payment            one payment, created by a checkout or a bill (D54); lifecycle in Local
 
-The bonus pool and campaigns are added by tasks 14 and 15 of the S2 plan.
+The bonus pool and campaigns are added by task 15 of the S2 plan.
 """
 
 from dataclasses import dataclass, field
