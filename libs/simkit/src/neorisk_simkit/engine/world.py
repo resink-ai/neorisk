@@ -14,6 +14,7 @@ the touched slots, the calendar of owners' next command times and the message bu
 from __future__ import annotations
 
 import dataclasses
+import functools
 import threading
 from typing import Any
 
@@ -166,6 +167,15 @@ class _Creation:
     handle: int                                # provisional handle of the created row
     src_g: int                                 # creator's global slot
     action: int                                # creator's process (action id)
+
+
+def _row_of(ns: str, handles: np.ndarray, cols: dict[str, np.ndarray],
+            handle: int) -> dict[str, Any]:
+    """The row of `handle` in `cols` (sorted by handle, see `World._created_rows`)."""
+    i = int(np.searchsorted(handles, handle))
+    if i == len(handles) or handles[i] != handle:
+        raise EngineError(f"created row {handle} of {ns} is missing from the create slabs")
+    return {k: v[i] for k, v in cols.items()}
 
 
 def instance_keys(name: str, ordinals: np.ndarray) -> np.ndarray:
@@ -672,6 +682,7 @@ class World:
         for c in due:
             key, o = (c.src_g, c.cause, c.ns), handle_ordinal(c.handle)
             first[key] = min(first.get(key, o), o)
+        rows = self._created_rows({plan.namespaces[c.ns] for c in due})
         owner_of = {p.table: p for p in plan.partitions if p.kind == "owner"}
         limit = int(self.run.budget.max_admissions_per_step)
         admitted = []
@@ -691,7 +702,7 @@ class World:
             k = handle_ordinal(c.handle) - first[(c.src_g, c.cause, c.ns)]
             inst = _as_i64(rng.mix(int(hid.inst[c.src_g]), c.cause, c.ns, k))
             self._reset_slots(part, np.array([g]), c.handle, c.handle, inst)
-            row = self._created_row(ns, c.handle)
+            row = rows[ns](c.handle)
             for col, arr in zip(plan.table(ns).cols, self.state[part.name], strict=True):
                 arr[ls] = row[col.name]
             procs = [p.action_id for p in plan.processes if p.partition == part.name
@@ -712,18 +723,22 @@ class World:
         self.created_causes = []
         return got[:, 0].copy(), got[:, 1].copy()
 
-    def _created_row(self, ns: str, handle: int) -> dict[str, Any]:
-        """The create-slab row of `handle` (live in a worker slab, or in a flushed chunk)."""
-        res = f"creates:{ns}"
-        for w, slab in enumerate(self.slabs):
-            n = int(slab.cnt[slab.resources.index(res)])
-            parts = [{k: v[:n] for k, v in slab.buffers[res].items()}]
-            parts += [ch.creates[ns] for ch in self.chunks[w] if ns in ch.creates]
-            for rows in parts:
-                hit = np.flatnonzero(rows["handle"] == handle)
-                if len(hit):
-                    return {k: v[hit[0]] for k, v in rows.items()}
-        raise EngineError(f"created row {handle} of {ns} is missing from the create slabs")
+    def _created_rows(self, namespaces: set[str]) -> dict[str, Any]:
+        """Per namespace, a lookup `handle -> create-slab row` over every worker's live create
+        slab and flushed chunks (one index per admission call, not one scan per row)."""
+        found = {}
+        for ns in namespaces:
+            res = f"creates:{ns}"
+            parts = []
+            for w, slab in enumerate(self.slabs):
+                n = int(slab.cnt[slab.resources.index(res)])
+                parts.append({k: v[:n] for k, v in slab.buffers[res].items()})
+                parts += [ch.creates[ns] for ch in self.chunks[w] if ns in ch.creates]
+            cols = {k: np.concatenate([p[k] for p in parts]) for k in parts[0]}
+            order = np.argsort(cols["handle"], kind="stable")
+            found[ns] = functools.partial(_row_of, ns, cols["handle"][order],
+                                          {k: v[order] for k, v in cols.items()})
+        return found
 
     def init_shards(self) -> None:
         """Queue occurrence 0 of every periodic shard process (D26)."""
