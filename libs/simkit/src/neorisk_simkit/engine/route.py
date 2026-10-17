@@ -16,8 +16,10 @@ Route tuple `R` (indices `RT_*`):
   msg       int64[2]: messages routed this step, `engine.max_messages_per_step`
   woken     int64[G] + woken_n int64[1]: owners whose `pending` dropped to 0
   tmask     uint8[G] + tlist int64[G] + tn int64[1]: slots touched this step
-  susp      int64[G] + susp_n int64[1] + smask uint8[G]: owners that may be suspended
-            (pending > 0), each listed once
+  susp      int64[G] + susp_n int64[1] + smask uint8[G]: the suspended owners (pending > 0)
+            as a min-heap on susp_t + delta, each listed once (see `note_suspended`)
+  bnd_req   int64[boundaries]: requests delivered per boundary code over the run (run stats)
+  spos      int64[G]: heap position of each listed suspended owner
 """
 
 from __future__ import annotations
@@ -27,11 +29,11 @@ from numba import njit
 
 from neorisk_simkit.engine.cmdq import P_FREE_N, PAYLOAD_W, pay_alloc, q_push
 from neorisk_simkit.engine.codegen import COUNTERS
-from neorisk_simkit.engine.slabs import OB_CREATE, OB_RESPONSE, OUTBOX_COLS
+from neorisk_simkit.engine.slabs import OB_CREATE, OB_REQUEST, OB_RESPONSE, OUTBOX_COLS
 
 (RT_QHEAD, RT_CSEQ, RT_GEN, RT_ALIVE, RT_PENDING, RT_SUSP_T, RT_SUSP_DELTA, RT_POOL, RT_PAY,
  RT_BND_BASE, RT_COUNTERS, RT_MSG, RT_WOKEN, RT_WOKEN_N, RT_TMASK, RT_TLIST, RT_TN, RT_SUSP,
- RT_SUSP_N, RT_SMASK) = range(20)
+ RT_SUSP_N, RT_SMASK, RT_BND_REQ, RT_SPOS) = range(22)
 
 # route_outbox statuses
 ROUTED, NEED_MESSAGES, NEED_NODES, NEED_PAYLOAD, HAS_CREATE = 0, 1, 2, 3, 4
@@ -76,41 +78,97 @@ def mark_all(R, slots, n):
 
 
 @njit(cache=True, nogil=True)
-def _compact_suspended(R):
-    susp, sn, pending, smask = R[RT_SUSP], R[RT_SUSP_N], R[RT_PENDING], R[RT_SMASK]
-    k = 0
-    for i in range(sn[0]):
-        g = susp[i]
-        if pending[g] > 0:
-            susp[k] = g
-            k += 1
-        else:
-            smask[g] = 0
-    sn[0] = k
+def _wake_key(R, g):
+    """susp_t + delta of suspended owner g, saturating (the term it adds to the horizon)."""
+    t, d = R[RT_SUSP_T][g], R[RT_SUSP_DELTA][g]
+    return t + d if t < _I64_MAX - d else _I64_MAX
+
+
+@njit(cache=True, nogil=True)
+def _heap_swap(R, i, j):
+    heap, pos = R[RT_SUSP], R[RT_SPOS]
+    a, b = heap[i], heap[j]
+    heap[i], heap[j] = b, a
+    pos[b], pos[a] = i, j
+
+
+@njit(cache=True, nogil=True)
+def _heap_up(R, i):
+    heap = R[RT_SUSP]
+    while i > 0:
+        parent = (i - 1) // 2
+        if _wake_key(R, heap[parent]) <= _wake_key(R, heap[i]):
+            break
+        _heap_swap(R, i, parent)
+        i = parent
+
+
+@njit(cache=True, nogil=True)
+def _heap_down(R, i):
+    heap, n = R[RT_SUSP], R[RT_SUSP_N][0]
+    while True:
+        lo, c = i, 2 * i + 1
+        if c < n and _wake_key(R, heap[c]) < _wake_key(R, heap[lo]):
+            lo = c
+        if c + 1 < n and _wake_key(R, heap[c + 1]) < _wake_key(R, heap[lo]):
+            lo = c + 1
+        if lo == i:
+            return
+        _heap_swap(R, i, lo)
+        i = lo
+
+
+@njit(cache=True, nogil=True)
+def _unlist_suspended(R, g):
+    """Remove owner g from the suspended heap (no-op if it is not listed)."""
+    smask = R[RT_SMASK]
+    if smask[g] == 0:
+        return
+    smask[g] = 0
+    heap, sn, pos = R[RT_SUSP], R[RT_SUSP_N], R[RT_SPOS]
+    i = pos[g]
+    last = sn[0] - 1
+    sn[0] = last
+    if i != last:
+        moved = heap[last]
+        heap[i] = moved
+        pos[moved] = i
+        _heap_up(R, i)
+        _heap_down(R, pos[moved])
 
 
 @njit(cache=True, nogil=True)
 def note_suspended(R, slots, n):
-    """After an owner phase over `slots[:n]`: mark them touched, remember the suspended ones."""
-    _compact_suspended(R)
-    susp, sn, pending, smask = R[RT_SUSP], R[RT_SUSP_N], R[RT_PENDING], R[RT_SMASK]
+    """After an owner phase over `slots[:n]`: mark them touched, list the suspended ones.
+
+    The suspended owners are a binary min-heap on susp_t + delta (`RT_SUSP[:RT_SUSP_N]`, slot
+    positions in `RT_SPOS`, membership in `RT_SMASK`), each listed once; routing unlists an
+    owner when its last response is delivered, so the horizon costs O(1) per round instead of
+    a scan over every suspended owner."""
+    heap, sn, pending, smask, pos = (R[RT_SUSP], R[RT_SUSP_N], R[RT_PENDING], R[RT_SMASK],
+                                     R[RT_SPOS])
     for i in range(n):
         g = slots[i]
         mark_touched(R, g)
         if pending[g] > 0 and smask[g] == 0:
             smask[g] = 1
-            susp[sn[0]] = g
-            sn[0] += 1
+            k = sn[0]
+            heap[k] = g
+            pos[g] = k
+            sn[0] = k + 1
+            _heap_up(R, k)
 
 
 @njit(cache=True, nogil=True)
 def horizon(R, step_end, create_min):
-    """`safe_horizon` over the owners still waiting for a response."""
-    _compact_suspended(R)
-    n = R[RT_SUSP_N][0]
-    gs = R[RT_SUSP][:n]
-    return safe_horizon(step_end, R[RT_SUSP_T][gs], R[RT_SUSP_DELTA][gs],
-                        np.full(1, create_min, np.int64))
+    """`safe_horizon` over the owners still waiting for a response (the heap's top)."""
+    heap, sn, pending = R[RT_SUSP], R[RT_SUSP_N], R[RT_PENDING]
+    while sn[0] > 0 and pending[heap[0]] == 0:     # defensive: unlisted on delivery already
+        _unlist_suspended(R, heap[0])
+    h = min(np.int64(step_end), np.int64(create_min))
+    if sn[0] > 0:
+        h = min(h, _wake_key(R, heap[0]))
+    return h
 
 
 @njit(cache=True, nogil=True)
@@ -234,6 +292,7 @@ def route_outbox(R, ob, n, skip_creates):
                                         R[RT_PENDING])
     bnd_base, counters = R[RT_BND_BASE], R[RT_COUNTERS]
     woken, wn = R[RT_WOKEN], R[RT_WOKEN_N]
+    bnd_req = R[RT_BND_REQ]
     src = ob[_PAYC]
     rows = PA[0]
     order = route_order(ob, n)
@@ -249,6 +308,8 @@ def route_outbox(R, ob, n, skip_creates):
                 continue
         else:
             g = bnd_base[ob[_BND][i]] + ob[_DST][i]
+            if kind == OB_REQUEST:
+                bnd_req[ob[_BND][i]] += 1
         row = pay_alloc(PA, 0)
         for c in range(PAYLOAD_W):
             rows[row, c] = src[i, c]
@@ -260,6 +321,7 @@ def route_outbox(R, ob, n, skip_creates):
         if kind == OB_RESPONSE:
             pending[g] -= 1
             if pending[g] == 0:
+                _unlist_suspended(R, g)
                 resume_owner(P, qhead, g)
                 woken[wn[0]] = g
                 wn[0] += 1

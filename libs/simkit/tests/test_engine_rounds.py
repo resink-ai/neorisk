@@ -122,6 +122,8 @@ def test_suspended_owners_are_listed_once(monkeypatch):
     run = make_run("mini", ["behavior.take_p=0.5"], parallel_min_partitions=1)
     w = World.build(run, threads=1)
     real, sizes = w.note_suspended, []
+    t0 = run.start_us - run.warmup_us
+    t1 = t0 + run.engine.step_us
 
     def check(slots):
         real(slots)
@@ -129,11 +131,17 @@ def test_suspended_owners_are_listed_once(monkeypatch):
         listed = w.R[rt.RT_SUSP][:n]
         assert len(set(listed.tolist())) == n
         assert (w.R[rt.RT_SMASK].astype(bool) == np.isin(np.arange(w.G), listed)).all()
+        # listed == suspended, kept as a min-heap on susp_t + delta; the horizon is its top
+        hid = w.hidden
+        assert set(listed.tolist()) == set(np.flatnonzero(hid.pending[:w.shard_lo] > 0).tolist())
+        key = hid.susp_t[listed] + hid.susp_delta[listed]
+        assert all(key[(i - 1) // 2] <= key[i] for i in range(1, n))
+        assert (w.R[rt.RT_SPOS][listed] == np.arange(n)).all()
+        assert rt.horizon(w.R, t1, np.iinfo(np.int64).max) == min([t1, *key.tolist()])
         sizes.append(n)
 
     monkeypatch.setattr(w, "note_suspended", check)
-    t0 = run.start_us - run.warmup_us
-    run_step(w, t0, t0 + run.engine.step_us)
+    run_step(w, t0, t1)
     assert len(sizes) > 100 and max(sizes) > 0
 
 

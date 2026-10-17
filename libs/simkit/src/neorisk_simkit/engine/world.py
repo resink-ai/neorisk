@@ -561,7 +561,8 @@ class World:
                   self._bnd_array(base), self.counters, self.msg,
                   np.zeros(G, np.int64), np.zeros(1, np.int64),
                   self._tmask, self._tlist, self._tn,
-                  np.zeros(G, np.int64), np.zeros(1, np.int64), np.zeros(G, np.uint8))
+                  np.zeros(G, np.int64), np.zeros(1, np.int64), np.zeros(G, np.uint8),
+                  self._bnd_array(lambda b: 0), np.zeros(G, np.int64))
         self.pending_creates: list[_Creation] = []
         self.admissions = 0                               # created owners admitted this step
         self.run_buf = np.zeros(G, np.int64)              # runnable slots (compiled rounds)
@@ -955,4 +956,8 @@ class World:
         return {"rejects": {p.name: int(rej[p.action_id]) for p in self.plan.processes},
                 "retries": int(c[COUNTERS.index("retries")]),
                 "late_messages": int(c[COUNTERS.index("late_messages")]),
-                "continuations": int(c[COUNTERS.index("continuations")])}
+                "continuations": int(c[COUNTERS.index("continuations")]),
+                "commands": int(c[COUNTERS.index("commands")]),
+                "requests_by_boundary": {b.name: int(self.R[rt.RT_BND_REQ][b.code])
+                                         for b in self.plan.boundaries
+                                         if b.kind == "request"}}

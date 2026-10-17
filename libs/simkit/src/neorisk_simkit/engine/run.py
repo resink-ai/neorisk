@@ -46,7 +46,9 @@ class Simulation:
         self.stats: dict[str, Any] = {
             "steps": 0, "rows_per_table": {}, "late_messages": 0,
             "rejects": {p.name: 0 for p in plan.processes}, "retries": 0, "continuations": 0,
-            "rounds_per_step": [], "round_detail": [], "generate_s": 0.0, "seal_s": 0.0}
+            "rounds_per_step": [], "round_detail": [], "generate_s": 0.0, "seal_s": 0.0,
+            "proposals": 0, "requests_by_boundary": {}}
+        self._shard_commands = 0
 
     # ------------------------------------------------------------------ entities
     def static_entities(self) -> dict[str, pa.Table]:
@@ -128,3 +130,7 @@ class Simulation:
         ws = self.world.stats
         for k in _ENGINE_COUNTERS:
             st[k] = dict(ws[k]) if isinstance(ws[k], dict) else int(ws[k])
+        # proposals: owner commands executed (commits and rejects; retries are not commands)
+        self._shard_commands += sum(rounds.shard_cmds)
+        st["proposals"] = ws["commands"] - self._shard_commands
+        st["requests_by_boundary"] = dict(ws["requests_by_boundary"])

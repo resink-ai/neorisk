@@ -45,7 +45,16 @@ warmup = "3d"
 set = { users = 20_000, skus = 5_000, sku_groups = 64 }
 
 [profiles.full]                        # the S1 benchmark shape (benchmarks/s1.toml)
-set = { users = 2_000_000, skus = 50_000, sku_groups = 512 }
+# Journey calibrated so 2M users over 90 days export ~10^7 events with ~8% of owner commands
+# being inventory reserves (spec §10); see benchmarks/README.md.
+[profiles.full.set]
+users = 2_000_000
+skus = 50_000
+sku_groups = 512
+journey = { session_gap_min_h = 2_300.0, views_mean = 4.0, add_to_cart_p = 0.4, checkout_p = 0.85 }
+# signup_delay = exp(mean 7 days), in microseconds: spreads the 1.2M initial shoppers' first
+# sessions over the warm-up so the first step stays under budget.max_step_rows.
+"journey.signup_delay.params" = [604_800_000_000.0, 0.0, 0.0]
 
 [replay.presets.peek]
 first = 100

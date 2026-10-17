@@ -57,7 +57,22 @@ def main(argv: Sequence[str] | None = None) -> int:
                      help="emit ids and amounts as JSON numbers")
     rep.add_argument("--batch-rows", type=int, default=None, metavar="N")
     rep.add_argument("--preset", default=None, help="[replay.presets.NAME] of datagen.toml")
+    bench = sub.add_parser("benchmark", help="run a benchmark workload and check its gate")
+    bench.add_argument("workload", help="workload file, e.g. benchmarks/s1.toml")
+    bench.add_argument("--scale", type=float, default=1.0,
+                       help="scale users by X (verdict 'skipped' unless 1)")
+    bench.add_argument("--cold", action="store_true",
+                       help="time the compile run with empty JIT caches")
+    bench.add_argument("--threads", type=int, default=None,
+                       help="default min(gate.threads, cores)")
+    bench.add_argument("--out", default=None, help="JSON report path")
+    bench.add_argument("--no-gate", action="store_true", help="exit 0 even if the gate fails")
     args = parser.parse_args(argv)
+
+    if args.cmd == "benchmark":
+        from datagen import benchmark
+
+        return benchmark.cmd_benchmark(args)
 
     if args.cmd == "replay":
         from datagen import replay_cmd

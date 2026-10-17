@@ -83,7 +83,7 @@ def _simulate(run: Any, project_dir: Path, work: Path, threads: int, checked: bo
         history_counts=history_counts, entity_counts=entities.counts(), project_dir=project_dir)
     t_done = time.perf_counter()
     return sim, manifest, {"build_s": t_built - t_start, "write_s": write_s,
-                           "total_s": t_done - t_start}
+                           "total_s": t_done - t_start, "manifest_at": t_done}
 
 
 def run_to_dataset(project_dir: str | Path, profile: str = "sample",
@@ -95,6 +95,7 @@ def run_to_dataset(project_dir: str | Path, profile: str = "sample",
 
     Raises `ValidationFailed` before creating any folder, `FileExistsError` if `out_dir` exists
     and `force` is false. The dataset is written to `<out_dir>.partial` and renamed when done."""
+    t_entry = time.perf_counter()
     project = load_project(project_dir)
     run = resolve_run(project, profile, overrides, seed=seed)
     if engine_overrides:
@@ -119,6 +120,7 @@ def run_to_dataset(project_dir: str | Path, profile: str = "sample",
     work.mkdir(parents=True)
     try:
         sim, manifest, timing = _simulate(run, project.dir, work, threads, checked)
+        timing["engine_s"] = timing.pop("manifest_at") - t_entry
         stats = _run_stats(sim, manifest, timing, threads)
         write_run_stats(work, stats)
         _install(work, out_dir)
@@ -151,7 +153,14 @@ def _run_stats(sim: Simulation, manifest: dict[str, Any], timing: dict[str, floa
     st = sim.stats
     rows = sum(manifest["counts"].values()) + sum(manifest["history_counts"].values())
     total = timing["total_s"]
+    exported = sum(manifest["counts"].values())
+    engine_s = timing["engine_s"]
     out = {
+        "engine_seconds": engine_s,
+        "exported_events": exported,
+        "events_per_second": exported / engine_s if engine_s > 0 else 0.0,
+        "proposals": st["proposals"],
+        "requests_by_boundary": dict(st["requests_by_boundary"]),
         "timings": {"total_s": total, "build_s": timing["build_s"],
                     "generate_s": st["generate_s"], "seal_s": st["seal_s"],
                     "write_s": timing["write_s"]},
