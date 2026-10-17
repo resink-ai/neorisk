@@ -210,7 +210,7 @@ def _answer(ctx, s, loc, cmd, out, cfg):
                                 tag=loc.checkout, sku_id=loc.cart_sku[i],
                                 quantity=loc.cart_qty[i], hold_id=loc.hold[i], slot=loc.slot[i])
             pay = out.create_payment(user_id=ctx.self_id, checkout_id=loc.checkout,
-                                     amount=loc.subtotal, method=method, origin="checkout")
+                                     amount=loc.subtotal, method=method, source="checkout")
             out.emit_checkout_succeeded(ctx.t, user_id=ctx.self_id, checkout_id=loc.checkout,
                                         payment_id=pay, amount=loc.subtotal, hold_after=s.held)
     else:
@@ -239,7 +239,7 @@ def _bill(ctx, out, cfg):
     if not out.reserve(records={"bill_payment_started": 1}, creates={"payment": 1}, timers=1):
         return RETRY                                       # + its creation message (automatic)
     pay = out.create_payment(user_id=ctx.self_id, checkout_id=std.NULL, amount=amt,
-                             method=method, origin="bill")
+                             method=method, source="bill")
     out.emit_bill_payment_started(ctx.t, user_id=ctx.self_id, payment_id=pay, amount=amt)
     out.timer(ctx.t + nxt, C_BILL, prio=PRIO_TIMER)
     return COMMIT
@@ -387,7 +387,7 @@ def _authorize(ctx, s, loc, out, cfg):
         return COMMIT                                      # nothing queued: retires
     loc.status = P_AUTHORIZED
     out.emit_payment_authorized(ctx.t, payment_id=ctx.self_id, user_id=s.user_id,
-                                amount=s.amount, method=s.method, origin=s.origin)
+                                amount=s.amount, method=s.method, source=s.source)
     _post(ctx, out, A_CUSTOMER_FUNDS, A_CUSTOMER_HELD, s.amount)
     out.timer(ctx.t + cfg.auth_expiry_s * 1_000_000, C_AUTH_EXPIRE, prio=PRIO_EXPIRY)
     if capture:

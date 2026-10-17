@@ -66,6 +66,20 @@ def test_postings_balance_per_commit_and_fees_accumulate(run, ev):
         assert m["laws"][k]["violations"] == 0 and m["laws"][k]["checked"] > 0
 
 
+def test_payment_entities_read_back_with_one_origin_column(run, ev):
+    pay = pl.read_parquet(run.out_dir / "entities" / "payment")
+    assert pay.columns.count("origin") == 1 and (pay["origin"] == "created").all()
+    assert pay.columns[:3] == ["id", "created_at", "origin"]       # the reserved entity head
+    made = pl.concat([ev["checkout_succeeded"].select("payment_id", "checkout_id",
+                                                      pl.lit("checkout").alias("src")),
+                      ev["bill_payment_started"].select("payment_id",
+                                                        pl.lit(None, pl.Int64).alias("checkout_id"),
+                                                        pl.lit("bill").alias("src"))])
+    j = made.join(pay, left_on="payment_id", right_on="id", how="left")
+    assert j.height == made.height and (j["source"] == j["src"]).all()
+    assert j["checkout_id"].eq_missing(j["checkout_id_right"]).all()
+
+
 def test_payments_are_their_own_partitions(ev):
     plan = resolve_run(load_project(EX), "sample", []).plan
     code = plan.partition("payment").ptype_code

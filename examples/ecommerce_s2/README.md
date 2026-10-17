@@ -18,7 +18,7 @@ later S2 tasks. See
 | Partition | Kind | Holds | Processes |
 |---|---|---|---|
 | `user` | owner | profile, credit limit and credit hold; a cart of up to four lines and the checkout in flight (kernel locals) | `shopper` (kernel) |
-| `payment` | owner, created | user, checkout (null for a bill), amount, method, origin; the lifecycle status and dispute window (kernel locals) | `payment_life` (kernel) |
+| `payment` | owner, created | user, checkout (null for a bill), amount, method, source (`checkout` or `bill`; not `origin`, which `entities/` reserve); the lifecycle status and dispute window (kernel locals) | `payment_life` (kernel) |
 | `inventory` × `sku_groups` | shard | `on_hand`, `reserved` per SKU in the group; a 64-slot hold table (kernel locals, `std.reservations`) | `inventory_desk` (kernel), `restock` (kernel, weekly, 64-SKU sub-steps) |
 
 | Boundary | Kind | Carries | δ |

@@ -165,13 +165,13 @@ def define(p: Pack, cfg: Config) -> None:
     payment = p.table("payment", key="payment_id", mutable=True, doc="A card payment", cols={
         "user_id": ref("user"), "checkout_id": opt(ref("checkout")),
         "amount": amount(asset="USD"), "method": cat(*METHODS),
-        "origin": cat("checkout", "bill")})
+        "source": cat("checkout", "bill")})
     p.owner("payment", table=payment, max_live=max(1_000, int(cfg.users * cfg.payments_live_ratio)))
     p.accumulator("platform_fees", amount(asset="USD"))
     pay_id = {"payment_id": ref("payment")}
     p.event("payment_authorized", owner="payment", cols={
         **pay_id, "user_id": ref("user"), "amount": amount(asset="USD"),
-        "method": cat(*METHODS), "origin": cat("checkout", "bill")})
+        "method": cat(*METHODS), "source": cat("checkout", "bill")})
     p.event("payment_declined", owner="payment", cols={
         **pay_id, "user_id": ref("user"), "amount": amount(asset="USD")})
     p.event("payment_captured", owner="payment", cols={
