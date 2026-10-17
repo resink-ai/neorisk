@@ -13,7 +13,8 @@ Options: `--scale X` (users × X, nothing else changes; the verdict is `skipped`
 `--cold` (fresh `NEORISK_JIT_CACHE` and `NUMBA_CACHE_DIR`), `--threads N` (default
 `min(gate.threads, cores)`, D30), `--out FILE` (default `benchmarks/results/<name>-<utc>.json`,
 git-ignored), `--no-gate` (exit 0 even when the gate fails). Exit codes: 0 pass or skipped,
-1 gate failed or internal error (D35).
+1 gate failed or internal error, and the run's own code when it fails (2 validation, 3
+`CapExceeded`; D35).
 
 How a run is measured:
 
@@ -26,7 +27,8 @@ How a run is measured:
    `POLARS_MAX_THREADS=<threads>`.
 3. **Report.** The child's `run_stats.json` gives `engine_seconds` (from `run_to_dataset` entry to
    `manifest.json` written), `stage_seconds` (build, generate, seal, write), `exported_events`,
-   `events_per_second`, `peak_rss_bytes` (the child's own `ru_maxrss`), `proposals` (owner
+   `events_per_second`, `peak_rss_bytes` (the child's own `ru_maxrss`; the gate and the report
+   use GiB, 2³⁰ bytes), `proposals` (owner
    commands executed, retries excluded), `requests_by_boundary`, `rounds_per_step`, `threads`
    and `machine`. The report adds `inventory_share_of_proposals = requests_by_boundary.reserve /
    proposals`, the checks and the verdict.
@@ -59,35 +61,51 @@ Calibration runs (2M users, full span):
 | 2400 | 9,657,514 | 0.0773 |
 | 2500 | 9,518,714 | 0.0772 |
 
-**Gate (spec §10, §18):** ≤ 60 s warm and peak RSS ≤ 16 GB on the reference machine, 16 cores /
-64 GB, with Numba plus Polars threads capped at 16.
+**Gate (spec §10, §18):** ≤ 60 s warm and peak RSS ≤ 16 GiB (`peak_rss_gb = 16`, compared in
+GiB) on the reference machine, 16 cores / 64 GB, with Numba plus Polars threads capped at 16.
 
 ## Results
 
-| Date | Machine (cores / RAM) | Threads | Exported events | Warm s | Cold compile s | Peak RSS GB | generate / seal / write s | Rounds per step (max) | Verdict |
-|---|---|---|---|---|---|---|---|---|---|
-| 2026-10-17 UTC | arm64 14 / 36 GB (not reference) | 14 | 10,022,123 | 116.67 | 509.18 | 2.77 | 109.14 / 4.38 / 2.38 | 96,955 | **fail** |
+| Code | Date | Machine (cores / RAM) | Threads | Exported events | Warm s | Cold compile s | Peak RSS GiB | generate / seal / write s | Rounds per step (max) | Verdict |
+|---|---|---|---|---|---|---|---|---|---|---|
+| before (f8d9f14) | 2026-10-17 UTC | arm64 14 / 36 GiB (not reference) | 14 | 10,022,123 | 116.67 | 509.18 | 2.77 | 109.14 / 4.38 / 2.38 | 96,955 | **fail** |
+| after (task 24b) | 2026-10-17 UTC | arm64 14 / 36 GiB (not reference) | 14 | 10,022,123 | 43.97 | 471.80 | 2.78 | 36.41 / 4.41 / 2.39 | 96,955 | **pass** |
 
-Read from `results/s1-warm.json` (warm run) and `results/s1-cold.json` (cold compile; the
-cold run's own measured run took 117.84 s, peak RSS 2.88 GB). Both runs: 28 steps, 1,388,003
-rounds, 19,247,347 proposals, 1,490,629 reserve requests (share 0.0774).
+The "after" row reads `results/s1-warm.json` (warm run) and `results/s1-cold.json` (`--cold`; its
+own measured run took 44.47 s, peak RSS 2.74 GiB). Both runs: 28 steps, 1,388,003 rounds,
+19,247,347 proposals, 1,490,629 reserve requests (share 0.0774), 228k events/s end to end. The
+dataset is byte-identical to the f8d9f14 run (seed 42; sha256 over every data file, manifest and
+`run_stats.json` excluded).
 
-The gate **fails** on time: 116.7 s against 60 s, 85.9k events/s end to end against the
-≥ 167k/s owner-dominated band. Memory passes with a wide margin (2.8 GB of 16 GB). The machine
-is not the reference machine (14 cores / 36 GB), but almost all of the time is single-threaded
-(below), so two more cores would not close the gap.
+**The gate passes** on this (non-reference) machine: 44.0 s warm against 60 s, 2.8 GiB against
+16 GiB.
 
-The stage that misses its §10 band is **generate**: 109 s for 10⁷ events, 92k events/s
-against 0.5–3M/s (3–20 s). Seal (4.4 s) and write (2.4 s) are inside their bands. Profiling
-(see the task report) puts the generate time in two places:
+What changed: the generated module inlines the lowered kernels and every generated helper
+(`_emit_*`, `_rng_*`, `_timer`, `_request_*`, ...) into `dispatch` at the Numba IR level
+(`inline='always'`). Before, each of those calls took the whole `out` slab tuple and `ctx` (hundreds
+of arrays) by value, and Numba increfed and decrefed every array on every call: an owner command
+cost ~10 µs, nearly all in NRT refcounting. Generate went from 109 s to 36 s.
 
-- **Small rounds.** Rounds per step follow distinct request windows (D4, D5): each checkout's
-  reserve request opens its own 150 ms window, so a step has up to ~97k rounds and the run
-  1.39M. Nearly all of them run in the compiled `drain_small_rounds` loop on one thread
-  (process CPU ~160% on 14 threads).
-- **Per-command overhead in the generated module.** Generated helpers take the whole `out`
-  slab tuple and `ctx` by value, and Numba increfs and decrefs every array in them on each call:
-  `_emit_product_viewed` compiles to ~1,800 indirect (refcount) calls, `_view` to ~8,100.
-  An owner command costs ~10 µs, nearly all in NRT refcounting.
+Tried and not kept (no measurable gain, same output): a tail pointer for the command queues
+(O(1) in-order appends; ±1 s, within noise or slightly slower), and inlining the queue and routing
+helpers (`q_push`, `mark_touched`, heap operations). Inlining `dispatch` into `run_partitions` was
+abandoned: cold compile went past 30 minutes.
 
-S1 is not exited on this gate until a later change passes it.
+Generate alone runs at ~275k events/s, still under the §10 band of 0.5–3M/s; seal and write
+are inside theirs. What is left in generate (36 s): ~1.39M rounds per run, up to 97k per step, almost all in the
+single-threaded compiled `drain_small_rounds` loop (D4). Each checkout's reserve request opens its
+own 150 ms window, so rounds track distinct request windows. Each command still makes one real
+call to `dispatch` with the `out` and `ctx` tuples. Reducing the round count (only with
+output-identical horizon changes) or the per-command dispatch call are the next levers.
+
+### Before (f8d9f14)
+
+Read from `results/s1-warm.json` and `results/s1-cold.json` of that commit (the cold run's own
+measured run took 117.84 s, peak RSS 2.88 GiB). Both runs: 28 steps, 1,388,003 rounds,
+19,247,347 proposals, 1,490,629 reserve requests (share 0.0774).
+
+The gate failed on time: 116.7 s against 60 s, 85.9k events/s end to end against the ≥ 167k/s
+owner-dominated band. The stage that missed its §10 band was **generate**: 109 s for 10⁷ events,
+92k events/s against 0.5–3M/s. Profiling put the generate time in small rounds (above) and in
+per-command refcounting in the generated module: `_emit_product_viewed` compiled to ~1,800
+indirect (refcount) calls, `_view` to ~8,100.
