@@ -27,8 +27,9 @@ _ORDER = ("event_time", "lamport", "partition_id", "seq")     # the canonical ke
 
 def _rows(events: dict[str, pl.DataFrame], cols: dict[str, tuple[str, ...]],
           by: str | None) -> Iterator[dict[str, Any]]:
-    """Rows of the tables `cols` (table -> columns wanted), tagged with their table in `_ev`,
-    in `(by, event_time, lamport, partition_id, seq)` order; cat columns come back as strings."""
+    """Rows of the tables `cols` (table -> columns wanted), tagged with their table in `_ev`
+    and with `event_time` in UTC microseconds in `_t`, in
+    `(by, event_time, lamport, partition_id, seq)` order; cat columns come back as strings."""
     frames = []
     for name, want in cols.items():
         f = events.get(name)
@@ -37,7 +38,8 @@ def _rows(events: dict[str, pl.DataFrame], cols: dict[str, tuple[str, ...]],
         keep = dict.fromkeys((*([by] if by else []), *_ORDER, *want))
         sel = [pl.col(c).cast(pl.String) if isinstance(f.schema[c], (pl.Categorical, pl.Enum))
                else pl.col(c) for c in keep]
-        frames.append(f.select(sel).with_columns(pl.lit(name).alias("_ev")))
+        frames.append(f.select(sel).with_columns(pl.lit(name).alias("_ev"),
+                                                 pl.col("event_time").dt.epoch("us").alias("_t")))
     if not frames:
         return iter(())
     merged = pl.concat(frames, how="diagonal_relaxed")
@@ -62,11 +64,15 @@ _INVENTORY = {
 
 
 def replay_inventory(events: dict[str, pl.DataFrame], on_hand0: dict[int, int],
-                     slots: int, sku_group: dict[int, int] | None = None) -> list[str]:
+                     slots: int, sku_group: dict[int, int] | None = None,
+                     hold_ttl_us: int | None = None) -> list[str]:
     """Replay every inventory group's decisions. `on_hand0` maps public SKU IDs to their
     initial stock; `slots` is the hold-table size; `sku_group`, when given, maps public SKU IDs
     to their group, and every row's SKU must belong to the row's group. Every hold ID is issued
-    once. A reserve is granted iff
+    once. With `hold_ttl_us`, TTL timing is replayed too: a hold expires exactly `hold_ttl_us`
+    after its reserve and never outlives that instant, a commit or release at or before it is on
+    time (messages run before the TTL timer at an equal instant, D49), a late commit comes after
+    it. A reserve is granted iff
     `on_hand - reserved >= quantity` and fewer than `slots` holds are live; a rejection says
     `out_of_stock` when stock is short, else `busy`. Commits, releases and expiries name a live
     hold of that SKU, checkout and quantity and free it; `stock_commit_late` names a hold of this
@@ -78,9 +84,17 @@ def replay_inventory(events: dict[str, pl.DataFrame], on_hand0: dict[int, int],
     live: dict[int, dict[int, tuple[int, int, int]]] = {}     # group -> hold -> (sku, ckt, qty)
     dead: dict[int, tuple[int, tuple[int, int, int], str]] = {}   # hold -> (group, hold, how)
     issued: set[int] = set()
+    due: dict[int, int] = {}                                 # hold -> its TTL instant
+    overdue: set[int] = set()                                # holds already reported overdue
     for r in _rows(events, _INVENTORY, "sku_group"):
         ev, sku, qty = r["_ev"], r["sku_id"], r["quantity"]
         holds = live.setdefault(r["sku_group"], {})
+        t = r["_t"]
+        if hold_ttl_us is not None:
+            for h in holds:
+                if due[h] < t and h not in overdue:
+                    overdue.add(h)
+                    out.append(_miss(r, f"hold {h} live past its TTL instant", due[h], t))
         if sku not in on_hand:
             out.append(_miss(r, "SKU of the group", "a SKU with initial stock", sku))
             continue
@@ -111,6 +125,8 @@ def replay_inventory(events: dict[str, pl.DataFrame], on_hand0: dict[int, int],
                 if hold in issued:
                     out.append(_miss(r, "hold_id", "a hold ID never issued before", hold))
                 issued.add(hold)
+                if hold_ttl_us is not None:
+                    due[hold] = t + hold_ttl_us
                 holds[hold] = (sku, r["checkout_id"], qty)
                 reserved[sku] = reserved.get(sku, 0) + qty
         elif ev == "stock_commit_late":
@@ -120,6 +136,8 @@ def replay_inventory(events: dict[str, pl.DataFrame], on_hand0: dict[int, int],
                 got = dead.get(hold) or ("live" if hold in issued else "never issued")
                 out.append(_miss(r, f"hold {hold} (group, (sku_id, checkout_id, quantity), "
                                  "ended by)", want, got))
+            if hold_ttl_us is not None and hold in due and not t > due[hold]:
+                out.append(_miss(r, "late commit time", f"> {due[hold]}", t))
         else:                                       # committed, released, expired
             hold = r["hold_id"]
             h = holds.pop(hold, None)
@@ -127,6 +145,11 @@ def replay_inventory(events: dict[str, pl.DataFrame], on_hand0: dict[int, int],
                 out.append(_miss(r, "hold", "a live hold", hold))
                 continue
             dead[hold] = (r["sku_group"], h, ev)
+            if hold_ttl_us is not None:
+                on_time = t == due[hold] if ev == "stock_expired" else t <= due[hold]
+                if not on_time:
+                    out.append(_miss(r, "time", f"{'==' if ev == 'stock_expired' else '<='} "
+                                     f"{due[hold]}", t))
             if h != (sku, r["checkout_id"], qty):
                 out.append(_miss(r, "(sku_id, checkout_id, quantity)", h,
                                  (sku, r["checkout_id"], qty)))

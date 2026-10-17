@@ -59,27 +59,28 @@ def _initial(over: tuple[str, ...]):
             {int(p): int(g) for p, g in zip(pub, group, strict=True)})
 
 
-def _replay_inventory(ev, over):
+def _replay_inventory(ev, over, ttl_s):
     on_hand0, sku_group = _initial(tuple(over))
-    return replay_inventory(ev, on_hand0, slots=64, sku_group=sku_group)
+    return replay_inventory(ev, on_hand0, slots=64, sku_group=sku_group,
+                            hold_ttl_us=ttl_s * 1_000_000)
 
 
 def test_inventory_reference(ev):
     assert ev["stock_reserved"].height > 500 and ev["stock_expired"].height > 0
-    assert _replay_inventory(ev, STRESS) == []
+    assert _replay_inventory(ev, STRESS, ttl_s=600) == []
 
 
 def test_inventory_reference_full_hold_table(tmp_path):
     ev = _events(BUSY, tmp_path)
     reasons = ev["stock_rejected"]["reason"]
     assert (reasons == "busy").sum() > 0 and (reasons == "out_of_stock").sum() > 0
-    assert _replay_inventory(ev, BUSY) == []
+    assert _replay_inventory(ev, BUSY, ttl_s=600) == []
 
 
 def test_inventory_reference_commit_after_ttl(tmp_path):
     ev = _events(LATE, tmp_path)
     assert ev["stock_commit_late"].height > 0
-    assert _replay_inventory(ev, LATE) == []
+    assert _replay_inventory(ev, LATE, ttl_s=0) == []
 
 
 def test_pool_reference(ev):
