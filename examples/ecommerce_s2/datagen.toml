@@ -1,0 +1,55 @@
+# S2 slice (spec §18 S2): shoppers with multi-SKU carts, payments, a capped bonus pool.
+[project]
+name = "ecommerce_s2"
+pack = "specs/pack.py"
+
+[paths]
+out = "out"
+reports = "reports"
+logs = "logs"
+
+[defaults]
+seed = 42
+start = "2026-01-01T00:00:00Z"
+mode = "time"
+span = "90d"
+warmup = "14d"
+
+[budget]
+threads = 16
+memory = "32GB"
+max_step_rows = 4_000_000
+max_step_bytes = "1GB"
+max_spawn_depth = 3
+max_admissions_per_step = 2_000_000
+max_checker_keys = 60_000_000
+
+[writer]
+compression = "zstd"
+compression_level = 3
+row_group_rows = 131_072
+
+[engine]
+step = "1d"
+step_min = "1h"
+step_max = "7d"
+adapt = true
+slab_bytes = "4MB"
+timer_nodes = 90_000_000
+payload_slots = 4_000_000
+max_messages_per_step = 8_000_000
+parallel_min_partitions = 2_048
+
+[profiles.sample]
+span = "21d"
+warmup = "3d"
+
+[profiles.sample.set]
+users = 20_000
+skus = 5_000
+sku_groups = 64
+"engine.timer_nodes" = 3_000_000
+"engine.payload_slots" = 400_000
+"engine.max_messages_per_step" = 1_000_000
+"budget.max_admissions_per_step" = 200_000
+"budget.max_checker_keys" = 5_000_000

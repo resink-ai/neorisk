@@ -11,6 +11,7 @@ spec an agent writes and a human reviews, plus three folders that `datagen` fill
 |---|---|---|---|
 | [`ecommerce/`](ecommerce/) | Shoppers, carts, multi-SKU checkout, fulfillment, returns, referrals | owner `user` · shards `inventory`, `referral_pool` | `bounty_hunters`, `flash_sale` |
 | [`ecommerce_s1/`](ecommerce_s1/) | S1 slice; superseded by `ecommerce/` at M3. Sessions, one-line carts, single-SKU checkout | owner `user` · shard `inventory` | — |
+| [`ecommerce_s2/`](ecommerce_s2/) | S2 slice; superseded by `ecommerce/` and `payments/` at M3/M4. Multi-SKU carts with reservations, payments with refunds and disputes, a capped bonus pool, bounty-hunter campaigns | owners `user`, `payment`, `campaign` · shards `inventory`, `pool` | — |
 | [`payments/`](payments/) | Card payments (acquirer view): risk, 3-D Secure, auth, capture, refund, dispute, ledger | owners `cardholder`, `payment` · shard `merchant_risk` | `card_testing`, `friendly_fraud` |
 | [`crypto_exchange/`](crypto_exchange/) | Spot CEX: KYC, deposits, per-symbol order books, trades, withdrawals | owner `trader` · shard `book` per symbol | `wash_traders`, `pump_and_dump` |
 | [`layer1/`](layer1/) | Account-based L1: wallets, EIP-1559 blocks, reverts, token/DEX/NFT logs, airdrop | owner `wallet` · shard `chain` (one, global) | `airdrop_sybils`, `mint_rush` |
