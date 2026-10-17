@@ -275,16 +275,29 @@ class _Gen:
             "return np.int64(idx[offs[id_] + min(np.int64(u * n), n - 1)])"])
 
     # ------------------------------------------------------------------ reserve
+    def _owner_tables(self) -> set[str]:
+        return {p.table for p in self.plan.partitions if p.kind == "owner"}
+
     def reserve(self, p: ProcessDef) -> None:
-        body = ["cnt = out[OUT_CNT]", "cap = out[OUT_CAP]", "miss = out[OUT_MISS]"]
+        """`_reserve_<proc>(out, vec)`: all or nothing over every resource. Creating an owner
+        also takes an outbox row for its creation message (D43), so the `requests` need is
+        `vec[requests]` plus the `creates:<owner table>` entries."""
+        q = self.resources.index("requests")
+        owners = self._owner_tables()
+        made = [i for i, r in enumerate(self.resources)
+                if r.startswith("creates:") and r[len("creates:"):] in owners]
+        body = ["cnt = out[OUT_CNT]", "cap = out[OUT_CAP]", "miss = out[OUT_MISS]",
+                "nreq = " + " + ".join(f"vec[{i}]" for i in [q, *made])]
         for i, res in enumerate(self.resources):
+            need = "nreq" if i == q else f"vec[{i}]"
             if res == "timers":
-                cond = f"out[OUT_POOL][P_FREE_N][out[OUT_W]] < vec[{i}]"
+                cond = f"out[OUT_POOL][P_FREE_N][out[OUT_W]] < {need}"
             else:
-                cond = f"cap[{i}] - cnt[{i}] < vec[{i}]"
-            body += [f"if vec[{i}] > 0 and {cond}:", f"    miss[0] = {i}", "    return False"]
+                cond = f"cap[{i}] - cnt[{i}] < {need}"
+            body += [f"if {need} > 0 and {cond}:", f"    miss[0] = {i}", "    return False"]
         body.append("resv = out[OUT_RESV]")
-        body += [f"resv[{i}] = vec[{i}]" for i in range(len(self.resources))]
+        body += [f"resv[{i}] = {'nreq' if i == q else f'vec[{i}]'}"
+                 for i in range(len(self.resources))]
         body.append("return True")
         self.fn(f"_reserve_{p.name}", "out, vec", body)
 
@@ -360,18 +373,24 @@ class _Gen:
                 f"ordn[g, {code}] = o_ + 1",
                 f"h = make_handle({code}, g, o_)"]
 
+    # values of `slabs.CREATE_HEAD`, in order
+    CREATE_HEAD_VALUES = ("h", "ctx[CTX_PID]", "o_", "ctx[CTX_T]", "g", "ctx[CTX_LAMPORT]")
+
     def create(self, ns: str, code: int) -> None:
         spec = self.specs[f"creates:{ns}"]
         procs = list(self.plan.processes)
         args = [f"c{i}" for i in range(len(spec.cols))]
         body = self.resv_check(spec.resource, procs, f"create beyond reservation: {ns}")
         body += self._handle(ns, code, procs)
-        body += self._row(spec, ["h", "ctx[CTX_PID]", "o_", "ctx[CTX_T]", "g"], args)
-        owner_tables = {p.table for p in self.plan.partitions if p.kind == "owner"}
-        if ns in owner_tables:
+        body += self._row(spec, [*self.CREATE_HEAD_VALUES], args)
+        if ns in self._owner_tables():
             body += self.resv_check("requests", procs, f"create beyond reservation: {ns} "
                                     "(creation message)")
-            body.append(f"_outbox_row(out, ctx, OB_CREATE, {code}, ctx[CTX_T], h, 0, -1, -1)")
+            # the created row's columns ride the creation message (D43; validate keeps them
+            # to <= 7 int64-storable values): admission reads them from there
+            body += [f"i = _outbox_row(out, ctx, OB_CREATE, {code}, ctx[CTX_T], h, 0, -1, -1)",
+                     "pay = out[OUT_OUTBOX][OBX_PAY]"]
+            body += [f"pay[i, {j}] = np.int64({a})" for j, a in enumerate(args)]
         body.append("return h")
         self.fn(f"_create_{ns}", ", ".join(["out", "ctx", *args]), body)
 
@@ -385,7 +404,7 @@ class _Gen:
             spec = self.specs[f"creates:{ns}"]
             sub = self.resv_check(spec.resource, procs, f"new_id beyond reservation: {ns}")
             sub += self._handle(ns, code, procs)
-            sub += self._row(spec, ["h", "ctx[CTX_PID]", "o_", "ctx[CTX_T]", "g"], [])
+            sub += self._row(spec, [*self.CREATE_HEAD_VALUES], [])
             sub.append("return h")
             self.fn(f"_new_id_{ns}", "out, ctx", sub)
             body += [f"if ns == {code}:", f"    return _new_id_{ns}(out, ctx)"]

@@ -45,7 +45,7 @@ RECORD_HEAD = (("time", _I64), ("lamport", _I64), ("pid", _I64), ("seq", _I32),
                ("action", _I16))
 CHANGE_HEAD = (*RECORD_HEAD, ("entity_id", _I64))
 CREATE_HEAD = (("handle", _I64), ("pid", _I64), ("ordinal", _I32), ("created_at", _I64),
-               ("g", _I64))
+               ("g", _I64), ("lamport", _I64))      # lamport: the creating commit's (D43)
 
 
 def const_name(resource: str) -> str:

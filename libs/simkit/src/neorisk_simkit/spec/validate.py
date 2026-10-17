@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from neorisk_simkit.engine.abi import START
 from neorisk_simkit.engine.identity import MAX_NAMESPACES, NS_BITS
 from neorisk_simkit.spec.caps import (
+    OUTBOX_ROW_BYTES,
     BudgetError,
     CapItem,
     check_budget,
@@ -30,6 +31,94 @@ class ValidationReport:
 def _narrow_int(t) -> bool:
     dt = storage_dtype(t)
     return dt.kind in "iu" and dt.itemsize < 8
+
+
+# D43: a created owner's initial state rides the user columns 0..6 of its creation message
+CREATION_PAYLOAD_COLS = 7
+
+
+def _owner_tables(plan) -> dict[str, str]:
+    """Owner table -> owner partition name."""
+    return {p.table: p.name for p in plan.partitions if p.kind == "owner" and p.table}
+
+
+def creation_graph(plan) -> dict[str, list[tuple[str, str]]]:
+    """Owner-creation edges (D42): partition -> [(created owner partition, process)], every
+    partition in plan order, edges in process order."""
+    owner_of = _owner_tables(plan)
+    graph: dict[str, list[tuple[str, str]]] = {p.name: [] for p in plan.partitions}
+    for p in plan.processes:
+        for ns in p.kernel.max.creates:
+            if ns in owner_of:
+                graph[p.partition].append((owner_of[ns], p.name))
+    return graph
+
+
+def _creation_cycle(graph: dict[str, list[tuple[str, str]]]) -> tuple[list[str], list[str]]:
+    """The first creation cycle a depth-first search in plan order finds, as (partitions on it,
+    closing with the first again; processes on its edges); empty lists when acyclic."""
+    done: set[str] = set()
+    path: list[str] = []                              # partitions on the DFS stack
+    via: list[str] = []                               # via[i]: process of edge path[i] -> path[i+1]
+
+    def visit(n: str) -> tuple[list[str], list[str]] | None:
+        path.append(n)
+        for dst, proc in graph[n]:
+            via.append(proc)
+            if dst in path:
+                i = path.index(dst)
+                return [*path[i:], dst], via[i:]
+            if dst not in done:
+                found = visit(dst)
+                if found:
+                    return found
+            via.pop()
+        path.pop()
+        done.add(n)
+        return None
+
+    for n in graph:
+        if n not in done:
+            found = visit(n)
+            if found:
+                return found
+    return [], []
+
+
+def _longest_spawn_chain(graph: dict[str, list[tuple[str, str]]]) -> list[str]:
+    """Processes along the longest creation chain of an acyclic graph (first in plan order on
+    ties); its length is the static spawn depth."""
+    memo: dict[str, list[str]] = {}
+
+    def chain(n: str) -> list[str]:
+        if n not in memo:
+            best: list[str] = []
+            for dst, proc in graph[n]:
+                c = [proc, *chain(dst)]
+                if len(c) > len(best):
+                    best = c
+            memo[n] = best
+        return memo[n]
+
+    best: list[str] = []
+    for n in graph:
+        if len(chain(n)) > len(best):
+            best = chain(n)
+    return best
+
+
+def _spawn_errors(run) -> list[str]:
+    graph = creation_graph(run.plan)
+    parts, procs = _creation_cycle(graph)
+    if parts:
+        return [(f"unbounded spawn: owner creation cycle {' -> '.join(parts)} "
+                 f"(processes {', '.join(procs)})")]
+    chain = _longest_spawn_chain(graph)
+    m = run.budget.max_spawn_depth
+    if len(chain) > m >= 1:
+        return [(f"spawn depth {len(chain)} exceeds budget.max_spawn_depth {m} "
+                 f"(processes {' -> '.join(chain)})")]
+    return []
 
 
 def validate(run, threads: int | None = None) -> ValidationReport:
@@ -61,7 +150,7 @@ def validate(run, threads: int | None = None) -> ValidationReport:
                 errs.append(f"event {e.name}: column {c.name} is text; "
                             "S1 kernels can only write opt(text)")
 
-    owner_tables = {p.table for p in plan.partitions if p.kind == "owner" and p.table}
+    owner_tables = _owner_tables(plan)
     for t in plan.tables:
         if t.name not in owner_tables:
             continue
@@ -69,9 +158,20 @@ def validate(run, threads: int | None = None) -> ValidationReport:
             if c.ltype.nullable and _narrow_int(c.ltype):
                 errs.append(f"{t.name}.{c.name}: nullable {c.ltype.kind} state is not "
                             "supported; use opt(i64)")
+        if not t.creatable:
+            continue
+        if len(t.cols) > CREATION_PAYLOAD_COLS:
+            errs.append(f"created owner table {t.name} has {len(t.cols)} columns; a creation "
+                        f"message carries at most {CREATION_PAYLOAD_COLS}")
+        bad = next((c for c in t.cols if c.ltype.kind in ("f64", "text")), None)
+        if bad is not None:
+            errs.append(f"created owner table {t.name}: column {bad.name} is {bad.ltype.kind}; "
+                        "a creation message carries only int64 values")
+    errs += _spawn_errors(run)
 
     slab_rows = {n: eng.slab_bytes // max(1, rb) for n, rb in row_bytes.items()}
     forced_timers = eng.force_capacity.get("timers")
+    outbox_cap = eng.force_capacity.get("requests", eng.slab_bytes // OUTBOX_ROW_BYTES)
     for p in plan.processes:
         k = p.kernel
         if k.state != p.partition:
@@ -89,6 +189,11 @@ def validate(run, threads: int | None = None) -> ValidationReport:
         for name in k.max.creates:
             if name not in plan.namespaces:
                 errs.append(f"{p.name} reserves unknown namespace '{name}'")
+        n_create = sum(k.max.creates.get(t, 0) for t in owner_tables)
+        if n_create > 0 and k.max.requests + n_create > outbox_cap:
+            errs.append(f"{p.name}: declared maximum of requests {k.max.requests} plus "
+                        f"{n_create} creation message(s) exceeds the outbox capacity "
+                        f"{outbox_cap}")
         commands = set(p.commands) | set(k.commands)
         if p.every_us is not None and part_kind.get(p.partition) != "shard":
             errs.append(f"{p.name}: every= is only for shard processes (D26)")

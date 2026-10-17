@@ -4,6 +4,7 @@ from conftest import make_run, records_of
 
 from neorisk_simkit.engine import CapExceeded
 from neorisk_simkit.engine import route as rt
+from neorisk_simkit.engine.codegen import NEED_SWAP
 from neorisk_simkit.engine.rounds import run_step
 from neorisk_simkit.engine.run import Simulation
 from neorisk_simkit.engine.world import World
@@ -258,10 +259,62 @@ def test_safe_horizon_saturates():
     _suspend(w, [0], [inf], [inf])
     assert rt.horizon(w.R, 1000, inf) == 1000
 
-def test_admission_indexes_each_created_row_once(monkeypatch):
-    """An owner that creates one owner per request round trip makes many small admission
-    batches in one step; each created row is indexed once, so admission work is linear in the
-    rows created, not quadratic in the batches (Codex CX3)."""
+@pytest.mark.parametrize("name,overrides", [
+    ("spawn", ["create_on_answer=1", "rounds=20"]), ("creators", ["accts=40"]),
+    ("trace_shopper", []), ("mini", ["behavior.note_p=0.5"]), ("chain", []),
+])
+def test_creating_fixtures_respect_their_reservations(name, overrides):
+    """Checked mode (D3) over every fixture that creates rows, with slabs small enough to swap:
+    a kernel that writes more than it reserved (e.g. an owner create's creation message
+    without `requests`) fails with AbiViolation instead of overflowing a buffer."""
+    run = make_run(name, overrides, slab_bytes=2048)
+    checked = list(Simulation(run, threads=2, checked=True).steps())
+    plain = list(Simulation(run, threads=2).steps())
+    assert sum(t.num_rows for s in checked for t in s.events.values()) > 0
+    for a, b in zip(checked, plain, strict=True):
+        assert all(a.events[k].equals(b.events[k]) for k in a.events)
+
+
+def test_created_rows_carry_their_commit_lamport():
+    _, w, _ = _step("spawn")
+    w.flush_all()
+    rows = [c.creates["pay"] for chunks in w.chunks for c in chunks if "pay" in c.creates]
+    lam = {int(h): int(x) for r in rows for h, x in zip(r["handle"], r["lamport"], strict=True)}
+    spawned = _rows(w, "spawned")
+    assert lam and {int(h): int(x) for h, x in zip(spawned["pay_id"], spawned["lamport"],
+                                                    strict=True)} == lam
+
+
+def test_a_chain_of_creations_runs_in_one_step():
+    run, w, stats = _step("chain")
+    t0 = run.start_us - run.warmup_us
+    c = _rows(w, "c_drew")
+    assert len(c["time"]) == 4 and (c["time"] == t0).all()
+    assert sorted(c["w"].tolist()) == [110, 111, 112, 113]       # b's state reached c by payload
+    assert stats.owners_run[:3] == [4, 4, 4]                     # a; then b; then c (D5)
+
+
+def test_creates_reserve_their_creation_messages(monkeypatch):
+    """`chain` kernels reserve `creates` but no `requests`: the creation message's outbox row is
+    reserved automatically, so a one-row outbox swaps between creators instead of overflowing
+    (the S1 `creators` fixture overflowed a 4 KiB outbox silently outside checked mode)."""
+    swaps, handle_status = [], World.handle_status
+
+    def spy(self, worker, status):
+        swaps.append(int(status))
+        return handle_status(self, worker, status)
+
+    monkeypatch.setattr(World, "handle_status", spy)
+    _, w, _ = _step("chain", engine={"force_capacity": {"requests": 1}})
+    c = _rows(w, "c_drew")
+    assert sorted(c["w"].tolist()) == [110, 111, 112, 113]
+    assert swaps.count(NEED_SWAP) >= 3                            # 4 creators, 1-row outbox
+
+
+def test_admission_reads_creation_payloads_in_many_small_batches(monkeypatch):
+    """Replaces S1's `test_admission_indexes_each_created_row_once` (Codex CX3): admission reads
+    each created row's state from its creation message (D43), so no create-slab index exists;
+    many small batches in one step, with slabs flushed mid-step, still admit every row once."""
     calls, flushes = [], []
     admit, flush = World.admit_created, World._flush
 
@@ -278,28 +331,12 @@ def test_admission_indexes_each_created_row_once(monkeypatch):
     monkeypatch.setattr(World, "admit_created", spy)
     monkeypatch.setattr(World, "_flush", spy_flush)
     run = make_run("spawn", ["create_on_answer=1", "rounds=60"], slab_bytes=2048)
-    sim = Simulation(run, threads=2, checked=True)         # reservations are checked too
+    sim = Simulation(run, threads=2)
     steps = list(sim.steps())
     assert len(steps) == 1
     created = sum(s.entities["pay"].num_rows for s in steps)
     assert created == 3 * 60
-    assert len(calls) >= 60 and max(calls) <= 3           # many small batches
-    assert sum(calls) == created
-    assert sim.world.created_rows_indexed == created
+    assert len(calls) >= 60 and max(calls) <= 3 and sum(calls) == created
     assert len(flushes) > 2 * 2                 # slabs flushed mid-step, not only at seal
-
-
-@pytest.mark.parametrize("name,overrides", [
-    ("spawn", ["create_on_answer=1", "rounds=20"]), ("creators", ["accts=40"]),
-    ("trace_shopper", []), ("mini", ["behavior.note_p=0.5"]),
-])
-def test_creating_fixtures_respect_their_reservations(name, overrides):
-    """Checked mode (D3) over every fixture that creates rows, with slabs small enough to swap:
-    a kernel that writes more than it reserved (e.g. an owner create's creation message
-    without `requests`) fails with AbiViolation instead of overflowing a buffer."""
-    run = make_run(name, overrides, slab_bytes=2048)
-    checked = list(Simulation(run, threads=2, checked=True).steps())
-    plain = list(Simulation(run, threads=2).steps())
-    assert sum(t.num_rows for s in checked for t in s.events.values()) > 0
-    for a, b in zip(checked, plain, strict=True):
-        assert all(a.events[k].equals(b.events[k]) for k in a.events)
+    assert not hasattr(sim.world, "created_rows_indexed")
+    assert not hasattr(World, "_created_rows")

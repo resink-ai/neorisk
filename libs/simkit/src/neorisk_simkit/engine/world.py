@@ -166,29 +166,7 @@ class _Creation:
     handle: int                                # provisional handle of the created row
     src_g: int                                 # creator's global slot
     action: int                                # creator's process (action id)
-
-
-class _CreatedIndex:
-    """`handle -> created row` over one step's create slabs and flushed chunks, for one namespace,
-    built incrementally (see `World._created_rows`)."""
-
-    def __init__(self, ns: str) -> None:
-        self.ns = ns
-        self.rows: dict[int, tuple[dict[str, np.ndarray], int]] = {}
-        self.seen: dict[int, tuple[int, int]] = {}  # worker -> (chunks indexed, live rows indexed)
-
-    def add(self, cols: dict[str, np.ndarray], lo: int, hi: int) -> int:
-        for i, h in enumerate(cols["handle"][lo:hi].tolist(), lo):
-            self.rows[h] = (cols, i)
-        return max(0, hi - lo)
-
-    def __call__(self, handle: int) -> dict[str, Any]:
-        got = self.rows.get(handle)
-        if got is None:
-            raise EngineError(f"created row {handle} of {self.ns} is missing from the create "
-                              "slabs")
-        cols, i = got
-        return {k: v[i] for k, v in cols.items()}
+    pay: tuple[int, ...]                       # the created row's columns (D43; 7 values)
 
 
 def instance_keys(name: str, ordinals: np.ndarray) -> np.ndarray:
@@ -305,8 +283,6 @@ class World:
         self._outs = [s.as_tuple(self.hidden, self.pool, self.payload, self.seed)
                       for s in self.slabs]
         self.chunks: list[list[StepChunk]] = [[] for _ in range(self.threads)]
-        self._created_index: dict[str, _CreatedIndex] = {}  # this step's, by namespace
-        self.created_rows_indexed = 0               # rows indexed for admission (whole run)
         self._step_lock = threading.Lock()
         self.step_rows = 0                          # rows / bytes flushed this step (all
         self.step_bytes = 0                         # record and create buffers, ids included)
@@ -681,8 +657,9 @@ class World:
         """Admit every pending creation with time < `limit_t`; returns their global slots.
 
         In routing-key order, each created owner gets a free slot, the created row's columns as
-        state, `self_id = pid = handle` (provisional; D12), `inst = mix(creator inst, lamport,
-        ns, k)` and a `START` at the creation time per process started by `on_created`.
+        state (from the creation message's payload, D43; create slabs are never read),
+        `self_id = pid = handle` (provisional; D12), `inst = mix(creator inst, lamport, ns, k)`
+        and a `START` at the creation time per process started by `on_created`.
 
         `k` is the row's ordinal among the rows of its namespace created by the same commit: the
         handle's per-step ordinal minus the commit's first one. A commit's creations share its
@@ -700,7 +677,6 @@ class World:
         for c in due:
             key, o = (c.src_g, c.cause, c.ns), handle_ordinal(c.handle)
             first[key] = min(first.get(key, o), o)
-        rows = self._created_rows({plan.namespaces[c.ns] for c in due})
         owner_of = {p.table: p for p in plan.partitions if p.kind == "owner"}
         limit = int(self.run.budget.max_admissions_per_step)
         admitted = []
@@ -719,9 +695,8 @@ class World:
             k = handle_ordinal(c.handle) - first[(c.src_g, c.cause, c.ns)]
             inst = _as_i64(rng.mix(int(hid.inst[c.src_g]), c.cause, c.ns, k))
             self._reset_slots(part, np.array([g]), c.handle, c.handle, inst)
-            row = rows[ns](c.handle)
-            for col, arr in zip(plan.table(ns).cols, self.state[part.name], strict=True):
-                arr[ls] = row[col.name]
+            for j, arr in enumerate(self.state[part.name]):  # table columns, in order
+                arr[ls] = c.pay[j]
             procs = [p.action_id for p in plan.processes if p.partition == part.name
                      and p.start is not None and p.start.table == ns]
             self._take_reserve_nodes(len(procs))
@@ -733,40 +708,6 @@ class World:
             rt.mark_touched(self.R, g)
             admitted.append(g)
         return np.array(admitted, np.int64)
-
-    def _created_rows(self, namespaces: set[str]) -> dict[str, _CreatedIndex]:
-        """Per namespace, this step's lookup `handle -> create-slab row`, brought up to date.
-
-        Indexing is incremental, so a step's admission calls index each created row once
-        (`created_rows_indexed`): per worker, the chunks flushed since the last call (the first
-        of them starts with the live rows indexed last time, which are skipped), then the live
-        slab rows added since. Live rows are copied, as the slab is reused after a flush; chunk
-        rows are final. `take_chunks` drops the index with the step's chunks."""
-        out = {}
-        for ns in namespaces:
-            idx = self._created_index.get(ns)
-            if idx is None:
-                idx = self._created_index[ns] = _CreatedIndex(ns)
-            res = f"creates:{ns}"
-            for w, slab in enumerate(self.slabs):
-                n_chunks, n_live = idx.seen.get(w, (0, 0))
-                chunks = self.chunks[w]
-                if len(chunks) > n_chunks:
-                    skip = n_live
-                    for ch in chunks[n_chunks:]:
-                        cols = ch.creates.get(ns)
-                        if cols is not None:
-                            self.created_rows_indexed += idx.add(cols, skip,
-                                                                 len(cols["handle"]))
-                        skip = 0
-                    n_live = 0
-                n = int(slab.cnt[slab.resources.index(res)])
-                if n > n_live:
-                    live = {k: v[n_live:n].copy() for k, v in slab.buffers[res].items()}
-                    self.created_rows_indexed += idx.add(live, 0, n - n_live)
-                idx.seen[w] = (len(chunks), n)
-            out[ns] = idx
-        return out
 
     def init_shards(self) -> None:
         """Queue occurrence 0 of every periodic shard process (D26)."""
@@ -952,7 +893,8 @@ class World:
             self.pending_creates.append(_Creation(
                 int(ob["time"][i]), int(ob["prio"][i]), int(ob["cause"][i]),
                 int(ob["src_pid"][i]), int(ob["src_seq"][i]), int(ob["bnd"][i]),
-                int(ob["dst"][i]), int(ob["pay"][i, 7]), int(ob["pay"][i, 10])))
+                int(ob["dst"][i]), int(ob["pay"][i, 7]), int(ob["pay"][i, 10]),
+                tuple(int(v) for v in ob["pay"][i, :7])))
         tup = tuple(np.ascontiguousarray(ob[c]) for c in cols)
         while True:
             status, k = rt.route_outbox(self.R, tup, n, True)
@@ -1026,7 +968,6 @@ class World:
         out = [c for chunks in self.chunks for c in chunks]
         for chunks in self.chunks:
             chunks.clear()
-        self._created_index = {}
         self.step_rows = self.step_bytes = 0
         return out
 

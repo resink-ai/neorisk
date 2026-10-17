@@ -167,3 +167,52 @@ def test_namespace_count_is_bounded_by_the_handle_layout(run):
     errs = validate(_with_namespaces(run, 65)).errors
     assert ("65 id namespaces (created tables + p.ids) exceed the 64 that provisional "
             "handles can encode (D11: 6 bits)") in errs
+
+
+def _run_of(fixture_project, name, overrides=()):
+    return resolve_run(load_project(fixture_project(name)), "sample", list(overrides))
+
+
+def test_chain_depth_two_is_valid_and_bounded(fixture_project):
+    assert validate(_run_of(fixture_project, "chain")).ok
+    errs = validate(_run_of(fixture_project, "chain", ["budget.max_spawn_depth=1"])).errors
+    assert "spawn depth 2 exceeds budget.max_spawn_depth 1 (processes a_main -> b_main)" in errs
+
+
+def test_creation_cycle_is_an_unbounded_spawn(fixture_project):
+    from neorisk_simkit.engine import Res
+    run = _run_of(fixture_project, "spawn")
+    bad = _with_kernel(run, "pay_main", max=Res(records={"paid": 1}, creates={"pay": 1},
+                                                 requests=1))
+    assert ("unbounded spawn: owner creation cycle pay -> pay (processes pay_main)"
+            in validate(bad).errors)
+
+
+def test_created_owner_tables_fit_a_creation_message(fixture_project):
+    from neorisk_simkit.spec.plan import Column
+    from neorisk_simkit.spec.types import f64, i64
+    run = _run_of(fixture_project, "spawn")
+    plan = run.plan
+
+    def with_pay_cols(cols):
+        ts = tuple(dataclasses.replace(t, cols=cols) if t.name == "pay" else t
+                   for t in plan.tables)
+        return dataclasses.replace(run, plan=dataclasses.replace(plan, tables=ts))
+
+    wide = with_pay_cols(plan.table("pay").cols + tuple(Column(f"x{i}", i64()) for i in range(6)))
+    assert "created owner table pay has 8 columns; a creation message carries at most 7" \
+        in validate(wide).errors
+    floaty = with_pay_cols(plan.table("pay").cols + (Column("rate", f64()),))
+    assert ("created owner table pay: column rate is f64; a creation message carries only "
+            "int64 values") in validate(floaty).errors
+
+
+def test_creation_messages_count_toward_the_outbox(fixture_project):
+    run = _run_of(fixture_project, "spawn")              # acct_main: requests=3, creates pay 1
+    small = dataclasses.replace(run, engine=dataclasses.replace(
+        run.engine, force_capacity={"requests": 3}))
+    assert ("acct_main: declared maximum of requests 3 plus 1 creation message(s) exceeds the "
+            "outbox capacity 3") in validate(small).errors
+    fits = dataclasses.replace(run, engine=dataclasses.replace(
+        run.engine, force_capacity={"requests": 4}))
+    assert not any("creation message(s)" in e for e in validate(fits).errors)
