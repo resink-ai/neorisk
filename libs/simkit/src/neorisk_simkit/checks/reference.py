@@ -4,7 +4,8 @@ holds run against the real kernels on fixtures in CI").
 Each model is plain Python over one dataset's event tables (`io.read.read_events`). It merges
 the tables one partition (or owner) writes, steps through them in execution order
 `(event_time, lamport, seq)` with its own state, and predicts every decision the compiled kernel
-made. A model returns one line per disagreement, naming the event, `partition_id`, `seq` and
+made (`partition_id` in the sort key keeps the order canonical; every replayed stream is one
+partition). A model returns one line per disagreement, naming the event, `partition_id`, `seq` and
 the expected vs observed value; an empty list means the kernel agrees. The models assume the
 stream holds the whole history (warm-up 0), so their state starts from the world's initial one.
 
@@ -21,20 +22,19 @@ from typing import Any
 
 import polars as pl
 
-_ORDER = ("event_time", "lamport", "seq")
-_CITE = ("partition_id", "seq")
+_ORDER = ("event_time", "lamport", "partition_id", "seq")     # the canonical key
 
 
 def _rows(events: dict[str, pl.DataFrame], cols: dict[str, tuple[str, ...]],
           by: str | None) -> Iterator[dict[str, Any]]:
     """Rows of the tables `cols` (table -> columns wanted), tagged with their table in `_ev`,
-    in `(by, event_time, lamport, seq)` order; cat columns come back as strings."""
+    in `(by, event_time, lamport, partition_id, seq)` order; cat columns come back as strings."""
     frames = []
     for name, want in cols.items():
         f = events.get(name)
         if f is None or f.height == 0:
             continue
-        keep = dict.fromkeys((*([by] if by else []), *_ORDER, "partition_id", *want))
+        keep = dict.fromkeys((*([by] if by else []), *_ORDER, *want))
         sel = [pl.col(c).cast(pl.String) if isinstance(f.schema[c], (pl.Categorical, pl.Enum))
                else pl.col(c) for c in keep]
         frames.append(f.select(sel).with_columns(pl.lit(name).alias("_ev")))
