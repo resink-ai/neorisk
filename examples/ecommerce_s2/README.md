@@ -50,9 +50,11 @@ releases it (`refund_failed`). A request while a dispute is open is `refund_reje
 the same key (`pay.duplicate_p`, 5%, ~30 s later) emits `refund_replayed` with the first result
 (`requested` or `rejected`) and changes nothing. Disputes (D51, a sub-lifecycle in the payment
 kernel): `pay.dispute_p` (0.6%) of captures open a dispute after `pay.dispute_delay` (gamma, mean
-21 days) if that is inside the window, for `captured - refunded` (`dispute_opened`); it resolves
-after `pay.dispute_resolve` (gamma, mean 30 days), `dispute_won` with `pay.dispute_win_p` (55%)
-or `dispute_lost`.
+21 days) if that is inside the window, for the remainder no refund has claimed,
+`captured - refunded - held` (`dispute_opened`); with nothing left no dispute opens. Refunds
+already held when it opens still settle or fail on the processor's delay, so settled refunds
+plus a lost dispute never exceed the capture. It resolves after `pay.dispute_resolve` (gamma,
+mean 30 days), `dispute_won` with `pay.dispute_win_p` (55%) or `dispute_lost`.
 
 Postings `ledger` (`postings/ledger/`, D45): authorization debits `customer_funds` and credits
 `customer_held`; capture debits `customer_held` and credits `merchant` and `platform_fees`;

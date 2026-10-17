@@ -26,6 +26,7 @@ the shard-heavy parts of `examples/ecommerce` and `examples/payments`, as handwr
   changing anything. Settled refunds never exceed the capture (`chk.refunds_le_captured`) and
   each refund settles at most once (`chk.refund_settles_once`).
 - **Disputes** open on 0.6% of captured payments (gamma delay, mean 21 days, only inside the
-  90-day window) for `captured - refunded`, move that amount to the dispute reserve, and are
+  90-day window) for `captured - refunded - held` (refunds already held still settle or fail;
+  with nothing left no dispute opens), move that amount to the dispute reserve, and are
   resolved after a gamma delay (mean 30 days): won 55% (back to the merchant), lost otherwise
   (back to the customer).

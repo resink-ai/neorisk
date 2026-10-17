@@ -79,3 +79,16 @@ def test_payment_laws_hold(run):
     laws = json.loads((run.out_dir / "manifest.json").read_text())["laws"]
     for k in ("chk.refunds_le_captured", "chk.refund_settles_once", "chk.postings_balanced"):
         assert laws[k]["violations"] == 0 and laws[k]["checked"] > 0, k
+
+
+def test_customers_never_recover_more_than_the_capture(ev):
+    # review I-1: a dispute covers only what no refund has settled or holds, so settled refunds
+    # plus a lost dispute never return more than the capture
+    cap = ev["payment_captured"].select("payment_id", pl.col("amount").alias("captured"))
+    back = pl.concat([ev["refund_settled"].select("payment_id", "amount"),
+                      ev["dispute_lost"].select("payment_id", "amount")])
+    tot = back.group_by("payment_id").agg(pl.col("amount").sum()).join(cap, on="payment_id")
+    assert ev["dispute_lost"].height > 50
+    over = tot.filter(pl.col("amount") > pl.col("captured"))
+    assert over.height == 0, over.head()
+

@@ -533,10 +533,14 @@ def _replay(ctx, loc, cmd, out):
 def _dispute(ctx, loc, out, cfg):
     if loc.status != P_CAPTURED or loc.dispute != D_NONE or ctx.t >= loc.window_end:
         return reject(REJ_STALE)
+    # the remainder no refund has claimed: held refunds still settle or fail on their own, so
+    # disputing them too would let a lost dispute return more than the capture (review I-1)
+    amt = loc.captured - loc.refunded - loc.refund_hold
+    if amt <= 0:
+        return reject(REJ_STALE)                           # nothing left to dispute
     resolve = ctx.rng.dist_us(site=30, d=cfg.dispute_resolve)
     if not out.reserve(records={"dispute_opened": 1, "ledger": 2}, timers=1):
         return RETRY
-    amt = loc.captured - loc.refunded
     loc.dispute = D_OPEN
     loc.disputed = amt
     out.emit_dispute_opened(ctx.t, payment_id=ctx.self_id, amount=amt)
