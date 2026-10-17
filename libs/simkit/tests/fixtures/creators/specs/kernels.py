@@ -5,14 +5,15 @@ ACCT_COMMANDS = (START, C_AGAIN, C_LAST)
 C_TICK = 1
 PAY_COMMANDS = (START, C_TICK)
 MINUTE = 60_000_000
+# every created owner is also a creation message: creates of owner tables reserve `requests`
 TICK_EVERY = 480 * MINUTE                       # 8 h, aligned to UTC midnight
 
 
 @kernel(state="acct", commands=ACCT_COMMANDS,
-        max=Res(records={"spawned": 2}, creates={"pay": 2}, timers=1))
+        max=Res(records={"spawned": 2}, creates={"pay": 2}, timers=1, requests=2))
 def acct_main(ctx, s, cmd, out):
     if cmd.kind == C_AGAIN:
-        if not out.reserve(records={"spawned": 2}, creates={"pay": 2}, timers=1):
+        if not out.reserve(records={"spawned": 2}, creates={"pay": 2}, timers=1, requests=2):
             return RETRY
         a = out.create_pay(acct_id=ctx.self_id, amt=200)
         out.emit_spawned(ctx.t, acct_id=ctx.self_id, pay_id=a)
@@ -20,7 +21,7 @@ def acct_main(ctx, s, cmd, out):
         out.emit_spawned(ctx.t, acct_id=ctx.self_id, pay_id=b)
         out.timer(ctx.t + 180 * MINUTE, C_LAST, prio=PRIO_TIMER)
         return COMMIT
-    if not out.reserve(records={"spawned": 1}, creates={"pay": 1}, timers=1):
+    if not out.reserve(records={"spawned": 1}, creates={"pay": 1}, timers=1, requests=1):
         return RETRY
     pay = out.create_pay(acct_id=ctx.self_id, amt=100)
     out.emit_spawned(ctx.t, acct_id=ctx.self_id, pay_id=pay)
@@ -31,11 +32,13 @@ def acct_main(ctx, s, cmd, out):
 
 
 @kernel(state="pay", commands=PAY_COMMANDS, max=Res(records={"paid": 1, "ticked": 1},
-                                                    creates={"refund": 1}, timers=1))
+                                                    creates={"refund": 1}, timers=1,
+                                                    requests=1))
 def pay_main(ctx, s, cmd, out):
     d = ctx.rng.uniform_int(site=1, lo=0, hi=1_000_000)
     if cmd.kind == START:
-        if not out.reserve(records={"paid": 1}, creates={"refund": 1}, timers=1):
+        if not out.reserve(records={"paid": 1}, creates={"refund": 1}, timers=1,
+                           requests=1):
             return RETRY
         out.emit_paid(ctx.t, pay_id=ctx.self_id, acct_id=s.acct_id, draw=d)
         if s.amt > 100:

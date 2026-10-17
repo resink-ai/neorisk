@@ -5,6 +5,7 @@ from conftest import make_run, records_of
 from neorisk_simkit.engine import CapExceeded
 from neorisk_simkit.engine import route as rt
 from neorisk_simkit.engine.rounds import run_step
+from neorisk_simkit.engine.run import Simulation
 from neorisk_simkit.engine.world import World
 
 H = 3_600_000_000
@@ -256,3 +257,33 @@ def test_safe_horizon_saturates():
     w = World.build(make_run("mini"), threads=1)
     _suspend(w, [0], [inf], [inf])
     assert rt.horizon(w.R, 1000, inf) == 1000
+
+def test_admission_indexes_each_created_row_once(monkeypatch):
+    """An owner that creates one owner per request round trip makes many small admission
+    batches in one step; each created row is indexed once, so admission work is linear in the
+    rows created, not quadratic in the batches (Codex CX3)."""
+    calls, flushes = [], []
+    admit, flush = World.admit_created, World._flush
+
+    def spy(self, limit_t):
+        got = admit(self, limit_t)
+        if len(got):
+            calls.append(len(got))
+        return got
+
+    def spy_flush(self, worker):
+        flushes.append(worker)
+        return flush(self, worker)
+
+    monkeypatch.setattr(World, "admit_created", spy)
+    monkeypatch.setattr(World, "_flush", spy_flush)
+    run = make_run("spawn", ["create_on_answer=1", "rounds=60"], slab_bytes=2048)
+    sim = Simulation(run, threads=2)
+    steps = list(sim.steps())
+    assert len(steps) == 1
+    created = sum(s.entities["pay"].num_rows for s in steps)
+    assert created == 3 * 60
+    assert len(calls) >= 60 and max(calls) <= 3           # many small batches
+    assert sum(calls) == created
+    assert sim.world.created_rows_indexed == created
+    assert len(flushes) > 2 * 2                 # slabs flushed mid-step, not only at seal

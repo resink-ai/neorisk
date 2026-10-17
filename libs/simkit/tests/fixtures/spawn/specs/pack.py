@@ -17,6 +17,7 @@ class Config:
     bad_shard: int = 0                 # 1: address the request to a shard index past n
     request_delay: int = 0             # > 0: date the request after ctx.t (an error)
     create_on_answer: int = 0          # 1: create the payment when the answer arrives
+    rounds: int = 1                    # request/answer round trips per account
 
 
 def define(p: Pack, cfg: Config) -> None:
@@ -24,7 +25,7 @@ def define(p: Pack, cfg: Config) -> None:
     pay = p.table("pay", key="pay_id", mutable=True,
                   cols={"acct_id": ref("acct"), "amt": amount(asset="USD")})
     p.owner("acct", table=acct, max_live=cfg.accts)
-    p.owner("pay", table=pay, max_live=cfg.accts)
+    p.owner("pay", table=pay, max_live=cfg.accts * cfg.rounds)
     p.population(acct, n=cfg.accts, initial=1.0)
     desk = p.shard("desk", key="desk", n=2, items=None, state={})
     tick = p.message("tick", frm="acct", to=desk, payload={"v": i32()},

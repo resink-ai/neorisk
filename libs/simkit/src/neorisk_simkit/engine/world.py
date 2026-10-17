@@ -14,7 +14,6 @@ the touched slots, the calendar of owners' next command times and the message bu
 from __future__ import annotations
 
 import dataclasses
-import functools
 import threading
 from typing import Any
 
@@ -169,13 +168,27 @@ class _Creation:
     action: int                                # creator's process (action id)
 
 
-def _row_of(ns: str, handles: np.ndarray, cols: dict[str, np.ndarray],
-            handle: int) -> dict[str, Any]:
-    """The row of `handle` in `cols` (sorted by handle, see `World._created_rows`)."""
-    i = int(np.searchsorted(handles, handle))
-    if i == len(handles) or handles[i] != handle:
-        raise EngineError(f"created row {handle} of {ns} is missing from the create slabs")
-    return {k: v[i] for k, v in cols.items()}
+class _CreatedIndex:
+    """`handle -> created row` over one step's create slabs and flushed chunks, for one namespace,
+    built incrementally (see `World._created_rows`)."""
+
+    def __init__(self, ns: str) -> None:
+        self.ns = ns
+        self.rows: dict[int, tuple[dict[str, np.ndarray], int]] = {}
+        self.seen: dict[int, tuple[int, int]] = {}  # worker -> (chunks indexed, live rows indexed)
+
+    def add(self, cols: dict[str, np.ndarray], lo: int, hi: int) -> int:
+        for i, h in enumerate(cols["handle"][lo:hi].tolist(), lo):
+            self.rows[h] = (cols, i)
+        return max(0, hi - lo)
+
+    def __call__(self, handle: int) -> dict[str, Any]:
+        got = self.rows.get(handle)
+        if got is None:
+            raise EngineError(f"created row {handle} of {self.ns} is missing from the create "
+                              "slabs")
+        cols, i = got
+        return {k: v[i] for k, v in cols.items()}
 
 
 def instance_keys(name: str, ordinals: np.ndarray) -> np.ndarray:
@@ -292,6 +305,8 @@ class World:
         self._outs = [s.as_tuple(self.hidden, self.pool, self.payload, self.seed)
                       for s in self.slabs]
         self.chunks: list[list[StepChunk]] = [[] for _ in range(self.threads)]
+        self._created_index: dict[str, _CreatedIndex] = {}  # this step's, by namespace
+        self.created_rows_indexed = 0               # rows indexed for admission (whole run)
         self._step_lock = threading.Lock()
         self.step_rows = 0                          # rows / bytes flushed this step (all
         self.step_bytes = 0                         # record and create buffers, ids included)
@@ -715,22 +730,39 @@ class World:
             admitted.append(g)
         return np.array(admitted, np.int64)
 
-    def _created_rows(self, namespaces: set[str]) -> dict[str, Any]:
-        """Per namespace, a lookup `handle -> create-slab row` over every worker's live create
-        slab and flushed chunks (one index per admission call, not one scan per row)."""
-        found = {}
+    def _created_rows(self, namespaces: set[str]) -> dict[str, _CreatedIndex]:
+        """Per namespace, this step's lookup `handle -> create-slab row`, brought up to date.
+
+        Indexing is incremental, so a step's admission calls index each created row once
+        (`created_rows_indexed`): per worker, the chunks flushed since the last call (the first
+        of them starts with the live rows indexed last time, which are skipped), then the live
+        slab rows added since. Live rows are copied, as the slab is reused after a flush; chunk
+        rows are final. `take_chunks` drops the index with the step's chunks."""
+        out = {}
         for ns in namespaces:
+            idx = self._created_index.get(ns)
+            if idx is None:
+                idx = self._created_index[ns] = _CreatedIndex(ns)
             res = f"creates:{ns}"
-            parts = []
             for w, slab in enumerate(self.slabs):
+                n_chunks, n_live = idx.seen.get(w, (0, 0))
+                chunks = self.chunks[w]
+                if len(chunks) > n_chunks:
+                    skip = n_live
+                    for ch in chunks[n_chunks:]:
+                        cols = ch.creates.get(ns)
+                        if cols is not None:
+                            self.created_rows_indexed += idx.add(cols, skip,
+                                                                 len(cols["handle"]))
+                        skip = 0
+                    n_live = 0
                 n = int(slab.cnt[slab.resources.index(res)])
-                parts.append({k: v[:n] for k, v in slab.buffers[res].items()})
-                parts += [ch.creates[ns] for ch in self.chunks[w] if ns in ch.creates]
-            cols = {k: np.concatenate([p[k] for p in parts]) for k in parts[0]}
-            order = np.argsort(cols["handle"], kind="stable")
-            found[ns] = functools.partial(_row_of, ns, cols["handle"][order],
-                                          {k: v[order] for k, v in cols.items()})
-        return found
+                if n > n_live:
+                    live = {k: v[n_live:n].copy() for k, v in slab.buffers[res].items()}
+                    self.created_rows_indexed += idx.add(live, 0, n - n_live)
+                idx.seen[w] = (len(chunks), n)
+            out[ns] = idx
+        return out
 
     def init_shards(self) -> None:
         """Queue occurrence 0 of every periodic shard process (D26)."""
@@ -990,6 +1022,7 @@ class World:
         out = [c for chunks in self.chunks for c in chunks]
         for chunks in self.chunks:
             chunks.clear()
+        self._created_index = {}
         self.step_rows = self.step_bytes = 0
         return out
 
