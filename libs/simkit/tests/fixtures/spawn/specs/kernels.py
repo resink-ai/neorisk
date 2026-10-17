@@ -20,7 +20,7 @@ def acct_main(ctx, s, cmd, out):
                         shard=ctx.self_id % 2 + 5 * ctx.cfg.bad_shard, v=ctx.self_id)
         return COMMIT
     if not out.reserve(records={"answered": 1, "spawned": 1}, creates={"pay": 1},
-                       requests=1):
+                       requests=2):              # the creation message and the next ask
         return RETRY
     out.emit_answered(ctx.t, acct_id=ctx.self_id)
     if ctx.cfg.create_on_answer == 1:

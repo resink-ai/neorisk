@@ -278,7 +278,7 @@ def test_admission_indexes_each_created_row_once(monkeypatch):
     monkeypatch.setattr(World, "admit_created", spy)
     monkeypatch.setattr(World, "_flush", spy_flush)
     run = make_run("spawn", ["create_on_answer=1", "rounds=60"], slab_bytes=2048)
-    sim = Simulation(run, threads=2)
+    sim = Simulation(run, threads=2, checked=True)         # reservations are checked too
     steps = list(sim.steps())
     assert len(steps) == 1
     created = sum(s.entities["pay"].num_rows for s in steps)
@@ -287,3 +287,19 @@ def test_admission_indexes_each_created_row_once(monkeypatch):
     assert sum(calls) == created
     assert sim.world.created_rows_indexed == created
     assert len(flushes) > 2 * 2                 # slabs flushed mid-step, not only at seal
+
+
+@pytest.mark.parametrize("name,overrides", [
+    ("spawn", ["create_on_answer=1", "rounds=20"]), ("creators", ["accts=40"]),
+    ("trace_shopper", []), ("mini", ["behavior.note_p=0.5"]),
+])
+def test_creating_fixtures_respect_their_reservations(name, overrides):
+    """Checked mode (D3) over every fixture that creates rows, with slabs small enough to swap:
+    a kernel that writes more than it reserved (e.g. an owner create's creation message
+    without `requests`) fails with AbiViolation instead of overflowing a buffer."""
+    run = make_run(name, overrides, slab_bytes=2048)
+    checked = list(Simulation(run, threads=2, checked=True).steps())
+    plain = list(Simulation(run, threads=2).steps())
+    assert sum(t.num_rows for s in checked for t in s.events.values()) > 0
+    for a, b in zip(checked, plain, strict=True):
+        assert all(a.events[k].equals(b.events[k]) for k in a.events)

@@ -93,7 +93,8 @@ class EntityWriter:
     """Streams every entity table to `run_dir/entities/<table>/part-00000.parquet`.
 
     `cap_bytes` (default: the pending part of the `entity_buffers` cap) bounds the bytes
-    buffered across all tables between `add` calls."""
+    buffered across all tables between `add` calls, counted as logical Arrow bytes
+    (`Table.nbytes`), not allocator capacity."""
 
     def __init__(self, run_dir: Path, writer: Any, plan: Any,
                  cap_bytes: int | None = None) -> None:

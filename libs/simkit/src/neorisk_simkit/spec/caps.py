@@ -152,7 +152,8 @@ def entity_row_bytes(plan: Plan, table: str) -> int:
 def entity_buffer_bytes(plan: Plan, row_group_rows: int) -> tuple[int, int]:
     """(pending, working) bytes of the streaming entity writer (`io.entities`): every table keeps
     at most `row_group_rows - 1` rows buffered across steps (fewer when the table's row count
-    is fixed and smaller), and writing one row group needs about twice its size."""
+    is fixed and smaller), and writing one row group needs about twice its size. Bytes are
+    logical Arrow bytes (`Table.nbytes`), not allocator capacity or padding."""
     pending = biggest = 0
     group = max(1, int(row_group_rows))
     for t in plan.tables:
