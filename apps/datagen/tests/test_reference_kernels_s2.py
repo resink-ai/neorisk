@@ -90,7 +90,14 @@ def test_pool_reference(ev):
 
 def test_refund_reference(ev):
     assert ev["refund_replayed"].height > 0 and ev["dispute_opened"].height > 0
-    assert replay_refunds(ev) == []
+    assert replay_refunds(ev, dispute_window_us=90 * int(DAY)) == []   # pack default
+
+
+def test_refund_reference_short_dispute_window(tmp_path):
+    # a 2-day window the 1-day-mean dispute delay often overruns: disputes open only inside it
+    ev = _events([*STRESS, "pay.dispute_window_days=2"], tmp_path)
+    assert ev["dispute_opened"].height > 0
+    assert replay_refunds(ev, dispute_window_us=2 * int(DAY)) == []
 
 
 def test_references_catch_a_wrong_decision(ev):

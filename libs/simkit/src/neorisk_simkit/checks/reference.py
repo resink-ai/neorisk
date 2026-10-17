@@ -189,6 +189,7 @@ def replay_pool(events: dict[str, pl.DataFrame], cap: int) -> list[str]:
 
 # ---------------------------------------------------------------------------- refunds
 _PAYMENT = {
+    "payment_authorized": ("amount",),
     "payment_captured": ("amount",),
     "payment_expired": ("amount",),
     "payment_declined": ("amount",),
@@ -205,10 +206,13 @@ IDEM_SLOTS = 4                            # refund idempotency keys per payment 
 
 
 class _Pay:
-    __slots__ = ("captured", "dispute", "disputed", "ended", "held", "keys", "refunded")
+    __slots__ = ("authorized", "captured", "captured_t", "dispute", "disputed", "ended", "held",
+                 "keys", "refunded")
 
     def __init__(self) -> None:
+        self.authorized: int | None = None  # the authorized amount, None until authorized
         self.captured: int | None = None   # None until captured
+        self.captured_t = 0                # capture time, UTC microseconds
         self.ended = False                 # expired or declined
         self.refunded = 0
         self.held = 0                      # Σ amounts of refunds requested, not yet settled/failed
@@ -217,9 +221,12 @@ class _Pay:
         self.disputed = 0
 
 
-def replay_refunds(events: dict[str, pl.DataFrame]) -> list[str]:
+def replay_refunds(events: dict[str, pl.DataFrame],
+                   dispute_window_us: int | None = None) -> list[str]:
     """Replay each payment's refunds and dispute (README "Refunds", kernels `payment_life`):
 
+    - a payment is first authorized or declined (not both); only an authorized payment is
+      captured or expires, once, for the authorized amount, and capture races expiry;
     - a refund request needs a captured payment and a fresh key (at most `IDEM_SLOTS`); it is
       rejected `dispute_open` while a dispute is open, else `nothing_left` when
       `left = captured - refunded - held <= 0` or after a lost dispute, else held for
@@ -228,22 +235,31 @@ def replay_refunds(events: dict[str, pl.DataFrame]) -> list[str]:
       amount, whatever the dispute state;
     - a replayed key returns its first result (`requested` or `rejected`) and changes nothing;
     - a dispute opens once on a captured payment for `captured - refunded - held > 0` and
-      resolves once for that amount.
+      resolves once for that amount; with `dispute_window_us` it opens before
+      `capture time + dispute_window_us`.
     """
     out: list[str] = []
     pays: dict[int, _Pay] = {}
     for r in _rows(events, _PAYMENT, "payment_id"):
         ev = r["_ev"]
         p = pays.setdefault(r["payment_id"], _Pay())
-        if ev == "payment_captured":
-            if p.captured is not None or p.ended:
-                out.append(_miss(r, "capture", "an authorized payment", "captured or ended"))
-            p.captured = r["amount"]
+        if ev in ("payment_authorized", "payment_declined"):
+            if p.authorized is not None or p.ended:
+                out.append(_miss(r, "status", "a new payment", "authorized or ended"))
+            if ev == "payment_authorized":
+                p.authorized = r["amount"]
+            else:
+                p.ended = True
             continue
-        if ev in ("payment_expired", "payment_declined"):
-            if p.captured is not None or p.ended:
-                out.append(_miss(r, "status", "authorized", "captured or ended"))
-            p.ended = True
+        if ev in ("payment_captured", "payment_expired"):
+            if p.authorized is None or p.captured is not None or p.ended:
+                out.append(_miss(r, "status", "authorized", "not authorized, captured or ended"))
+            elif r["amount"] != p.authorized:
+                out.append(_miss(r, "amount", p.authorized, r["amount"]))
+            if ev == "payment_captured":
+                p.captured, p.captured_t = r["amount"], r["_t"]
+            else:
+                p.ended = True
             continue
         if p.captured is None:
             out.append(_miss(r, "status", "captured", "not captured"))
@@ -293,6 +309,8 @@ def replay_refunds(events: dict[str, pl.DataFrame]) -> list[str]:
             if left <= 0 or r["amount"] != left:
                 out.append(_miss(r, "dispute amount", f"{left} (> 0, else no dispute)",
                                  r["amount"]))
+            if dispute_window_us is not None and r["_t"] >= p.captured_t + dispute_window_us:
+                out.append(_miss(r, "time", f"< {p.captured_t + dispute_window_us}", r["_t"]))
             p.dispute, p.disputed = "open", r["amount"]
         else:                                       # dispute_won, dispute_lost
             if p.dispute != "open":
