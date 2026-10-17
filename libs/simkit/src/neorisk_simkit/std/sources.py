@@ -65,6 +65,7 @@ class CatalogSource(GeneratedSource):
     """A generated table plus per-row view weights (`weight`): `zipf(s)` over a keyed random
     permutation of the rows. `World` turns them into the read column `cumw`."""
     weight: Dist | None = None
+    hot_rows: int = 0
 
     def generate(self, n_rows: int, table: Any, seed: int,
                  stream: int) -> dict[str, np.ndarray]:
@@ -75,6 +76,8 @@ class CatalogSource(GeneratedSource):
             if d.kind == _dist.CATEGORICAL and lt is not None and lt.kind == "cat":
                 codes = np.array([cat_code(lt, str(x)) for x in d.labels], np.int64)
                 out[name] = codes[out[name]]
+        if self.hot_rows:                               # hot SKU group (D53)
+            out["sku_group"][:self.hot_rows] = 0
         return out
 
     def row_weights(self, seed: int, stream: int) -> np.ndarray:
@@ -85,18 +88,23 @@ class CatalogSource(GeneratedSource):
         return 1.0 / (rank + 1.0) ** self.weight.params[0]
 
 
-def catalog(n: int, category: Dist, price: Dist, group: Dist, weight: Dist) -> Source:
+def catalog(n: int, category: Dist, price: Dist, group: Dist, weight: Dist,
+            hot_rows: int = 0) -> Source:
     """A catalog of `n` items with columns `category`, `price`, `sku_group` and view weights
-    `weight` (a `dist.zipf`) for `ctx.reads.<t>.sample_by_weight`."""
+    `weight` (a `dist.zipf`) for `ctx.reads.<t>.sample_by_weight`. Rows `[0, hot_rows)` are
+    the hot SKU group 0 (D53); other rows draw `sku_group` from `group`."""
     if n < 1:
         raise ValueError("catalog needs n >= 1")
+    if not 0 <= hot_rows <= n:
+        raise ValueError("hot_rows must be in [0, n]")
     cols = {"category": category, "price": price, "sku_group": group}
     for name, d in (*cols.items(), ("weight", weight)):
         if not isinstance(d, Dist):
             raise TypeError(f"catalog {name}: expected a Dist, got {type(d).__name__}")
     if weight.kind != _dist.ZIPF:
         raise ValueError("catalog weight must be dist.zipf(s=...)")
-    return CatalogSource(n=int(n), cols=MappingProxyType(cols), weight=weight)
+    return CatalogSource(n=int(n), cols=MappingProxyType(cols), weight=weight,
+                         hot_rows=int(hot_rows))
 
 
 # ---------------------------------------------------------------------------- devices

@@ -2,7 +2,7 @@
 
 from neorisk_simkit.spec import law
 from neorisk_simkit.spec.sources import generated, rows
-from neorisk_simkit.std import handoff
+from neorisk_simkit.std import capped_pool, handoff, reservations
 from neorisk_simkit.std.checked import (
     I64_MAX,
     I64_MIN,
@@ -19,6 +19,7 @@ __all__ = [
     "I64_MAX",
     "I64_MIN",
     "NULL",
+    "capped_pool",
     "catalog",
     "checked_add",
     "checked_max",
@@ -29,6 +30,7 @@ __all__ = [
     "generated",
     "handoff",
     "law",
+    "reservations",
     "rows",
     "stock",
 ]
