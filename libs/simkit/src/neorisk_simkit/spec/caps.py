@@ -12,7 +12,7 @@ from neorisk_simkit.spec.types import storage_dtype
 
 CAP_ITEMS = ("output_slabs", "step_output", "merge_working_space", "live_partition_state",
              "timer_heaps", "requests_and_inboxes", "fanout_bursts", "read_inputs",
-             "checker_state", "scorer")
+             "checker_state", "scorer", "entity_buffers")
 
 # D8: 40 B per command node (spec section 10 says 24 B); memory caps use the real size.
 NODE_BYTES = 40
@@ -126,6 +126,46 @@ def _live_state(plan: Plan) -> int:
     return total
 
 
+# Arrow bytes per row of an entity column (text is always written null: offsets only)
+_ARROW_BYTES = {"cat": 2, "ts": 8, "bool": 1, "text": 4, "f64": 8, "i16": 2, "i32": 4}
+_ORIGIN_MAX = max(len(o) for o in ("static", "initial", "arrival", "created"))
+
+
+def entity_row_bytes(plan: Plan, table: str) -> int:
+    """Upper bound of the Arrow bytes one buffered entity row costs: `id`, `created_at`,
+    `origin` (offset + longest label), every column's width, one validity byte per column, and
+    per-chunk overhead (string offsets end, category dictionaries) charged to every row, since
+    the writer never buffers an empty chunk."""
+    cols = plan.table(table).cols
+    per_row = 8 + 8 + 4 + _ORIGIN_MAX + 3
+    per_chunk = 4                                     # origin offsets end
+    for c in cols:
+        per_row += _ARROW_BYTES.get(c.ltype.kind, 8) + 1
+        if c.ltype.kind == "text":
+            per_chunk += 4
+        if c.ltype.kind == "cat":
+            per_chunk += 4 * (len(c.ltype.values) + 1) + sum(len(str(v).encode())
+                                                             for v in c.ltype.values)
+    return per_row + per_chunk
+
+
+def entity_buffer_bytes(plan: Plan, row_group_rows: int) -> tuple[int, int]:
+    """(pending, working) bytes of the streaming entity writer (`io.entities`): every table keeps
+    at most `row_group_rows - 1` rows buffered across steps (fewer when the table's row count
+    is fixed and smaller), and writing one row group needs about twice its size."""
+    pending = biggest = 0
+    group = max(1, int(row_group_rows))
+    for t in plan.tables:
+        rows = group - 1
+        n = _table_rows(plan, t.name)
+        if t.name not in plan.namespaces and n:
+            rows = min(rows, n)
+        rb = entity_row_bytes(plan, t.name)
+        pending += rows * rb
+        biggest = max(biggest, min(group, rows + 1) * rb)
+    return pending, 2 * biggest
+
+
 def compute_caps(run, threads: int | None = None) -> list[CapItem]:
     """Every item's hard cap and estimate for `threads` workers (default `budget.threads`)."""
     plan, eng, bud = run.plan, run.engine, run.budget
@@ -155,6 +195,8 @@ def compute_caps(run, threads: int | None = None) -> list[CapItem]:
         "read_inputs": (read, ""),
         "checker_state": (0, "not used in S1"),
         "scorer": (0, "not used in S1"),
+        "entity_buffers": (sum(entity_buffer_bytes(plan, run.writer.row_group_rows)),
+                           "row groups buffered by the entity writer, plus one being written"),
     }
     caps = []
     for name in CAP_ITEMS:

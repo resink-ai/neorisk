@@ -8,6 +8,10 @@ Rows are written in full row groups (`writer.row_group_rows`) as soon as a table
 buffered, so at most one partial row group per table stays in memory. A row group is written
 from the same Arrow chunks, in the same order, as one `pq.write_table` of the concatenation of
 every part would use, so the file bytes are identical to writing the whole table at the end.
+
+The buffered rows are the `entity_buffers` memory item (spec section 10): validate reserves
+`spec.caps.entity_buffer_bytes`, and `EntityWriter.add` fails with `CapExceeded` if the bytes
+actually buffered ever exceed that reservation.
 """
 
 from __future__ import annotations
@@ -20,7 +24,9 @@ from typing import Any
 import pyarrow as pa
 import pyarrow.parquet as pq
 
+from neorisk_simkit.engine.errors import CapExceeded
 from neorisk_simkit.io.writer import FileEntry, plan_columns, writer_options
+from neorisk_simkit.spec.caps import entity_buffer_bytes
 
 
 def _own_buffers(table: pa.Table) -> pa.Table:
@@ -41,6 +47,7 @@ class _TableStream:
         self._writer: pq.ParquetWriter | None = None
         self._pending: list[pa.Table] = []
         self._pending_rows = 0
+        self.buffered_bytes = 0
 
     @property
     def buffered_rows(self) -> int:
@@ -58,6 +65,7 @@ class _TableStream:
         self.rows += table.num_rows
         self._pending.append(table)
         self._pending_rows += table.num_rows
+        self.buffered_bytes += table.nbytes
         if self._pending_rows < self._group:
             return
         joined = pa.concat_tables(self._pending)
@@ -66,13 +74,14 @@ class _TableStream:
         rest = joined.slice(full)
         self._pending = [_own_buffers(rest)] if rest.num_rows else []
         self._pending_rows = rest.num_rows
+        self.buffered_bytes = self._pending[0].nbytes if self._pending else 0
 
     def close(self) -> None:
         if self._pending or self._writer is None:
             # an empty table still gets its (empty) row group, like `pq.write_table`
             self._write(pa.concat_tables(self._pending) if self._pending
                         else self._schema.empty_table())
-        self._pending, self._pending_rows = [], 0
+        self._pending, self._pending_rows, self.buffered_bytes = [], 0, 0
         self._writer.close()
 
     def abort(self) -> None:
@@ -81,12 +90,18 @@ class _TableStream:
 
 
 class EntityWriter:
-    """Streams every entity table to `run_dir/entities/<table>/part-00000.parquet`."""
+    """Streams every entity table to `run_dir/entities/<table>/part-00000.parquet`.
 
-    def __init__(self, run_dir: Path, writer: Any, plan: Any) -> None:
+    `cap_bytes` (default: the pending part of the `entity_buffers` cap) bounds the bytes
+    buffered across all tables between `add` calls."""
+
+    def __init__(self, run_dir: Path, writer: Any, plan: Any,
+                 cap_bytes: int | None = None) -> None:
         self._run_dir = Path(run_dir)
         self._options = writer_options(writer, *plan_columns(plan))
         self._streams: dict[str, _TableStream] = {}
+        self._cap = (entity_buffer_bytes(plan, writer.row_group_rows)[0] if cap_bytes is None
+                     else int(cap_bytes))
 
     def add(self, tables: dict[str, pa.Table]) -> None:
         for name, t in tables.items():
@@ -95,6 +110,9 @@ class EntityWriter:
                 stream = self._streams[name] = _TableStream(
                     self._run_dir / self.rel(name), t.schema, self._options)
             stream.add(t)
+        used = sum(st.buffered_bytes for st in self._streams.values())
+        if used > self._cap:
+            raise CapExceeded("entity_buffers", self._cap, used)
 
     def buffered_rows(self, name: str) -> int:
         return self._streams[name].buffered_rows

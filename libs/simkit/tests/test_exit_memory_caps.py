@@ -104,3 +104,50 @@ def test_non_positive_threads_are_refused_at_validation(tmp_path, threads):
     with pytest.raises(ValidationFailed, match="threads must be >= 1"):
         run_to_dataset(MINI, "sample", [], out_dir=out, threads=threads)
     assert not out.exists() and not out.with_suffix(".partial").exists()
+
+
+# ---------------------------------------------------------------------------- entity buffers
+SMALL_STEPS = ["engine.step='15m'", "engine.adapt=false"]
+
+
+def test_oversized_entity_row_groups_are_refused_at_validation(tmp_path):
+    """The entity writer keeps up to one row group per table buffered across steps; with many
+    small steps and a huge row group that buffer would hold almost the whole run, so the cap
+    (`entity_buffers`) refuses the configuration up front."""
+    out = tmp_path / "refused"
+    with pytest.raises(ValidationFailed, match="exceed the memory budget") as e:
+        run_to_dataset(MINI, "sample", [*SMALL_STEPS, "writer.row_group_rows=1_000_000_000"],
+                       out_dir=out)
+    assert "entity_buffers" in str(e.value)
+    assert not out.exists() and not out.with_suffix(".partial").exists()
+
+
+def test_entity_buffers_stay_within_their_cap(tmp_path, monkeypatch):
+    """What the entity writer really buffers (Arrow bytes) never exceeds the reservation."""
+    from neorisk_simkit.io import entities
+    from neorisk_simkit.spec.caps import entity_buffer_bytes
+
+    seen = []
+    add = entities.EntityWriter.add
+
+    def spy(self, tables):
+        add(self, tables)
+        seen.append(sum(s.buffered_bytes for s in self._streams.values()))
+
+    monkeypatch.setattr(entities.EntityWriter, "add", spy)
+    run = make_run("mini", SMALL_STEPS)
+    run_to_dataset(MINI, "sample", SMALL_STEPS, out_dir=tmp_path / "ok")
+    assert len(seen) > 100 and max(seen) > 0
+    assert max(seen) <= entity_buffer_bytes(run.plan, run.writer.row_group_rows)[0]
+
+
+def test_entity_buffer_cap_fails_at_runtime_with_the_item_named(tmp_path, monkeypatch):
+    from neorisk_simkit.io import entities
+
+    monkeypatch.setattr(entities, "entity_buffer_bytes", lambda plan, rows: (4096, 0))
+    out = tmp_path / "capped"
+    with pytest.raises(CapExceeded) as e:
+        run_to_dataset(MINI, "sample", SMALL_STEPS, out_dir=out)
+    assert e.value.item == "entity_buffers" and e.value.limit == 4096
+    assert e.value.attempted > 4096
+    assert not out.exists() and not out.with_suffix(".partial").exists()
