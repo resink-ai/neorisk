@@ -113,6 +113,15 @@ from neorisk_simkit.spec.dist import EXP, PARETO
 '''
 
 _JIT = "@njit(cache=True, nogil=True, boundscheck=CHECKED)"
+# Kernels and the helpers they call take the `out` slab tuple and `ctx` (hundreds of arrays) by
+# value. A real call increfs and decrefs every array in them (~10 µs per owner command), so they
+# are inlined at the Numba IR level into `dispatch`, where the refcount pairs fold away. The
+# runner-level functions (dispatch, run_partitions, ...) stay ordinary calls.
+_JIT_INLINE = "@njit(cache=True, nogil=True, boundscheck=CHECKED, inline='always')"
+# Generated functions that stay real calls (everything else is inlined into its caller).
+_NOT_INLINED = frozenset({"dispatch", "periodic_time", "_out_of_order", "run_partitions",
+                          "drain_small_rounds", "_same", "_checked_dispatch"})
+_NOT_INLINED_PREFIXES = ("_snap_", "_unchanged_")
 
 _PKG = Path(__file__).resolve().parents[1]           # neorisk_simkit/
 # Library code the generated module runs. Numba's cache=True only notices edits to the file of the
@@ -158,7 +167,8 @@ class _Gen:
 
     def fn(self, name: str, params: str, body: list[str]) -> None:
         self.names.add(name)
-        self.funcs.append(f"{_JIT}\ndef {name}({params}):\n" + "\n".join(
+        inline = name not in _NOT_INLINED and not name.startswith(_NOT_INLINED_PREFIXES)
+        self.funcs.append(f"{_JIT_INLINE if inline else _JIT}\ndef {name}({params}):\n" + "\n".join(
             "    " + ln if ln else "" for ln in body) + "\n")
 
     def by_proc(self, procs: list[ProcessDef], cls: str,
@@ -867,8 +877,8 @@ class _Gen:
 
 
 def _decorate(lowered: str) -> str:
-    """Put the JIT decorator on every top-level function of a lowered module."""
-    return "\n".join(f"{_JIT}\n{ln}" if ln.startswith("def ") else ln
+    """Put the (inlining) JIT decorator on every top-level function of a lowered module."""
+    return "\n".join(f"{_JIT_INLINE}\n{ln}" if ln.startswith("def ") else ln
                      for ln in lowered.split("\n"))
 
 
