@@ -1,6 +1,5 @@
 """D38: seal remaps handles held by shards: `ref` state, `Local` refs, payload column 9."""
 
-import numpy as np
 from conftest import FIXTURES, make_run
 
 from neorisk_simkit import std
@@ -10,9 +9,9 @@ from neorisk_simkit.io.read import read_events
 from neorisk_simkit.spec.caps import compute_caps, hidden_bytes, row_bytes
 
 
-def _run(tmp_path, threads=1):
-    r = run_to_dataset(FIXTURES / "holder", "sample", out_dir=tmp_path / f"t{threads}",
-                       threads=threads)
+def _run(tmp_path, threads=1, fixture="holder", **engine):
+    r = run_to_dataset(FIXTURES / fixture, "sample", out_dir=tmp_path / f"{fixture}-t{threads}",
+                       threads=threads, engine_overrides=engine or None)
     return r, read_events(r.out_dir)
 
 
@@ -44,7 +43,7 @@ def test_queued_sender_is_remapped(tmp_path):
 def test_threads_do_not_change_holder(tmp_path):
     from conftest import event_dicts
     a, _ = _run(tmp_path, threads=1)
-    b, _ = _run(tmp_path, threads=2)
+    b, _ = _run(tmp_path, threads=4, parallel_min_partitions=1)   # 7 partitions run in parallel
     assert event_dicts(a.out_dir) == event_dicts(b.out_dir)
 
 
@@ -57,4 +56,19 @@ def test_shard_locals_count_as_live_state():
               + 3 * (row_bytes(plan.table("pay").cols) + hid))
     desk = 1 * (hid + 8) + 1 * (8 * 4 + 4)            # state `last` + Local seen[4], n
     assert caps["live_partition_state"].hard_bytes == owners + desk
-    assert np.dtype(np.int64).itemsize == 8
+
+
+def test_per_item_ref_state_starts_null():
+    w = World.build(make_run("rack"), threads=1)
+    assert w.offs["rack"].tolist() == [0, 2, 4]
+    assert w.state["rack"][0].tolist() == [std.NULL] * 4
+
+
+def test_per_item_ref_state_survives_the_seal(tmp_path):
+    _, ev = _run(tmp_path, fixture="rack")
+    opened, stowed, echoed = ev["opened"], ev["stowed"], ev["echoed"]
+    assert opened.height == stowed.height == echoed.height == 1
+    assert (stowed["event_time"].dt.hour() == 0).all() and (echoed["event_time"].dt.hour() == 2).all()
+    assert echoed["partition_id"].to_list() == stowed["partition_id"].to_list()
+    assert [pid & ((1 << 56) - 1) for pid in stowed["partition_id"]] == [1]       # rack 1 only
+    assert echoed["held_id"].to_list() == stowed["ticket_id"].to_list() == opened["ticket_id"].to_list()
