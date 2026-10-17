@@ -45,6 +45,8 @@ def test_refunds_are_rejected_while_a_dispute_is_open(ev):
     closed = pl.concat([ev["dispute_won"].select("payment_id", "event_time"),
                         ev["dispute_lost"].select("payment_id", "event_time")]).rename(
         {"event_time": "t1"})
+    # a payment opens at most one dispute (`_dispute` needs D_NONE), so joining its close by
+    # payment_id pairs each rejection with that one dispute
     j = rej.join(opened, on="payment_id").join(closed, on="payment_id", how="left")
     assert j.height == rej.height
     assert ((j["event_time"] >= j["t0"]) & (j["t1"].is_null() | (j["event_time"] < j["t1"]))).all()
@@ -92,3 +94,47 @@ def test_customers_never_recover_more_than_the_capture(ev):
     over = tot.filter(pl.col("amount") > pl.col("captured"))
     assert over.height == 0, over.head()
 
+
+def test_refunds_after_a_lost_dispute_find_nothing_left(ev):
+    lost = ev["dispute_lost"].select("payment_id", pl.col("event_time").alias("tl"))
+    after = [ev[n].join(lost, on="payment_id").filter(pl.col("event_time") >= pl.col("tl"))
+             for n in ("refund_requested", "refund_rejected")]
+    assert after[0].height == 0
+    assert after[1].height > 0 and (after[1]["reason"] == "nothing_left").all()
+
+
+def test_holds_follow_the_remaining_amount(ev):
+    """Replay each payment's refund holds in execution order (one payment = one partition)."""
+    names = ("payment_captured", "refund_requested", "refund_settled", "refund_failed",
+             "refund_rejected", "dispute_opened", "dispute_lost")
+    rows = pl.concat([ev[n].select("payment_id", "event_time", "lamport", "event_type",
+                                   pl.col("amount") if "amount" in ev[n].columns
+                                   else pl.lit(None, pl.Int64).alias("amount"),
+                                   pl.col("refunded_after") if n == "refund_settled"
+                                   else pl.lit(None, pl.Int64).alias("refunded_after"))
+                      for n in names], how="vertical_relaxed")
+    rows = rows.with_columns(pl.col("event_type").cast(pl.String)).sort(
+        "payment_id", "event_time", "lamport")
+    st: dict = {}
+    overlapping = 0
+    for pid, _t, _l, kind, amt, after in rows.iter_rows():
+        p = st.setdefault(pid, {"cap": 0, "ref": 0, "hold": 0, "lost": False})
+        left = p["cap"] - p["ref"] - p["hold"]
+        if kind == "payment_captured":
+            p["cap"] = amt
+        elif kind == "refund_requested":
+            assert 0 < amt <= left and not p["lost"]
+            overlapping += p["hold"] > 0          # a second refund while a hold is unsettled
+            p["hold"] += amt
+        elif kind == "refund_settled":
+            p["hold"] -= amt
+            p["ref"] += amt
+            assert p["hold"] >= 0 and after == p["ref"] <= p["cap"]
+        elif kind == "refund_failed":
+            p["hold"] -= amt
+            assert p["hold"] >= 0
+        elif kind == "dispute_opened":
+            assert amt == left > 0                # the remainder no refund has claimed
+        elif kind == "dispute_lost":
+            p["lost"] = True
+    assert overlapping > 0
