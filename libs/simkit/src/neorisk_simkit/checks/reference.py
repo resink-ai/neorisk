@@ -62,9 +62,11 @@ _INVENTORY = {
 
 
 def replay_inventory(events: dict[str, pl.DataFrame], on_hand0: dict[int, int],
-                     slots: int) -> list[str]:
+                     slots: int, sku_group: dict[int, int] | None = None) -> list[str]:
     """Replay every inventory group's decisions. `on_hand0` maps public SKU IDs to their
-    initial stock; `slots` is the hold-table size. A reserve is granted iff
+    initial stock; `slots` is the hold-table size; `sku_group`, when given, maps public SKU IDs
+    to their group, and every row's SKU must belong to the row's group. Every hold ID is issued
+    once. A reserve is granted iff
     `on_hand - reserved >= quantity` and fewer than `slots` holds are live; a rejection says
     `out_of_stock` when stock is short, else `busy`. Commits, releases and expiries name a live
     hold of that SKU, checkout and quantity and free it; `stock_commit_late` names a hold of this
@@ -75,12 +77,15 @@ def replay_inventory(events: dict[str, pl.DataFrame], on_hand0: dict[int, int],
     reserved: dict[int, int] = {}
     live: dict[int, dict[int, tuple[int, int, int]]] = {}     # group -> hold -> (sku, ckt, qty)
     dead: dict[int, tuple[int, tuple[int, int, int], str]] = {}   # hold -> (group, hold, how)
+    issued: set[int] = set()
     for r in _rows(events, _INVENTORY, "sku_group"):
         ev, sku, qty = r["_ev"], r["sku_id"], r["quantity"]
         holds = live.setdefault(r["sku_group"], {})
         if sku not in on_hand:
             out.append(_miss(r, "SKU of the group", "a SKU with initial stock", sku))
             continue
+        if sku_group is not None and sku_group.get(sku) != r["sku_group"]:
+            out.append(_miss(r, f"group of SKU {sku}", sku_group.get(sku), r["sku_group"]))
         free = on_hand[sku] - reserved.get(sku, 0)
         if ev == "restocked":
             if qty < 1:
@@ -103,16 +108,16 @@ def replay_inventory(events: dict[str, pl.DataFrame], on_hand0: dict[int, int],
                     out.append(_miss(r, "reason", want, r["reason"]))
             if ev == "stock_reserved":
                 hold = r["hold_id"]
-                if any(hold in h for h in live.values()):
-                    out.append(_miss(r, "hold_id", "a hold that is not live", hold))
+                if hold in issued:
+                    out.append(_miss(r, "hold_id", "a hold ID never issued before", hold))
+                issued.add(hold)
                 holds[hold] = (sku, r["checkout_id"], qty)
                 reserved[sku] = reserved.get(sku, 0) + qty
         elif ev == "stock_commit_late":
             hold = r["hold_id"]
             want = (r["sku_group"], (sku, r["checkout_id"], qty), "stock_expired")
             if dead.get(hold) != want:
-                got = dead.get(hold) or ("live" if any(hold in h for h in live.values())
-                                         else "never issued")
+                got = dead.get(hold) or ("live" if hold in issued else "never issued")
                 out.append(_miss(r, f"hold {hold} (group, (sku_id, checkout_id, quantity), "
                                  "ended by)", want, got))
         else:                                       # committed, released, expired

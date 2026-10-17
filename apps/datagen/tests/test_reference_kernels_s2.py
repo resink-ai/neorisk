@@ -1,5 +1,6 @@
 """§11: reference models replay the real kernels' decisions and agree with every one."""
 
+import functools
 from pathlib import Path
 
 import numpy as np
@@ -45,31 +46,40 @@ def _events(over, tmp_path):
                                       threads=4).out_dir)
 
 
-def _on_hand0(over):
-    run = resolve_run(load_project(EX), "sample", over)
+@functools.cache
+def _initial(over: tuple[str, ...]):
+    """`(on_hand0, sku_group)` keyed by public SKU ID, from the world the run was built with."""
+    run = resolve_run(load_project(EX), "sample", list(over))
     w = World.build(run, threads=1)
     items = w.items["inventory"]                         # dense SKU ids in CSR order
     on_hand = w.state["inventory"][0]                    # initial on_hand, CSR order
+    group = np.searchsorted(w.offs["inventory"], np.arange(len(items)), side="right") - 1
     pub = public_ids(int(run.seed), "sku", np.asarray(items, np.int64))
-    return {int(p): int(x) for p, x in zip(pub, on_hand, strict=True)}
+    return ({int(p): int(x) for p, x in zip(pub, on_hand, strict=True)},
+            {int(p): int(g) for p, g in zip(pub, group, strict=True)})
+
+
+def _replay_inventory(ev, over):
+    on_hand0, sku_group = _initial(tuple(over))
+    return replay_inventory(ev, on_hand0, slots=64, sku_group=sku_group)
 
 
 def test_inventory_reference(ev):
     assert ev["stock_reserved"].height > 500 and ev["stock_expired"].height > 0
-    assert replay_inventory(ev, _on_hand0(STRESS), slots=64) == []
+    assert _replay_inventory(ev, STRESS) == []
 
 
 def test_inventory_reference_full_hold_table(tmp_path):
     ev = _events(BUSY, tmp_path)
     reasons = ev["stock_rejected"]["reason"]
     assert (reasons == "busy").sum() > 0 and (reasons == "out_of_stock").sum() > 0
-    assert replay_inventory(ev, _on_hand0(BUSY), slots=64) == []
+    assert _replay_inventory(ev, BUSY) == []
 
 
 def test_inventory_reference_commit_after_ttl(tmp_path):
     ev = _events(LATE, tmp_path)
     assert ev["stock_commit_late"].height > 0
-    assert replay_inventory(ev, _on_hand0(LATE), slots=64) == []
+    assert _replay_inventory(ev, LATE) == []
 
 
 def test_pool_reference(ev):
