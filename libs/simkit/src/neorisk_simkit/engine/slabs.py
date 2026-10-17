@@ -35,6 +35,8 @@ HID_FIELDS = ("rseq", "cseq", "ordn", "gen", "self_id", "pid", "qhead")
 # Outbox columns (all int64) followed by `pay int64[cap, PAYLOAD_W]`. For requests and messages
 # `resp_kind`/`target_action` name the command kind and process the receiver runs; for
 # responses they are the requester's `on_response` command id and process (`cmd.pay[10]`).
+# `src_pid` is diagnostic only: nothing orders by it (it is a provisional handle in a created
+# sender's creation step); routing and admission order by the sender key of `src_g` (D61).
 OUTBOX_COLS = ("kind", "bnd", "time", "prio", "cause", "src_g", "src_pid", "src_seq", "dst",
                "tag", "resp_kind", "target_action")
 OUTBOX_PAY = len(OUTBOX_COLS)

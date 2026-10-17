@@ -78,7 +78,7 @@ def test_hidden_bytes_follow_the_world_dtype_table(run):
     from neorisk_simkit.spec import caps as caps_mod
     per = {1: 1, "A": 3, "N_NS": 2}
     expect = sum(np.dtype(dt).itemsize * per.get(m, m) for _, dt, m in HIDDEN_DTYPES)
-    assert hidden_bytes(3, 2) == expect == 9 * 8 + 4 * 5 + 2 + 1 + 4 * 3 + 4 * 2 + 8 * 4
+    assert hidden_bytes(3, 2) == expect == 9 * 8 + 4 * 5 + 2 + 1 + 4 * 3 + 4 * 2 + 8 * 4 + 1
     names = [n for n, _, _ in HIDDEN_DTYPES]
     assert "susp_t" in names and "susp_delta" in names and len(names) == len(set(names))
     assert caps_mod.hidden_bytes(run.plan) == hidden_bytes(1, len(run.plan.namespaces))

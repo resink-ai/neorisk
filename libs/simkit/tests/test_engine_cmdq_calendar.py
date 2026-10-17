@@ -190,3 +190,23 @@ def test_node_bytes_follow_the_pool_arrays():
     assert sum(a.nbytes for a in arrays) == 10 * cmdq.NODE_BYTES
     assert all(a is b for a, b in zip(arrays[:8], pool.as_tuple()[:8], strict=True))
     assert all(a is b for a, b in zip(arrays[8:], pool.as_tuple()[cmdq.P_SK0:], strict=True))
+
+
+@pytest.mark.parametrize("self_first", [True, False])
+def test_own_commands_run_before_tied_delivered_commands(self_first):
+    """D61 (contracts): at equal (time, prio, cause) a command a partition queued for itself
+    (sender key SELF_SENDER) runs before a delivered one, whichever was queued first; delivered
+    ones follow in sender-key order."""
+    pool = _pool()
+    P, qhead = pool.as_tuple(), np.full(1, -1, np.int32)
+
+    def own():
+        assert cmdq.q_push(P, 0, qhead, 0, 10, 5, 3, 9, 1, 0, 0, -1) >= 0
+
+    def delivered():
+        assert cmdq.q_push_from(P, 0, qhead, 0, 10, 5, 3, 0, 3, 0, 0, -1, 4, 7, 0, 0, 0) >= 0
+        assert cmdq.q_push_from(P, 0, qhead, 0, 10, 5, 3, 0, 2, 0, 0, -1, 2, 8, 0, 0, 0) >= 0
+
+    (own, delivered)[0 if self_first else 1]()
+    (own, delivered)[1 if self_first else 0]()
+    assert [x[4] for x in _drain(P, qhead, 0)] == [1, 2, 3]

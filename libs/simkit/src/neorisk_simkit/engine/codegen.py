@@ -697,11 +697,12 @@ class _Gen:
     def unpaired(self) -> None:
         """The pairing guard's error (D40): a request not answered exactly once by a commit, or
         an answer from a command that was not a request. Names process and boundary and cites
-        (partition_id, seq) and the action id (§11, F-06)."""
+        the command by its partition and its sender's (partition_id, seq) (node seq is the
+        sender's seq, D61), and the action id (§11, F-06)."""
         def cite(text: str) -> str:
             """`text` then the citation, as EngineError arguments."""
-            return (f"{_q(text + ' at (partition_id ')}, pid_, {_q(', seq ')}, seq_, "
-                    f"{_q('), action ')}, a)")
+            return (f"{_q(text + ' at (partition_id ')}, pid_, {_q('), sent by (partition_id ')}, "
+                    f"spid_, {_q(', seq ')}, seq_, {_q('), action ')}, a)")
 
         body = []
         for p in self.plan.processes:
@@ -720,7 +721,7 @@ class _Gen:
                         f"{cite(' answered a request it was not given')}")
         body.append(f"raise EngineError({_q('command ')}, kind, "
                     f"{cite(' answered a request it was not given')}")
-        self.fn("_unpaired", "a, kind, rc, nresp, pid_, seq_", body)
+        self.fn("_unpaired", "a, kind, rc, nresp, pid_, spid_, seq_", body)
 
     def run_partitions(self) -> None:
         disp = "_checked_dispatch" if self.checked else "dispatch"
@@ -822,10 +823,10 @@ class _Gen:
             "            if obx[OBX_KIND][r_] == OB_RESPONSE:",
             "                nresp += 1",
             "        asked = prow >= 0 and PA[0][prow, PAY_KIND] == OB_REQUEST",
-            "        if asked and (rc != COMMIT or nresp != 1):",
-            "            _unpaired(a, kind, rc, nresp, pid[g], P[2][node])",
-            "        if not asked and nresp != 0:",
-            "            _unpaired(a, kind, rc, nresp, pid[g], P[2][node])",
+            "        if (asked and (rc != COMMIT or nresp != 1)) or (not asked and nresp != 0):",
+            # the command's sender: its payload's src_g if delivered, else the partition itself
+            "            sg_ = PA[0][prow, 7] if prow >= 0 else g",
+            "            _unpaired(a, kind, rc, nresp, pid[g], pid[sg_], P[2][node])",
             "        counters[_C_RETRY_STREAK] = 0",
             "        counters[_C_COMMANDS] += 1",
             "        occ[g, oc] += 1",

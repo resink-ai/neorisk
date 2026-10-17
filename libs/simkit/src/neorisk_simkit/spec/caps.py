@@ -18,8 +18,7 @@ CAP_ITEMS = ("output_slabs", "step_output", "merge_working_space", "live_partiti
 # D8 (amended by D61: the sender key): bytes per command node, from the node pool's own field
 # table (spec section 10 says 24 B); memory caps use the real size.
 NODE_BYTES = _cmdq.NODE_BYTES
-# engine.cmdq does not exist yet; Task 7's test asserts these match cmdq.PAYLOAD_W.
-PAYLOAD_W = 12
+PAYLOAD_W = _cmdq.PAYLOAD_W
 OUTBOX_ROW_BYTES = 8 * 12 + 8 * PAYLOAD_W
 
 _LOCAL_TYPE_BYTES = {"i8": 1, "u8": 1, "i16": 2, "i32": 4, "u32": 4, "i64": 8, "f64": 8, "ref": 8}

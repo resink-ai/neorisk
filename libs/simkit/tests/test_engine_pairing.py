@@ -60,8 +60,9 @@ def test_unpaired_answers_fail_naming_process_and_boundary(mode, match):
 
 def test_unpaired_answers_cite_partition_seq_and_action():
     """§11: "Failures cite (partition_id, seq) and action ID" (F-06)."""
-    with pytest.raises(EngineError, match=r"\(answered 0, returned 2\) at \(partition_id \d+, "
-                                          r"seq \d+\), action \d+$"):
+    with pytest.raises(EngineError, match=r"\(answered 0, returned 2\) at \(partition_id \d+\), "
+                                          r"sent by \(partition_id \d+, seq \d+\), "
+                                          r"action \d+$"):
         _step(["mode=1"])
 
 

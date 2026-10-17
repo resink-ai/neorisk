@@ -63,6 +63,7 @@ HIDDEN_DTYPES: tuple[tuple[str, str, int | str], ...] = (
     # a created owner's step-invariant sender key (created_at, creator commit lamport, creator
     # inst, k), written at admission; 0 for population owners and shards (D61)
     ("ckey", "int64", 4),
+    ("created", "uint8", 1),       # 1 for a created owner's slot (its sender key is ckey, D61)
 )
 
 
@@ -576,21 +577,13 @@ class World:
                   np.zeros(max(1, G - self.shard_lo), np.int64),     # RT_SHARD_REQ
                   np.array([self.shard_lo], np.int64),               # RT_SHARD_LO
                   (hid.ptype, hid.pid, hid.ckey),                    # RT_HID
-                  self._created_types())                             # RT_CREATED_TYPE
+                  hid.created)                                       # RT_CREATED
         self.pending_creates: list[_Creation] = []
         self.admissions = 0                               # created owners admitted this step
         self.run_buf = np.zeros(G, np.int64)              # runnable slots (compiled rounds)
         self.shard_buf = np.zeros(max(1, G - self.shard_lo), np.int64)
         self.round_log = np.zeros((256, 2), np.int64)
         self.round_state = np.zeros(8, np.int64)
-
-    def _created_types(self) -> np.ndarray:
-        """uint8[32]: 1 for each owner partition type whose table is created, not a population."""
-        out = np.zeros(32, np.uint8)
-        for part in self.plan.partitions:
-            if part.kind == "owner" and self.plan.table(part.table).creatable:
-                out[part.ptype_code] = 1
-        return out
 
     # ------------------------------------------------------------------ admission
     def _reserve_pool(self) -> tuple:
@@ -661,6 +654,7 @@ class World:
         hid.inst[g] = inst
         hid.self_id[g] = self_id
         hid.ckey[g] = 0                     # a created owner's key is written by admit_created
+        hid.created[g] = 0
         lslots = hid.lslot[g]
         for p in self.plan.processes:
             if p.partition == part.name and p.kernel.local is not None:
@@ -718,6 +712,7 @@ class World:
             inst = _as_i64(rng.mix(creator_inst, c.cause, c.ns, k))
             self._reset_slots(part, np.array([g]), c.handle, c.handle, inst)
             hid.ckey[g] = (c.time, c.cause, creator_inst, k)
+            hid.created[g] = 1
             for j, arr in enumerate(self.state[part.name]):  # table columns, in order
                 arr[ls] = c.pay[j]
             procs = [p.action_id for p in plan.processes if p.partition == part.name

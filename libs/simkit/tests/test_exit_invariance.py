@@ -301,3 +301,31 @@ def test_tied_requests_arriving_in_different_rounds_run_step_invariantly(latecom
         assert asked.height == 2 and asked["event_time"].dt.hour().to_list() == [1] * 2, step
         orders[step] = asked["v"].to_list()
     assert orders["1h"] == orders["6h"] == orders["1d"] == [0, 1]   # asker type first
+
+
+MIXED = Path(__file__).resolve().parent / "fixtures" / "mixed"
+
+
+@pytest.fixture(scope="module")
+def mixed_runs(tmp_path_factory):
+    root = tmp_path_factory.mktemp("mixed")
+    out = {}
+    for step, threads in (("1h", 1), ("6h", 1), ("1d", 1), ("6h", 4), ("1h", 4)):
+        d = root / f"{step}-{threads}"
+        run_to_dataset(MIXED, "sample", [f"engine.step={step!r}",
+                                          "engine.parallel_min_partitions=1"],
+                       out_dir=d, threads=threads)
+        out[(step, threads)] = d
+    return out
+
+
+def test_population_owners_of_a_created_type_key_by_partition_id(mixed_runs):
+    """A `child_of` owner type with population and created owners: the population pays' tied
+    asks (same time, prio, cause and src_seq) run in partition_id order whatever the step
+    length or thread count (the created flag is per slot, not per type)."""
+    orders = {}
+    for run, d in mixed_runs.items():
+        asked = read_events(d)["asked"].sort("event_time", "lamport", "partition_id", "seq")
+        assert asked.height == 2 and asked["event_time"].dt.hour().to_list() == [1] * 2, run
+        orders[run] = asked["v"].to_list()
+    assert set(map(tuple, orders.values())) == {(0, 1)}, orders

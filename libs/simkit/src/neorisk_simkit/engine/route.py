@@ -24,7 +24,8 @@ Route tuple `R` (indices `RT_*`):
   shard_req int64[max(1, G - shard_lo)]: requests delivered per shard slot over the run
   shard_lo  int64[1]: the first shard slot
   hid       (ptype, pid, ckey): views of the hidden arrays the sender keys read (D61)
-  created_type uint8[32]: 1 for each partition type whose owners are created (not a population)
+  created   uint8[G]: the hidden `created` flag, 1 for a created owner's slot (D61); per slot,
+            since one `child_of` owner type can hold both population and created owners
 """
 
 from __future__ import annotations
@@ -39,7 +40,7 @@ from neorisk_simkit.engine.slabs import OB_CREATE, OB_REQUEST, OB_RESPONSE, OUTB
 (RT_QHEAD, RT_CSEQ, RT_GEN, RT_ALIVE, RT_PENDING, RT_SUSP_T, RT_SUSP_DELTA, RT_POOL, RT_PAY,
  RT_BND_BASE, RT_COUNTERS, RT_MSG, RT_WOKEN, RT_WOKEN_N, RT_TMASK, RT_TLIST, RT_TN, RT_SUSP,
  RT_SUSP_N, RT_SMASK, RT_BND_REQ, RT_SPOS, RT_BND_RESP, RT_SHARD_REQ, RT_SHARD_LO, RT_HID,
- RT_CREATED_TYPE) = range(27)
+ RT_CREATED) = range(27)
 
 # route_outbox statuses
 ROUTED, NEED_MESSAGES, NEED_NODES, NEED_PAYLOAD, HAS_CREATE = 0, 1, 2, 3, 4
@@ -264,20 +265,19 @@ def resume_owner(P, pay_rows, qhead, g):
 def sender_keys(R, src_g, n):
     """The step-invariant sender key of each of the first n rows, from the sender's slot (D61).
 
-    A partition of a non-created type (population owner, shard) keys as `(ptype, 0, pid, 0, 0,
-    0)`; its `pid` never changes. A created owner keys as `(ptype, 1, created_at, creator
+    A population owner or a shard keys as `(ptype, 0, pid, 0, 0, 0)`; its `pid` never
+    changes. A created owner (hidden `created` flag, per slot) keys as `(ptype, 1, created_at, creator
     commit lamport, creator inst, k)` from `ckey`, written at its admission: its `pid` is a
     provisional handle in its creation step and a per-step dense index afterwards, so it
     would order the owner differently under different step lengths."""
     ptype, pid, ckey = R[RT_HID]
-    created = R[RT_CREATED_TYPE]
+    created = R[RT_CREATED]
     k0, k1, k2 = np.zeros(n, np.int64), np.zeros(n, np.int64), np.zeros(n, np.int64)
     k3, k4, k5 = np.zeros(n, np.int64), np.zeros(n, np.int64), np.zeros(n, np.int64)
     for i in range(n):
         g = src_g[i]
-        t = ptype[g]
-        k0[i] = t
-        if created[t]:
+        k0[i] = ptype[g]
+        if created[g]:
             k1[i] = 1
             k2[i], k3[i], k4[i], k5[i] = ckey[g, 0], ckey[g, 1], ckey[g, 2], ckey[g, 3]
         else:
