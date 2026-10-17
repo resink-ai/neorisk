@@ -2,16 +2,18 @@
 
 Partitions
     owner  user        one shopper: profile, credit hold, a cart of up to four lines
+    owner  campaign    one bounty hunter and its zombie members (D52)
     shard  inventory   one inventory group: on_hand / reserved per SKU and a 64-slot hold table
+    shard  pool        the global capped referral bonus pool (n = 1): remaining / granted
 
 Boundaries (immutable, latency >= delta)
     user -> inventory  reserve (request: granted / rejected with hold id and slot)  delta 150 ms
     user -> inventory  commit, release (one-way messages carrying the hold)         delta 150 ms
+    user -> pool       claim (request: granted / rejected)                          delta 200 ms
+    campaign -> pool   campaign_claim (request: granted / rejected)                 delta 200 ms
 
 Created owners
     payment            one payment, created by a checkout or a bill (D54); lifecycle in Local
-
-The bonus pool and campaigns are added by task 15 of the S2 plan.
 """
 
 from dataclasses import dataclass, field
@@ -54,6 +56,8 @@ class Journey:
     bill_gap: dist.Dist = dist.exp(mean_days=20)    # between a shopper's bill payments (D54)
     bill_median: float = 6_000.0
     bill_sigma: float = 0.8
+    min_order: int = 2_000                  # a referral's first order qualifies from $20
+    invitee_bonus: int = 1_000              # claimed from the pool by a qualifying referral
 
 
 @dataclass(frozen=True)
@@ -87,6 +91,17 @@ class PayLife:
 
 
 @dataclass(frozen=True)
+class Hunt:
+    """Bounty-hunter campaigns (D52); consumed by kernels.hunter."""
+    share: float = 0.01                      # hunters + zombies, as a share of users
+    zombies_mean: float = 12.0               # zombie members per hunter (at most 30)
+    member_gap: dist.Dist = dist.exp(mean_s=900)
+    order_p: float = 0.85                    # a zombie places one qualifying order and claims
+    order_amount: int = 2_100
+    bonus: int = 1_000
+
+
+@dataclass(frozen=True)
 class Config:
     users: int = 20_000
     initial_share: float = 0.6
@@ -99,6 +114,8 @@ class Config:
     desk: Desk = field(default_factory=Desk)
     payments_live_ratio: float = 1.5
     pay: PayLife = field(default_factory=PayLife)
+    pool_cap: int = 2_000_000                # the bonus pool, in cents
+    hunt: Hunt = field(default_factory=Hunt)
 
 
 def define(p: Pack, cfg: Config) -> None:
@@ -123,7 +140,7 @@ def define(p: Pack, cfg: Config) -> None:
         "acquisition": cat(*ACQUISITION), "status": cat("active", "dormant"),
         "referred": boolean(), "credit_limit": amount(asset="USD"),
         "held": amount(asset="USD")})
-    p.ids("session", "checkout", "hold")
+    p.ids("session", "checkout", "hold", "claim", "member")
     p.owner("user", table=user, max_live=cfg.users, retire_when_idle=False)
     p.population(
         user, n=cfg.users, initial=cfg.initial_share,
@@ -151,6 +168,28 @@ def define(p: Pack, cfg: Config) -> None:
     held = {"sku_id": ref("sku"), "quantity": i16(), "hold_id": ref("hold"), "slot": i32()}
     commit = p.message("commit", frm="user", to=inventory, payload=held, latency=lat)
     release = p.message("release", frm="user", to=inventory, payload=held, latency=lat)
+    # ---------------------------------------------------------------- bonus pool (§07)
+    # one shard, so every claim runs in the pool's own heap and the cap is exact
+    pool = p.shard("pool", key="pool_id", n=1, items=None,
+                   doc="The global referral bonus pool; claims are whole or rejected",
+                   state={"remaining": "i64", "granted": "i64"},
+                   init=std.capped_pool.init(cfg.pool_cap))
+    hunt = cfg.hunt
+    campaign = p.table("campaign", key="campaign_id", mutable=True,
+                       doc="A bounty hunter and its zombie members", cols={"zombies": i16()})
+    # D52: hunters plus their zombies are about `hunt.share` of users
+    n_campaigns = max(1, round(cfg.users * hunt.share / (1 + hunt.zombies_mean)))
+    p.owner("campaign", table=campaign, max_live=n_campaigns)
+    p.population(campaign, n=n_campaigns, initial=0.2,      # flat arrivals over the run
+                 attrs={"zombies": dist.geometric(mean=hunt.zombies_mean)})
+    usd = amount(asset="USD")
+    pool_lat = dist.shifted_lognormal(min_ms=200, median_ms=500)
+    claim = p.request("claim", frm="user", to=pool, payload={"amount": usd},
+                      response_payload={"amount": usd}, responses=("granted", "rejected"),
+                      latency=pool_lat)
+    campaign_claim = p.request("campaign_claim", frm="campaign", to=pool,
+                               payload={"amount": usd}, response_payload={"amount": usd},
+                               responses=("granted", "rejected"), latency=pool_lat)
     # ---------------------------------------------------------------- events
     u = {"user_id": ref("user")}
     p.event("user_signed_up", owner="user", cols={
@@ -237,12 +276,34 @@ def define(p: Pack, cfg: Config) -> None:
         "sku_group": i16(), "sku_id": ref("sku"), "quantity": i32(min=1), "on_hand_after": i32()})
     # §10 "one hot SKU group taking 5% of checkouts": started checkouts with a line in group 0
     p.accumulator("hot_checkouts", i64())
+    # bonus pool and campaigns
+    src = cat("user", "campaign")
+    p.event("bonus_granted", shard="pool", cols={
+        "claim_id": ref("claim"), "source": src, "amount": usd, "remaining_after": usd})
+    p.event("bonus_rejected", shard="pool", doc="The claim exceeds what is left; nothing paid",
+            cols={"claim_id": ref("claim"), "source": src, "amount": usd})
+    p.event("referral_bonus_paid", owner="user", cols={
+        **u, "claim_id": ref("claim"), "amount": usd})
+    p.event("referral_bonus_denied", owner="user", cols={**u, "claim_id": ref("claim")})
+    camp = {"campaign_id": ref("campaign")}
+    member = {**camp, "member_id": ref("member")}
+    p.event("campaign_started", owner="campaign", cols={**camp, "zombies": i16()})
+    p.event("member_joined", owner="campaign", cols=member)
+    p.event("member_ordered", owner="campaign", doc="A zombie's qualifying order",
+            cols={**member, "amount": usd})
+    p.event("member_bonus_paid", owner="campaign", cols={
+        **member, "claim_id": ref("claim"), "amount": usd})
+    p.event("member_bonus_denied", owner="campaign", cols={**member, "claim_id": ref("claim")})
+    p.event("campaign_finished", owner="campaign", cols={
+        **camp, "paid": i16(), "denied": i16()})
     # ---------------------------------------------------------------- processes
     p.process("shopper", owner="user", kernel=k.shopper, config=j,
-              start=p.on_created("user"), requests={"reserve": reserve},
+              start=p.on_created("user"), requests={"reserve": reserve, "claim": claim},
               messages={"commit": commit, "release": release},
               on_response={("reserve", "granted"): k.R_GRANTED,
-                           ("reserve", "rejected"): k.R_REJECTED},
+                           ("reserve", "rejected"): k.R_REJECTED,
+                           ("claim", "granted"): k.R_BONUS,
+                           ("claim", "rejected"): k.R_NO_BONUS},
               reads={"sku": sku, "device": device}, refs={"device": "device"},
               commands=k.SHOPPER_COMMANDS)
     p.process("inventory_desk", shard=inventory, kernel=k.inventory_desk, config=cfg.desk,
@@ -251,6 +312,14 @@ def define(p: Pack, cfg: Config) -> None:
               reads={"sku": sku}, commands=k.DESK_COMMANDS)
     p.process("restock", shard=inventory, kernel=k.restock, every=cfg.restock_period,
               jitter=dist.normal(mean_h=0, sd_h=18), reads={"sku": sku})
+    p.process("hunter", owner="campaign", kernel=k.hunter, config=hunt,
+              start=p.on_created("campaign"), requests={"campaign_claim": campaign_claim},
+              on_response={("campaign_claim", "granted"): k.R_PAID,
+                           ("campaign_claim", "rejected"): k.R_DENIED},
+              commands=k.HUNTER_COMMANDS)
+    p.process("pool_desk", shard="pool", kernel=k.pool_desk, on_request={"claim": k.C_CLAIM})
+    p.process("campaign_desk", shard="pool", kernel=k.campaign_desk,
+              on_request={"campaign_claim": k.C_CLAIM})
     # ---------------------------------------------------------------- laws (§11)
     p.check("chk.stock_never_negative", law.never_negative("inventory.on_hand"), required=True)
     p.check("chk.reserved_never_negative", law.never_negative("inventory.reserved"),
@@ -259,3 +328,7 @@ def define(p: Pack, cfg: Config) -> None:
     p.check("chk.holds_resolved", law.resolved(
         "stock_reserved", by=("stock_committed", "stock_released", "stock_expired"),
         key="hold_id", within="15m"), required=True)
+    p.check("chk.one_grant_per_claim", law.at_most_once("bonus_granted", key="claim_id"),
+            required=True)
+    p.check("chk.pool_cap", law.total_le("bonus_granted.amount", cfg.pool_cap), required=True)
+    p.check("chk.pool_never_negative", law.never_negative("pool.remaining"), required=True)

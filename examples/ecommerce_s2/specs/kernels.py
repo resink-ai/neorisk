@@ -21,7 +21,9 @@ CART = 4                                  # cart lines (Local array width)
 HOLD_SLOTS = 64                           # holds per inventory shard (std.reservations table)
 IDEM_SLOTS = 4                            # refund idempotency keys per payment (pack: max_refunds)
 C_SESSION, C_VIEW, C_CHECKOUT, R_GRANTED, R_REJECTED, C_BILL = 1, 2, 3, 4, 5, 6
-SHOPPER_COMMANDS = (START, C_SESSION, C_VIEW, C_CHECKOUT, R_GRANTED, R_REJECTED, C_BILL)
+R_BONUS, R_NO_BONUS = 7, 8                # the pool's answer to a referral claim
+SHOPPER_COMMANDS = (START, C_SESSION, C_VIEW, C_CHECKOUT, R_GRANTED, R_REJECTED, C_BILL,
+                    R_BONUS, R_NO_BONUS)
 C_RESERVE, C_COMMIT, C_RELEASE, C_HOLD_EXPIRE = 1, 2, 3, 4
 DESK_COMMANDS = (C_RESERVE, C_COMMIT, C_RELEASE, C_HOLD_EXPIRE)
 REJ_DORMANT, REJ_NO_CART, REJ_STALE = 1, 2, 3
@@ -36,11 +38,15 @@ R_REQUESTED, R_SETTLED, R_FAILED, R_REJECTED_IDEM = 0, 1, 2, 3
 (A_CUSTOMER_FUNDS, A_CUSTOMER_HELD, A_MERCHANT, A_PLATFORM_FEES, A_REFUNDS_PAYABLE,
  A_DISPUTE_RESERVE) = 0, 1, 2, 3, 4, 5                # ledger.account codes
 DAY = 86_400_000_000
+C_CLAIM = 1                               # pool_desk / campaign_desk
+SRC_USER, SRC_CAMPAIGN = 0, 1             # bonus_granted / bonus_rejected .source codes
+C_MEMBER, R_PAID, R_DENIED = 1, 2, 3      # hunter
+HUNTER_COMMANDS = (START, C_MEMBER, R_PAID, R_DENIED)
 
 SHOPPER_LOCAL = Local(session="ref", device="ref", views_left="i16", cart_n="i8",
                       cart_sku="ref[4]", cart_qty="i16[4]", cart_price="i64[4]",
                       checkout="ref", subtotal="i64", pending="i8", granted="u8",
-                      rejected_sku="ref", hold="ref[4]", slot="i32[4]")
+                      rejected_sku="ref", hold="ref[4]", slot="i32[4]", ordered="u8")
 DESK_LOCAL = Local(**std.reservations.fields(HOLD_SLOTS))
 PAY_LOCAL = Local(status="i8", captured="i64", refunded="i64", refund_hold="i64",
                   refunds="i8", dispute="i8", disputed="i64", window_end="i64",
@@ -52,8 +58,10 @@ PAY_LOCAL = Local(status="i8", captured="i64", refunded="i64", refund_hold="i64"
         max=Res(records={"user_signed_up": 1, "session_started": 1, "product_viewed": 1,
                          "cart_item_added": 1, "checkout_started": 1, "checkout_failed": 1,
                          "checkout_abandoned": 1, "checkout_succeeded": 1,
-                         "bill_payment_started": 1},
-                creates={"session": 1, "checkout": 1, "payment": 1}, timers=2, requests=CART))
+                         "bill_payment_started": 1, "referral_bonus_paid": 1,
+                         "referral_bonus_denied": 1},
+                creates={"session": 1, "checkout": 1, "payment": 1, "claim": 1}, timers=2,
+                requests=CART + 1))
 def shopper(ctx, s, loc, cmd, out):
     cfg = ctx.cfg
     if cmd.kind == START:
@@ -66,6 +74,8 @@ def shopper(ctx, s, loc, cmd, out):
         return _checkout(ctx, s, loc, out)
     if cmd.kind == C_BILL:
         return _bill(ctx, out, cfg)
+    if cmd.kind == R_BONUS or cmd.kind == R_NO_BONUS:
+        return _bonus(ctx, cmd, out)
     return _answer(ctx, s, loc, cmd, out, cfg)
 
 
@@ -190,8 +200,8 @@ def _answer(ctx, s, loc, cmd, out, cfg):
     nxt = ctx.rng.dist_us(site=23, d=cfg.view_gap)
     method = ctx.rng.categorical(site=24, p=(0.7, 0.22, 0.08))
     if not out.reserve(records={"checkout_failed": 1, "checkout_abandoned": 1,
-                                "checkout_succeeded": 1}, creates={"payment": 1}, timers=1,
-                       requests=CART):
+                                "checkout_succeeded": 1},
+                       creates={"payment": 1, "claim": 1}, timers=1, requests=CART + 1):
         return RETRY
     line = cmd.line
     if cmd.kind == R_GRANTED:
@@ -217,6 +227,11 @@ def _answer(ctx, s, loc, cmd, out, cfg):
                                      amount=loc.subtotal, method=method, source="checkout")
             out.emit_checkout_succeeded(ctx.t, user_id=ctx.self_id, checkout_id=loc.checkout,
                                         payment_id=pay, amount=loc.subtotal, hold_after=s.held)
+            if loc.ordered == 0:                           # the referral's first order
+                loc.ordered = 1
+                if s.referred and loc.subtotal >= cfg.min_order:
+                    claim = out.new_id("claim")
+                    out.request_claim(ctx.t, shard=0, tag=claim, amount=cfg.invitee_bonus)
     else:
         for i in range(loc.cart_n):
             if loc.granted & (1 << i):
@@ -232,6 +247,17 @@ def _answer(ctx, s, loc, cmd, out, cfg):
             out.timer(ctx.t + nxt, C_VIEW, prio=PRIO_TIMER)
     loc.checkout = std.NULL
     loc.cart_n = 0
+    return COMMIT
+
+
+def _bonus(ctx, cmd, out):
+    if not out.reserve(records={"referral_bonus_paid": 1, "referral_bonus_denied": 1}):
+        return RETRY
+    if cmd.kind == R_BONUS:
+        out.emit_referral_bonus_paid(ctx.t, user_id=ctx.self_id, claim_id=cmd.tag,
+                                     amount=cmd.amount)
+    else:
+        out.emit_referral_bonus_denied(ctx.t, user_id=ctx.self_id, claim_id=cmd.tag)
     return COMMIT
 
 
@@ -565,4 +591,102 @@ def _resolve(ctx, loc, out, cfg):
         loc.dispute = D_LOST
         out.emit_dispute_lost(ctx.t, payment_id=ctx.self_id, amount=loc.disputed)
         _post(ctx, out, A_DISPUTE_RESERVE, A_CUSTOMER_FUNDS, loc.disputed)
+    return COMMIT
+
+
+# ---------------------------------------------------------------- the bonus pool and campaigns
+HUNTER_LOCAL = Local(left="i16", member="ref", paid="i16", denied="i16")
+
+
+def _grant(ctx, s, cmd, out, source):
+    g = std.capped_pool.take(s.remaining, cmd.amount)      # whole claims only: exact cap
+    if g > 0:
+        s.remaining = std.checked_sub(s.remaining, g)
+        s.granted = std.checked_add(s.granted, g)
+        out.emit_bonus_granted(ctx.t, claim_id=cmd.tag, source=source, amount=g,
+                               remaining_after=s.remaining)
+    else:
+        out.emit_bonus_rejected(ctx.t, claim_id=cmd.tag, source=source, amount=cmd.amount)
+    return g
+
+
+@kernel(state="pool", commands=(C_CLAIM,),
+        max=Res(records={"bonus_granted": 1, "bonus_rejected": 1}, requests=1))
+def pool_desk(ctx, s, cmd, out):
+    if not out.reserve(records={"bonus_granted": 1, "bonus_rejected": 1}, requests=1):
+        return RETRY
+    if _grant(ctx, s, cmd, out, SRC_USER) > 0:
+        out.respond(cmd, "granted", amount=cmd.amount)
+    else:
+        out.respond(cmd, "rejected", amount=0)
+    return COMMIT
+
+
+@kernel(state="pool", commands=(C_CLAIM,),
+        max=Res(records={"bonus_granted": 1, "bonus_rejected": 1}, requests=1))
+def campaign_desk(ctx, s, cmd, out):
+    if not out.reserve(records={"bonus_granted": 1, "bonus_rejected": 1}, requests=1):
+        return RETRY
+    if _grant(ctx, s, cmd, out, SRC_CAMPAIGN) > 0:
+        out.respond(cmd, "granted", amount=cmd.amount)
+    else:
+        out.respond(cmd, "rejected", amount=0)
+    return COMMIT
+
+
+@kernel(state="campaign", local=HUNTER_LOCAL, commands=HUNTER_COMMANDS,
+        max=Res(records={"campaign_started": 1, "member_joined": 1, "member_ordered": 1,
+                         "member_bonus_paid": 1, "member_bonus_denied": 1,
+                         "campaign_finished": 1},
+                creates={"member": 1, "claim": 1}, timers=1, requests=1))
+def hunter(ctx, s, loc, cmd, out):
+    """One bounty hunter and its zombie members (D52): a member joins every `member_gap`, and
+    most place one qualifying order and claim the referral bonus; the campaign then retires."""
+    cfg = ctx.cfg
+    if cmd.kind == START:
+        gap = ctx.rng.dist_us(site=1, d=cfg.member_gap)
+        if not out.reserve(records={"campaign_started": 1}, timers=1):
+            return RETRY
+        loc.left = min(s.zombies, 30)
+        out.emit_campaign_started(ctx.t, campaign_id=ctx.self_id, zombies=loc.left)
+        out.timer(ctx.t + gap, C_MEMBER, prio=PRIO_TIMER)
+        return COMMIT
+    if cmd.kind == C_MEMBER:
+        return _member(ctx, loc, out, cfg)
+    return _member_answer(ctx, loc, cmd, out)
+
+
+def _member(ctx, loc, out, cfg):
+    orders = ctx.rng.bernoulli(site=2, p=cfg.order_p)
+    gap = ctx.rng.dist_us(site=3, d=cfg.member_gap)
+    if not out.reserve(records={"member_joined": 1, "member_ordered": 1, "campaign_finished": 1},
+                       creates={"member": 1, "claim": 1}, timers=1, requests=1):
+        return RETRY
+    if loc.left <= 0:
+        out.emit_campaign_finished(ctx.t, campaign_id=ctx.self_id, paid=loc.paid,
+                                   denied=loc.denied)
+        return COMMIT                                      # nothing queued: retires
+    loc.member = out.new_id("member")
+    loc.left -= 1
+    out.emit_member_joined(ctx.t, campaign_id=ctx.self_id, member_id=loc.member)
+    if orders:                                             # a zombie's qualifying order
+        out.emit_member_ordered(ctx.t, campaign_id=ctx.self_id, member_id=loc.member,
+                                amount=cfg.order_amount)
+        claim = out.new_id("claim")
+        out.request_campaign_claim(ctx.t, shard=0, tag=claim, amount=cfg.bonus)
+    out.timer(ctx.t + gap, C_MEMBER, prio=PRIO_TIMER)
+    return COMMIT
+
+
+def _member_answer(ctx, loc, cmd, out):
+    if not out.reserve(records={"member_bonus_paid": 1, "member_bonus_denied": 1}):
+        return RETRY
+    if cmd.kind == R_PAID:
+        loc.paid += 1
+        out.emit_member_bonus_paid(ctx.t, campaign_id=ctx.self_id, member_id=loc.member,
+                                   claim_id=cmd.tag, amount=cmd.amount)
+    else:
+        loc.denied += 1
+        out.emit_member_bonus_denied(ctx.t, campaign_id=ctx.self_id, member_id=loc.member,
+                                     claim_id=cmd.tag)
     return COMMIT

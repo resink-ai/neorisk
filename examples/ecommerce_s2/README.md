@@ -10,8 +10,8 @@ One hot inventory group (group 0) holds a small set of SKUs that about 5% of che
 Successful checkouts and bill payments create payments, each its own owner: authorized or
 declined, then captured or expired (capture races expiry), with double-entry postings and a
 platform fee; captured payments get refunds (held, then settled or failed, with idempotency
-keys) and disputes. The capped bonus pool and bounty-hunter campaigns are added by later S2 tasks. See
-[`specs/brief.md`](specs/brief.md).
+keys) and disputes. A referred shopper's first qualifying order claims a bonus from one global
+capped pool, which bounty-hunter campaigns drain too. See [`specs/brief.md`](specs/brief.md).
 
 ## Model
 
@@ -19,12 +19,16 @@ keys) and disputes. The capped bonus pool and bounty-hunter campaigns are added 
 |---|---|---|---|
 | `user` | owner | profile, credit limit and credit hold; a cart of up to four lines and the checkout in flight (kernel locals) | `shopper` (kernel) |
 | `payment` | owner, created | user, checkout (null for a bill), amount, method, source (`checkout` or `bill`; not `origin`, which `entities/` reserve); the lifecycle status, dispute window, refund hold, idempotency keys and dispute state (kernel locals) | `payment_life` (kernel) |
+| `campaign` | owner | one bounty hunter's zombie count; members left, the member in flight, paid and denied counts (kernel locals) | `hunter` (kernel) |
 | `inventory` × `sku_groups` | shard | `on_hand`, `reserved` per SKU in the group; a 64-slot hold table (kernel locals, `std.reservations`) | `inventory_desk` (kernel), `restock` (kernel, weekly, 64-SKU sub-steps) |
+| `pool` × 1 | shard | `remaining`, `granted` (`std.capped_pool`) | `pool_desk`, `campaign_desk` (kernels) |
 
 | Boundary | Kind | Carries | δ |
 |---|---|---|---|
 | `user` → `inventory` | `reserve` request, answered `granted` / `rejected` | SKU, quantity, cart line; the answer carries the hold ID and slot | 150 ms |
 | `user` → `inventory` | `commit`, `release` one-way messages | the hold (SKU, quantity, hold ID, slot) | 150 ms |
+| `user` → `pool` | `claim` request, answered `granted` / `rejected` | the bonus amount | 200 ms |
+| `campaign` → `pool` | `campaign_claim` request, answered `granted` / `rejected` | the bonus amount | 200 ms |
 
 Hold-table rules: a reserve takes the lowest free slot; a full table rejects the line as `busy`.
 A hold's TTL is a shard timer. A commit at exactly the expiry instant is on time (messages run
@@ -64,6 +68,25 @@ expiry returns `customer_held` to `customer_funds`; a settled refund debits `mer
 credits `refunds_payable`; a dispute moves the amount from `merchant` to `dispute_reserve`, and
 back to `merchant` (won) or on to `customer_funds` (lost). Every commit balances.
 
+Bonus pool (§07): the `pool` shard starts at `pool_cap` ($20,000). A referred shopper's first
+successful checkout (`journey.min_order` = $20 or more) sends one `claim` for
+`journey.invitee_bonus` ($10); the shopper only learns of it from the answer
+(`referral_bonus_paid` / `referral_bonus_denied`). Claims run in the pool's own heap, so the cap
+is exact: a claim is granted whole if it fits what is left (`bonus_granted`, with
+`remaining_after`), else rejected (`bonus_rejected`); there are no partial grants. Both sources
+are recorded (`source` = `user` or `campaign`).
+
+Bounty hunters (D52): a `campaign` owner is one hunter and its zombie members. The population
+is `max(1, round(users × hunt.share / (1 + hunt.zombies_mean)))` campaigns (20% at the start,
+the rest arriving flat), so hunters plus zombies approximate `hunt.share` (1%) of users. A
+campaign draws `zombies ~ geometric(mean 12)` (at most 30 used, `campaign_started`); every
+`hunt.member_gap` (mean 15 min) a member joins (`member_joined`, a `member_id`), and 85% place
+one qualifying $21 order (`member_ordered`) and claim `hunt.bonus` ($10) through
+`campaign_claim`. The answer is recorded per member (`member_bonus_paid` /
+`member_bonus_denied`); after the last member the campaign emits `campaign_finished` (paid and
+denied counts) and retires. Hunters compete with normal referrals for the same pool, so once it
+is drained normal users are rejected too.
+
 Accumulators: `hot_checkouts` (started checkouts with at least one line in group 0) and
 `platform_fees` (Σ capture fees); manifest `accumulators`, exported steps.
 
@@ -72,7 +95,10 @@ Laws (required): `chk.stock_never_negative`, `chk.reserved_never_negative`,
 released or expired within 15 minutes), `chk.postings_balanced` (`ledger` debits equal credits
 per commit), `chk.one_capture` (at most one `payment_captured` per payment),
 `chk.refunds_le_captured` (Σ `refund_settled.amount` ≤ `payment_captured.amount` per payment),
-`chk.refund_settles_once` (at most one `refund_settled` per refund ID).
+`chk.refund_settles_once` (at most one `refund_settled` per refund ID),
+`chk.one_grant_per_claim` (at most one `bonus_granted` per claim ID), `chk.pool_cap`
+(Σ `bonus_granted.amount` ≤ `pool_cap` over the run), `chk.pool_never_negative`
+(`pool.remaining` ≥ 0).
 
 ## Run
 

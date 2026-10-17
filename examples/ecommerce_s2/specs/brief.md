@@ -30,3 +30,11 @@ the shard-heavy parts of `examples/ecommerce` and `examples/payments`, as handwr
   with nothing left no dispute opens), move that amount to the dispute reserve, and are
   resolved after a gamma delay (mean 30 days): won 55% (back to the merchant), lost otherwise
   (back to the customer).
+- **Referral bonus pool** (spec §07, §10 S2-pool): one global pool of $20,000. A referred
+  shopper's first successful checkout of $20 or more claims a $10 bonus from it. Claims are
+  decided in the pool's own order, whole or not at all, so grants never exceed the cap
+  (`chk.pool_cap`), the pool never goes negative and each claim is granted at most once.
+- **Bounty-hunter campaigns** (D52): hunters plus their zombie members are about 1% of users. A
+  campaign has a geometric number of zombies (mean 12, at most 30); one joins about every
+  15 minutes, and 85% place one qualifying $21 order and claim the same $10 bonus. They drain
+  the pool alongside normal referrals, so normal users are rejected once it is empty.
