@@ -84,13 +84,22 @@ def ref_bounds(world: Any, id_bases: dict[str, int]) -> dict[str, int]:
     return bounds
 
 
-def check_ref_range(where: str, values: np.ndarray, target: str, bound: int) -> int:
-    """Check that every non-`NULL` dense ref lies in `[0, bound)`; returns the values checked."""
+def check_ref_range(where: str, values: np.ndarray, target: str, bound: int,
+                    cite: tuple[np.ndarray, ...] | None = None) -> int:
+    """Check that every non-`NULL` dense ref lies in `[0, bound)`; returns the values checked.
+
+    `cite` = `(partition_id, seq, action_id)` arrays parallel to `values`; the first offending
+    row is named in the error (§11: failures cite (partition_id, seq) and action ID)."""
     v = np.asarray(values, np.int64)
-    v = v[v != NULL]
+    keep = v != NULL
+    v = v[keep]
     bad = np.flatnonzero((v < 0) | (v >= bound))
     if len(bad):
-        raise EngineError(f"{where}: ref {int(v[bad[0]])} outside [0, {bound}) of {target}")
+        msg = f"{where}: ref {int(v[bad[0]])} outside [0, {bound}) of {target}"
+        if cite is not None:
+            pid, seq, action = (int(np.asarray(c)[keep][bad[0]]) for c in cite)
+            msg += f" at (partition_id {pid}, seq {seq}), action {action}"
+        raise EngineError(msg)
     return len(v)
 
 
@@ -102,12 +111,15 @@ def check_refs(plan: Any, records: dict[str, dict[str, np.ndarray]],
 
     def one(where: str, rows: dict[str, np.ndarray], c: Any) -> int:
         lt = c.ltype
-        if lt.target not in bounds:
-            return 0                              # not a table this run knows rows of
         v = rows[c.name]
+        cite = ((rows["pid"], rows["seq"], rows["action"])
+                if "seq" in rows and "action" in rows else (rows["pid"],) * 3)
         if lt.nullable:
-            v = v[np.asarray(rows[f"valid_{c.name}"], bool)]
-        return check_ref_range(f"{where}.{c.name}", v, lt.target, bounds[lt.target])
+            ok = np.asarray(rows[f"valid_{c.name}"], bool)
+            v, cite = v[ok], tuple(x[ok] for x in cite)
+        # a target with no rows at all (orphan table) has bound 0: every ref to it dangles
+        return check_ref_range(f"{where}.{c.name}", v, lt.target, bounds.get(lt.target, 0),
+                               cite)
 
     for e in plan.events:
         for c in e.cols[len(COMMON_COLUMNS):]:
