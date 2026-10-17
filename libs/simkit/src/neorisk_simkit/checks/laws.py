@@ -8,10 +8,13 @@ sealed step is fed to `LawBook.step`:
   at its first offending row; a non-required one counts `violations` and keeps the first
   citation. Failures cite `(partition_id, seq)` and the action ID.
 - a warm-up step (`exported=False`) reads `sealed.warmup_rows` and only updates carried state
-  (`total_le` running totals, `at_most_once` key sets): §11 reducers start from the opening
-  snapshot. Nothing is counted, judged or cited; state laws and `balanced` skip it.
+  (`total_le` running totals, `at_most_once` key sets, `sum_le` per-key sums, open `resolved`
+  keys): §11 reducers start from the opening snapshot. Nothing is counted, judged or cited;
+  state laws and `balanced` skip it.
 
-Carried keys are capped at `max_keys` (`checker_state`, 24 B per key). Evaluation reads only
+Within a step, checks run in declaration order and the first required check with a violation
+raises. `finish(end_us)` censors `resolved` keys still open whose deadline is at or after the
+end (reported in `censored`, never a violation). Carried keys are capped at `max_keys` (`checker_state`, 24 B per key). Evaluation reads only
 the sealed tables and the world state, so it is identical across thread counts.
 """
 
@@ -118,9 +121,13 @@ class _Law:
         self.violations = 0
         self.censored = 0
         self.first: dict[str, Any] | None = None
+        self.t_end = 0                                   # end of the step being fed
 
     def keys(self) -> int:
         return 0
+
+    def finish(self, end_us: int) -> None:
+        """The run ended at `end_us`."""
 
     def warm(self, rows: dict[str, pa.Table]) -> None:
         """Feed a warm-up step's rows into carried state (nothing judged)."""
@@ -343,12 +350,222 @@ class _NeverNegativeState(_Law):
         return int(valid.sum())
 
 
-class _Later(_Law):
-    """`sum_le` and `resolved`: evaluated from Task 10 on; until then nothing is checked."""
+_CANON = ("event_time", "lamport", "partition_id", "seq")
+_I64_MAX = np.iinfo(np.int64).max
 
-    def __init__(self, cdef: Any, tables: tuple[str, ...]):
+
+def _ints(t: pa.Table, name: str, idx: np.ndarray) -> np.ndarray:
+    return np.asarray(_column(t, name)[0], np.int64)[idx]
+
+
+def _first_canonical(c: dict[str, np.ndarray], among: np.ndarray, tag: str) -> int:
+    """The entry of `among` that comes first in canonical order (`tag` breaks exact ties)."""
+    sub = np.lexsort(tuple(c[k][among] for k in (tag, *_CANON[::-1])))
+    return int(among[sub[0]])
+
+
+def _concat(parts: list[dict[str, np.ndarray]], names: tuple[str, ...]) -> dict[str, np.ndarray]:
+    return {k: (np.concatenate([p[k] for p in parts]) if parts else np.zeros(0, np.int64))
+            for k in names}
+
+
+class _SumLe(_Law):
+    """Per `by` key, over the merged stream of both tables in canonical order (a right-side
+    row runs first at an exact tie of the canonical key), the running Σ lhs stays ≤ the running
+    Σ rhs at every lhs row. Sums are carried across steps as sorted key arrays; warm-up rows feed
+    them unjudged. Rows with a null key are skipped; a null amount adds 0 and an lhs row with a
+    null amount is not judged."""
+
+    _COLS = ("key", "amt", "side", "judged", "row", *_CANON)
+
+    def __init__(self, cdef: Any, lhs: tuple[str, str], rhs: tuple[str, str], by: str):
         super().__init__(cdef)
-        self.tables = tables
+        self.lhs, self.rhs, self.by = lhs, rhs, by
+        self.tables = (lhs[0], rhs[0])
+        self.skeys = np.zeros(0, np.int64)
+        self.lsum = np.zeros(0, np.int64)
+        self.rsum = np.zeros(0, np.int64)
+
+    def keys(self) -> int:
+        return len(self.skeys)
+
+    def _stream(self, rows: dict[str, pa.Table]) -> dict[str, np.ndarray]:
+        parts = []
+        for side, (table, col) in ((0, self.rhs), (1, self.lhs)):
+            t = rows.get(table)
+            if t is None or not t.num_rows:
+                continue
+            k, keyed = row_keys(t, (self.by,))
+            v, valid = _column(t, col)
+            v = np.asarray(v, np.int64)
+            ok = np.ones(t.num_rows, bool) if valid is None else valid
+            n = len(keyed)
+            parts.append({"key": k[keyed], "amt": np.where(ok, v, 0)[keyed],
+                          "side": np.full(n, side, np.int64),
+                          "judged": ok[keyed].astype(np.int64) * side, "row": keyed,
+                          **{c: _ints(t, c, keyed) for c in _CANON}})
+        s = _concat(parts, self._COLS)
+        order = np.lexsort((s["side"], *(s[c] for c in _CANON[::-1]), s["key"]))
+        return {k: v[order] for k, v in s.items()}
+
+    def _run(self, rows: dict[str, pa.Table]):
+        """The step's stream sorted by (key, canonical order), the running sums at each entry
+        (carried bases included); the carried sums are advanced past the step."""
+        s = self._stream(rows)
+        n = len(s["key"])
+        if not n:
+            return s, s["amt"], s["amt"]
+        ks = s["key"]
+        change = np.ones(n, bool)
+        change[1:] = ks[1:] != ks[:-1]
+        gid = np.cumsum(change) - 1
+        starts = np.flatnonzero(change)
+        ends = np.append(starts[1:], n) - 1
+        uniq = ks[starts]
+        pos = np.minimum(np.searchsorted(self.skeys, uniq), max(len(self.skeys) - 1, 0))
+        hit = self.skeys[pos] == uniq if len(self.skeys) else np.zeros(len(uniq), bool)
+        running = []
+        for sums, side in ((self.lsum, 1), (self.rsum, 0)):
+            a = np.where(s["side"] == side, s["amt"], 0)
+            c = np.cumsum(a)
+            base = np.where(hit, sums[pos] if len(sums) else 0, 0)
+            running.append(c - (c - a)[starts][gid] + base[gid])
+        run_l, run_r = running
+        keys = np.concatenate([self.skeys, uniq[~hit]])
+        new = []
+        for sums, r in ((self.lsum, run_l), (self.rsum, run_r)):
+            sums = sums.copy()
+            sums[pos[hit]] = r[ends][hit]
+            new.append(np.concatenate([sums, r[ends][~hit]]))
+        order = np.argsort(keys, kind="stable")
+        self.skeys, self.lsum, self.rsum = keys[order], new[0][order], new[1][order]
+        return s, run_l, run_r
+
+    def warm(self, rows):
+        self._run(rows)
+
+    def judge(self, rows, world, retired):
+        s, run_l, run_r = self._run(rows)
+        bad = np.flatnonzero((s["judged"] == 1) & (run_l > run_r))
+        if len(bad):
+            i = _first_canonical(s, bad, "side")
+            table = self.lhs[0]
+            self._fail(table, _cite(rows[table], int(s["row"][i])),
+                       f"{self.by} {int(s['key'][i])}: {'.'.join(self.lhs)} total "
+                       f"{int(run_l[i])} exceeds {'.'.join(self.rhs)} total {int(run_r[i])}",
+                       len(bad))
+        return int(s["judged"].sum())
+
+
+class _Resolved(_Law):
+    """Every `event` row opens its key; the first later row (canonical order) of a `by` table
+    with the same key closes it, if it comes at or before the deadline `opened_at + within`.
+    An exported opening is judged once: resolved when closed, a violation (cited, then dropped)
+    when the step whose end passes the deadline seals with it still open. Openings still open
+    at `finish` are censored (deadline ≥ end) or violations. A warm-up opening is never judged,
+    censored or cited: it is dropped when closed or at its deadline. An exported closing row
+    that closes nothing open (a key never opened, already closed, or open no longer: past its
+    deadline) is counted in `unmatched`; judging a close against the deadline, not against the
+    step that holds it, keeps every count independent of step length. Rows with a null key
+    are skipped."""
+
+    _OPEN = ("key", "t", "deadline", "pid", "seq", "action", "warm")
+
+    def __init__(self, cdef: Any, event: str, by: tuple[str, ...], key: str, within: str | None):
+        from neorisk_simkit.spec.project import parse_duration
+
+        super().__init__(cdef)
+        self.event, self.by, self.key, self.within = event, tuple(dict.fromkeys(by)), key, within
+        self.within_us = None if within is None else parse_duration(within)
+        self.tables = (event, *self.by)
+        self.unmatched = 0
+        self.open = {k: np.zeros(0, np.int64) for k in self._OPEN}
+
+    def keys(self) -> int:
+        return len(self.open["key"])
+
+    def _entries(self, t: pa.Table | None, tag: int) -> dict[str, np.ndarray] | None:
+        if t is None or not t.num_rows:
+            return None
+        k, keyed = row_keys(t, (self.key,))
+        e = {"key": k[keyed], "tag": np.full(len(keyed), tag, np.int64),
+             "action": _ints(t, "action_id", keyed), **{c: _ints(t, c, keyed) for c in _CANON}}
+        return e
+
+    def _advance(self, rows: dict[str, pa.Table], t_end: int, exported: bool) -> int:
+        """Open, close and expire this step's keys; returns the openings judged."""
+        names = ("key", "tag", "action", *_CANON)
+        new = _concat([e for e in [self._entries(rows.get(self.event), 1)] if e], names)
+        closes = _concat([e for b in self.by if (e := self._entries(rows.get(b), 0))], names)
+        n_new, n_cl = len(new["key"]), len(closes["key"])
+        allr = {k: np.concatenate([new[k], closes[k]]) for k in names}
+        order = np.lexsort((allr["tag"], *(allr[c] for c in _CANON[::-1])))
+        rank = np.empty(len(order), np.int64)          # canonical position in this step; a row
+        rank[order] = np.arange(len(order))            # closes before it opens (no self-close)
+        new_order = np.argsort(rank[:n_new], kind="stable")
+        dl = (new["event_time"] + self.within_us if self.within_us is not None
+              else np.full(n_new, _I64_MAX, np.int64))
+        o = self.open
+        op = {"key": np.concatenate([o["key"], new["key"][new_order]]),
+              "t": np.concatenate([o["t"], new["event_time"][new_order]]),
+              "deadline": np.concatenate([o["deadline"], dl[new_order]]),
+              "pid": np.concatenate([o["pid"], new["partition_id"][new_order]]),
+              "seq": np.concatenate([o["seq"], new["seq"][new_order]]),
+              "action": np.concatenate([o["action"], new["action"][new_order]]),
+              "warm": np.concatenate([o["warm"], np.full(n_new, 0 if exported else 1, np.int64)])}
+        orank = np.concatenate([np.full(len(o["key"]), -1, np.int64), rank[:n_new][new_order]])
+        n_op = len(op["key"])
+        match = np.zeros(n_op, bool)
+        used = 0
+        if n_cl and n_op:
+            crank = rank[n_new:]
+            corder = np.lexsort((crank, closes["key"]))
+            ck, cr, ct = closes["key"][corder], crank[corder], closes["event_time"][corder]
+            uniq, gid = np.unique(ck, return_inverse=True)
+            m = np.int64(len(order) + 2)
+            comp = gid.astype(np.int64) * m + (cr + 1)
+            g = np.minimum(np.searchsorted(uniq, op["key"]), len(uniq) - 1)
+            j = np.searchsorted(comp, g * m + (orank + 1), side="right")
+            jj = np.minimum(j, n_cl - 1)
+            match = ((uniq[g] == op["key"]) & (j < n_cl) & (gid[jj] == g)
+                     & (ct[jj] <= op["deadline"]))   # a close past the deadline is too late
+            used = len(np.unique(jj[match]))
+        warm = op["warm"] == 1
+        expired = ~match & (op["deadline"] < t_end)
+        judged = ~warm & (match | expired)
+        bad = np.flatnonzero(~warm & expired)
+        self.open = {k: v[~match & ~expired] for k, v in op.items()}
+        if not exported:
+            return 0
+        self.unmatched += n_cl - used
+        if len(bad):
+            self._fail_open(op, bad)
+        return int(judged.sum())
+
+    def _fail_open(self, op: dict[str, np.ndarray], bad: np.ndarray) -> None:
+        i = int(bad[0])                                  # openings are kept in canonical order
+        self._fail(self.event, (int(op["pid"][i]), int(op["seq"][i]), int(op["action"][i])),
+                   f"{self.key} {int(op['key'][i])} opened at {int(op['t'][i])} not resolved "
+                   f"within {self.within}", len(bad))
+
+    def warm(self, rows):
+        self._advance(rows, self.t_end, exported=False)
+
+    def judge(self, rows, world, retired):
+        return self._advance(rows, self.t_end, exported=True)
+
+    def finish(self, end_us: int) -> None:
+        op = self.open
+        live = op["warm"] == 0
+        bad = np.flatnonzero(live & (op["deadline"] < end_us))
+        self.censored += int((live & (op["deadline"] >= end_us)).sum())
+        self.checked += len(bad)
+        self.open = {k: v[:0] for k, v in op.items()}
+        if len(bad):
+            self._fail_open(op, bad)
+
+    def report(self) -> dict[str, Any]:
+        return {**super().report(), "unmatched": self.unmatched}
 
 
 def _build(plan: Any, cdef: Any) -> _Law:
@@ -367,10 +584,14 @@ def _build(plan: Any, cdef: Any) -> _Law:
     if kind == "balanced":
         return _Balanced(cdef, lw.arg("table"), lw.arg("amount"), lw.arg("side"), lw.arg("by"))
     if kind == "sum_le":
-        return _Later(cdef, (_event_table(plan, lw.arg("lhs"))[0],
-                             _event_table(plan, lw.arg("rhs"))[0]))
+        lhs, rhs, by = _event_table(plan, lw.arg("lhs")), _event_table(plan, lw.arg("rhs")), \
+            lw.arg("by")
+        for table, _ in (lhs, rhs):
+            if not any(c.name == by for e in plan.events if e.name == table for c in e.cols):
+                raise ValueError(f"check {cdef.id}: {table} has no column {by}")
+        return _SumLe(cdef, lhs, rhs, by)
     if kind == "resolved":
-        return _Later(cdef, (lw.arg("event"), *lw.arg("by")))
+        return _Resolved(cdef, lw.arg("event"), lw.arg("by"), lw.arg("key"), lw.arg("within"))
     raise ValueError(f"check {cdef.id}: unknown law {kind!r}")
 
 
@@ -396,6 +617,8 @@ class LawBook:
     def step(self, sealed: Any, world: Any, *, exported: bool = True) -> dict[str, int]:
         """Feed one sealed step; returns the values checked per check this step."""
         out: dict[str, int] = {}
+        for law in self._laws:
+            law.t_end = int(sealed.t_end)
         if exported:
             rows = {**sealed.events, **sealed.postings}
             retired = getattr(sealed, "retired", _NONE)
@@ -414,8 +637,11 @@ class LawBook:
         return out
 
     def finish(self, end_us: int) -> None:
-        """The run ended at `end_us` (Task 10 censors `resolved` keys open past it)."""
+        """The run ended at `end_us`: `resolved` openings still open are censored (deadline at
+        or after the end) or violations, in declaration order."""
         self.end_us = int(end_us)
+        for law in self._laws:
+            law.finish(self.end_us)
 
     def report(self) -> dict[str, dict]:
         return {law.id: law.report() for law in self._laws}
