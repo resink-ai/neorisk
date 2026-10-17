@@ -2,9 +2,10 @@
 up front; a run that hits a cap fails with the item named and leaves no dataset."""
 
 import pytest
-from conftest import FIXTURES
+from conftest import FIXTURES, make_run
 
 from neorisk_simkit.engine import CapExceeded
+from neorisk_simkit.engine.run import Simulation
 from neorisk_simkit.engine.world import World
 from neorisk_simkit.io.dataset import ValidationFailed, run_to_dataset
 from neorisk_simkit.spec.caps import compute_caps
@@ -50,3 +51,34 @@ def test_estimates_and_caps_are_reported_separately():
     run = resolve_run(load_project(MINI), "sample", [])
     caps = {c.name: c for c in compute_caps(run)}
     assert caps["step_output"].estimate_bytes < caps["step_output"].hard_bytes
+
+
+@pytest.mark.parametrize("override,limit", [("budget.max_step_rows=50", 50),
+                                            ("budget.max_step_bytes=4096", 4096)])
+def test_step_output_cap_fails_while_the_step_accumulates(override, limit):
+    """The step cap is checked as slabs are flushed, so a runaway step fails after at most one
+    more flush past the cap, not after the whole step is collected and merged."""
+    run = make_run("mini", ["users=2000", override], slab_bytes=1024)
+    sim = Simulation(run, threads=1)
+    slab = sim.world.slabs[0]
+    per_flush_rows = int(sum(slab.cap))
+    per_flush_bytes = sum(a.nbytes for bufs in slab.buffers.values() for a in bufs.values())
+    whole_step = make_run("mini", ["users=2000"], slab_bytes=1024)
+    first = next(Simulation(whole_step, threads=1).steps()).stats
+    unit = "rows" if "rows" in override else "bytes"
+    assert first[unit] > 4 * (limit + (per_flush_rows if unit == "rows" else per_flush_bytes))
+    with pytest.raises(CapExceeded) as e:
+        next(sim.steps())
+    assert e.value.item == "step_output" and e.value.limit == limit
+    assert e.value.attempted <= limit + (per_flush_rows if unit == "rows" else per_flush_bytes)
+
+
+def test_step_output_counts_id_allocations():
+    """`p.ids` rows have no entity table but sit in the step's buffers until it seals."""
+    first = next(Simulation(make_run("mini"), threads=1).steps()).stats
+    assert first["rows"] > 0                    # records + created entity rows, ids excluded
+    capped = make_run("mini", [f"budget.max_step_rows={first['rows']}"])
+    with pytest.raises(CapExceeded) as e:
+        next(Simulation(capped, threads=1).steps())
+    assert e.value.item == "step_output" and e.value.attempted > first["rows"]
+

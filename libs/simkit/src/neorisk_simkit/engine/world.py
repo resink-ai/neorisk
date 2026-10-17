@@ -282,6 +282,9 @@ class World:
         self._outs = [s.as_tuple(self.hidden, self.pool, self.payload, self.seed)
                       for s in self.slabs]
         self.chunks: list[list[StepChunk]] = [[] for _ in range(self.threads)]
+        self._step_lock = threading.Lock()
+        self.step_rows = 0                          # rows / bytes flushed this step (all
+        self.step_bytes = 0                         # record and create buffers, ids included)
         self.pending_outbox: list[list[dict[str, np.ndarray]]] = [
             [] for _ in range(self.threads)]
         self._build_route()
@@ -932,10 +935,24 @@ class World:
         return self.stats["late_messages"] - before
 
     def _flush(self, worker: int) -> None:
+        """Move `worker`'s filled slab rows into its chunks and enforce the step output cap
+        (spec section 10) on everything flushed this step, before the step accumulates more."""
         chunk = self.slabs[worker].flush()
-        if any(len(v["time"]) for v in chunk.records.values()) or any(
-                len(v["handle"]) for v in chunk.creates.values()):
-            self.chunks[worker].append(chunk)
+        parts = [*chunk.records.values(), *chunk.creates.values()]
+        rows = sum(len(next(iter(p.values()))) for p in parts)
+        if not rows:
+            return
+        n_bytes = sum(a.nbytes for p in parts for a in p.values())
+        self.chunks[worker].append(chunk)
+        budget = self.run.budget
+        with self._step_lock:
+            self.step_rows += rows
+            self.step_bytes += n_bytes
+            total_rows, total_bytes = self.step_rows, self.step_bytes
+        if total_rows > budget.max_step_rows:
+            raise CapExceeded("step_output", int(budget.max_step_rows), int(total_rows))
+        if budget.max_step_bytes is not None and total_bytes > budget.max_step_bytes:
+            raise CapExceeded("step_output", int(budget.max_step_bytes), int(total_bytes))
 
     def flush_all(self) -> None:
         """Flush every worker slab into its `chunks` list."""
@@ -947,6 +964,7 @@ class World:
         out = [c for chunks in self.chunks for c in chunks]
         for chunks in self.chunks:
             chunks.clear()
+        self.step_rows = self.step_bytes = 0
         return out
 
     @property

@@ -12,7 +12,8 @@
 5. number events per table (`id_bases["event:<name>"]` + rank by `(pid, seq)`) and map every
    ID to its public value (`feistel63` keyed by the table name);
 6. sort each table by the canonical key `(time, lamport, partition_id, seq)`;
-7. enforce the step caps (`CapExceeded("step_output", ...)`);
+7. count the step's output rows and bytes (the cap, `CapExceeded("step_output", ...)`, is
+   enforced earlier, on every slab flush, over all buffers including `p.ids` allocations);
 8. warm-up steps keep their created entities but drop events and history rows (D20);
 9. run the structural checks on exported steps.
 """
@@ -28,7 +29,7 @@ from numba import njit
 
 from neorisk_simkit.engine.abi import START
 from neorisk_simkit.engine.cmdq import PAY_CONTINUE
-from neorisk_simkit.engine.errors import CapExceeded, EngineError
+from neorisk_simkit.engine.errors import EngineError
 from neorisk_simkit.engine.identity import (
     FLAG,
     assign_dense,
@@ -312,7 +313,7 @@ def seal_step(world: Any, step: int, t0: int, t1: int, exported: bool,
     """
     from neorisk_simkit.checks.structural import check_step
 
-    plan, seed, budget = world.plan, world.seed, world.run.budget
+    plan, seed = world.plan, world.seed
     world.flush_all()
     chunks = world.take_chunks()
     specs = buffer_specs(plan)
@@ -363,15 +364,12 @@ def seal_step(world: Any, step: int, t0: int, t1: int, exported: bool,
     # 4. free retired slots
     freed = _free_retired(world, owners)
 
-    # 7. step caps (over everything the step produced, warm-up included)
+    # 7. output size (the step cap itself is enforced as slabs are flushed: `World._flush`);
+    # `rows` (records + created entity rows, warm-up included) drives the step length
     entity_ns = [ns for ns in plan.namespaces if ns in tables]
     parts = [*records.values(), *(creates[ns] for ns in entity_ns)]
     n_rows = sum(len(next(iter(p.values()))) for p in parts)
     n_bytes = sum(a.nbytes for p in parts for a in p.values())
-    if n_rows > budget.max_step_rows:
-        raise CapExceeded("step_output", int(budget.max_step_rows), int(n_rows))
-    if budget.max_step_bytes is not None and n_bytes > budget.max_step_bytes:
-        raise CapExceeded("step_output", int(budget.max_step_bytes), int(n_bytes))
 
     # 5, 6, 8. events and history (warm-up steps drop their rows), entities always
     def keep(rows: dict[str, np.ndarray]) -> dict[str, np.ndarray]:
