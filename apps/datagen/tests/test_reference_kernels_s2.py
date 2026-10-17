@@ -109,3 +109,29 @@ def test_references_catch_a_wrong_decision(ev):
         pl.when(pl.int_range(pl.len()) == 0).then(pl.col("remaining_after") + 1)
         .otherwise(pl.col("remaining_after")).alias("remaining_after"))
     assert replay_pool(flipped, cap=40_000)          # a tampered stream is caught
+
+
+def _bump(ev, table, col, by=1):
+    import polars as pl
+    out = dict(ev)
+    out[table] = ev[table].with_columns(
+        pl.when(pl.int_range(pl.len()) == 0).then(pl.col(col) + by).otherwise(pl.col(col))
+        .alias(col))
+    return out
+
+
+def _swap(ev, table, col, a, b):
+    import polars as pl
+    out = dict(ev)
+    out[table] = ev[table].with_columns(pl.col(col).cast(pl.String).replace({a: b, b: a}))
+    return out
+
+
+def test_inventory_and_refund_references_catch_tampering(ev):
+    assert _replay_inventory(_bump(ev, "stock_committed", "on_hand_after"), STRESS, ttl_s=600)
+    rej = _swap(ev, "stock_rejected", "reason", "out_of_stock", "busy")
+    assert len(_replay_inventory(rej, STRESS, ttl_s=600)) == ev["stock_rejected"].height
+    assert replay_refunds(_bump(ev, "dispute_opened", "amount"))
+    assert replay_refunds(_bump(ev, "refund_settled", "refunded_after"))
+    flipped = _swap(ev, "refund_replayed", "result", "requested", "rejected")
+    assert len(replay_refunds(flipped)) == ev["refund_replayed"].height
