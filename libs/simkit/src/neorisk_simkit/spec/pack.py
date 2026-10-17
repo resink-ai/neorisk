@@ -15,7 +15,7 @@ from neorisk_simkit.spec.sources import Source
 from neorisk_simkit.spec.types import COMMON_COLUMNS, LType
 
 MAX_PARTITION_TYPES = 31                     # ptype_code is 5 bits (D12)
-_STATE_RE = re.compile(r"^(i8|i16|i32|i64|u8|u32|f64)(?:\[(\w+)\])?$")
+_STATE_RE = re.compile(r"^(i8|i16|i32|i64|u8|u32|f64|ref)(?:\[(\w+)\])?$")
 _COMMON = frozenset(n for n, _ in COMMON_COLUMNS)
 
 

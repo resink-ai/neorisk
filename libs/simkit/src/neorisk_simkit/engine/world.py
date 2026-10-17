@@ -450,8 +450,9 @@ class World:
             size = len(order) if per_item else part.n
             v = recipe_vals.get(field) if recipe_vals is not None else (
                 init.get(field) if isinstance(init, dict) else None)
-            if v is None:
-                arrays.append(np.zeros(size, dt))
+            if v is None:                            # a `ref` field starts at std.NULL (D38)
+                arrays.append(np.full(size, _NULL, dt) if m.group(1) == "ref"
+                              else np.zeros(size, dt))
                 continue
             if isinstance(v, Dist):
                 s = rng.mix(rng.name_key(part.name), rng.name_key(field))

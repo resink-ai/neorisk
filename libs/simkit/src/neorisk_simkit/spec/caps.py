@@ -120,6 +120,8 @@ def _live_state(plan: Plan) -> int:
             total += part.max_live * (row_bytes(plan.table(part.table).cols) + local + hid)
         else:
             total += part.n * hid
+            total += part.n * sum(_local_bytes(p.kernel.local) for p in plan.processes
+                                  if p.partition == part.name)
             for decl in part.state.values():
                 width, items = _state_item_bytes(decl)
                 total += width * (_table_rows(plan, items) if items else part.n)

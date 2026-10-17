@@ -6,9 +6,10 @@
 2. give the rows created this step dense indices per namespace (`id_bases[<ns>]` + rank by
    `(pid, ordinal)`, spec §12: creator `partition_id` order, then local ordinal); created
    owners get `pid = ptype_code << 56 | dense`;
-3. remap provisional handles (D11) in records, created rows, the state, local `ref` fields and
-   `self_id`/`pid` of touched owners, and the tag and user payload of every command queued at a
-   touched slot; a provisional value that matches no row of this step fails the run;
+3. remap provisional handles (D11, D38) in records, created rows, the state, local `ref` fields
+   and `self_id`/`pid` of touched owners, the `ref` state and local `ref` fields of touched
+   shards, and the tag, user payload and sender (column 9) of every command queued at a touched
+   slot; a provisional value that matches no row of this step fails the run;
 4. free the slots of owners that retired idle this step (`alive = 0`, `gen += 1`, slot reusable);
 5. number events per table (`id_bases["event:<name>"]` + rank by `(pid, seq)`) and map every
    ID to its public value (`feistel63` keyed by the table name);
@@ -44,6 +45,7 @@ from neorisk_simkit.spec.types import COMMON_COLUMNS, LType, arrow_type
 NULL = int(np.iinfo(np.int64).min)               # std.NULL
 _I64_MAX = int(np.iinfo(np.int64).max)
 _USER_PAYLOAD = 7                                # payload columns 0..6 carry user values (D17)
+_PAY_SENDER = 9                                  # payload column 9: src_self_id (`cmd.sender`, D38)
 _TS = pa.timestamp("us", tz="UTC")
 
 HISTORY_HEAD = ("entity_id", "valid_from", "lamport", "partition_id", "seq")
@@ -241,7 +243,8 @@ def _merge(chunks: list[Any], spec: BufferSpec) -> dict[str, np.ndarray]:
 
 
 def _remap_world(world: Any, remap: _Remap) -> np.ndarray:
-    """Remap handles held by touched slots; returns the touched owner slots."""
+    """Remap handles held by touched slots (owners and shards); returns the touched owner
+    slots."""
     plan, hid = world.plan, world.hidden
     touched = np.asarray(world.touched, np.int64)
     owners = touched[touched < world.shard_lo]
@@ -265,6 +268,7 @@ def _remap_world(world: Any, remap: _Remap) -> np.ndarray:
                     remap.apply_copy(arr, ls, f"local {p.name}.{fname}")
         remap.apply_copy(hid.self_id, gs, f"self_id of {part.name}")
         remap.apply_copy(hid.pid, gs, f"pid of {part.name}", pid=True)
+    _remap_shards(world, remap, touched[touched >= world.shard_lo])
     pool = world.pool
     nodes = _queued_nodes(hid.qhead, pool.next, touched)
     if len(nodes):
@@ -276,8 +280,48 @@ def _remap_world(world: Any, remap: _Remap) -> np.ndarray:
             block = np.ascontiguousarray(world.payload.rows[rows, :_USER_PAYLOAD])
             remap.apply(block.reshape(-1), "a queued command payload")
             world.payload.rows[rows, :_USER_PAYLOAD] = block
+            sender = np.ascontiguousarray(world.payload.rows[rows, _PAY_SENDER])
+            remap.apply(sender, "a queued command sender")
+            world.payload.rows[rows, _PAY_SENDER] = sender
     hid.ordn[touched] = 0                     # create ordinals are per step (D11)
     return owners
+
+
+def _remap_shards(world: Any, remap: _Remap, shards: np.ndarray) -> None:
+    """Remap the `ref` state fields (scalar: at the shard index; per item: over the shard's item
+    range) and the `ref` local fields of every touched shard slot in `shards` (D38)."""
+    from neorisk_simkit.engine.layout import _STATE_RE
+
+    plan, hid = world.plan, world.hidden
+    for part in plan.partitions:
+        if part.kind == "owner":
+            continue
+        base = world.slot_base[part.name]
+        gs = shards[(shards >= base) & (shards < base + part.n)]
+        if not len(gs):
+            continue
+        idx = hid.lslot[gs].astype(np.int64)
+        items = None
+        for (field, decl), arr in zip(part.state.items(), world.state[part.name], strict=True):
+            m = _STATE_RE.match(decl)
+            if m.group(1) != "ref":
+                continue
+            where = f"state {part.name}.{field}"
+            if m.group(2) is None:
+                remap.apply_copy(arr, idx, where)
+                continue
+            if items is None:
+                offs = world.offs[part.name]
+                items = np.concatenate([np.arange(offs[i], offs[i + 1], dtype=np.int64)
+                                        for i in idx])
+            remap.apply_copy(arr, items, where)
+        for p in plan.processes:
+            if p.partition != part.name or p.kernel.local is None:
+                continue
+            for (fname, (kind, _)), arr in zip(p.kernel.local.fields.items(),
+                                               world.locals[p.name], strict=True):
+                if kind == "ref":
+                    remap.apply_copy(arr, idx, f"local {p.name}.{fname}")
 
 
 def _free_retired(world: Any, owners: np.ndarray) -> int:
