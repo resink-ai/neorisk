@@ -3,8 +3,8 @@ import pytest
 from conftest import make_run, records_of
 
 from neorisk_simkit.engine import CapExceeded
+from neorisk_simkit.engine import route as rt
 from neorisk_simkit.engine.rounds import run_step
-from neorisk_simkit.engine.route import safe_horizon
 from neorisk_simkit.engine.world import World
 
 H = 3_600_000_000
@@ -23,16 +23,25 @@ def _rows(w, table):
     return records_of(w, table)
 
 
+def _suspend(w, slots, susp_t, delta):
+    """List `slots` as suspended owners with the given request times and boundary deltas."""
+    hid = w.hidden
+    slots = np.array(slots, np.int64)
+    hid.pending[slots] = 1
+    hid.susp_t[slots] = susp_t
+    hid.susp_delta[slots] = delta
+    rt.note_suspended(w.R, slots, len(slots))
+
+
 def test_safe_horizon():
+    """H = min(step end, min over suspended owners of (request time + delta), min creation)."""
     inf = np.iinfo(np.int64).max
-    assert safe_horizon(1000, np.array([], np.int64), np.array([], np.int64),
-                        np.array([], np.int64)) == 1000
-    assert safe_horizon(1000, np.array([100, 50], np.int64), np.array([200, 300], np.int64),
-                        np.array([], np.int64)) == 300
-    assert safe_horizon(1000, np.array([100], np.int64), np.array([200], np.int64),
-                        np.array([120], np.int64)) == 120
-    assert safe_horizon(250, np.array([100], np.int64), np.array([200], np.int64),
-                        np.array([inf], np.int64)) == 250
+    w = World.build(make_run("mini"), threads=1)
+    assert rt.horizon(w.R, 1000, inf) == 1000
+    _suspend(w, [0, 1], [100, 50], [200, 300])
+    assert rt.horizon(w.R, 1000, inf) == 300
+    assert rt.horizon(w.R, 1000, 120) == 120
+    assert rt.horizon(w.R, 250, inf) == 250
 
 
 def test_mini_step_closes_with_responses_after_delta():
@@ -118,7 +127,6 @@ def test_compiled_rounds_match_python_rounds_over_steps():
 def test_suspended_owners_are_listed_once(monkeypatch):
     """An owner that suspends again after a resume must not get a second list entry (the list
     has one slot per partition)."""
-    from neorisk_simkit.engine import route as rt
     run = make_run("mini", ["behavior.take_p=0.5"], parallel_min_partitions=1)
     w = World.build(run, threads=1)
     real, sizes = w.note_suspended, []
@@ -245,5 +253,6 @@ def test_creations_inside_compiled_rounds_return_to_python(monkeypatch):
 
 def test_safe_horizon_saturates():
     inf = np.iinfo(np.int64).max
-    assert safe_horizon(1000, np.array([inf], np.int64), np.array([inf], np.int64),
-                        np.array([], np.int64)) == 1000
+    w = World.build(make_run("mini"), threads=1)
+    _suspend(w, [0], [inf], [inf])
+    assert rt.horizon(w.R, 1000, inf) == 1000

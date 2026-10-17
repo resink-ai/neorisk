@@ -50,18 +50,6 @@ _I64_MAX = np.iinfo(np.int64).max
 
 
 @njit(cache=True, nogil=True)
-def safe_horizon(step_end, susp_t, susp_delta, create_t):
-    """H = min(step end, min over suspended owners of (susp_t + delta), min creation time)."""
-    h = np.int64(step_end)
-    for i in range(susp_t.shape[0]):
-        if susp_t[i] < _I64_MAX - susp_delta[i]:          # saturating: never wraps negative
-            h = min(h, susp_t[i] + susp_delta[i])
-    for i in range(create_t.shape[0]):
-        h = min(h, create_t[i])
-    return h
-
-
-@njit(cache=True, nogil=True)
 def mark_touched(R, g):
     tmask = R[RT_TMASK]
     if tmask[g] == 0:
@@ -161,7 +149,8 @@ def note_suspended(R, slots, n):
 
 @njit(cache=True, nogil=True)
 def horizon(R, step_end, create_min):
-    """`safe_horizon` over the owners still waiting for a response (the heap's top)."""
+    """The safe horizon H = min(step end, min over suspended owners of (request time + delta),
+    earliest unadmitted creation `create_min`) (D5); the suspended term is the heap's top."""
     heap, sn, pending = R[RT_SUSP], R[RT_SUSP_N], R[RT_PENDING]
     while sn[0] > 0 and pending[heap[0]] == 0:     # defensive: unlisted on delivery already
         _unlist_suspended(R, heap[0])
@@ -224,6 +213,16 @@ def resume_owner(P, qhead, g):
     The queue stays sorted by time.
 
     In S1 an owner receives only responses, so its payload-carrying nodes are the responses.
+
+    Commands pushed at T_r while that re-dated prefix is still queued (a `continue_at`, or a
+    timer at `ctx.t` from the response handler): `q_push` walks the queue and inserts before
+    the first node with the same time and a greater `(key, seq)`. The prefix is not sorted by
+    key (it keeps the group order above), so the new command lands before the first remaining
+    prefix node with a greater key: a `PRIO_CONTINUE` continuation runs before every deferred
+    command still queued, a timer at priority p before the first deferred command of priority
+    > p (or of equal priority and a later cause). This depends only on the queue's contents,
+    never on step boundaries, workers or slabs, so it is invariant; it equals the canonical
+    `(time, key, seq)` order whenever the remaining prefix happens to be sorted by key.
     """
     ptime, nxt, ppay = P[0], P[4], P[7]
     t_r = np.int64(-(2 ** 63))

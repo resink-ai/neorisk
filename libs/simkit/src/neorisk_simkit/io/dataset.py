@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import dataclasses
 import hashlib
-import os
 import shutil
 import time
 from collections.abc import Iterable
@@ -14,7 +13,7 @@ from typing import Any
 
 import pyarrow as pa
 
-from neorisk_simkit.engine.run import Simulation
+from neorisk_simkit.engine.run import ENGINE_COUNTERS, Simulation
 from neorisk_simkit.io.entities import EntityWriter
 from neorisk_simkit.io.manifest import write_manifest
 from neorisk_simkit.io.schema.schema_json import write_schema
@@ -23,8 +22,6 @@ from neorisk_simkit.io.step_index import INDEX_PATH, step_index_row, write_step_
 from neorisk_simkit.io.writer import FileEntry, plan_columns, write_step, writer_options
 from neorisk_simkit.spec.project import load_project, resolve_run
 from neorisk_simkit.spec.validate import ValidationReport, validate
-
-_ENGINE_COUNTERS = ("rejects", "retries", "late_messages", "continuations")
 
 
 class ValidationFailed(Exception):
@@ -117,8 +114,10 @@ def run_to_dataset(project_dir: str | Path, profile: str = "sample",
     if out_dir.exists() and not force:
         raise FileExistsError(f"{out_dir} already exists (use force to overwrite)")
 
+    # D33 caps Arrow at `threads`. Polars is not used by a run; `POLARS_MAX_THREADS` only takes
+    # effect before polars is first imported, so a process that wants it (the benchmark child)
+    # sets it at start-up rather than here.
     pa.set_cpu_count(threads)
-    os.environ.setdefault("POLARS_MAX_THREADS", str(threads))
 
     work = out_dir.with_name(out_dir.name + ".partial")
     if work.exists():
@@ -181,6 +180,6 @@ def _run_stats(sim: Simulation, manifest: dict[str, Any], timing: dict[str, floa
         "threads": threads,
         "machine": machine(),
     }
-    for k in _ENGINE_COUNTERS:
+    for k in ENGINE_COUNTERS:
         out[k] = dict(st[k]) if isinstance(st[k], dict) else st[k]
     return out

@@ -70,6 +70,11 @@ GiB) on the reference machine, 16 cores / 64 GB, with Numba plus Polars threads 
 |---|---|---|---|---|---|---|---|---|---|---|
 | before (f8d9f14) | 2026-10-17 UTC | arm64 14 / 36 GiB (not reference) | 14 | 10,022,123 | 116.67 | 509.18 | 2.77 | 109.14 / 4.38 / 2.38 | 96,955 | **fail** |
 | after (task 24b) | 2026-10-17 UTC | arm64 14 / 36 GiB (not reference) | 14 | 10,022,123 | 43.97 | 471.80 | 2.78 | 36.41 / 4.41 / 2.39 | 96,955 | **pass** |
+| task 24c (6e352b4) | 2026-10-17 UTC | arm64 14 / 36 GiB (not reference) | 14 | 10,022,123 | 45.1 | — | 2.52 | — | — | **pass** |
+
+The task 24c row is a plain `datagen run --profile full --seed 42` (not the harness, so no cold
+compile, stage split or round counts) after entity tables were streamed per step: engine
+seconds 45.1, peak RSS 2.52 GiB (was 2.78), dataset hash unchanged.
 
 The "after" row reads `results/s1-warm.json` (warm run) and `results/s1-cold.json` (`--cold`; its
 own measured run took 44.47 s, peak RSS 2.74 GiB). Both runs: 28 steps, 1,388,003 rounds,

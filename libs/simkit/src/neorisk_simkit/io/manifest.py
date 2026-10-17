@@ -19,11 +19,12 @@ import neorisk_simkit
 from neorisk_simkit.io.writer import FileEntry, plan_columns, writer_options
 
 _EPOCH = datetime(1970, 1, 1, tzinfo=UTC)
-_REVISION_DIRS = ("spec", "engine", "std", "io")
+_REVISION_DIRS = ("spec", "engine", "std", "io", "checks")   # checks: counts are in the manifest
 
 
 def engine_revision() -> str:
-    """D22: package version + `@` + first 7 hex of sha256 over `{spec,engine,std,io}/**/*.py`."""
+    """D22: package version + `@` + first 7 hex of sha256 over
+    `{spec,engine,std,io,checks}/**/*.py` (`checks/` too: its counts go into the manifest)."""
     root = Path(neorisk_simkit.__file__).parent
     h = hashlib.sha256()
     for sub in _REVISION_DIRS:

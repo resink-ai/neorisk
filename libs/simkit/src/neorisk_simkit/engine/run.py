@@ -20,7 +20,7 @@ from neorisk_simkit.engine.world import World
 from neorisk_simkit.io.seal import SealedStep, entity_table, seal_step
 
 _SECOND = 1_000_000
-_ENGINE_COUNTERS = ("rejects", "retries", "late_messages", "continuations")
+ENGINE_COUNTERS = ("rejects", "retries", "late_messages", "continuations")   # run_stats keys
 
 
 def next_step_length(prev_len: int, rows: int, engine: Any, budget: Any) -> int:
@@ -128,7 +128,7 @@ class Simulation:
         st["generate_s"] += gen_s
         st["seal_s"] += seal_s
         ws = self.world.stats
-        for k in _ENGINE_COUNTERS:
+        for k in ENGINE_COUNTERS:
             st[k] = dict(ws[k]) if isinstance(ws[k], dict) else int(ws[k])
         # proposals: owner commands executed (commits and rejects; retries are not commands)
         self._shard_commands += sum(rounds.shard_cmds)
