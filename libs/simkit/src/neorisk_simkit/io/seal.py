@@ -11,17 +11,18 @@
    shards, and the tag, user payload and sender (column 9) of every command queued at a touched
    slot; a provisional value that matches no row of this step fails the run;
 4. free the slots of owners that retired idle this step (`alive = 0`, `gen += 1`, slot reusable);
-5. number events per table (`id_bases["event:<name>"]` + rank by `(pid, seq)`) and map every
-   ID to its public value (`feistel63` keyed by the table name);
+5. number events and postings per table (`id_bases["event:<name>"]` + rank by `(pid, seq)`)
+   and map every ID to its public value (`feistel63` keyed by the table name);
 6. sort each table by the canonical key `(time, lamport, partition_id, seq)`;
 7. count the step's output rows and bytes (the cap, `CapExceeded("step_output", ...)`, is
    enforced earlier, on every slab flush, over all buffers including `p.ids` allocations);
-8. warm-up steps keep their created entities but drop events and history rows (D20);
+8. warm-up steps keep their created entities but drop event, posting and history rows (D20);
 9. run the structural checks on exported steps.
 """
 
 from __future__ import annotations
 
+import dataclasses
 from dataclasses import dataclass
 from typing import Any
 
@@ -40,13 +41,11 @@ from neorisk_simkit.engine.identity import (
     remap_inplace,
 )
 from neorisk_simkit.engine.slabs import BufferSpec, buffer_specs
+from neorisk_simkit.io.consts import I64_MAX, NULL, TS
 from neorisk_simkit.spec.types import COMMON_COLUMNS, LType, arrow_type
 
-NULL = int(np.iinfo(np.int64).min)               # std.NULL
-_I64_MAX = int(np.iinfo(np.int64).max)
 _USER_PAYLOAD = 7                                # payload columns 0..6 carry user values (D17)
 _PAY_SENDER = 9                                  # payload column 9: src_self_id (`cmd.sender`, D38)
-_TS = pa.timestamp("us", tz="UTC")
 
 HISTORY_HEAD = ("entity_id", "valid_from", "lamport", "partition_id", "seq")
 ENTITY_HEAD = ("id", "created_at", "origin")
@@ -63,6 +62,7 @@ class SealedStep:
     history: dict[str, pa.Table]                 # change group -> rows (canonical order)
     entities: dict[str, pa.Table]                # created table -> rows created this step
     stats: dict[str, Any]
+    postings: dict[str, pa.Table] = dataclasses.field(default_factory=dict)  # D45
 
 
 # ---------------------------------------------------------------------------- Arrow columns
@@ -91,14 +91,14 @@ def column_array(values: np.ndarray, lt: LType, valid: np.ndarray | None, seed: 
         return pa.DictionaryArray.from_arrays(idx, pa.array(list(lt.values), pa.string()),
                                               safe=False)   # range is a structural check
     if lt.kind == "ts":
-        return pa.array(np.asarray(values, np.int64), pa.int64(), mask=mask).cast(_TS)
+        return pa.array(np.asarray(values, np.int64), pa.int64(), mask=mask).cast(TS)
     if lt.kind == "bool":
         return pa.array(np.asarray(values) != 0, pa.bool_(), mask=mask)
     return pa.array(values, arrow_type(lt), mask=mask)
 
 
 def _ts(values: np.ndarray) -> pa.Array:
-    return pa.array(np.asarray(values, np.int64), pa.int64()).cast(_TS)
+    return pa.array(np.asarray(values, np.int64), pa.int64()).cast(TS)
 
 
 def _table(names: list[str], arrays: list[pa.Array], nullable: list[bool]) -> pa.Table:
@@ -328,15 +328,15 @@ def _free_retired(world: Any, owners: np.ndarray) -> int:
     """Free owners that retired idle this step; an owner that got new commands after retiring
     (or waits on a response) stays live. Returns how many slots were freed."""
     hid = world.hidden
-    r = owners[hid.retire_at[owners] != _I64_MAX]
+    r = owners[hid.retire_at[owners] != I64_MAX]
     if not len(r):
         return 0
     idle = (hid.qhead[r] < 0) & (hid.pending[r] == 0)
-    hid.retire_at[r] = _I64_MAX
+    hid.retire_at[r] = I64_MAX
     gone = r[idle]
     hid.alive[gone] = 0
     hid.gen[gone] += 1
-    world.next_t[gone] = _I64_MAX
+    world.next_t[gone] = I64_MAX
     for part in world.plan.partitions:
         if part.kind != "owner":
             continue
@@ -417,12 +417,14 @@ def seal_step(world: Any, step: int, t0: int, t1: int, exported: bool,
     n_rows = sum(len(next(iter(p.values()))) for p in parts)
     n_bytes = sum(a.nbytes for p in parts for a in p.values())
 
-    # 5, 6, 8. events and history (warm-up steps drop their rows), entities always
+    # 5, 6, 8. events, postings and history (warm-up steps drop their rows), entities always
     def keep(rows: dict[str, np.ndarray]) -> dict[str, np.ndarray]:
         return rows if exported else {k: v[:0] for k, v in rows.items()}
 
-    events = {e.name: event_table(e, keep(records[e.name]), id_bases, seed)
-              for e in plan.events}
+    records_out = {e.name: event_table(e, keep(records[e.name]), id_bases, seed)
+                   for e in plan.events}
+    events = {e.name: records_out[e.name] for e in plan.events if e.group == "events"}
+    postings = {e.name: records_out[e.name] for e in plan.events if e.group == "postings"}
     history = {g.name: history_table(g, keep(records[g.name]), seed)
                for g in plan.change_groups}
     entities = {ns: entity_table(ns, tables[ns].cols, dense_of[ns], creates[ns]["created_at"],
@@ -430,10 +432,11 @@ def seal_step(world: Any, step: int, t0: int, t1: int, exported: bool,
     stats = {"rows": int(n_rows), "counted_rows": counted, "bytes": int(n_bytes),
              "freed_slots": freed,
              "events": {k: t.num_rows for k, t in events.items()},
+             "postings": {k: t.num_rows for k, t in postings.items()},
              "history": {k: t.num_rows for k, t in history.items()},
              "entities": {k: t.num_rows for k, t in entities.items()}}
     sealed = SealedStep(int(step), int(t0), int(t1), bool(exported), events, history, entities,
-                        stats)
+                        stats, postings=postings)
     if exported:
         stats["checks"] = check_step(sealed, plan)                # 9.
     return sealed

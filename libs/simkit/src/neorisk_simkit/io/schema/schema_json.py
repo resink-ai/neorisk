@@ -46,15 +46,16 @@ def _head(names: tuple[str, ...], types: dict[str, LType], docs: dict[str, str])
 
 
 def schema_document(plan: Any) -> dict[str, Any]:
-    """The schema of every table of a run: events (common columns first), entities (`id`,
-    `created_at`, `origin` first) and history groups (ordering columns first)."""
+    """The schema of every table of a run: events and postings (common columns first), entities
+    (`id`, `created_at`, `origin` first) and history groups (ordering columns first)."""
     from neorisk_simkit.spec.types import COMMON_COLUMNS
 
     tables: list[dict[str, Any]] = []
     for e in plan.events:
         cols = [_column(c.name, c.ltype, _COMMON_DOCS.get(c.name, "") if i < len(COMMON_COLUMNS)
                         else "") for i, c in enumerate(e.cols)]
-        tables.append({"name": e.name, "kind": "event", "doc": e.doc, "columns": cols})
+        kind = "posting" if e.group == "postings" else "event"
+        tables.append({"name": e.name, "kind": kind, "doc": e.doc, "columns": cols})
     entity_types = {"id": i64(), "created_at": ts(), "origin": text()}
     for t in plan.tables:
         cols = _head(ENTITY_HEAD, entity_types, _ENTITY_DOCS)

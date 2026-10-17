@@ -45,6 +45,7 @@ _TYPES = {
                "bool": "BOOLEAN", "f64": "DOUBLE"},
 }
 _MINOR = {"USD": "cents", "EUR": "cents", "GBP": "pence"}
+_EVENT_KINDS = ("event", "posting")      # tables with the common columns (D45)
 
 
 class SqlError(Exception):
@@ -77,10 +78,10 @@ def _column_line(table: dict[str, Any], col: dict[str, Any], dialect: str,
         sqltype = _TYPES[dialect][kind]
     if not col["nullable"]:
         cons.append("NOT NULL")
-    if (table["kind"] == "event" and name == "event_id") or (
+    if (table["kind"] in _EVENT_KINDS and name == "event_id") or (
             table["kind"] == "entity" and name == "id"):
         cons.append("PRIMARY KEY")
-    if table["kind"] == "event" and name == "event_type":
+    if table["kind"] in _EVENT_KINDS and name == "event_type":
         cons.append(f"CHECK (event_type = {_lit(table['name'])})")
     if col.get("minimum") is not None:
         cons.append(f"CHECK ({q} >= {col['minimum']})")
@@ -113,7 +114,7 @@ def _render_table(doc: dict[str, Any], table: dict[str, Any], dialect: str,
     lines.append(");")
     if table.get("doc"):
         lines.append(f"COMMENT ON TABLE {t} IS {_lit(table['doc'])};")
-    if table["kind"] == "event":
+    if table["kind"] in _EVENT_KINDS:
         lines.append(f"CREATE INDEX {quote_ident(table['name'] + '_time', dialect)} "
                      f"ON {t} (event_time, lamport);")
     return "\n".join(lines) + "\n"
@@ -125,7 +126,7 @@ def _check_lengths(doc: dict[str, Any], rendered: dict[str, str]) -> None:
         if t["name"] not in rendered:
             continue
         names = [t["name"], *(c["name"] for c in t["columns"])]
-        if t["kind"] == "event":
+        if t["kind"] in _EVENT_KINDS:
             names.append(t["name"] + "_time")
         for n in names:
             if len(n.encode()) > _PG_MAX_IDENT:

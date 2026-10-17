@@ -73,7 +73,8 @@ class Pack:
 
     def _new_record_type(self, what: str, name: str) -> None:
         if name in self.events or name in self.change_groups:
-            raise PackError(f"duplicate {what} {name!r} (events and change groups share names)")
+            raise PackError(f"duplicate {what} {name!r} (events, postings and change groups "
+                            f"share names)")
 
     # ------------------------------------------------------------------ tables and ids
     def table(self, name: str, *, key: str, cols: dict[str, LType], mutable: bool = False,
@@ -183,17 +184,27 @@ class Pack:
     # ------------------------------------------------------------------ records
     def event(self, name: str, *, cols: dict[str, LType], owner: str | None = None,
               shard: str | None = None, doc: str = "") -> str:
-        self._new_record_type("event", name)
+        return self._record("event", "events", name, cols, owner, shard, doc)
+
+    def postings(self, name: str, *, cols: dict[str, LType], owner: str | None = None,
+                 shard: str | None = None, doc: str = "") -> str:
+        """An append-only posting table (D45): written like an event (`out.emit_<name>`), kept
+        apart from events in `postings/`, counted in `posting_counts`, never replayed."""
+        return self._record("postings", "postings", name, cols, owner, shard, doc)
+
+    def _record(self, what: str, group: str, name: str, cols: dict[str, LType],
+                owner: str | None, shard: str | None, doc: str) -> str:
+        self._new_record_type(what, name)
         if (owner is None) == (shard is None):
-            raise PackError(f"event {name}: give exactly one of owner= or shard=")
+            raise PackError(f"{what} {name}: give exactly one of owner= or shard=")
         part = self._partition(owner, "owner") if owner is not None else self._partition(
             shard, "shard")
-        cols = _cols(f"event {name}", cols)
+        cols = _cols(f"{what} {name}", cols)
         clash = sorted(set(cols) & _COMMON)
         if clash:
-            raise PackError(f"event {name}: columns {clash} clash with the common columns")
+            raise PackError(f"{what} {name}: columns {clash} clash with the common columns")
         self.events[name] = {"name": name, "partition": part["name"], "kind": part["kind"],
-                             "cols": cols, "doc": doc}
+                             "cols": cols, "doc": doc, "group": group}
         return name
 
     def change_group(self, name: str, *, table: str, cols) -> None:

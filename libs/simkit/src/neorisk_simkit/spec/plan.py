@@ -45,6 +45,7 @@ class EventDef:
     kind: str                         # "owner" | "shard"
     doc: str
     cols: tuple[Column, ...]          # the 8 common columns first
+    group: str = "events"             # "events" | "postings" (D45)
 
 
 @dataclass(frozen=True)
@@ -218,7 +219,7 @@ def build_plan(pack_module, cfg, specs_dir: Path) -> Plan:
     common = tuple(Column(n, t) for n, t in COMMON_COLUMNS)
     events = tuple(
         EventDef(name=d["name"], code=i, partition=d["partition"], kind=d["kind"], doc=d["doc"],
-                 cols=common + resolve(f"event {d['name']}", d["cols"]))
+                 cols=common + resolve(f"event {d['name']}", d["cols"]), group=d["group"])
         for i, d in enumerate(p.events.values()))
 
     partitions = tuple(

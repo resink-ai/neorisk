@@ -1,5 +1,5 @@
 """`_index/steps.parquet`: one row per step with the first and last canonical key and the
-number of rows per event type."""
+number of rows per event type (postings are not indexed, D45)."""
 
 from __future__ import annotations
 
@@ -9,10 +9,10 @@ from typing import Any
 import pyarrow as pa
 import pyarrow.parquet as pq
 
+from neorisk_simkit.io.consts import TS
 from neorisk_simkit.io.seal import SealedStep
 
-_TS = pa.timestamp("us", tz="UTC")
-_KEY = (("time", _TS), ("lamport", pa.int64()), ("partition", pa.int64()), ("seq", pa.int32()))
+_KEY = (("time", TS), ("lamport", pa.int64()), ("partition", pa.int64()), ("seq", pa.int32()))
 _KEY_COLS = ("event_time", "lamport", "partition_id", "seq")
 INDEX_PATH = "_index/steps.parquet"
 
@@ -27,14 +27,15 @@ def step_index_row(sealed: SealedStep, plan: Any) -> dict:
     row: dict[str, Any] = {"step": sealed.step, "t_start": sealed.t_start,
                            "t_end": sealed.t_end}
     keys_first, keys_last = [], []
-    for e in plan.events:
+    events = [e for e in plan.events if e.group == "events"]
+    for e in events:
         t = sealed.events.get(e.name)
         n = 0 if t is None else t.num_rows
         row[f"rows__{e.name}"] = n
         if n:
             keys_first.append(_key_at(t, 0))
             keys_last.append(_key_at(t, n - 1))
-    row["rows"] = sum(row[f"rows__{e.name}"] for e in plan.events)
+    row["rows"] = sum(row[f"rows__{e.name}"] for e in events)
     for prefix, keys, pick in (("first", keys_first, min), ("last", keys_last, max)):
         key = pick(keys) if keys else (None,) * 4
         for (name, _), v in zip(_KEY, key, strict=True):
@@ -50,7 +51,7 @@ def write_step_index(run_dir: Path, rows: list[dict], options: dict | None = Non
     first = [f"first_{n}" for n, _ in _KEY]
     last = [f"last_{n}" for n, _ in _KEY]
     per_type = [n for n in names if n.startswith("rows__")]
-    types = {"step": pa.int32(), "t_start": _TS, "t_end": _TS, "rows": pa.int64(),
+    types = {"step": pa.int32(), "t_start": TS, "t_end": TS, "rows": pa.int64(),
              **{f"first_{n}": t for n, t in _KEY}, **{f"last_{n}": t for n, t in _KEY},
              **{n: pa.int64() for n in per_type}}
     cols = [*head, *first, *last, *per_type]

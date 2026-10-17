@@ -74,11 +74,12 @@ def write_manifest(run_dir: Path, run: Any, files: list[FileEntry], counts: dict
                    history_counts: dict[str, int] | None = None,
                    entity_counts: dict[str, int] | None = None,
                    project_dir: Path | None = None,
-                   pairing: dict[str, dict[str, int]] | None = None) -> dict[str, Any]:
+                   pairing: dict[str, dict[str, int]] | None = None,
+                   posting_counts: dict[str, int] | None = None) -> dict[str, Any]:
     """Build and write `manifest.json`.
 
-    `counts` is rows per event type; history groups and entity tables are counted apart in
-    `history_counts` and `entity_counts`, so equal names in different kinds cannot collide.
+    `counts` is rows per event type; posting tables (D45), history groups and entity tables are
+    counted apart in `posting_counts`, `history_counts` and `entity_counts`.
     `pairing` is `{request boundary: {"requests": delivered, "responses": routed}}` (D40)."""
     plan = run.plan
     options = writer_options(run.writer, *plan_columns(plan))
@@ -97,6 +98,7 @@ def write_manifest(run_dir: Path, run: Any, files: list[FileEntry], counts: dict
         "writer": writer,
         "counts": dict(sorted(counts.items())),
         "history_counts": dict(sorted((history_counts or {}).items())),
+        "posting_counts": dict(sorted((posting_counts or {}).items())),
         "entity_counts": dict(sorted((entity_counts or {}).items())),
         "checks": dict(checks),
         "late_messages": int(late_messages),

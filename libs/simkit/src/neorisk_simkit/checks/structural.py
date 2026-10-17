@@ -78,10 +78,12 @@ def check_step(sealed: Any, plan: Any) -> dict[str, int]:
     from neorisk_simkit.spec.plan import Column
 
     counts = dict.fromkeys(CHECKS, 0)
-    for e in plan.events:
-        t = sealed.events.get(e.name)
+    for e in plan.events:                          # events and postings (D45) alike
+        posting = e.group == "postings"
+        t = (sealed.postings if posting else sealed.events).get(e.name)
         if t is not None:
-            _check_table(f"event {e.name}", t, "event_time", e.cols, sealed, counts)
+            _check_table(f"{'postings' if posting else 'event'} {e.name}", t, "event_time",
+                         e.cols, sealed, counts)
     head = [Column(n, lt) for n, lt in COMMON_COLUMNS if n in ("lamport", "seq")]
     for g in plan.change_groups:
         t = sealed.history.get(g.name)

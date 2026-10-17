@@ -121,7 +121,8 @@ class Simulation:
         st = self.stats
         st["steps"] += 1
         rows = st["rows_per_table"]
-        for name, tbl in (*sealed.events.items(), *sealed.history.items()):
+        for name, tbl in (*sealed.events.items(), *sealed.postings.items(),
+                          *sealed.history.items()):
             rows[name] = rows.get(name, 0) + tbl.num_rows
         st["rounds_per_step"].append(rounds.rounds)
         st["round_detail"].append({"owners_run": list(rounds.owners_run),
