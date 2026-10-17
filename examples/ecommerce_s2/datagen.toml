@@ -48,6 +48,9 @@ warmup = "3d"
 users = 20_000
 skus = 5_000
 sku_groups = 64
+# a captured payment stays live for its 90-day dispute window, so every payment of this
+# 24-day run is live at its end (~35k for 20k users)
+payments_live_ratio = 3
 "engine.timer_nodes" = 3_000_000
 "engine.payload_slots" = 400_000
 "engine.max_messages_per_step" = 1_000_000

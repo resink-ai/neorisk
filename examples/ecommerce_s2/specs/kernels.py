@@ -7,6 +7,7 @@ its own site number within its process.
 from neorisk_simkit import std
 from neorisk_simkit.engine import (
     COMMIT,
+    PRIO_EXPIRY,
     PRIO_TIMER,
     RETRY,
     START,
@@ -18,25 +19,37 @@ from neorisk_simkit.engine import (
 
 CART = 4                                  # cart lines (Local array width)
 HOLD_SLOTS = 64                           # holds per inventory shard (std.reservations table)
-C_SESSION, C_VIEW, C_CHECKOUT, R_GRANTED, R_REJECTED = 1, 2, 3, 4, 5
-SHOPPER_COMMANDS = (START, C_SESSION, C_VIEW, C_CHECKOUT, R_GRANTED, R_REJECTED)
+C_SESSION, C_VIEW, C_CHECKOUT, R_GRANTED, R_REJECTED, C_BILL = 1, 2, 3, 4, 5, 6
+SHOPPER_COMMANDS = (START, C_SESSION, C_VIEW, C_CHECKOUT, R_GRANTED, R_REJECTED, C_BILL)
 C_RESERVE, C_COMMIT, C_RELEASE, C_HOLD_EXPIRE = 1, 2, 3, 4
 DESK_COMMANDS = (C_RESERVE, C_COMMIT, C_RELEASE, C_HOLD_EXPIRE)
 REJ_DORMANT, REJ_NO_CART, REJ_STALE = 1, 2, 3
 WHY_STOCK, WHY_BUSY = 0, 1                # stock_rejected.reason codes
+C_CAPTURE, C_AUTH_EXPIRE, C_WINDOW = 1, 2, 3
+PAYMENT_COMMANDS = (START, C_CAPTURE, C_AUTH_EXPIRE, C_WINDOW)
+P_AUTHORIZED, P_CAPTURED, P_EXPIRED, P_DECLINED = 1, 2, 3, 4
+D_NONE, D_OPEN, D_WON, D_LOST = 0, 1, 2, 3
+R_REQUESTED, R_SETTLED, R_FAILED, R_REJECTED_IDEM = 0, 1, 2, 3
+(A_CUSTOMER_FUNDS, A_CUSTOMER_HELD, A_MERCHANT, A_PLATFORM_FEES, A_REFUNDS_PAYABLE,
+ A_DISPUTE_RESERVE) = 0, 1, 2, 3, 4, 5                # ledger.account codes
+DAY = 86_400_000_000
 
 SHOPPER_LOCAL = Local(session="ref", device="ref", views_left="i16", cart_n="i8",
                       cart_sku="ref[4]", cart_qty="i16[4]", cart_price="i64[4]",
                       checkout="ref", subtotal="i64", pending="i8", granted="u8",
                       rejected_sku="ref", hold="ref[4]", slot="i32[4]")
 DESK_LOCAL = Local(**std.reservations.fields(HOLD_SLOTS))
+PAY_LOCAL = Local(status="i8", captured="i64", refunded="i64", refund_hold="i64",
+                  refunds="i8", dispute="i8", disputed="i64", window_end="i64",
+                  idem_key="ref[4]", idem_result="i8[4]", idem_amount="i64[4]", idem_n="i8")
 
 
 @kernel(state="user", local=SHOPPER_LOCAL, commands=SHOPPER_COMMANDS,
         max=Res(records={"user_signed_up": 1, "session_started": 1, "product_viewed": 1,
                          "cart_item_added": 1, "checkout_started": 1, "checkout_failed": 1,
-                         "checkout_abandoned": 1, "checkout_succeeded": 1},
-                creates={"session": 1, "checkout": 1}, timers=2, requests=4))
+                         "checkout_abandoned": 1, "checkout_succeeded": 1,
+                         "bill_payment_started": 1},
+                creates={"session": 1, "checkout": 1, "payment": 1}, timers=2, requests=CART))
 def shopper(ctx, s, loc, cmd, out):
     cfg = ctx.cfg
     if cmd.kind == START:
@@ -47,17 +60,21 @@ def shopper(ctx, s, loc, cmd, out):
         return _view(ctx, loc, out, cfg)
     if cmd.kind == C_CHECKOUT:
         return _checkout(ctx, s, loc, out)
+    if cmd.kind == C_BILL:
+        return _bill(ctx, out, cfg)
     return _answer(ctx, s, loc, cmd, out, cfg)
 
 
 def _signup(ctx, s, out, cfg):
     delay = ctx.rng.dist_us(site=1, d=cfg.signup_delay)
-    if not out.reserve(records={"user_signed_up": 1}, timers=1):
+    bill = ctx.rng.dist_us(site=6, d=cfg.bill_gap)
+    if not out.reserve(records={"user_signed_up": 1}, timers=2):
         return RETRY
     out.emit_user_signed_up(ctx.t, user_id=ctx.self_id,
                             device_id=ctx.refs.device.get(ctx.self_id, 0),
                             acquisition=s.acquisition, referred=s.referred)
     out.timer(ctx.t + delay, C_SESSION, prio=PRIO_TIMER)
+    out.timer(ctx.t + bill, C_BILL, prio=PRIO_TIMER)
     return COMMIT
 
 
@@ -167,8 +184,10 @@ def _answer(ctx, s, loc, cmd, out, cfg):
     substitute = ctx.rng.bernoulli(site=21, p=cfg.substitute_p)
     more = ctx.rng.geometric(site=22, mean=3.0)
     nxt = ctx.rng.dist_us(site=23, d=cfg.view_gap)
+    method = ctx.rng.categorical(site=24, p=(0.7, 0.22, 0.08))
     if not out.reserve(records={"checkout_failed": 1, "checkout_abandoned": 1,
-                                "checkout_succeeded": 1}, timers=1, requests=CART):
+                                "checkout_succeeded": 1}, creates={"payment": 1}, timers=1,
+                       requests=CART):
         return RETRY
     line = cmd.line
     if cmd.kind == R_GRANTED:
@@ -190,8 +209,10 @@ def _answer(ctx, s, loc, cmd, out, cfg):
                 out.send_commit(ctx.t, to=ctx.reads.sku.sku_group[loc.cart_sku[i]],
                                 tag=loc.checkout, sku_id=loc.cart_sku[i],
                                 quantity=loc.cart_qty[i], hold_id=loc.hold[i], slot=loc.slot[i])
+            pay = out.create_payment(user_id=ctx.self_id, checkout_id=loc.checkout,
+                                     amount=loc.subtotal, method=method, origin="checkout")
             out.emit_checkout_succeeded(ctx.t, user_id=ctx.self_id, checkout_id=loc.checkout,
-                                        amount=loc.subtotal, hold_after=s.held)
+                                        payment_id=pay, amount=loc.subtotal, hold_after=s.held)
     else:
         for i in range(loc.cart_n):
             if loc.granted & (1 << i):
@@ -207,6 +228,20 @@ def _answer(ctx, s, loc, cmd, out, cfg):
             out.timer(ctx.t + nxt, C_VIEW, prio=PRIO_TIMER)
     loc.checkout = std.NULL
     loc.cart_n = 0
+    return COMMIT
+
+
+def _bill(ctx, out, cfg):
+    amt = max(100, ctx.rng.lognormal_minor(site=40, median=cfg.bill_median,
+                                           sigma=cfg.bill_sigma))
+    method = ctx.rng.categorical(site=41, p=(0.8, 0.2, 0.0))
+    nxt = ctx.rng.dist_us(site=42, d=cfg.bill_gap)
+    if not out.reserve(records={"bill_payment_started": 1}, creates={"payment": 1}, timers=1):
+        return RETRY                                       # + its creation message (automatic)
+    pay = out.create_payment(user_id=ctx.self_id, checkout_id=std.NULL, amount=amt,
+                             method=method, origin="bill")
+    out.emit_bill_payment_started(ctx.t, user_id=ctx.self_id, payment_id=pay, amount=amt)
+    out.timer(ctx.t + nxt, C_BILL, prio=PRIO_TIMER)
     return COMMIT
 
 
@@ -315,4 +350,78 @@ def restock(ctx, s, cmd, out):
                                on_hand_after=s.on_hand[i])
     if stop < s.n_sku:
         out.continue_at(ctx.t, cursor=stop)
+    return COMMIT
+
+
+@kernel(state="payment", local=PAY_LOCAL, commands=PAYMENT_COMMANDS,
+        max=Res(records={"payment_authorized": 1, "payment_declined": 1,
+                         "payment_captured": 1, "payment_expired": 1, "ledger": 3},
+                timers=2))
+def payment_life(ctx, s, loc, cmd, out):
+    cfg = ctx.cfg
+    if cmd.kind == START:
+        return _authorize(ctx, s, loc, out, cfg)
+    if cmd.kind == C_CAPTURE:
+        return _capture(ctx, s, loc, out, cfg)
+    if cmd.kind == C_AUTH_EXPIRE:
+        return _auth_expire(ctx, s, loc, out)
+    return COMMIT                         # C_WINDOW: the dispute window closed; idle -> retire
+
+
+def _post(ctx, out, debit, credit, amt):
+    out.emit_ledger(ctx.t, payment_id=ctx.self_id, account=debit, side="debit", amount=amt)
+    out.emit_ledger(ctx.t, payment_id=ctx.self_id, account=credit, side="credit", amount=amt)
+
+
+def _authorize(ctx, s, loc, out, cfg):
+    declined = ctx.rng.bernoulli(site=1, p=cfg.decline_p)
+    capture = ctx.rng.bernoulli(site=2, p=cfg.capture_p)
+    delay = ctx.rng.dist_us(site=3, d=cfg.capture_delay)
+    if not out.reserve(records={"payment_authorized": 1, "payment_declined": 1, "ledger": 2},
+                       timers=2):
+        return RETRY
+    if declined:
+        loc.status = P_DECLINED
+        out.emit_payment_declined(ctx.t, payment_id=ctx.self_id, user_id=s.user_id,
+                                  amount=s.amount)
+        return COMMIT                                      # nothing queued: retires
+    loc.status = P_AUTHORIZED
+    out.emit_payment_authorized(ctx.t, payment_id=ctx.self_id, user_id=s.user_id,
+                                amount=s.amount, method=s.method, origin=s.origin)
+    _post(ctx, out, A_CUSTOMER_FUNDS, A_CUSTOMER_HELD, s.amount)
+    out.timer(ctx.t + cfg.auth_expiry_s * 1_000_000, C_AUTH_EXPIRE, prio=PRIO_EXPIRY)
+    if capture:
+        out.timer(ctx.t + delay, C_CAPTURE, prio=PRIO_TIMER)
+    return COMMIT
+
+
+def _capture(ctx, s, loc, out, cfg):
+    if loc.status != P_AUTHORIZED:
+        return reject(REJ_STALE)                           # expiry won the race
+    if not out.reserve(records={"payment_captured": 1, "ledger": 3}, timers=1):
+        return RETRY
+    fee = std.checked_mul(s.amount, cfg.fee_bps) // 10_000
+    loc.status = P_CAPTURED
+    loc.captured = s.amount
+    loc.window_end = ctx.t + cfg.dispute_window_days * DAY
+    out.emit_payment_captured(ctx.t, payment_id=ctx.self_id, amount=s.amount, fee=fee)
+    out.emit_ledger(ctx.t, payment_id=ctx.self_id, account=A_CUSTOMER_HELD, side="debit",
+                    amount=s.amount)
+    out.emit_ledger(ctx.t, payment_id=ctx.self_id, account=A_MERCHANT, side="credit",
+                    amount=s.amount - fee)
+    out.emit_ledger(ctx.t, payment_id=ctx.self_id, account=A_PLATFORM_FEES, side="credit",
+                    amount=fee)
+    out.add_platform_fees(fee)
+    out.timer(loc.window_end, C_WINDOW, prio=PRIO_TIMER)
+    return COMMIT
+
+
+def _auth_expire(ctx, s, loc, out):
+    if loc.status != P_AUTHORIZED:
+        return reject(REJ_STALE)                           # captured first
+    if not out.reserve(records={"payment_expired": 1, "ledger": 2}):
+        return RETRY
+    loc.status = P_EXPIRED
+    out.emit_payment_expired(ctx.t, payment_id=ctx.self_id, amount=s.amount)
+    _post(ctx, out, A_CUSTOMER_HELD, A_CUSTOMER_FUNDS, s.amount)
     return COMMIT

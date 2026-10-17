@@ -8,7 +8,10 @@ Boundaries (immutable, latency >= delta)
     user -> inventory  reserve (request: granted / rejected with hold id and slot)  delta 150 ms
     user -> inventory  commit, release (one-way messages carrying the hold)         delta 150 ms
 
-Payments, the bonus pool and campaigns are added by tasks 13 to 15 of the S2 plan.
+Created owners
+    payment            one payment, created by a checkout or a bill (D54); lifecycle in Local
+
+The bonus pool and campaigns are added by tasks 14 and 15 of the S2 plan.
 """
 
 from dataclasses import dataclass, field
@@ -28,6 +31,9 @@ CATEGORIES = (
 )
 CHANNELS = ("web", "app")
 ACQUISITION = ("organic", "search_ad", "social_ad", "affiliate")
+METHODS = ("card", "wallet", "bnpl")
+ACCOUNTS = ("customer_funds", "customer_held", "merchant", "platform_fees", "refunds_payable",
+            "dispute_reserve")
 
 
 @dataclass(frozen=True)
@@ -45,12 +51,26 @@ class Journey:
     checkout_delay: dist.Dist = dist.exp(mean_s=25)
     abandon_p: float = 0.02                 # a fully granted checkout is abandoned (TTL frees)
     substitute_p: float = 0.45
+    bill_gap: dist.Dist = dist.exp(mean_days=20)    # between a shopper's bill payments (D54)
+    bill_median: float = 6_000.0
+    bill_sigma: float = 0.8
 
 
 @dataclass(frozen=True)
 class Desk:
     """Inventory desk; consumed by kernels.inventory_desk."""
     hold_ttl_s: int = 600
+
+
+@dataclass(frozen=True)
+class PayLife:
+    """Payment lifecycle; consumed by kernels.payment_life."""
+    decline_p: float = 0.03
+    capture_p: float = 0.93
+    capture_delay: dist.Dist = dist.lognormal(median_s=3600, sigma=1.0)
+    auth_expiry_s: int = 7 * 86_400          # capture races this expiry (§09)
+    fee_bps: int = 290
+    dispute_window_days: int = 90            # the 90-day dispute timer (§10 S2)
 
 
 @dataclass(frozen=True)
@@ -64,6 +84,8 @@ class Config:
     household_share_device: float = 0.12
     journey: Journey = field(default_factory=Journey)
     desk: Desk = field(default_factory=Desk)
+    payments_live_ratio: float = 1.5
+    pay: PayLife = field(default_factory=PayLife)
 
 
 def define(p: Pack, cfg: Config) -> None:
@@ -137,8 +159,34 @@ def define(p: Pack, cfg: Config) -> None:
     p.event("checkout_abandoned", owner="user", doc="Every line granted, never committed",
             cols={**u, "checkout_id": ref("checkout"), "hold_after": amount(asset="USD")})
     p.event("checkout_succeeded", owner="user", cols={
-        **u, "checkout_id": ref("checkout"), "amount": amount(asset="USD"),
-        "hold_after": amount(asset="USD")})
+        **u, "checkout_id": ref("checkout"), "payment_id": ref("payment"),
+        "amount": amount(asset="USD"), "hold_after": amount(asset="USD")})
+    # ---------------------------------------------------------------- payments (§09)
+    payment = p.table("payment", key="payment_id", mutable=True, doc="A card payment", cols={
+        "user_id": ref("user"), "checkout_id": opt(ref("checkout")),
+        "amount": amount(asset="USD"), "method": cat(*METHODS),
+        "origin": cat("checkout", "bill")})
+    p.owner("payment", table=payment, max_live=max(1_000, int(cfg.users * cfg.payments_live_ratio)))
+    p.accumulator("platform_fees", amount(asset="USD"))
+    pay_id = {"payment_id": ref("payment")}
+    p.event("payment_authorized", owner="payment", cols={
+        **pay_id, "user_id": ref("user"), "amount": amount(asset="USD"),
+        "method": cat(*METHODS), "origin": cat("checkout", "bill")})
+    p.event("payment_declined", owner="payment", cols={
+        **pay_id, "user_id": ref("user"), "amount": amount(asset="USD")})
+    p.event("payment_captured", owner="payment", cols={
+        **pay_id, "amount": amount(asset="USD"), "fee": amount(asset="USD")})
+    p.event("payment_expired", owner="payment", cols={**pay_id, "amount": amount(asset="USD")})
+    p.postings("ledger", owner="payment", doc="Double-entry postings of payment events", cols={
+        **pay_id, "account": cat(*ACCOUNTS), "side": cat("debit", "credit"),
+        "amount": amount(asset="USD")})
+    p.event("bill_payment_started", owner="user", cols={
+        **u, "payment_id": ref("payment"), "amount": amount(asset="USD")})
+    p.process("payment_life", owner="payment", kernel=k.payment_life, config=cfg.pay,
+              start=p.on_created("payment"), commands=k.PAYMENT_COMMANDS)
+    p.check("chk.postings_balanced", law.balanced("ledger"), required=True)
+    p.check("chk.one_capture", law.at_most_once("payment_captured", key="payment_id"),
+            required=True)
     stock = {"sku_group": i16(), "sku_id": ref("sku"), "checkout_id": ref("checkout")}
     p.event("stock_reserved", shard="inventory", cols={
         **stock, "hold_id": ref("hold"), "quantity": i16()})

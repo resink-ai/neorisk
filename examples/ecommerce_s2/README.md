@@ -7,7 +7,10 @@ cart total on the shopper's credit limit, then sends one reserve request per lin
 inventory group, waits for every answer, and commits all lines or releases the granted ones.
 About 2% of shoppers abandon a fully granted checkout; their holds expire after a 10-minute TTL.
 One hot inventory group (group 0) holds a small set of SKUs that about 5% of checkouts reach.
-Payments, the capped bonus pool and bounty-hunter campaigns are added by later S2 tasks. See
+Successful checkouts and bill payments create payments, each its own owner: authorized or
+declined, then captured or expired (capture races expiry), with double-entry postings and a
+platform fee. Refunds, disputes, the capped bonus pool and bounty-hunter campaigns are added by
+later S2 tasks. See
 [`specs/brief.md`](specs/brief.md).
 
 ## Model
@@ -15,6 +18,7 @@ Payments, the capped bonus pool and bounty-hunter campaigns are added by later S
 | Partition | Kind | Holds | Processes |
 |---|---|---|---|
 | `user` | owner | profile, credit limit and credit hold; a cart of up to four lines and the checkout in flight (kernel locals) | `shopper` (kernel) |
+| `payment` | owner, created | user, checkout (null for a bill), amount, method, origin; the lifecycle status and dispute window (kernel locals) | `payment_life` (kernel) |
 | `inventory` × `sku_groups` | shard | `on_hand`, `reserved` per SKU in the group; a 64-slot hold table (kernel locals, `std.reservations`) | `inventory_desk` (kernel), `restock` (kernel, weekly, 64-SKU sub-steps) |
 
 | Boundary | Kind | Carries | δ |
@@ -27,12 +31,26 @@ A hold's TTL is a shard timer. A commit at exactly the expiry instant is on time
 before timers at an equal instant); a commit after expiry emits `stock_commit_late` and moves no
 stock. Commit, release and expiry each free the slot.
 
-Accumulator `hot_checkouts`: started checkouts with at least one line in group 0 (manifest
-`accumulators.hot_checkouts`, exported steps).
+Payments: a successful checkout (`checkout_succeeded.payment_id`) or a bill
+(`bill_payment_started`, about every 20 days per shopper) creates a `payment` owner, which starts
+at its creation time: `payment_declined` (3%, retires) or `payment_authorized`. An authorized
+payment schedules its expiry (`pay.auth_expiry_s`, 7 days) and, 93% of the time, a capture after
+a lognormal delay (median 1 h). Whichever comes first wins; at an equal instant expiry runs
+first. `payment_captured` charges `pay.fee_bps` (290) as a platform fee and keeps the payment
+live until its dispute window (`pay.dispute_window_days`, 90) closes; the expiry timer is never
+cancelled, so a payment also lives until its expiry instant.
+
+Postings `ledger` (`postings/ledger/`, D45): authorization debits `customer_funds` and credits
+`customer_held`; capture debits `customer_held` and credits `merchant` and `platform_fees`;
+expiry returns `customer_held` to `customer_funds`. Every commit balances.
+
+Accumulators: `hot_checkouts` (started checkouts with at least one line in group 0) and
+`platform_fees` (Σ capture fees); manifest `accumulators`, exported steps.
 
 Laws (required): `chk.stock_never_negative`, `chk.reserved_never_negative`,
 `chk.user_hold_never_negative`, `chk.holds_resolved` (every `stock_reserved` hold is committed,
-released or expired within 15 minutes).
+released or expired within 15 minutes), `chk.postings_balanced` (`ledger` debits equal credits
+per commit), `chk.one_capture` (at most one `payment_captured` per payment).
 
 ## Run
 
@@ -46,7 +64,7 @@ uv run --all-packages datagen schema   examples/ecommerce_s2 --format sql --dial
 
 | Profile | Shape |
 |---|---|
-| `sample` | 20k users, 5,000 SKUs in 64 inventory groups, 21 days after a 3-day warm-up |
+| `sample` | 20k users, 5,000 SKUs in 64 inventory groups, 21 days after a 3-day warm-up; room for 60k live payments (`payments_live_ratio = 3`: none outlives its 90-day dispute window in 24 days) |
 
 The `full` (benchmark `s2.toml`) and `pool` (benchmark `s2_pool.toml`) profiles arrive with
 Task 20 of the S2 plan.
