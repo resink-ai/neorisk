@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from neorisk_simkit.engine.abi import START
+from neorisk_simkit.engine.identity import MAX_NAMESPACES, NS_BITS
 from neorisk_simkit.spec.caps import (
     BudgetError,
     CapItem,
@@ -102,6 +103,10 @@ def validate(run) -> ValidationReport:
         if forced_timers is not None and k.max.timers > forced_timers:
             errs.append(f"engine: force_capacity timers={forced_timers} is below the declared "
                         f"maximum timers={k.max.timers} of {p.name}")
+
+    if len(plan.namespaces) > MAX_NAMESPACES:
+        errs.append(f"{len(plan.namespaces)} id namespaces (created tables + p.ids) exceed the "
+                    f"{MAX_NAMESPACES} that provisional handles can encode (D11: {NS_BITS} bits)")
 
     if run.budget.max_spawn_depth < 1:
         errs.append("budget.max_spawn_depth must be >= 1")

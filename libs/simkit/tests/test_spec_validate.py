@@ -146,3 +146,24 @@ def test_nullable_f64_owner_state_is_fine(run):
     from neorisk_simkit.spec import types
     ok = _with_table_col(run, "user", "balance", types.opt(types.f64()))
     assert not any("nullable" in e for e in validate(ok).errors)
+
+
+def _with_namespaces(run, n):
+    extra = tuple(f"x{i}" for i in range(n - len(run.plan.namespaces)))
+    return dataclasses.replace(run, plan=dataclasses.replace(
+        run.plan, namespaces=run.plan.namespaces + extra))
+
+
+def test_handle_layout_fits_64_namespaces_and_ns_64_would_alias_ns_0():
+    from neorisk_simkit.engine import identity as ident
+    assert ident.MAX_NAMESPACES == 64
+    hs = {ident.make_handle(ns, 3, 5) for ns in range(ident.MAX_NAMESPACES)}
+    assert len(hs) == 64 and all(ident.handle_ns(h) < 64 for h in hs)
+    assert ident.make_handle(64, 3, 5) == ident.make_handle(0, 3, 5)   # why 65 is refused
+
+
+def test_namespace_count_is_bounded_by_the_handle_layout(run):
+    assert validate(_with_namespaces(run, 64)).ok
+    errs = validate(_with_namespaces(run, 65)).errors
+    assert ("65 id namespaces (created tables + p.ids) exceed the 64 that provisional "
+            "handles can encode (D11: 6 bits)") in errs

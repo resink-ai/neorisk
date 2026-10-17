@@ -8,6 +8,8 @@ from numba import int64, njit, uint64
 from neorisk_simkit.engine.rng import MASK64, mix, mix64, name_key, u64
 
 FLAG = 1 << 62
+NS_BITS = 6                                 # D11: namespace code width in a provisional handle
+MAX_NAMESPACES = 1 << NS_BITS               # created tables + p.ids namespaces (spec.validate)
 _DOMAIN = (1 << 63) - 1                     # dense indices live in [0, 2^63 - 1)
 _LOW32 = 0xFFFFFFFF
 
