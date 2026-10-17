@@ -26,7 +26,9 @@ DESK_COMMANDS = (C_RESERVE, C_COMMIT, C_RELEASE, C_HOLD_EXPIRE)
 REJ_DORMANT, REJ_NO_CART, REJ_STALE = 1, 2, 3
 WHY_STOCK, WHY_BUSY = 0, 1                # stock_rejected.reason codes
 C_CAPTURE, C_AUTH_EXPIRE, C_WINDOW = 1, 2, 3
-PAYMENT_COMMANDS = (START, C_CAPTURE, C_AUTH_EXPIRE, C_WINDOW)
+C_REFUND, C_REFUND_DUP, C_SETTLE, C_DISPUTE, C_RESOLVE = 4, 5, 6, 7, 8
+PAYMENT_COMMANDS = (START, C_CAPTURE, C_AUTH_EXPIRE, C_WINDOW, C_REFUND, C_REFUND_DUP, C_SETTLE,
+                    C_DISPUTE, C_RESOLVE)
 P_AUTHORIZED, P_CAPTURED, P_EXPIRED, P_DECLINED = 1, 2, 3, 4
 D_NONE, D_OPEN, D_WON, D_LOST = 0, 1, 2, 3
 R_REQUESTED, R_SETTLED, R_FAILED, R_REJECTED_IDEM = 0, 1, 2, 3
@@ -355,8 +357,11 @@ def restock(ctx, s, cmd, out):
 
 @kernel(state="payment", local=PAY_LOCAL, commands=PAYMENT_COMMANDS,
         max=Res(records={"payment_authorized": 1, "payment_declined": 1,
-                         "payment_captured": 1, "payment_expired": 1, "ledger": 3},
-                timers=2))
+                         "payment_captured": 1, "payment_expired": 1, "refund_requested": 1,
+                         "refund_rejected": 1, "refund_settled": 1, "refund_failed": 1,
+                         "refund_replayed": 1, "dispute_opened": 1, "dispute_won": 1,
+                         "dispute_lost": 1, "ledger": 3},
+                creates={"refund": 1}, timers=3))
 def payment_life(ctx, s, loc, cmd, out):
     cfg = ctx.cfg
     if cmd.kind == START:
@@ -365,6 +370,16 @@ def payment_life(ctx, s, loc, cmd, out):
         return _capture(ctx, s, loc, out, cfg)
     if cmd.kind == C_AUTH_EXPIRE:
         return _auth_expire(ctx, s, loc, out)
+    if cmd.kind == C_REFUND:
+        return _refund(ctx, loc, out, cfg)
+    if cmd.kind == C_REFUND_DUP:
+        return _replay(ctx, loc, cmd, out)
+    if cmd.kind == C_SETTLE:
+        return _settle(ctx, loc, cmd, out, cfg)
+    if cmd.kind == C_DISPUTE:
+        return _dispute(ctx, loc, out, cfg)
+    if cmd.kind == C_RESOLVE:
+        return _resolve(ctx, loc, out, cfg)
     return COMMIT                         # C_WINDOW: the dispute window closed; idle -> retire
 
 
@@ -398,7 +413,11 @@ def _authorize(ctx, s, loc, out, cfg):
 def _capture(ctx, s, loc, out, cfg):
     if loc.status != P_AUTHORIZED:
         return reject(REJ_STALE)                           # expiry won the race
-    if not out.reserve(records={"payment_captured": 1, "ledger": 3}, timers=1):
+    refund = ctx.rng.bernoulli(site=4, p=cfg.refund_p)
+    rgap = ctx.rng.dist_us(site=5, d=cfg.refund_gap)
+    dispute = ctx.rng.bernoulli(site=6, p=cfg.dispute_p)
+    dgap = ctx.rng.dist_us(site=7, d=cfg.dispute_delay)
+    if not out.reserve(records={"payment_captured": 1, "ledger": 3}, timers=3):
         return RETRY
     fee = std.checked_mul(s.amount, cfg.fee_bps) // 10_000
     loc.status = P_CAPTURED
@@ -413,6 +432,10 @@ def _capture(ctx, s, loc, out, cfg):
                     amount=fee)
     out.add_platform_fees(fee)
     out.timer(loc.window_end, C_WINDOW, prio=PRIO_TIMER)
+    if refund:
+        out.timer(ctx.t + rgap, C_REFUND, prio=PRIO_TIMER)
+    if dispute and ctx.t + dgap < loc.window_end:
+        out.timer(ctx.t + dgap, C_DISPUTE, prio=PRIO_TIMER)
     return COMMIT
 
 
@@ -424,4 +447,116 @@ def _auth_expire(ctx, s, loc, out):
     loc.status = P_EXPIRED
     out.emit_payment_expired(ctx.t, payment_id=ctx.self_id, amount=s.amount)
     _post(ctx, out, A_CUSTOMER_HELD, A_CUSTOMER_FUNDS, s.amount)
+    return COMMIT
+
+
+def _find(loc, key):
+    for j in range(loc.idem_n):
+        if loc.idem_key[j] == key:
+            return j
+    return -1
+
+
+def _refund(ctx, loc, out, cfg):
+    if loc.status != P_CAPTURED or loc.refunds >= cfg.max_refunds or loc.idem_n >= 4:
+        return reject(REJ_STALE)
+    want = max(1, ctx.rng.lognormal_minor(site=10, median=cfg.refund_median,
+                                          sigma=cfg.refund_sigma))
+    settle = ctx.rng.dist_us(site=11, d=cfg.refund_settle)
+    dup = ctx.rng.bernoulli(site=12, p=cfg.duplicate_p)
+    dup_gap = ctx.rng.dist_us(site=13, d=cfg.duplicate_gap)
+    again = ctx.rng.bernoulli(site=14, p=cfg.refund_p)
+    gap = ctx.rng.dist_us(site=15, d=cfg.refund_gap)
+    if not out.reserve(records={"refund_requested": 1, "refund_rejected": 1},
+                       creates={"refund": 1}, timers=3):
+        return RETRY
+    rid = out.new_id("refund")
+    k = loc.idem_n
+    loc.idem_key[k] = rid
+    loc.idem_n = k + 1
+    loc.refunds += 1
+    left = loc.captured - loc.refunded - loc.refund_hold
+    if loc.dispute == D_OPEN:                              # §09: rejected while disputed
+        loc.idem_result[k] = R_REJECTED_IDEM
+        out.emit_refund_rejected(ctx.t, payment_id=ctx.self_id, refund_id=rid,
+                                 reason="dispute_open")
+    elif left <= 0 or loc.dispute == D_LOST:
+        loc.idem_result[k] = R_REJECTED_IDEM
+        out.emit_refund_rejected(ctx.t, payment_id=ctx.self_id, refund_id=rid,
+                                 reason="nothing_left")
+    else:
+        amt = std.checked_min(left, want)
+        loc.refund_hold = std.checked_add(loc.refund_hold, amt)          # the hold
+        loc.idem_result[k] = R_REQUESTED
+        loc.idem_amount[k] = amt
+        out.emit_refund_requested(ctx.t, payment_id=ctx.self_id, refund_id=rid, amount=amt)
+        out.timer(ctx.t + settle, C_SETTLE, prio=PRIO_TIMER, tag=rid)
+    if dup:                                                # the merchant retries the key
+        out.timer(ctx.t + dup_gap, C_REFUND_DUP, prio=PRIO_TIMER, tag=rid)
+    if again and loc.refunds < cfg.max_refunds:
+        out.timer(ctx.t + gap, C_REFUND, prio=PRIO_TIMER)
+    return COMMIT
+
+
+def _settle(ctx, loc, cmd, out, cfg):
+    j = _find(loc, cmd.tag)
+    if j < 0 or loc.idem_result[j] != R_REQUESTED:
+        return reject(REJ_STALE)
+    fail = ctx.rng.bernoulli(site=20, p=cfg.refund_fail_p)
+    if not out.reserve(records={"refund_settled": 1, "refund_failed": 1, "ledger": 2}):
+        return RETRY
+    amt = loc.idem_amount[j]
+    loc.refund_hold = std.checked_sub(loc.refund_hold, amt)
+    if fail:                                               # release the hold
+        loc.idem_result[j] = R_FAILED
+        out.emit_refund_failed(ctx.t, payment_id=ctx.self_id, refund_id=cmd.tag, amount=amt)
+    else:                                                  # commit the hold
+        loc.refunded = std.checked_add(loc.refunded, amt)
+        loc.idem_result[j] = R_SETTLED
+        out.emit_refund_settled(ctx.t, payment_id=ctx.self_id, refund_id=cmd.tag, amount=amt,
+                                refunded_after=loc.refunded)
+        _post(ctx, out, A_MERCHANT, A_REFUNDS_PAYABLE, amt)
+    return COMMIT
+
+
+def _replay(ctx, loc, cmd, out):
+    j = _find(loc, cmd.tag)
+    if j < 0:
+        return reject(REJ_STALE)
+    if not out.reserve(records={"refund_replayed": 1}):
+        return RETRY
+    first = 1 if loc.idem_result[j] == R_REJECTED_IDEM else 0     # requested | rejected
+    out.emit_refund_replayed(ctx.t, payment_id=ctx.self_id, refund_id=cmd.tag, result=first)
+    return COMMIT
+
+
+def _dispute(ctx, loc, out, cfg):
+    if loc.status != P_CAPTURED or loc.dispute != D_NONE or ctx.t >= loc.window_end:
+        return reject(REJ_STALE)
+    resolve = ctx.rng.dist_us(site=30, d=cfg.dispute_resolve)
+    if not out.reserve(records={"dispute_opened": 1, "ledger": 2}, timers=1):
+        return RETRY
+    amt = loc.captured - loc.refunded
+    loc.dispute = D_OPEN
+    loc.disputed = amt
+    out.emit_dispute_opened(ctx.t, payment_id=ctx.self_id, amount=amt)
+    _post(ctx, out, A_MERCHANT, A_DISPUTE_RESERVE, amt)
+    out.timer(ctx.t + resolve, C_RESOLVE, prio=PRIO_TIMER)
+    return COMMIT
+
+
+def _resolve(ctx, loc, out, cfg):
+    if loc.dispute != D_OPEN:
+        return reject(REJ_STALE)
+    won = ctx.rng.bernoulli(site=31, p=cfg.dispute_win_p)
+    if not out.reserve(records={"dispute_won": 1, "dispute_lost": 1, "ledger": 2}):
+        return RETRY
+    if won:
+        loc.dispute = D_WON
+        out.emit_dispute_won(ctx.t, payment_id=ctx.self_id, amount=loc.disputed)
+        _post(ctx, out, A_DISPUTE_RESERVE, A_MERCHANT, loc.disputed)
+    else:
+        loc.dispute = D_LOST
+        out.emit_dispute_lost(ctx.t, payment_id=ctx.self_id, amount=loc.disputed)
+        _post(ctx, out, A_DISPUTE_RESERVE, A_CUSTOMER_FUNDS, loc.disputed)
     return COMMIT

@@ -9,8 +9,8 @@ About 2% of shoppers abandon a fully granted checkout; their holds expire after 
 One hot inventory group (group 0) holds a small set of SKUs that about 5% of checkouts reach.
 Successful checkouts and bill payments create payments, each its own owner: authorized or
 declined, then captured or expired (capture races expiry), with double-entry postings and a
-platform fee. Refunds, disputes, the capped bonus pool and bounty-hunter campaigns are added by
-later S2 tasks. See
+platform fee; captured payments get refunds (held, then settled or failed, with idempotency
+keys) and disputes. The capped bonus pool and bounty-hunter campaigns are added by later S2 tasks. See
 [`specs/brief.md`](specs/brief.md).
 
 ## Model
@@ -18,7 +18,7 @@ later S2 tasks. See
 | Partition | Kind | Holds | Processes |
 |---|---|---|---|
 | `user` | owner | profile, credit limit and credit hold; a cart of up to four lines and the checkout in flight (kernel locals) | `shopper` (kernel) |
-| `payment` | owner, created | user, checkout (null for a bill), amount, method, source (`checkout` or `bill`; not `origin`, which `entities/` reserve); the lifecycle status and dispute window (kernel locals) | `payment_life` (kernel) |
+| `payment` | owner, created | user, checkout (null for a bill), amount, method, source (`checkout` or `bill`; not `origin`, which `entities/` reserve); the lifecycle status, dispute window, refund hold, idempotency keys and dispute state (kernel locals) | `payment_life` (kernel) |
 | `inventory` × `sku_groups` | shard | `on_hand`, `reserved` per SKU in the group; a 64-slot hold table (kernel locals, `std.reservations`) | `inventory_desk` (kernel), `restock` (kernel, weekly, 64-SKU sub-steps) |
 
 | Boundary | Kind | Carries | δ |
@@ -40,9 +40,25 @@ first. `payment_captured` charges `pay.fee_bps` (290) as a platform fee and keep
 live until its dispute window (`pay.dispute_window_days`, 90) closes; the expiry timer is never
 cancelled, so a payment also lives until its expiry instant.
 
+Refunds (§09): a captured payment requests a refund with probability `pay.refund_p` (4%) after
+`pay.refund_gap` (mean 9 days), and each request may schedule another (same probability, at most
+`pay.max_refunds` = 3). Each request gets a new `refund_id` (its idempotency key) and holds
+`min(left, wanted)` against `left = captured - refunded - held` (`refund_requested`); after
+`pay.refund_settle` (median 1 day) the processor commits the hold (`refund_settled`, 98%) or
+releases it (`refund_failed`). A request while a dispute is open is `refund_rejected`
+`dispute_open`; with nothing left, or after a lost dispute, `nothing_left`. A merchant retry of
+the same key (`pay.duplicate_p`, 5%, ~30 s later) emits `refund_replayed` with the first result
+(`requested` or `rejected`) and changes nothing. Disputes (D51, a sub-lifecycle in the payment
+kernel): `pay.dispute_p` (0.6%) of captures open a dispute after `pay.dispute_delay` (gamma, mean
+21 days) if that is inside the window, for `captured - refunded` (`dispute_opened`); it resolves
+after `pay.dispute_resolve` (gamma, mean 30 days), `dispute_won` with `pay.dispute_win_p` (55%)
+or `dispute_lost`.
+
 Postings `ledger` (`postings/ledger/`, D45): authorization debits `customer_funds` and credits
 `customer_held`; capture debits `customer_held` and credits `merchant` and `platform_fees`;
-expiry returns `customer_held` to `customer_funds`. Every commit balances.
+expiry returns `customer_held` to `customer_funds`; a settled refund debits `merchant` and
+credits `refunds_payable`; a dispute moves the amount from `merchant` to `dispute_reserve`, and
+back to `merchant` (won) or on to `customer_funds` (lost). Every commit balances.
 
 Accumulators: `hot_checkouts` (started checkouts with at least one line in group 0) and
 `platform_fees` (Σ capture fees); manifest `accumulators`, exported steps.
@@ -50,7 +66,9 @@ Accumulators: `hot_checkouts` (started checkouts with at least one line in group
 Laws (required): `chk.stock_never_negative`, `chk.reserved_never_negative`,
 `chk.user_hold_never_negative`, `chk.holds_resolved` (every `stock_reserved` hold is committed,
 released or expired within 15 minutes), `chk.postings_balanced` (`ledger` debits equal credits
-per commit), `chk.one_capture` (at most one `payment_captured` per payment).
+per commit), `chk.one_capture` (at most one `payment_captured` per payment),
+`chk.refunds_le_captured` (Σ `refund_settled.amount` ≤ `payment_captured.amount` per payment),
+`chk.refund_settles_once` (at most one `refund_settled` per refund ID).
 
 ## Run
 

@@ -71,6 +71,19 @@ class PayLife:
     auth_expiry_s: int = 7 * 86_400          # capture races this expiry (§09)
     fee_bps: int = 290
     dispute_window_days: int = 90            # the 90-day dispute timer (§10 S2)
+    refund_p: float = 0.04                   # per capture, then again per refund request
+    refund_gap: dist.Dist = dist.exp(mean_days=9)
+    max_refunds: int = 3                     # refund requests per payment (idempotency keys)
+    refund_median: float = 2_500.0
+    refund_sigma: float = 0.9
+    refund_settle: dist.Dist = dist.lognormal(median_s=86_400, sigma=0.5)
+    refund_fail_p: float = 0.02              # the processor fails a refund: the hold is released
+    duplicate_p: float = 0.05                # the merchant retries a refund with the same key
+    duplicate_gap: dist.Dist = dist.exp(mean_s=30)
+    dispute_p: float = 0.006                 # per capture, inside the dispute window
+    dispute_delay: dist.Dist = dist.gamma(mean_days=21)
+    dispute_resolve: dist.Dist = dist.gamma(mean_days=30)
+    dispute_win_p: float = 0.55
 
 
 @dataclass(frozen=True)
@@ -182,10 +195,30 @@ def define(p: Pack, cfg: Config) -> None:
         "amount": amount(asset="USD")})
     p.event("bill_payment_started", owner="user", cols={
         **u, "payment_id": ref("payment"), "amount": amount(asset="USD")})
+    # refunds (§09): a refund holds against the remainder, then settles or fails; a repeated
+    # idempotency key returns the first result; a dispute is a sub-lifecycle of the payment (D51)
+    p.ids("refund")
+    refund = {**pay_id, "refund_id": ref("refund")}
+    p.event("refund_requested", owner="payment", doc="Held against captured - refunded - held",
+            cols={**refund, "amount": amount(asset="USD")})
+    p.event("refund_settled", owner="payment", doc="The hold is committed", cols={
+        **refund, "amount": amount(asset="USD"), "refunded_after": amount(asset="USD")})
+    p.event("refund_failed", owner="payment", doc="The processor failed; the hold is released",
+            cols={**refund, "amount": amount(asset="USD")})
+    p.event("refund_rejected", owner="payment", cols={
+        **refund, "reason": cat("nothing_left", "dispute_open")})
+    p.event("refund_replayed", owner="payment", doc="A repeated key returns the first result",
+            cols={**refund, "result": cat("requested", "rejected")})
+    for name in ("dispute_opened", "dispute_won", "dispute_lost"):
+        p.event(name, owner="payment", cols={**pay_id, "amount": amount(asset="USD")})
     p.process("payment_life", owner="payment", kernel=k.payment_life, config=cfg.pay,
               start=p.on_created("payment"), commands=k.PAYMENT_COMMANDS)
     p.check("chk.postings_balanced", law.balanced("ledger"), required=True)
     p.check("chk.one_capture", law.at_most_once("payment_captured", key="payment_id"),
+            required=True)
+    p.check("chk.refunds_le_captured", law.sum_le(
+        "refund_settled.amount", "payment_captured.amount", by="payment_id"), required=True)
+    p.check("chk.refund_settles_once", law.at_most_once("refund_settled", key="refund_id"),
             required=True)
     stock = {"sku_group": i16(), "sku_id": ref("sku"), "checkout_id": ref("checkout")}
     p.event("stock_reserved", shard="inventory", cols={
