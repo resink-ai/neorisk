@@ -9,14 +9,18 @@ from pathlib import Path
 
 import polars as pl
 import pytest
-from conftest import dataset_tree, event_dicts
+from conftest import (
+    canonicalize_ids,
+    created_namespaces,
+    created_owner_codes,
+    dataset_tree,
+    event_dicts,
+)
 
 from neorisk_simkit.engine.codegen import NEED_SWAP
 from neorisk_simkit.engine.world import World
 from neorisk_simkit.io.dataset import run_to_dataset
 from neorisk_simkit.io.read import read_events
-from neorisk_simkit.io.schema.schema_json import load_schema
-from neorisk_simkit.spec.project import load_project, resolve_run
 
 EX = Path(__file__).resolve().parents[3] / "examples" / "ecommerce_s1"
 CREATORS = Path(__file__).resolve().parent / "fixtures" / "creators"
@@ -28,7 +32,6 @@ SMALL = ["users=1500", "skus=300", "sku_groups=8", "run.span=4d", "run.warmup=1d
 THREADS = (1, 4, 16)
 SLABS = ("8MB", "16KB")             # 16KB forces constant slab swaps (RETRY path)
 STEPS = ("6h", "1d")
-KEY = ["event_time", "lamport", "partition_id", "seq"]
 ENGINE = {"parallel_min_partitions": 1}     # every phase goes through the thread pool
 
 
@@ -72,64 +75,6 @@ def runs(tmp_path_factory):
     return out, probes
 
 
-def created_namespaces(project: Path = EX, overrides: list[str] = SMALL) -> frozenset[str]:
-    """The ID namespaces the engine hands out at seal (creatable tables and `ids`): only their
-    dense indices legitimately depend on step boundaries (D13). Population and static IDs
-    (`user`, `sku`, `device`) and partition IDs are fixed before the run starts."""
-    return frozenset(resolve_run(load_project(project), "sample", overrides).plan.namespaces)
-
-
-def canonicalize_ids(d: Path, created: frozenset[str] | None = None,
-                     owner_codes: frozenset[int] = frozenset()) -> dict[str, list[dict]]:
-    """Rename every created ID namespace by first appearance in global canonical order and
-    number events by their canonical position (D13); every other column is kept as is.
-
-    With `owner_codes` (the `ptype_code`s of created owner types), the `partition_id` of a
-    created owner is renamed too, and "canonical order" is replaced by an order that does not
-    use `partition_id`: `(event_time, lamport, type, every other non-ID column)`. Spec §12 gives
-    a created owner the dense index (hence `partition_id`, the canonical tiebreak) of its rank
-    by creator `partition_id` in its creation step, so rows of different created owners that
-    tie on `(event_time, lamport)` may change relative order with the step length; "identical
-    logical records" then means equal records under this partition-free order. Each table's
-    rows are returned in that order (`event_id` = position)."""
-    created = created_namespaces() if created is None else created
-    schema, events = load_schema(d), read_events(d)
-    refs = {t["name"]: {c["name"]: c["ref"] for c in t["columns"]
-                        if c.get("ref") in created}
-            for t in schema["tables"] if t["kind"] == "event"}
-    out = {name: e.to_dicts() for name, e in events.items()}
-    if owner_codes:
-        ids = {"event_id", "partition_id"}
-
-        def key(name: str, row: dict) -> tuple:
-            rest = tuple((v is None, v) for c, v in sorted(row.items())
-                         if c not in ids and c not in refs[name])
-            return (row["event_time"], row["lamport"], name, rest)
-
-        flat = sorted(((key(name, r), name, r) for name, rows in out.items() for r in rows),
-                      key=lambda x: x[0])
-        keys = [k for k, _, _ in flat]
-        assert len(set(keys)) == len(keys), "partition-free order is ambiguous"
-    else:
-        merged = pl.concat([
-            e.select(*KEY, pl.lit(name).alias("_t"), pl.int_range(pl.len()).alias("_i"))
-            for name, e in events.items() if e.height], how="vertical").sort(KEY)
-        order = {(t, i): n for n, (t, i) in enumerate(zip(merged["_t"], merged["_i"]))}
-        flat = sorted(((order[(name, i)], name, r) for name, rows in out.items()
-                       for i, r in enumerate(rows)), key=lambda x: x[0])
-    rename: dict[str, dict[int, int]] = {}
-    for pos, (_, name, row) in enumerate(flat):
-        for col, ns in refs[name].items():
-            v = row[col]
-            if v is not None:
-                row[col] = rename.setdefault(ns, {}).setdefault(v, len(rename[ns]))
-        if row["partition_id"] >> 56 in owner_codes:
-            p = rename.setdefault("partition", {})
-            row["partition_id"] = p.setdefault(row["partition_id"], len(p))
-        row["event_id"] = pos
-    return {name: sorted(rows, key=lambda r: r["event_id"]) for name, rows in out.items()}
-
-
 def test_each_axis_varies_the_execution(runs):
     """Guard against a vacuous pass: more threads really split the work, a 16KB slab really
     swaps (record flushes and outbox move-asides) and the step lengths really move the step
@@ -158,9 +103,10 @@ def test_threads_and_slabs_give_identical_records(runs, step):
 
 def test_step_lengths_give_identical_logical_records(runs):
     dirs, _ = runs
-    created = created_namespaces()
+    created = created_namespaces(EX, SMALL)
     assert {"session", "checkout"} <= created and created.isdisjoint({"user", "sku", "device"})
-    assert canonicalize_ids(dirs[(1, "8MB", "6h")]) == canonicalize_ids(dirs[(4, "16KB", "1d")])
+    assert canonicalize_ids(dirs[(1, "8MB", "6h")], created) == \
+        canonicalize_ids(dirs[(4, "16KB", "1d")], created)
 
 
 def test_identical_replay_is_byte_identical(runs, tmp_path):
@@ -214,18 +160,13 @@ def test_created_owners_identical_across_threads(creator_runs):
     assert event_dicts(creator_runs[(1, "6h")]) == event_dicts(creator_runs[(4, "6h")])
 
 
-def _creators_plan():
-    return resolve_run(load_project(CREATORS), "sample", []).plan
-
-
 def test_created_owners_identical_across_step_lengths(creator_runs):
     """A created owner's draws and records do not depend on where the step boundaries fall
     (C1 of the S1 final review). Its dense index, hence `partition_id`, legitimately does
     (spec §12, D13), so the comparison renames them and drops `partition_id` from the order."""
     created = created_namespaces(CREATORS, [])
     assert created == {"pay", "refund"}
-    codes = frozenset(p.ptype_code for p in _creators_plan().partitions
-                      if p.kind == "owner" and p.table in created)
+    codes = created_owner_codes(CREATORS, [], created)
     base = canonicalize_ids(creator_runs[(1, "1d")], created, codes)
     for step in ("30m", "6h"):
         assert canonicalize_ids(creator_runs[(1, step)], created, codes) == base, step
