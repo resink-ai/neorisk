@@ -54,7 +54,9 @@ kernel): `pay.dispute_p` (0.6%) of captures open a dispute after `pay.dispute_de
 `captured - refunded - held` (`dispute_opened`); with nothing left no dispute opens. Refunds
 already held when it opens still settle or fail on the processor's delay, so settled refunds
 plus a lost dispute never exceed the capture. It resolves after `pay.dispute_resolve` (gamma,
-mean 30 days), `dispute_won` with `pay.dispute_win_p` (55%) or `dispute_lost`.
+mean 30 days), `dispute_won` with `pay.dispute_win_p` (55%) or `dispute_lost`. A payment has at
+most `pay.max_refunds` refund requests, at most 4 (one idempotency slot each; the pack refuses
+more).
 
 Postings `ledger` (`postings/ledger/`, D45): authorization debits `customer_funds` and credits
 `customer_held`; capture debits `customer_held` and credits `merchant` and `platform_fees`;

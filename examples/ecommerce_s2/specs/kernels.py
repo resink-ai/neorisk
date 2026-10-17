@@ -19,6 +19,7 @@ from neorisk_simkit.engine import (
 
 CART = 4                                  # cart lines (Local array width)
 HOLD_SLOTS = 64                           # holds per inventory shard (std.reservations table)
+IDEM_SLOTS = 4                            # refund idempotency keys per payment (pack: max_refunds)
 C_SESSION, C_VIEW, C_CHECKOUT, R_GRANTED, R_REJECTED, C_BILL = 1, 2, 3, 4, 5, 6
 SHOPPER_COMMANDS = (START, C_SESSION, C_VIEW, C_CHECKOUT, R_GRANTED, R_REJECTED, C_BILL)
 C_RESERVE, C_COMMIT, C_RELEASE, C_HOLD_EXPIRE = 1, 2, 3, 4
@@ -43,7 +44,8 @@ SHOPPER_LOCAL = Local(session="ref", device="ref", views_left="i16", cart_n="i8"
 DESK_LOCAL = Local(**std.reservations.fields(HOLD_SLOTS))
 PAY_LOCAL = Local(status="i8", captured="i64", refunded="i64", refund_hold="i64",
                   refunds="i8", dispute="i8", disputed="i64", window_end="i64",
-                  idem_key="ref[4]", idem_result="i8[4]", idem_amount="i64[4]", idem_n="i8")
+                  idem_key=f"ref[{IDEM_SLOTS}]", idem_result=f"i8[{IDEM_SLOTS}]",
+                  idem_amount=f"i64[{IDEM_SLOTS}]", idem_n="i8")
 
 
 @kernel(state="user", local=SHOPPER_LOCAL, commands=SHOPPER_COMMANDS,
@@ -458,7 +460,7 @@ def _find(loc, key):
 
 
 def _refund(ctx, loc, out, cfg):
-    if loc.status != P_CAPTURED or loc.refunds >= cfg.max_refunds or loc.idem_n >= 4:
+    if loc.status != P_CAPTURED or loc.refunds >= cfg.max_refunds or loc.idem_n >= IDEM_SLOTS:
         return reject(REJ_STALE)
     want = max(1, ctx.rng.lognormal_minor(site=10, median=cfg.refund_median,
                                           sigma=cfg.refund_sigma))

@@ -16,7 +16,7 @@ The bonus pool and campaigns are added by tasks 14 and 15 of the S2 plan.
 
 from dataclasses import dataclass, field
 
-from neorisk_simkit.spec import Pack, dist, law, std
+from neorisk_simkit.spec import Pack, PackError, dist, law, std
 from neorisk_simkit.spec.types import amount, boolean, cat, i16, i32, i64, opt, ref, ts
 
 from . import kernels as k
@@ -103,6 +103,9 @@ class Config:
 
 def define(p: Pack, cfg: Config) -> None:
     j = cfg.journey
+    if cfg.pay.max_refunds > k.IDEM_SLOTS:     # one idempotency slot per refund request
+        raise PackError(f"pay.max_refunds = {cfg.pay.max_refunds} exceeds the "
+                        f"{k.IDEM_SLOTS} idempotency slots of a payment")
     # ---------------------------------------------------------------- catalog and devices
     sku = p.table("sku", key="sku_id", doc="Catalog, fixed for the run", cols={
         "category": cat(*CATEGORIES), "price": amount(asset="USD"), "sku_group": i16()},
