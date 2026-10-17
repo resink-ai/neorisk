@@ -41,6 +41,55 @@ def test_priority_inversion_same_time():
     assert [x[4] for x in _drain(P, qhead, 0)] == [2, 1]
 
 
+def _walk(P, qhead, g):
+    out, n = [], qhead[g]
+    while n >= 0:
+        out.append(int(n))
+        n = P[4][n]
+    return out
+
+
+@pytest.mark.parametrize("seed", [0, 1, 2])
+def test_queue_order_at_scale_matches_sorted_canonical_keys(seed):
+    """Thousands of inserts (in-order tail appends, random ones, exact ties on time and key),
+    interleaved with pops and removals: the queue always equals the sorted (time, key, seq)."""
+    rng = np.random.default_rng(seed)
+    cap = 6000
+    pool = cmdq.NodePool(cap, 1)
+    assert pool.refill(0, cap)
+    P, qhead = pool.as_tuple(), np.full(2, -1, np.int32)
+    seq, t_hi, live = 0, 0, {}
+    for step in range(5000):
+        r = rng.random()
+        if r < 0.45:                      # in order: at or after the current maximum time
+            t_hi += int(rng.integers(0, 3))
+            t = t_hi
+        elif r < 0.75:                    # anywhere, with many exact time ties
+            t = int(rng.integers(0, t_hi + 1))
+        elif r < 0.85 and live:           # pop the head
+            n = cmdq.q_pop(P, qhead, 1)
+            del live[int(n)]
+            cmdq.q_free(P, 0, n)
+            continue
+        elif live:                        # remove an arbitrary node
+            n = int(rng.choice(list(live)))
+            cmdq.q_remove(P, qhead, 1, n)
+            del live[n]
+            cmdq.q_free(P, 0, n)
+            continue
+        else:
+            continue
+        prio, cause = int(rng.integers(0, 3)), int(rng.integers(0, 3))
+        n = cmdq.q_push(P, 0, qhead, 1, t, prio, cause, seq, 1, 0, 0, -1)
+        assert n >= 0
+        live[int(n)] = (t, (prio << 56) | cause, seq)
+        seq += 1
+        if step % 500 == 0 or step == 4999:
+            got = [(int(P[0][x]), int(P[1][x]), int(P[2][x])) for x in _walk(P, qhead, 1)]
+            assert got == sorted(live.values())
+    assert qhead[0] == -1
+
+
 def test_worker_free_lists_and_refill():
     pool = cmdq.NodePool(4, 2)
     P, qhead = pool.as_tuple(), np.full(1, -1, np.int32)
