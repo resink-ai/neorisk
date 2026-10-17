@@ -2,12 +2,18 @@
 
 import functools
 import json
+import re
 from pathlib import Path
 
 import numpy as np
 import pytest
 
-from neorisk_simkit.checks.reference import replay_inventory, replay_pool, replay_refunds
+from neorisk_simkit.checks.reference import (
+    IDEM_SLOTS,
+    replay_inventory,
+    replay_pool,
+    replay_refunds,
+)
 from neorisk_simkit.engine.world import World
 from neorisk_simkit.io.dataset import run_to_dataset
 from neorisk_simkit.io.read import read_events
@@ -16,6 +22,7 @@ from neorisk_simkit.spec.project import load_project, resolve_run
 
 EX = Path(__file__).resolve().parents[3] / "examples" / "ecommerce_s2"
 DAY = 86_400_000_000.0
+HOLD_SLOTS = 64                                          # kernels.HOLD_SLOTS of the S2 pack
 POOLS = ["engine.timer_nodes=600_000", "engine.payload_slots=100_000",
          "engine.max_messages_per_step=300_000", "budget.max_admissions_per_step=50_000",
          "budget.max_checker_keys=2_000_000"]
@@ -62,7 +69,7 @@ def _initial(over: tuple[str, ...]):
 
 def _replay_inventory(ev, over, ttl_s):
     on_hand0, sku_group = _initial(tuple(over))
-    return replay_inventory(ev, on_hand0, slots=64, sku_group=sku_group,
+    return replay_inventory(ev, on_hand0, slots=HOLD_SLOTS, sku_group=sku_group,
                             hold_ttl_us=ttl_s * 1_000_000)
 
 
@@ -135,3 +142,11 @@ def test_inventory_and_refund_references_catch_tampering(ev):
     assert replay_refunds(_bump(ev, "refund_settled", "refunded_after"))
     flipped = _swap(ev, "refund_replayed", "result", "requested", "rejected")
     assert len(replay_refunds(flipped)) == ev["refund_replayed"].height
+
+
+def test_reference_constants_match_the_kernels():
+    # a kernel module cannot be imported outside its pack, so read the constants from its text
+    src = (EX / "specs" / "kernels.py").read_text()
+    lines = re.finditer(r"^(\w+_SLOTS) = (\d+)", src, re.MULTILINE)
+    found = {m[1]: int(m[2]) for m in lines}
+    assert found == {"HOLD_SLOTS": HOLD_SLOTS, "IDEM_SLOTS": IDEM_SLOTS}
