@@ -232,6 +232,13 @@ def sample_np(d: Dist, u: np.ndarray, u2: np.ndarray) -> np.ndarray:
         return v
     if d.kind == NEGBINOM:
         return _negbinom_np(p[0], p[1], u)
+    if d.kind == GEOMETRIC:                     # trials until first success (>= 1), as rng
+        if p[0] <= 1.0:
+            v = np.ones(len(u), np.int64)
+        else:
+            k = np.floor(np.log1p(-u) / np.log1p(-1.0 / p[0]))
+            v = np.clip(k, 0.0, 2.0**62 - 1).astype(np.int64) + 1
+        return np.minimum(v, int(p[1])) if p[1] else v
     if d.kind == ZIPF:
         w = 1.0 / np.arange(1, len(u) + 1, dtype=np.float64) ** p[0]
         cum = np.cumsum(w / w.sum())

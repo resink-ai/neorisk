@@ -164,3 +164,13 @@ def test_sample_us_nan_is_zero():
     c, _a, b, d = dist.encode(dist.normal(mean_h=1, sd_h=1))
     for f in (rng.sample_us, getattr(rng.sample_us, "py_func", rng.sample_us)):
         assert f(c, float("nan"), b, d, 0.3, 0.7) == 0
+
+
+def test_geometric_sample_np_matches_the_kernel_draw():
+    u = rng.uniforms(3, 7, 50_000)
+    x = dist.sample_np(dist.geometric(mean=12.0), u, u)
+    assert x.min() >= 1 and abs(x.mean() - 12.0) < 0.3
+    want = [rng.geometric.py_func(12.0, float(v)) for v in u[:200]]
+    assert x[:200].tolist() == want
+    assert dist.sample_np(dist.geometric(mean=12.0, max=5), u, u).max() == 5
+    assert (dist.sample_np(dist.geometric(mean=1.0), u[:9], u[:9]) == 1).all()
