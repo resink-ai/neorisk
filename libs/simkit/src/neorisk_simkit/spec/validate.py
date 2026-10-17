@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 
 from neorisk_simkit.engine.abi import START
 from neorisk_simkit.engine.identity import MAX_NAMESPACES, NS_BITS
+from neorisk_simkit.io.seal import ENTITY_HEAD, HISTORY_HEAD
 from neorisk_simkit.spec.caps import (
     OUTBOX_ROW_BYTES,
     BudgetError,
@@ -14,7 +15,7 @@ from neorisk_simkit.spec.caps import (
     compute_caps,
     record_row_bytes,
 )
-from neorisk_simkit.spec.types import storage_dtype
+from neorisk_simkit.spec.types import COMMON_COLUMNS, storage_dtype
 
 
 @dataclass
@@ -169,6 +170,26 @@ def _law_reason(plan, law) -> str | None:
     return f"unknown law {k!r}"
 
 
+def _shadow_errors(plan) -> list[str]:
+    """User columns named like a reserved head column the writer puts first: the output would
+    hold two columns of that name, which parquet readers and SQL refuse."""
+    errs = []
+    entity, history = set(ENTITY_HEAD), set(HISTORY_HEAD)
+    common = {n for n, _ in COMMON_COLUMNS}
+    for t in plan.tables:
+        errs += [f"table {t.name}: column {c.name!r} shadows the reserved entity column "
+                 f"{c.name!r} (entities/ write {', '.join(ENTITY_HEAD)} first)"
+                 for c in t.cols if c.name in entity]
+    for e in plan.events:
+        what = "posting" if e.group == "postings" else "event"
+        errs += [f"{what} {e.name}: column {c.name!r} shadows the reserved common column "
+                 f"{c.name!r}" for c in e.cols[len(COMMON_COLUMNS):] if c.name in common]
+    for g in plan.change_groups:
+        errs += [f"change group {g.name}: column {c.name!r} shadows the reserved history "
+                 f"column {c.name!r}" for c in g.cols if c.name in history]
+    return errs
+
+
 def _law_errors(plan) -> list[str]:
     return [f"check {c.id}: {r}" for c in plan.checks
             if (r := _law_reason(plan, c.law)) is not None]
@@ -221,6 +242,7 @@ def validate(run, threads: int | None = None) -> ValidationReport:
             errs.append(f"created owner table {t.name}: column {bad.name} is {bad.ltype.kind}; "
                         "a creation message carries only int64 values")
     errs += _spawn_errors(run)
+    errs += _shadow_errors(plan)
 
     slab_rows = {n: eng.slab_bytes // max(1, rb) for n, rb in row_bytes.items()}
     forced_timers = eng.force_capacity.get("timers")

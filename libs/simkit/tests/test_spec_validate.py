@@ -154,6 +154,45 @@ def test_nullable_f64_owner_state_is_fine(run):
     assert not any("nullable" in e for e in validate(ok).errors)
 
 
+def _renamed(cols, old, new):
+    return tuple(dataclasses.replace(c, name=new) if c.name == old else c for c in cols)
+
+
+@pytest.mark.parametrize("table,col,head", [("user", "tier", "origin"), ("note", "size", "id"),
+                                            ("item", "price", "created_at")])
+def test_a_table_column_may_not_shadow_the_entity_head(run, table, col, head):
+    plan = run.plan
+    ts = tuple(dataclasses.replace(t, cols=_renamed(t.cols, col, head)) if t.name == table
+               else t for t in plan.tables)
+    bad = dataclasses.replace(run, plan=dataclasses.replace(plan, tables=ts))
+    assert (f"table {table}: column {head!r} shadows the reserved entity column {head!r} "
+            "(entities/ write id, created_at, origin first)") in validate(bad).errors
+
+
+@pytest.mark.parametrize("head", ["event_id", "lamport", "action_id"])
+def test_an_event_column_may_not_shadow_the_common_columns(run, head):
+    plan = run.plan
+    es = tuple(dataclasses.replace(e, cols=e.cols[:8] + _renamed(e.cols[8:], "tier", head))
+               if e.name == "user_joined" else e for e in plan.events)
+    bad = dataclasses.replace(run, plan=dataclasses.replace(plan, events=es))
+    assert (f"event user_joined: column {head!r} shadows the reserved common column "
+            f"{head!r}") in validate(bad).errors
+
+
+def test_a_change_group_column_may_not_shadow_the_history_head(run):
+    from neorisk_simkit.spec.plan import ChangeGroupDef, Column
+    from neorisk_simkit.spec.types import i32
+    g = ChangeGroupDef("user_seq", 99, "user", (Column("seq", i32()),))
+    bad = dataclasses.replace(run, plan=dataclasses.replace(
+        run.plan, change_groups=(*run.plan.change_groups, g)))
+    assert ("change group user_seq: column 'seq' shadows the reserved history column 'seq'"
+            in validate(bad).errors)
+
+
+def test_mini_shadows_no_head_column(run):
+    assert not any("shadows the reserved" in e for e in validate(run).errors)
+
+
 def _with_namespaces(run, n):
     extra = tuple(f"x{i}" for i in range(n - len(run.plan.namespaces)))
     return dataclasses.replace(run, plan=dataclasses.replace(
