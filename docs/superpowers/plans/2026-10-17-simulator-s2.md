@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Ship milestone S2, the shard slice: payments with refunds and disputes, multi-SKU reservations with a TTL, a hot SKU group and a capped bonus pool; rounds at scale, cross-partition laws, reference kernel tests and mutation tests; and `benchmarks/s2.toml` (≤ 10 min warm) and `benchmarks/s2_pool.toml` (shard path ≥ 80k events/s) measured and reported.
+**Goal:** Ship milestone S2, the shard slice: payments with refunds and disputes, multi-SKU reservations with a TTL, a hot SKU group and a capped bonus pool; rounds at scale, cross-partition laws, reference kernel tests and mutation tests; and `benchmarks/s2.toml` (≤ 10 min warm) and `benchmarks/s2_pool.toml` (shard path ≥ 80k events/s, gated both end to end and on shard-phase time, D55) measured and reported.
 
 **Architecture:** The engine closes the obligations S1 left open: seal remaps handles held by shards, responses are tagged explicitly and every request is answered exactly once, step length adapts on the rows the cap counts, and created owners are admitted by generated compiled code inside the compiled round loop. The spec layer gains postings, accumulators, evaluated laws (`checks/laws.py`) and static spawn bounds. `std` gains `reservations` and `capped_pool`. A new project `examples/ecommerce_s2/` (users, payments, inventory, a global bonus pool, bounty-hunter campaigns) is the slice the S2 workloads run.
 
@@ -47,7 +47,7 @@ Every task implicitly includes this section. Values are copied from the spec; do
 - "S2-pool: a global capped bonus pool that every referral claim reaches, with the bounty-hunter overlay at 1% of users."
 - "Accounting: exported events, histories, cases, snapshots, postings and labels are counted separately. Timing runs from engine start with a warm JIT cache to manifest.json written; cold compile is timed separately. Numba plus Polars threads are capped at 16."
 - "Also verified: identical logical records across 1, 4 and 16 threads, two slab sizes and two step lengths."
-- Memory items (names used in code): `output_slabs`, `step_output`, `merge_working_space`, `live_partition_state`, `timer_heaps`, `requests_and_inboxes`, `fanout_bursts`, `read_inputs`, `checker_state` ("keyed aggregates × bytes per key, by dense index"), `scorer`. Every item has a hard cap enforced at runtime; a run whose caps exceed the budget is refused up front; v1 has no spilling.
+- Memory items (names used in code): `output_slabs`, `step_output`, `merge_working_space`, `live_partition_state`, `timer_heaps`, `requests_and_inboxes`, `fanout_bursts`, `read_inputs`, `checker_state` ("keyed aggregates × bytes per key, by dense index"), `scorer`, plus `entity_buffers` (added by the S1 fix round, 6fdb05e: row groups buffered by the streaming entity writer; every S2 caps table and budget check includes it). Every item has a hard cap enforced at runtime; a run whose caps exceed the budget is refused up front; v1 has no spilling.
 - Gates are measured on the available machine with `threads = min(16, os.cpu_count())` and the report flags non-reference hardware (S1 D30). A gate is never relaxed and a workload never shrunk to pass; a failing measurement is reported with the stage that misses its §10 band.
 
 **Checks (§11, verbatim)**
@@ -66,30 +66,30 @@ Every task implicitly includes this section. Values are copied from the spec; do
 Where the spec is silent or ambiguous; each line is binding for this plan. Numbering continues from the S1 plan.
 
 - **D36** S2 runs a new slice project `examples/ecommerce_s2/` (owners `user`, `payment` (created), `campaign`; shards `inventory`, `pool`). `examples/ecommerce_s1/` and its S1 gate stay; `examples/ecommerce/` and `examples/payments/` remain the M3/M4 targets, untouched.
-- **D37** BASE is `4705e40`, the end of the S1 final-fix wave (`230a571..4705e40`, contracts "Final-fix" entries): a created owner's instance key is `mix(creator inst, cause lamport, ns code, k)` with `k` its ordinal within the creating commit; `route.safe_horizon` is gone (`route.horizon` is the formula). Per the controller's correction, the fix wave's creation-key ranking of created-owner dense IDs is reverted: spec §12 binds dense indices of **every** table, created owners included, "by prefix sum over partitions in partition_id order, then local ordinal". §12 step invariance is read as **identical logical records as a multiset after ID canonicalization**: created-owner IDs and `partition_id`s may differ across step lengths, and exact `(event_time, lamport)` ties between different created owners may reorder; values must not. If the revert has not landed when Task 1 starts, plan against whatever `seal` does for created-owner dense IDs — no S2 task depends on either ranking.
+- **D37** BASE is `f3a5582`: the S1 final-fix wave (`230a571..4705e40`, contracts "Final-fix" entries) plus the S1 Codex fix round (`f35b683` dense IDs by §12 again, `8f0d693` incremental created-row index, `6fdb05e` `entity_buffers` cap item, `f3a5582` distribution bounds). A created owner's instance key is `mix(creator inst, cause lamport, ns code, k)` with `k` its ordinal within the creating commit (contracts C1); `route.safe_horizon` is gone (`route.horizon` is the formula). The fix wave's creation-key ranking of created-owner dense IDs is reverted at BASE (contracts CX1; `seal._owner_dense`, `World.created_causes` and `World.take_created_causes` no longer exist): spec §12 binds dense indices of **every** table, created owners included, "by prefix sum over partitions in partition_id order, then local ordinal" (`identity.assign_dense(pid, ordinal)`), where a creator that was itself created in the same step ranks by its provisional handle (bit 62 set, so after every dense creator). §12 step invariance is read as **identical logical records as a multiset after ID canonicalization**: created-owner IDs and `partition_id`s may differ across step lengths, and exact `(event_time, lamport)` ties between different created owners may reorder; values must not. The comparison is `canonicalize_ids(d, created, owner_codes)` as landed (moved to `conftest.py` by Task 18).
 - **D38** Seal remaps provisional handles in shard state fields typed `ref` / `ref[<items>]`, in `ref` fields of shard processes' `Local`, and in payload column 9 (`src_self_id`, read as `cmd.sender`) of every queued command at a touched slot. Shard state accepts the type `ref` (int64, initial value `std.NULL`). Shard `Local` bytes count toward `live_partition_state`.
 - **D39** Explicit response tagging: on delivery `route_outbox` writes the delivered kind (`OB_REQUEST`, `OB_MESSAGE`, `OB_RESPONSE`) into payload column 11 (`cmdq.PAY_KIND`) of the receiver's payload row, after the response's generation check has consumed the generation that column carried in the outbox. `resume_owner(P, pay_rows, qhead, g)` treats a node as a response iff its payload row has `PAY_KIND == OB_RESPONSE`.
 - **D40** Request/response pairing is enforced at runtime: a command whose payload row has `PAY_KIND == OB_REQUEST` must COMMIT with exactly one `OB_RESPONSE` row in its outbox; any other command must emit none. A violation raises `EngineError` naming process and boundary. Per request boundary the run reports `{"requests": delivered, "responses": routed}` (`World.stats["pairing"]`, manifest `pairing`). `cause_id` stays null (re-deferred, see Deferred).
-- **D41** Step-length adaptation targets 25% of `max_step_rows` on the rows the cap counts: everything flushed in the step (records, created rows and `p.ids` allocations; `SealedStep.stats["counted_rows"]`). S1 step boundaries, hence S1 dataset bytes, change once; Task 22 re-measures the S1 gate.
-- **D42** Spawn bounds are static. `validate` builds the owner-creation graph (partition `P` → owner partition `Q` when a process of `P` reserves `creates` of `Q`'s table); a cycle is an "unbounded spawn" error, and the longest chain (in creation edges) must be ≤ `budget.max_spawn_depth`; both errors name the processes on the path. On an acyclic graph the static bound is exact, so there is no runtime depth counter. `max_admissions_per_step` stays a runtime cap naming the creating process.
-- **D43** A created owner's initial state travels in its `OB_CREATE` payload (user columns 0..6), so admission never reads create slabs: a created owner table has at most 7 columns, none of kind `f64` or `text` (validate). Create rows carry the creator's commit lamport (`slabs.CREATE_HEAD` gains `lamport`), which replaces the fix wave's `World.created_causes` / `take_created_causes` and `_created_rows`.
-- **D44** Admission of created owners is generated compiled code: `admit_created(W, R, CQ, FS, limit_t, adm, limit, out_slots)`. Creation rows wait in a compiled pending-creation queue `CQ` (capacity `budget.max_admissions_per_step`); free local slots live in a `FreeSlots` ring per owner type (FIFO, exactly the S1 order). `drain_small_rounds` admits inside the compiled loop (phase `PH_ADMIT`), Python rounds call the same function, and admitted owners join the woken list. CQ bytes count toward `requests_and_inboxes`.
+- **D41** Step-length adaptation targets 25% of `max_step_rows` on the rows the cap counts: everything flushed in the step (records, created rows and `p.ids` allocations; `SealedStep.stats["counted_rows"]`). S1 step boundaries, hence S1 dataset bytes, change once; Task 21 re-measures the S1 gate.
+- **D42** Spawn bounds are static. `validate` builds the owner-creation graph (partition `P` → owner partition `Q` when a process of `P` reserves `creates` of `Q`'s table); a cycle is an "unbounded spawn" error, and the longest chain (in creation edges) must be ≤ `budget.max_spawn_depth`; both errors name the processes on the path. On an acyclic graph the static bound is exact, so there is no runtime depth counter. `max_admissions_per_step` stays a runtime cap naming the creating process. *Spec deviation (F-04):* §06 gives each process its own `max_spawn_depth` (default 3) and fails at runtime on excess; S2 uses one budget-wide static depth and refuses every creation cycle at validate, including recursion that would stay within the depth at runtime (§16 does let validate report "unbounded spawns"; no S2 workload needs a cycle). Per-process depth and a runtime depth counter are Deferred (M3, with `spawn`).
+- **D43** A created owner's initial state travels in its `OB_CREATE` payload (user columns 0..6), so admission never reads create slabs: a created owner table has at most 7 columns, none of kind `f64` or `text` (validate). Create rows carry the creator's commit lamport (`slabs.CREATE_HEAD` gains `lamport`). Admission no longer reads create slabs, so S1's incremental create-slab index (`World._created_rows`, `_CreatedIndex`, `World._created_index`, the `World.created_rows_indexed` counter, 8f0d693) is deleted by Task 4. Creation messages are counted in `requests` automatically: `out.reserve(creates={<owner table>: n})` also reserves `n` outbox rows (Task 4; an S1 fixture that forgot the unit overflowed a 4 KiB outbox silently outside checked mode).
+- **D44** Admission of created owners is generated compiled code: `admit_created(W, R, CQ, FS, limit_t, out_slots)` (admissions so far and the limit are `R[RT_ADM]`). It admits due creations in Task 4b's sender-key order, all or nothing with respect to command nodes (F-10), with each row's `k` computed by `route_outbox` and stored in `CQ`. Creation rows wait in a compiled pending-creation queue `CQ` (capacity `budget.max_admissions_per_step`); free local slots live in a `FreeSlots` ring per owner type (FIFO, exactly the S1 order). `drain_small_rounds` admits inside the compiled loop (phase `PH_ADMIT`), Python rounds call the same function, and admitted owners join the woken list. CQ bytes count toward `requests_and_inboxes`.
 - **D45** Postings: `p.postings(name, *, cols, owner=None, shard=None, doc="")` declares an append-only posting table with the 8 common columns first. Kernels write it with `out.emit_<name>(t, ...)`, reserved under `records`. It is written to `postings/<name>/date=YYYY-MM-DD/step-NNNNNN.parquet`, counted in manifest `posting_counts` (never in `counts` or `exported_events`), typed `"posting"` in `schema.json`, absent from `_index/steps.parquet` and never replayed. One posting transaction is one commit, `(partition_id, lamport)`.
 - **D46** Accumulators: `p.accumulator(name, ltype)` with `ltype.kind` in `{"i64", "amount"}`; kernels call `out.add_<name>(value)` (checked int64 add, commit phase only; checked mode treats it as a write). Each worker keeps a partial sum; seal folds them into the step's delta. Kernels cannot read an accumulator. Manifest `accumulators` holds totals over exported steps; `_index/steps.parquet` gets `acc__<name>` per step (0 for warm-up steps).
-- **D47** Laws are evaluated at seal on exported steps by `checks/laws.py` (`LawBook`), in canonical order, with keyed state carried across steps and capped at `budget.max_checker_keys` (default 50,000,000 keys × 24 B = `checker_state`). Path forms: `<event or posting>.<column>`, or `<owner table>.<column>` / `<shard>.<state field>` (state is checked at every exported seal over live partitions). `sum_le` takes event columns on both sides. New laws: `law.total_le(lhs, limit)` and `law.balanced(table, *, amount, side, by)`. A required violation raises `LawViolation` (exit code 4) citing `(partition_id, seq)` and `action_id`; a non-required one is counted in manifest `laws`. A `resolved(..., within=)` key still open at the end of the run whose deadline is at or after the end is censored (reported), not a violation.
-- **D48** Referential integrity is a range check on dense values before public IDs are drawn (`ref_in_range`): dense indices are contiguous and rows are never deleted, so `0 ≤ v < rows known for the target` (population `n`, static rows, or `id_bases[ns]` after the step) is exact; no bitset is needed.
+- **D47** Laws are evaluated at seal by `checks/laws.py` (`LawBook`), in canonical order, with keyed state carried across steps and capped at `budget.max_checker_keys` (default 50,000,000 keys × 24 B = `checker_state`). §11 reducers are "initialized from the opening snapshot" (F-01): every warm-up step is fed too, `LawBook.step(sealed, world, exported=False)`, with the rows of the event and posting tables the checks read (`SealedStep.warmup_rows`, built by seal before D20 drops warm-up rows). A warm-up step updates running totals (`total_le`, `sum_le`), `at_most_once` key sets and open `resolved` keys, but counts nothing in `checked` and never raises or counts a violation; only exported rows are judged and cited. State laws and `balanced` (no carried state) skip warm-up steps. Path forms: `<event or posting>.<column>`, or `<owner table>.<column>` / `<shard>.<state field>` (state is checked at every exported seal over live partitions). `sum_le` takes event columns on both sides (*spec deviation, F-07:* the spec's own example `law.sum_le("refund.amount", "payment.captured", by="payment_id")` has a state column on the right; a state-column right side is Deferred, M3 parity). New laws: `law.total_le(lhs, limit)` and `law.balanced(table, *, amount, side, by)`. A required violation raises `LawViolation` (exit code 4) citing `(partition_id, seq)` and `action_id`; a non-required one is counted in manifest `laws`. A `resolved(..., within=)` key still open at the end of the run whose deadline is at or after the end is censored (reported), not a violation.
+- **D48** Referential integrity is a range check on dense values before public IDs are drawn (`ref_in_range`): dense indices are contiguous and rows are never deleted, so `0 ≤ v < rows known for the target` (population owners admitted so far, `pop.next`; static rows; or `id_bases[ns]` after the step) is exact; no bitset is needed. *Spec deviation (F-05):* §11 specifies "a bitset over dense indices"; the range form is equivalent here and is recorded as a deviation. Population refs are bounded by `pop.next`, not by `n`, so a ref to an owner that has not arrived yet is caught.
 - **D49** Reservations: each inventory shard keeps a fixed hold table in its process `Local` (`std.reservations.fields(64)`: `res_hold`, `res_item`, `res_qty`, `res_ckt`). Hold IDs come from `p.ids("hold")`, created by the shard; the TTL is a shard timer tagged with the hold ID. A full table rejects the line with reason `busy`. A commit for a hold that already expired emits `stock_commit_late` and leaves stock untouched; a late release is a stale reject. At an equal instant a commit (message priority 1) runs before the TTL timer (priority 5).
 - **D50** The join over N reserve responses uses blocking suspension (`pending = N`; all responses run first on resume, S1 Task 10 ruling). Join and request timeouts stay M3.
 - **D51** A dispute is a sub-lifecycle inside the payment kernel (its own `Local` fields and commands). Separate child kernels started by `spawn` are an M3 machine operation (§04).
-- **D52** Bounty hunters in S2 are a plain `campaign` owner partition with a handwritten kernel: one hunter and its zombie members (`p.ids("member")`) are one owner, the population sized so hunters plus zombies are `hunt.share` (1%) of users. The overlay mechanism and schema parity with base events are M3.
-- **D53** Hot SKU group: `std.catalog(..., hot_rows=K)` puts catalog rows `[0, K)` in SKU group 0 (other rows draw from `group`, which the pack sets to `uniform_int(1, G - 1)`); a view picks a hot SKU with probability `journey.hot_pick_p`. "5% of checkouts" is measured as group 0's share of reserve requests.
+- **D52** Bounty hunters in S2 are a plain `campaign` owner partition with a handwritten kernel: one hunter and its zombie members (`p.ids("member")`) are one owner, the population sized so hunters plus zombies are `hunt.share` (1%) of users. The overlay mechanism and schema parity with base events are M3. *Approximation (F-08, with D51 and D57):* "1% of users" is approximated by (campaigns + members) ÷ users; the S2-pool README section states this next to `campaign_member_share` (Task 21). All three approximations are listed under Deferred, M3.
+- **D53** Hot SKU group: `std.catalog(..., hot_rows=K)` puts catalog rows `[0, K)` in SKU group 0 (other rows draw from `group`, which the pack sets to `uniform_int(1, G - 1)`); a view picks a hot SKU with probability `journey.hot_pick_p`. "5% of checkouts" is measured on checkouts (F-02): `hot_share_of_checkouts` = checkouts with at least one line in group 0 ÷ `checkout_started`, both over exported steps. The shopper counts the numerator in the accumulator `hot_checkouts` (Task 12: `out.add_hot_checkouts(1)` when a started checkout sends a reserve to group 0; every line of a started checkout sends one reserve, so this equals "checkouts with at least one reserve to group 0"). Group 0's share of reserve requests (`hot_share_of_reserves`) is reported as information only.
 - **D54** "30M payments" with 10⁸ exported events leaves about 3 events per payment, so payments come from checkouts (`origin = "checkout"`) and from bill payments (`origin = "bill"`), both created by users as owners. A payment's lifecycle state lives in its process `Local` (D43 limits the table to 7 columns).
-- **D55** The s2_pool gate metric is `events_per_second` (exported events ÷ warm `engine_seconds`) of `benchmarks/s2_pool.toml`, a shard-dominated workload whose expectation `shard_command_share ≥ 0.35` (shard commands ÷ all commands) proves it exercises the shard path; spec §10's shard-dominated band is 80–300k/s.
-- **D56** Benchmark expectations add `{ at_least = x }` and `{ at_most = x }`; gates add `min_events_per_second`. Derived values: `inventory_share_of_proposals` (S1), `payments`, `postings_per_payment_event`, `hot_share_of_reserves`, `shard_command_share`, `campaign_member_share`.
+- **D55** (controller ruling F-03) The s2_pool gate is two gates, both ≥ 80,000 and both required: (1) end to end, `events_per_second` (exported events ÷ warm `engine_seconds`, §10's "shard-dominated, end to end" band 80–300k/s) on a workload whose expectation `shard_command_share ≥ 0.5` (shard commands ÷ all commands, whole run) makes it actually shard-dominated — the `pool` profile is calibrated until it reaches that share; (2) the shard path (§18 "s2_pool.toml shard path ≥ 80k events/s"), `shard_events_per_second` = exported events emitted by shard partitions ÷ seconds spent in shard phases of exported steps (Task 19). Both rates are reported in the benchmark output and `benchmarks/README.md`. Gating both never relaxes either reading of the spec.
+- **D56** Benchmark expectations add `{ at_least = x }` and `{ at_most = x }`; gates add `min_events_per_second` and `min_shard_events_per_second`. Derived values: `inventory_share_of_proposals` (S1), `payments`, `postings_per_payment_event`, `hot_share_of_checkouts` (gated, F-02), `hot_share_of_reserves` (information), `shard_command_share`, `campaign_member_share`. Each derived value takes numerator and denominator from the same counting window (F-25): exported steps for `payments`, `postings_per_payment_event` and `hot_share_of_checkouts`; the whole run (warm-up included) for `shard_command_share`, `hot_share_of_reserves` and `campaign_member_share`; `benchmarks/README.md` states each window.
 - **D57** Owner-to-owner messages are re-deferred to M3: no S2 workload needs them (campaign members share their owner; the pool pays claimants through responses), their first consumer is the M3 overlay ("inviter credited when invitee qualifies"), and they need an owner-id → slot index that M3 owns. validate keeps refusing them, now with "owner-to-owner messages arrive in M3".
 - **D58** `datagen run` and the benchmark child exit 4 when a required law is violated (`LawViolation`); D35's 0/1/2/3 are unchanged.
 - **D59** Workload spans (the spec fixes actors and counts, not spans): `s2.toml` runs `examples/ecommerce_s2` profile `full` (20M users, 90 days, 14-day warm-up); `s2_pool.toml` runs profile `pool` (2M users, 30 days, 3-day warm-up, ~10⁷ exported events).
-- **D61** Shard-side processing results must not depend on step length (the open item of the S1 final fix, under D37's multiset reading). The order in which a shard processes tied commands decides results (which claim takes the pool's last unit, which reserve gets the last item), and routing breaks `(time, prio, cause)` ties by sender. A created owner's `partition_id` is step-dependent (a provisional handle in its creation step, a per-step dense index afterwards), so routing never uses it: routing sorts outbox rows by `(time, prio, cause, sender key, src_seq)` and admission sorts creations the same way. The sender key is step-invariant: for partitions of a non-created type (population owners, shards) `(ptype, 0, pid, 0, 0)`; for a created owner, for its whole life, `(ptype, 1, created_at, creator commit lamport, creator inst, k)` read from a hidden array `ckey int64[G, 4]` written at admission (`creator inst` is the creator's step-invariant instance key; `k` the ordinal within the creating commit, as in the RNG key). Two created senders tie on the key only if two creators with equal instance keys (a 2⁻⁶⁴ hash collision) create at the same instant with the same lamport; `src_seq` then still orders them deterministically.
+- **D61** Shard-side processing results must not depend on step length (the open item of the S1 final fix, under D37's multiset reading). The order in which a shard processes tied commands decides results (which claim takes the pool's last unit, which reserve gets the last item), and routing breaks `(time, prio, cause)` ties by sender. A created owner's `partition_id` is step-dependent (a provisional handle in its creation step, a per-step dense index afterwards), so routing never uses it: routing sorts outbox rows by `(time, prio, cause, sender key, src_seq)` and admission sorts creations the same way. The sender key is step-invariant: for partitions of a non-created type (population owners, shards) `(ptype, 0, pid, 0, 0, 0)`; for a created owner, for its whole life, `(ptype, 1, created_at, creator commit lamport, creator inst, k)` read from a hidden array `ckey int64[G, 4]` written at admission (`creator inst` is the creator's step-invariant instance key; `k` the ordinal within the creating commit, as in the RNG key). Two created senders tie on the key only if two creators with equal instance keys (a 2⁻⁶⁴ hash collision) create at the same instant with the same lamport; `src_seq` then still orders them deterministically.
 - **D60** `rng.normal`'s `log(1 - u)` (kernels) vs `dist`'s `log1p(-u)` (pack-time) stays as is: the two sides draw from different streams, each is bit-identical compiled and uncompiled, and changing either alters outputs for no gain (closes the S1 Task 5 minor "decide in S2").
 
 ## Review Focus
@@ -99,18 +99,20 @@ Inputs the spec implies but no exit test names; each line has a pinning test in 
 2. **Carts that are not "all granted or all rejected":** two lines in the same shard, one line rejected while others are granted (release only the granted ones), a full hold table (`busy`), an abandoned checkout (TTL expiry exactly `hold_ttl_s` after the reserve), a commit arriving after the TTL (`stock_commit_late`, stock untouched) (Tasks 12, 16).
 3. **Exact cap edges:** a claim equal to the remaining pool is granted, one cent more is rejected, and the total granted never exceeds the cap even when hunters and normal users claim at the same instant (Tasks 15, 16, 17).
 4. **Refund edges:** a refund for exactly the remaining amount, a second refund while the first hold is unsettled, a duplicate idempotency key after the first refund settled or failed (returns the first result), a refund while a dispute is open (Tasks 14, 16).
-5. **Empty and censored runs:** a run with zero payments or zero claims passes every law vacuously (`checked = 0`), writes `posting_counts` with zeros and accumulators at 0; a hold whose TTL deadline falls after the run's end is censored, not a violation (Tasks 6, 7, 10).
+5. **Empty and censored runs:** a run with zero payments or zero claims passes every law vacuously (`checked = 0`), writes `posting_counts` with zeros and accumulators at 0; a hold whose TTL deadline falls after the run's end is censored, not a violation (Tasks 7, 9, 10).
 
 ## Engine reference deltas (shared by Tasks 1–5, 19)
 
 Everything in the S1 plan's Engine reference stays except:
 - **Payload arena** `pay int64[payload_slots, 12]`: columns 0..6 user payload; 7 `src_g`; 8 `src_gen`; 9 `src_self_id` (remapped at seal, D38); 10 `src_action`; 11 `PAY_KIND` once delivered (D39; in the outbox it still carries the requester generation of a response).
 - **Create buffers**: `CREATE_HEAD = (handle, pid, ordinal, created_at, g, lamport)` (D43).
+- **Reservations**: `out.reserve(creates={<owner table>: n})` also reserves `n` `requests` outbox rows for the creation messages (Task 4): generated `_reserve_<proc>` checks and records `vec[requests] + Σ vec[creates:<owner table>]`. `requests=` in kernels counts requests, messages and responses only (kernels that still add the creation unit by hand over-reserve, which is harmless). validate refuses a process whose declared `max.requests` plus owner-table `max.creates` exceeds the outbox capacity.
 - **`out` tuple tail**: `OUT_TAIL = ("outbox", "lat", "shard_n", "seed", "cmd_kind", "acc")`; `acc` is `int64[max(1, n_accumulators)]` per worker (D46).
 - **Route tuple** `R`: appended `RT_BND_RESP` (int64[boundaries], responses routed per boundary), `RT_SHARD_REQ` (int64[max(1, G − shard_lo)], requests delivered per shard slot) and `RT_SHARD_LO` (int64[1] = shard_lo), indices 22, 23, 24 (Task 2); `RT_HID` (tuple view of the hidden `ptype`, `pid`, `ckey`) and `RT_CREATED_TYPE` (uint8[32]), 25 and 26 (Task 4b); `RT_ADM` (int64[2] = admissions this step, limit), 27 (Task 5). `route_order(ob, n, R)` sorts by `(time, prio, cause, sender_keys(src_g), src_seq)` (D61). `route_outbox(R, CQ, ob, n)` replaces `skip_creates`; its statuses are `ROUTED, NEED_MESSAGES, NEED_NODES, NEED_PAYLOAD, NEED_CREATES` (0..4; `NEED_CREATES` replaces `HAS_CREATE`) and it returns `(status, k)` where for `NEED_CREATES` `k` is the outbox row that did not fit.
-- **Pending-creation queue** `CQ` (`engine/admit.py`): `(time, prio, cause, src_pid, src_seq, ns, handle, src_g, action, pay int64[C, 7], n int64[1])`, `C = budget.max_admissions_per_step`; `cq_min(CQ)` is its earliest time (I64_MAX when empty).
+- **Pending-creation queue** `CQ` (`engine/admit.py`): `(time, prio, cause, src_pid, src_seq, ns, handle, src_g, action, k, pay int64[C, 7], n int64[1])`, `C = budget.max_admissions_per_step`; `k` (the row's ordinal within its creating commit) is computed by `route_outbox` when it queues the row (F-10); `cq_min(CQ)` is its earliest time (I64_MAX when empty).
 - **Free slots** `FS` (`engine/admit.py`, `FreeSlots.as_tuple()`): `(buf int32[Σ owner max_live], head int64[T], n int64[T], off int64[T], cap int64[T], base int64[T])`, `T` = owner partition types in plan order.
-- **Admission statuses**: `ADM_OK, ADM_CAP, ADM_LIVE, ADM_NODES = 0, 1, 2, 3`; round phase `PH_ADMIT = 4`.
+- **Admission statuses**: `ADM_OK, ADM_CAP, ADM_LIVE, ADM_NODES = 0, 1, 2, 3`; round phase `PH_ADMIT = 4`. `ADM_NODES` admits nothing (all or nothing, F-10).
+- **Round state**: `RS_SHARD_NS` (Task 19), nanoseconds spent in shard phases this step (compiled drain and Python rounds), read into `RoundStats.shard_ns`.
 - **Hidden arrays**: one addition, `("ckey", "int64", 4)` — a created owner's step-invariant sender key `(created_at, creator commit lamport, creator inst, k)`, written at admission and used for the owner's whole life (D61); zero for population owners and shards. No runtime spawn depth (D42).
 
 ## File structure
@@ -126,8 +128,10 @@ libs/simkit/src/neorisk_simkit/
   engine/admit.py                                         # CQ, FreeSlots (D44)
   std/{__init__,sources,reservations,capped_pool}.py
   checks/{structural,laws,reference}.py
-  io/{seal,writer,manifest,step_index,dataset,read}.py  io/schema/{schema_json,sql}.py
+  io/{seal,writer,manifest,step_index,dataset,read,consts}.py  io/schema/{schema_json,sql}.py
+  io/replay/*                                             # io constants (Task 6)
 libs/simkit/tests/
+  conftest.py                                  # created_namespaces, canonicalize_ids (Task 18)
   fixtures/{holder,pairing,chain,relay,ledger,mutants}/
   test_engine_seal_shards.py test_engine_pairing.py test_engine_admit.py test_spec_postings.py
   test_spec_accumulators.py test_std_reservations.py test_checks_laws.py
@@ -424,7 +428,7 @@ Claude-Session: https://claude.ai/code/session_01BKddEJ7kY3XR8oXDK9HriN"
   - `cmdq.PAY_KIND = 11`.
   - `route.resume_owner(P, pay_rows, qhead, g)`: responses are the nodes with `pay >= 0 and pay_rows[pay, PAY_KIND] == OB_RESPONSE`; everything else follows S1 D7 (blocking resume) unchanged.
   - `route.RT_BND_RESP = 22`, `route.RT_SHARD_REQ = 23`, `route.RT_SHARD_LO = 24` (`int64[1]` holding `shard_lo`). `route_outbox` writes `rows[row, PAY_KIND] = kind` after copying the 12 columns of every delivered row, counts each routed response in `R[RT_BND_RESP][bnd]` and each delivered request in `R[RT_SHARD_REQ][g - shard_lo]` (Task 19 reads it).
-  - Generated `run_partitions`: after a command that did not RETRY, `nresp` = `OB_RESPONSE` rows in the outbox written by this command; `PAY_KIND == OB_REQUEST` requires `rc == COMMIT and nresp == 1`, any other command requires `nresp == 0`; otherwise `_unpaired(a, kind, rc, nresp)` raises `EngineError("<process>: request <b> must be answered exactly once (answered <n>, returned <rc>)")` or `EngineError("<process>: <label> answered a request it was not given")` with `<label>` as in `_out_of_order` (`start`, `request b`, `message b`, `response b.r`, `command <k>`).
+  - Generated `run_partitions`: after a command that did not RETRY, `nresp` = `OB_RESPONSE` rows in the outbox written by this command; `PAY_KIND == OB_REQUEST` requires `rc == COMMIT and nresp == 1`, any other command requires `nresp == 0`; otherwise `_unpaired(a, kind, rc, nresp, pid_, seq_)` (called with `pid[g], P[2][node]`: the partition and the command's seq) raises `EngineError("<process>: request <b> must be answered exactly once (answered <n>, returned <rc>) at (partition_id <pid>, seq <seq>), action <a>")` or `EngineError("<process>: <label> answered a request it was not given at (partition_id <pid>, seq <seq>), action <a>")` with `<label>` as in `_out_of_order` (`start`, `request b`, `message b`, `response b.r`, `command <k>`). The citation is §11's "Failures cite (partition_id, seq) and action ID" (F-06); the tests' `match=` patterns are unanchored and stop before it.
   - `World.stats["pairing"] = {boundary: {"requests": int, "responses": int}}` for request boundaries; `Simulation.stats["pairing"]` and manifest `pairing` carry the end-of-run values.
 
 - [ ] **Step 1: Write the fixture**
@@ -579,6 +583,13 @@ def test_unpaired_answers_fail_naming_process_and_boundary(mode, match):
         _step([f"mode={mode}"])
 
 
+def test_unpaired_answers_cite_partition_seq_and_action():
+    """§11: "Failures cite (partition_id, seq) and action ID" (F-06)."""
+    with pytest.raises(EngineError, match=r"\(answered 0, returned 2\) at \(partition_id \d+, "
+                                          r"seq \d+\), action \d+$"):
+        _step(["mode=1"])
+
+
 def test_manifest_reports_pairing(tmp_path):
     r = run_to_dataset(FIXTURES / "pairing", "sample", out_dir=tmp_path / "run", threads=1)
     m = json.loads((r.out_dir / "manifest.json").read_text())
@@ -619,11 +630,12 @@ Expected: FAIL — `ImportError: cannot import name 'PAY_KIND' from 'neorisk_sim
     "                nresp += 1",
     "        asked = prow >= 0 and PA[0][prow, PAY_KIND] == OB_REQUEST",
     "        if asked and (rc != COMMIT or nresp != 1):",
-    "            _unpaired(a, kind, rc, nresp)",
+    "            _unpaired(a, kind, rc, nresp, pid[g], P[2][node])",
     "        if not asked and nresp != 0:",
-    "            _unpaired(a, kind, rc, nresp)",
+    "            _unpaired(a, kind, rc, nresp, pid[g], P[2][node])",
     ```
-  - Generate `_unpaired(a, kind, rc, nresp)` (not inlined: add to `_NOT_INLINED`) the way `_out_of_order` is generated: per process, per command kind in `on_request` → `raise EngineError("<proc>: request <b> must be answered exactly once (answered ", nresp, ", returned ", rc, ")")`; every other labelled kind → `raise EngineError("<proc>: <label> answered a request it was not given")`; fallback `raise EngineError("<proc>: command ", kind, " answered a request it was not given")`.
+    (the node is still queued here: `q_remove`/`q_free` run after the check, so `P[2][node]`, the command's seq, is valid.)
+  - Generate `_unpaired(a, kind, rc, nresp, pid_, seq_)` (not inlined: add to `_NOT_INLINED`) the way `_out_of_order` is generated, every message ending with the §11 citation `" at (partition_id ", pid_, ", seq ", seq_, "), action ", a` (F-06): per process, per command kind in `on_request` → `raise EngineError("<proc>: request <b> must be answered exactly once (answered ", nresp, ", returned ", rc, ") at (partition_id ", pid_, ", seq ", seq_, "), action ", a)`; every other labelled kind → `raise EngineError("<proc>: <label> answered a request it was not given at (partition_id ", pid_, ", seq ", seq_, "), action ", a)`; fallback `raise EngineError("<proc>: command ", kind, " answered a request it was not given at (partition_id ", pid_, ", seq ", seq_, "), action ", a)`.
 - `run.py` `_account`: `st["pairing"] = dict(ws["pairing"])`; `Simulation.stats` initializes `"pairing": {}`.
 - `manifest.write_manifest(..., pairing=None)` writes `"pairing": dict(sorted((pairing or {}).items()))`; `dataset._simulate` passes `sim.stats["pairing"]`.
 - `validate.py`: the owner-to-owner message error text becomes `f"boundary {b.name}: owner-to-owner messages arrive in M3"` (D57).
@@ -631,7 +643,7 @@ Expected: FAIL — `ImportError: cannot import name 'PAY_KIND' from 'neorisk_sim
 - [ ] **Step 5: Run tests to verify they pass**
 
 Run: `uv run --all-packages pytest libs/simkit/tests/test_engine_pairing.py libs/simkit/tests/test_engine_rounds.py libs/simkit/tests/test_exit_trace_shopper.py -v`
-Expected: PASS (`test_engine_pairing.py`: 7 tests; the existing round and trace tests unchanged).
+Expected: PASS (`test_engine_pairing.py`: 8 tests; the existing round and trace tests unchanged).
 
 - [ ] **Step 6: Uncompiled leg, full suite and lint**
 
@@ -721,15 +733,15 @@ Claude-Session: https://claude.ai/code/session_01BKddEJ7kY3XR8oXDK9HriN"
 
 ### Task 4: Static spawn bounds and creation payloads
 
-The created row's columns ride in the `OB_CREATE` payload (D43) because Task 5's compiled admission cannot read create slabs; whatever create-row index S1 landed for Python admission (`_created_rows`, made incremental in S1) becomes unused and is deleted here.
+The created row's columns ride in the `OB_CREATE` payload (D43) because Task 5's compiled admission cannot read create slabs; S1's incremental create-slab index for Python admission (`World._created_rows`, `_CreatedIndex`, `World._created_index`, the `World.created_rows_indexed` counter; Codex CX3, 8f0d693) becomes unused and is deleted here, with the test that counted its work. Creation messages also start counting toward `requests` automatically (S1 contracts, Task 8 → Task 14: "kernels creating owners must also reserve requests (or Task 14 makes `_reserve_` count them)"; the S1 `creators` fixture forgot the unit and overflowed a 4 KiB outbox silently outside checked mode, codex-fix-report CX3).
 
 **Files:**
 - Create: `libs/simkit/tests/fixtures/chain/{datagen.toml,specs/pack.py,specs/kernels.py}`
-- Modify: `libs/simkit/src/neorisk_simkit/spec/validate.py` (creation graph, created-owner table rule), `engine/slabs.py` (`CREATE_HEAD` + `lamport`), `engine/codegen.py` (`_create_<ns>` writes `lamport` and, for owner tables, the row's columns into the creation payload), `engine/world.py` (`_Creation.pay`; admission reads the payload; remove `created_causes`, `take_created_causes`, `_created_rows`, `_row_of`), `io/seal.py` (`_owner_dense` reads causes from `creates[ns]["lamport"]`)
-- Test: `libs/simkit/tests/test_spec_validate.py` (append), `libs/simkit/tests/test_engine_rounds.py` (append)
+- Modify: `libs/simkit/src/neorisk_simkit/spec/validate.py` (creation graph, created-owner table rule, outbox fit of declared requests plus creation messages), `engine/slabs.py` (`CREATE_HEAD` + `lamport`), `engine/codegen.py` (`_create_<ns>` writes `lamport` and, for owner tables, the row's columns into the creation payload; `_reserve_<proc>` counts creation messages in `requests`), `engine/world.py` (`_Creation.pay`; admission reads the payload; delete `_CreatedIndex`, `_created_index`, `created_rows_indexed`, `_created_rows` and the `_created_index` reset in `take_chunks`)
+- Test: `libs/simkit/tests/test_spec_validate.py` (append), `libs/simkit/tests/test_engine_rounds.py` (append; rewrite `test_admission_indexes_each_created_row_once`)
 
 **Interfaces:**
-- Consumes: S1 `plan.namespaces`, `Res.creates`, `budget.max_spawn_depth`; fix-wave `k` (ordinal within the creating commit) in `World.admit_created`.
+- Consumes: S1 `plan.namespaces`, `Res.creates`, `budget.max_spawn_depth`; contracts C1 `k` (ordinal within the creating commit) in `World.admit_created`; codegen `reserve(p)` (`_reserve_<proc>(out, vec)`, `vec` in `KernelLayout.resources` order: `records:<n>`, `creates:<ns>`, `timers`, `requests`).
 - Produces:
   - `validate.creation_graph(plan) -> dict[str, list[tuple[str, str]]]`: owner/shard partition → `[(created owner partition, process)]`.
   - validate errors (D42, D43):
@@ -737,8 +749,10 @@ The created row's columns ride in the `OB_CREATE` payload (D43) because Task 5's
     - `f"spawn depth {d} exceeds budget.max_spawn_depth {m} (processes {' -> '.join(procs)})"`
     - `f"created owner table {t} has {n} columns; a creation message carries at most 7"`
     - `f"created owner table {t}: column {c} is {kind}; a creation message carries only int64 values"`
+    - `f"{p.name}: declared maximum of requests {r} plus {c} creation message(s) exceeds the outbox capacity {cap}"` (`r = max.requests`, `c` = Σ `max.creates` over owner tables, `cap = force_capacity["requests"]` when forced, else `slab_bytes // OUTBOX_ROW_BYTES`; only when `c > 0`)
   - `slabs.CREATE_HEAD = (("handle", i64), ("pid", i64), ("ordinal", i32), ("created_at", i64), ("g", i64), ("lamport", i64))`.
-  - Create rows carry `lamport`, so nothing needs a per-step list of creation causes: if `World.created_causes` / `take_created_causes` exist at BASE they are deleted, and any `seal` consumer of them reads `creates[ns]["lamport"]` instead (with D37's revert, `seal` ranks every table by `(pid, ordinal)` and needs no cause at all).
+  - Create rows carry `lamport` (consumed by Task 4b/5 through `_Creation.cause` / `CQ.cause`). At BASE `World.created_causes`, `take_created_causes` and `seal._owner_dense` are already gone (contracts CX1) and `seal` ranks every namespace by `assign_dense(pid, ordinal)` (§12; a creator created in the same step ranks by its provisional handle), so `seal` needs no change here.
+  - Generated `_reserve_<proc>(out, vec)`: with `q` the index of `requests` and `C` the indices of `creates:<ns>` for owner tables `ns`, the requests need is `nreq = vec[q] + Σ_{i ∈ C} vec[i]`; the check is `nreq > 0 and cap[q] - cnt[q] < nreq` (miss `q`) and the recorded reservation is `resv[q] = nreq`. Kernels' `requests=` from now on counts requests, messages and responses only; kernels that already add the creation unit by hand (S1 `spawn`, `creators`; S2 `holder`) over-reserve one row per created owner, which only moves slab swaps (outputs are slab-invariant).
 
 - [ ] **Step 1: Write the `chain` fixture**
 
@@ -786,21 +800,21 @@ def define(p: Pack, cfg: Config) -> None:
 ```python
 from neorisk_simkit.engine import COMMIT, RETRY, START, Res, kernel
 
+# no `requests=`: creating an owner reserves its creation message automatically (Task 4)
 
-@kernel(state="a", commands=(START,), max=Res(records={"a_made": 1}, creates={"b": 1},
-                                              requests=1))
+
+@kernel(state="a", commands=(START,), max=Res(records={"a_made": 1}, creates={"b": 1}))
 def a_main(ctx, s, cmd, out):
-    if not out.reserve(records={"a_made": 1}, creates={"b": 1}, requests=1):
+    if not out.reserve(records={"a_made": 1}, creates={"b": 1}):
         return RETRY
     b = out.create_b(a_id=ctx.self_id, w=10 + ctx.self_id)
     out.emit_a_made(ctx.t, a_id=ctx.self_id, b_id=b)
     return COMMIT
 
 
-@kernel(state="b", commands=(START,), max=Res(records={"b_made": 1}, creates={"c": 1},
-                                              requests=1))
+@kernel(state="b", commands=(START,), max=Res(records={"b_made": 1}, creates={"c": 1}))
 def b_main(ctx, s, cmd, out):
-    if not out.reserve(records={"b_made": 1}, creates={"c": 1}, requests=1):
+    if not out.reserve(records={"b_made": 1}, creates={"c": 1}):
         return RETRY
     c = out.create_c(b_id=ctx.self_id, w=s.w + 100)
     out.emit_b_made(ctx.t, b_id=ctx.self_id, c_id=c, w=s.w)
@@ -856,6 +870,17 @@ def test_created_owner_tables_fit_a_creation_message(fixture_project):
     floaty = with_pay_cols(plan.table("pay").cols + (Column("rate", f64()),))
     assert ("created owner table pay: column rate is f64; a creation message carries only "
             "int64 values") in validate(floaty).errors
+
+
+def test_creation_messages_count_toward_the_outbox(fixture_project):
+    run = _run_of(fixture_project, "spawn")              # acct_main: requests=3, creates pay 1
+    small = dataclasses.replace(run, engine=dataclasses.replace(
+        run.engine, force_capacity={"requests": 3}))
+    assert ("acct_main: declared maximum of requests 3 plus 1 creation message(s) exceeds the "
+            "outbox capacity 3") in validate(small).errors
+    fits = dataclasses.replace(run, engine=dataclasses.replace(
+        run.engine, force_capacity={"requests": 4}))
+    assert not any("creation message(s)" in e for e in validate(fits).errors)
 ```
 
 Append to `libs/simkit/tests/test_engine_rounds.py`:
@@ -877,12 +902,61 @@ def test_a_chain_of_creations_runs_in_one_step():
     assert len(c["time"]) == 4 and (c["time"] == t0).all()
     assert sorted(c["w"].tolist()) == [110, 111, 112, 113]       # b's state reached c by payload
     assert stats.owners_run[:3] == [4, 4, 4]                     # a; then b; then c (D5)
+
+
+def test_creates_reserve_their_creation_messages(monkeypatch):
+    """`chain` kernels reserve `creates` but no `requests`: the creation message's outbox row is
+    reserved automatically, so a one-row outbox swaps between creators instead of overflowing
+    (the S1 `creators` fixture overflowed a 4 KiB outbox silently outside checked mode)."""
+    swaps, handle_status = [], World.handle_status
+
+    def spy(self, worker, status):
+        swaps.append(int(status))
+        return handle_status(self, worker, status)
+
+    monkeypatch.setattr(World, "handle_status", spy)
+    _, w, _ = _step("chain", engine={"force_capacity": {"requests": 1}})
+    c = _rows(w, "c_drew")
+    assert sorted(c["w"].tolist()) == [110, 111, 112, 113]
+    assert swaps.count(NEED_SWAP) >= 3                            # 4 creators, 1-row outbox
+
+
+def test_admission_reads_creation_payloads_in_many_small_batches(monkeypatch):
+    """Replaces S1's `test_admission_indexes_each_created_row_once` (Codex CX3): admission reads
+    each created row's state from its creation message (D43), so no create-slab index exists;
+    many small batches in one step, with slabs flushed mid-step, still admit every row once."""
+    calls, flushes = [], []
+    admit, flush = World.admit_created, World._flush
+
+    def spy(self, limit_t):
+        got = admit(self, limit_t)
+        if len(got):
+            calls.append(len(got))
+        return got
+
+    def spy_flush(self, worker):
+        flushes.append(worker)
+        return flush(self, worker)
+
+    monkeypatch.setattr(World, "admit_created", spy)
+    monkeypatch.setattr(World, "_flush", spy_flush)
+    run = make_run("spawn", ["create_on_answer=1", "rounds=60"], slab_bytes=2048)
+    sim = Simulation(run, threads=2)
+    steps = list(sim.steps())
+    assert len(steps) == 1
+    created = sum(s.entities["pay"].num_rows for s in steps)
+    assert created == 3 * 60
+    assert len(calls) >= 60 and max(calls) <= 3 and sum(calls) == created
+    assert len(flushes) > 2 * 2                 # slabs flushed mid-step, not only at seal
+    assert not hasattr(sim.world, "created_rows_indexed")
+    assert not hasattr(World, "_created_rows")
 ```
+`test_admission_reads_creation_payloads_in_many_small_batches` replaces `test_admission_indexes_each_created_row_once` (delete the old test; its `created_rows_indexed` counter is gone). `NEED_SWAP` comes from `neorisk_simkit.engine.codegen` (add it to the module's imports with `World`, `Simulation` and `make_run`, which it already has).
 
 - [ ] **Step 3: Run tests to verify they fail**
 
-Run: `uv run --all-packages pytest libs/simkit/tests/test_spec_validate.py libs/simkit/tests/test_engine_rounds.py -k "chain or cycle or creation_message or commit_lamport" -v`
-Expected: FAIL — the validate tests find no such error message; `test_created_rows_carry_their_commit_lamport` fails with `KeyError: 'lamport'`.
+Run: `uv run --all-packages pytest libs/simkit/tests/test_spec_validate.py libs/simkit/tests/test_engine_rounds.py -k "chain or cycle or creation_message or commit_lamport or small_batches" -v`
+Expected: FAIL — the validate tests find no such error message; `test_created_rows_carry_their_commit_lamport` fails with `KeyError: 'lamport'`; `test_creates_reserve_their_creation_messages` fails (the second creator writes past the one-row outbox: an `IndexError` uncompiled, garbage routing or a crash compiled; no `NEED_SWAP`); `test_admission_reads_creation_payloads_in_many_small_batches` fails on `hasattr(sim.world, "created_rows_indexed")`. `test_a_chain_of_creations_runs_in_one_step` already passes on S1's admission (S1 admits chains of creations in one step; it pins that Step 4 keeps doing so).
 
 - [ ] **Step 4: Implement**
 
@@ -890,18 +964,19 @@ Expected: FAIL — the validate tests find no such error message; `test_created_
   - `creation_graph(plan)`: owner tables `{p.table: p.name for owner partitions}`; for every process `p`, every `ns` in `p.kernel.max.creates` that is an owner table → edge `p.partition → owner partition of ns` labelled `p.name`.
   - Cycle detection by DFS in plan order (report the first cycle found: partitions on it, then the processes on its edges). Depth: longest path in edges from any node (memoized DFS); when it exceeds `budget.max_spawn_depth`, report the processes along the longest path in order.
   - For every owner table that is creatable (`TableDef.creatable` and an owner's table): `len(cols) > 7` → width error; any column of kind `f64` or `text` → type error (first offending column, declaration order).
+  - Outbox fit, beside the existing per-process slab checks: `c = sum(k.max.creates.get(t, 0) for t in owner tables)`; when `c > 0` and `k.max.requests + c > cap` (`cap = eng.force_capacity.get("requests", eng.slab_bytes // OUTBOX_ROW_BYTES)`, `OUTBOX_ROW_BYTES` from `spec.caps`) → the outbox-fit error of Interfaces.
+- `codegen.py` `reserve(p)`: `q = self.resources.index("requests")`, `C = [i for i, r in enumerate(self.resources) if r.startswith("creates:") and r[8:] in owner_tables]`; emit `nreq = vec[q] + vec[i1] + ...` first, use `cond = f"cap[{q}] - cnt[{q}] < nreq"` with guard `nreq > 0` for the `requests` resource, and `resv[q] = nreq` instead of `resv[q] = vec[q]` (every other resource unchanged). The checked-mode `resv_check("requests", ...)` in `_create_<ns>` already decrements the same counter, so checked mode stays exact.
 - `slabs.py`: append `("lamport", _I64)` to `CREATE_HEAD`.
 - `codegen.py` `create`/`new_id`: head values become `["h", "ctx[CTX_PID]", "o_", "ctx[CTX_T]", "g", "ctx[CTX_LAMPORT]"]`. For owner tables, after `_outbox_row(...)` returns `i`, write the row's values into the creation payload: `pay = out[OUT_OUTBOX][OBX_PAY]` then `pay[i, j] = c<j>` for each column `j` (a nullable `NULL` stays `NULL`; narrow ints widen to int64).
 - `world.py`:
   - `_Creation` gains `pay: tuple[int, ...]` (7 values) and `route()` fills it from `ob["pay"][i, :7]`.
   - `admit_created` writes `arr[ls] = c.pay[j]` for column `j` (cast by numpy) instead of reading `rows[ns](c.handle)`; it keeps the fix wave's `k` (ordinal within the commit) and `inst = mix(creator inst, cause, ns, k)`.
-  - Delete whichever of `created_causes`, `take_created_causes`, `_created_rows`, `_row_of` and `_created_row` exist at BASE.
-- `seal.py`: if it still consumes creation causes (`_owner_dense`), read them from `creates[ns]["lamport"]`; otherwise no change.
+  - Delete `_CreatedIndex`, `World._created_rows`, the attributes `self._created_index` and `self.created_rows_indexed` (set in `World.build`), and the `self._created_index = {}` reset in `take_chunks` (S1 8f0d693). `created_causes`, `take_created_causes` and `seal._owner_dense` are already gone at BASE; `seal.py` is not touched.
 
 - [ ] **Step 5: Run tests to verify they pass**
 
 Run: `uv run --all-packages pytest libs/simkit/tests/test_spec_validate.py libs/simkit/tests/test_engine_rounds.py libs/simkit/tests/test_exit_invariance.py libs/simkit/tests/test_exit_trace_shopper.py -v`
-Expected: PASS (the fix wave's created-owner invariance tests still pass: the cause now comes from the create row instead of the admission list).
+Expected: PASS (the `creators` invariance tests of `test_exit_invariance.py` still pass: created state now comes from the creation payload instead of the create-slab index, with identical values).
 
 - [ ] **Step 6: Full suite and lint**
 
@@ -927,6 +1002,7 @@ The open item of the S1 final fix (contracts, "Final-fix, NOT fixed"): a created
 **Files:**
 - Create: `libs/simkit/tests/fixtures/relay/{datagen.toml,specs/pack.py,specs/kernels.py}`
 - Modify: `libs/simkit/src/neorisk_simkit/engine/world.py` (`HIDDEN_DTYPES` + `ckey`; admission writes it), `engine/route.py` (`sender_keys`; `route_order` uses it), `spec/caps.py` (hidden bytes follow the table automatically)
+- Modify (tests): `libs/simkit/tests/test_engine_rounds.py` (`test_route_order_sorts_equal_keys_by_partition_id_then_seq` passes `R` and distinct senders)
 - Test: `libs/simkit/tests/test_exit_invariance.py` (append)
 
 **Interfaces:**
@@ -1007,10 +1083,9 @@ PEER_COMMANDS = (START, C_ASK, R_OK, C_STEP)
 C_ASKED = 1
 
 
-@kernel(state="acct", commands=ACCT_COMMANDS, max=Res(creates={"pay": 1}, timers=1,
-                                                      requests=1))
+@kernel(state="acct", commands=ACCT_COMMANDS, max=Res(creates={"pay": 1}, timers=1))
 def acct_main(ctx, s, cmd, out):
-    if not out.reserve(creates={"pay": 1}, timers=1, requests=1):
+    if not out.reserve(creates={"pay": 1}, timers=1):     # the creation message: automatic
         return RETRY
     if cmd.kind == START:
         out.timer(ctx.t + 50 * MINUTE, C_MAKE, prio=PRIO_TIMER)
@@ -1105,7 +1180,32 @@ Expected: FAIL — `orders["6h"] == [1, 1, 0, 0]` (provisional pays sort after t
 
 - `world.HIDDEN_DTYPES` gains `("ckey", "int64", 4)`; `_reset_slots` zeroes it; `admit_created` writes `(c.time, c.cause, hid.inst[c.src_g], k)` and sorts due creations with the creators' sender keys (`route.sender_keys` over their `src_g`s) in place of `src_pid`. A slot freed at seal and reused keeps no stale key: admission always rewrites `ckey`.
 - `route.sender_keys` as in Interfaces; `R[RT_CREATED_TYPE][ptype_code] = 1` for every owner type whose table is creatable.
-- `route_order(ob, n, R)`: stable argsorts by `src_seq`, then the six sender keys innermost first, then `cause`, `prio`, `time`. The sender slot is still alive when its outbox is routed (routing runs in the same phase as the commit), so `ptype/pid/ckey[src_g]` describe the sender. Update the call in `route_outbox` and the existing unit test `test_route_order_sorts_equal_keys_by_partition_id_then_seq` (dense pids only: same expected order, now `route_order(ob, n, w.R)` with a World of any fixture, or a minimal `R` built by a helper in the test).
+- `route_order(ob, n, R)`: stable argsorts by `src_seq`, then the six sender keys innermost first, then `cause`, `prio`, `time`. The sender slot is still alive when its outbox is routed (routing runs in the same phase as the commit), so `ptype/pid/ckey[src_g]` describe the sender. Update the call in `route_outbox` and replace the existing unit test in `test_engine_rounds.py` (it leaves `src_g = 0`, so every row would have one sender) with:
+  ```python
+  def test_route_order_sorts_equal_keys_by_partition_id_then_seq():
+      """D61 on dense senders: key (ptype, 0, pid, 0, 0, 0) orders tied rows by partition_id."""
+      from neorisk_simkit.engine.route import route_order
+      from neorisk_simkit.engine.slabs import OUTBOX_COLS
+      run = make_run("mini")
+      w = World.build(run, threads=1)
+      g = w.admit_population(run.start_us - run.warmup_us, run.start_us)
+      senders = g[np.argsort(w.hidden.pid[g], kind="stable")][:10]   # ascending partition_id
+      assert len(senders) == 10
+      rng_ = np.random.default_rng(3)
+      n = 40
+      cols = {c: np.zeros(n, np.int64) for c in OUTBOX_COLS}
+      cols["time"][:] = rng_.integers(0, 2, n)          # many rows tie on (time, prio, cause)
+      cols["prio"][:] = 1
+      cols["cause"][:] = rng_.integers(0, 2, n)
+      rank = rng_.permutation(n) // 4                   # four rows per partition...
+      cols["src_g"][:] = senders[rank]
+      cols["src_pid"][:] = w.hidden.pid[senders[rank]]
+      cols["src_seq"][:] = rng_.permutation(n)          # ...told apart by seq
+      ob = (*cols.values(), np.zeros((n, 12), np.int64))
+      want = np.lexsort((cols["src_seq"], rank, cols["cause"], cols["prio"], cols["time"]))
+      assert route_order(ob, n, w.R).tolist() == want.tolist()
+  ```
+  (`senders` are the slots of the 10 lowest-`partition_id` mini users, so the `k`-th sender's `pid` order equals the old test's `src_pid = k` order.)
 
 - [ ] **Step 5: Run tests to verify they pass**
 
@@ -1132,7 +1232,7 @@ S2 creates ~30M payment owners; S1 admits each creation in a Python loop and dro
 **Files:**
 - Create: `libs/simkit/src/neorisk_simkit/engine/admit.py` (`CreationQueue`, `FreeSlots`, `cq_min`, status constants)
 - Modify: `engine/route.py` (`route_outbox(R, CQ, ob, n)` queues `OB_CREATE` rows), `engine/codegen.py` (generated `admit_created`; `drain_small_rounds` admits, phase `PH_ADMIT`; new drain signature), `engine/world.py` (`World.CQ`, `World.FS`, `World.admissions` as `int64[1]`; `admit_created` and `admit_population` use them; `pending_creations()`; `horizon` uses `cq_min`), `engine/rounds.py` (drain no longer waits for an empty creation list; resume from `PH_ADMIT`), `io/seal.py` (`_free_retired` gives slots back through `FS`), `spec/caps.py` (`requests_and_inboxes` + CQ bytes), `engine/rng.py` (`mix4` njit)
-- Modify (tests): `libs/simkit/tests/test_engine_rounds.py` (`pending_creates == []` → `pending_creations() == 0`; replace `test_creations_inside_compiled_rounds_return_to_python`), `libs/simkit/tests/test_spec_validate.py` (`test_caps_formulas`)
+- Modify (tests): `libs/simkit/tests/test_engine_rounds.py` (`pending_creates == []` → `pending_creations() == 0` in `test_engine_rounds.py:167` only; delete `test_creations_inside_compiled_rounds_return_to_python` and Task 4's `test_admission_reads_creation_payloads_in_many_small_batches`, both superseded by `test_engine_admit.py`), `libs/simkit/tests/test_spec_validate.py` (`test_caps_formulas`)
 - Test: `libs/simkit/tests/test_engine_admit.py`
 
 **Interfaces:**
@@ -1140,13 +1240,13 @@ S2 creates ~30M payment owners; S1 admits each creation in a Python loop and dro
 - Produces:
   - `engine/admit.py`:
     - `ADM_OK, ADM_CAP, ADM_LIVE, ADM_NODES = 0, 1, 2, 3`; `CQ_PAY = 7`.
-    - `class CreationQueue(capacity: int)` with arrays `time, prio, cause, src_pid, src_seq, ns, handle, src_g, action` (int64[capacity]), `pay` (int64[capacity, 7]), `n` (int64[1]); `as_tuple()` in that order; `count() -> int`; `row_bytes = 16 * 8`.
+    - `class CreationQueue(capacity: int)` with arrays `time, prio, cause, src_pid, src_seq, ns, handle, src_g, action, k` (int64[capacity]), `pay` (int64[capacity, 7]), `n` (int64[1]); `as_tuple()` in that order; `count() -> int`; `row_bytes = 17 * 8`.
     - `@njit cq_min(CQ) -> int64` (earliest queued time, `I64_MAX` when empty).
     - `class FreeSlots(sizes: list[int], bases: list[int])`: one FIFO ring per owner type `t` (plan order of owner partitions), initially `arange(size)`; `take(t, k) -> np.ndarray[int32]` (front `k`, raises `IndexError` if fewer), `give(t, lslots)` (appends `np.sort(lslots)` at the back), `n(t) -> int`, `as_tuple() -> (buf int32[Σ sizes], head int64[T], n int64[T], off int64[T], cap int64[T], base int64[T])`; `@njit fs_take1(FS, t) -> int32` (−1 when empty).
-  - `route.route_outbox(R, CQ, ob, n) -> (status, k)`: `OB_CREATE` rows are appended to `CQ` (all-or-nothing with the other checks, before anything is delivered); a row that would make `adm + cq_n + 1 > limit` returns `(NEED_CREATES, i)` with `i` the outbox row (`R` gains `RT_ADM = 27`, `int64[2]` = admissions this step, `max_admissions_per_step`; indices 25–26 are Task 4b's). `HAS_CREATE` and `skip_creates` are removed; `NEED_CREATES = 4`.
-  - Generated `admit_created(W, R, CQ, FS, limit_t, out_slots) -> (status, n_or_row)`: admits every queued creation with `time < limit_t` in routing-key order `(time, prio, cause, src_pid, src_seq)`, exactly as S1 `World.admit_created` did (fresh hidden fields, `Local` rows reset to `NULL`/0, state columns from the payload, `inst = mix4(creator inst, cause, ns, k)`, one `START` per process started by `on_created(table)` at the creation time with `PRIO_MESSAGE` and cause `cause`), marks each slot touched and appends it to the woken list and to `out_slots`; removes admitted rows from `CQ`. On `ADM_CAP` / `ADM_LIVE` / `ADM_NODES` it stops before the row that does not fit and returns that row's index in `CQ`.
+  - `route.route_outbox(R, CQ, ob, n) -> (status, k)`: `OB_CREATE` rows are appended to `CQ` (all-or-nothing with the other checks, before anything is delivered), each with its `k` (F-10): one commit's outbox rows are contiguous (the kernel reserved them before writing any), so for create row `i` the commit block is the maximal run of rows around `i` with the same `(src_g = pay[·, 7], cause)`, and `k = ordinal(handle_i) − min ordinal(handle_j)` over the `OB_CREATE` rows `j` of that block with the same `ns` (`ordinal = handle & 0xFFFFFF`, the contracts C1 rule); a row that would make `adm + cq_n + 1 > limit` returns `(NEED_CREATES, i)` with `i` the outbox row (`R` gains `RT_ADM = 27`, `int64[2]` = admissions this step, `max_admissions_per_step`; indices 25–26 are Task 4b's). `HAS_CREATE` and `skip_creates` are removed; `NEED_CREATES = 4`.
+  - Generated `admit_created(W, R, CQ, FS, limit_t, out_slots) -> (status, value)`: admits every queued creation with `time < limit_t` in Task 4b's order — `(time, prio, cause, sender_keys(src_g), src_seq)`, the creator's six step-invariant sender keys in place of `src_pid` (F-12) — with the records S1 `World.admit_created` produced (fresh hidden fields, `Local` rows reset to `NULL`/0, state columns from the payload, `inst = mix4(creator inst, cause, ns, CQ.k)`, one `START` per process started by `on_created(table)` at the creation time with `PRIO_MESSAGE` and cause `cause`), marks each slot touched and appends it to the woken list and to `out_slots`; removes admitted rows from `CQ`. Node checking is all or nothing (F-10): before admitting any row it sums the `START` nodes of every due row and, if the reserve holds fewer, returns `(ADM_NODES, need)` having admitted nothing and left `CQ` unchanged. `ADM_CAP` / `ADM_LIVE` (fatal) return the `CQ` index of the row that does not fit. `ADM_OK` returns the number admitted.
   - `drain_small_rounds(W, out, R, CQ, FS, run, n_run, t1, min_par, shard_lo, shard_hi, sbuf, log, rs, adm_buf)`: horizon `horizon(R, t1, cq_min(CQ))`; after `PH_ROUTE2` a `PH_ADMIT` phase calls `admit_created(W, R, CQ, FS, t1, adm_buf)`; a non-OK status returns `DR_PYTHON` with `rs[RS_STATUS]` = the admission status; `n_run = take_runnable(R, t1, run)` then includes the admitted owners. `PH_ADMIT = 4`.
-  - `World`: `CQ`, `FS`, `owner_type: dict[str, int]`, `pending_creations() -> int`, `admit_created(limit_t) -> np.ndarray` (wraps the generated function: `ADM_NODES` → `_take_reserve_nodes(n)` and retry; `ADM_CAP` → `CapExceeded("max_admissions_per_step", limit, attempted, process=<creating process>)`; `ADM_LIVE` → `CapExceeded("live_partition_state", max_live, max_live + 1, process=<creating process>)`); `route()` maps `NEED_CREATES` to the same `max_admissions_per_step` error naming the process of outbox row `k` (`ob["pay"][k, 10]`).
+  - `World`: `CQ`, `FS`, `owner_type: dict[str, int]`, `pending_creations() -> int`, `admit_created(limit_t) -> np.ndarray` (wraps the generated function: `ADM_NODES` → `_take_reserve_nodes(need)` and retry the whole call; `ADM_CAP` → `CapExceeded("max_admissions_per_step", limit, attempted, process=<creating process>)`; `ADM_LIVE` → `CapExceeded("live_partition_state", max_live, max_live + 1, process=<creating process>)`); `route()` maps `NEED_CREATES` to the same `max_admissions_per_step` error naming the process of outbox row `k` (`ob["pay"][k, 10]`).
   - `rng.mix4(a, b, c, d) -> uint64` (njit): equals `rng.mix(a, b, c, d)` for int64 inputs.
   - `caps`: `requests_and_inboxes` adds `budget.max_admissions_per_step × CreationQueue.row_bytes`.
 
@@ -1162,9 +1262,10 @@ import pytest
 from conftest import make_run, records_of
 
 from neorisk_simkit.engine import CapExceeded, rng
-from neorisk_simkit.engine.admit import FreeSlots
-from neorisk_simkit.engine.codegen import DR_PYTHON, RS_PHASE
+from neorisk_simkit.engine.admit import ADM_NODES, FreeSlots
+from neorisk_simkit.engine.codegen import DR_PYTHON, PH_ADMIT, RS_PHASE, RS_STATUS
 from neorisk_simkit.engine.rounds import run_step
+from neorisk_simkit.engine.route import RT_ADM
 from neorisk_simkit.engine.world import World
 
 H = 3_600_000_000
@@ -1238,9 +1339,62 @@ def test_live_cap_names_the_creating_process():
 def test_admission_cap_still_names_the_creating_process():
     with pytest.raises(CapExceeded, match=r"max_admissions_per_step .*in process acct_main$"):
         _steps("spawn", ["budget.max_admissions_per_step=2"])
-```
 
-In `libs/simkit/tests/test_engine_rounds.py`: replace `w.pending_creates == []` by `w.pending_creations() == 0` (two places) and delete `test_creations_inside_compiled_rounds_return_to_python` (superseded by `test_creations_are_admitted_inside_compiled_rounds`).
+
+def test_admission_short_of_nodes_admits_nothing_and_retries_identically(monkeypatch):
+    """F-10: `ADM_NODES` admits no row and leaves `CQ` (and each row's `k`) as it was; after the
+    refill the records equal an unforced run's. The reserve is drained to one node before every
+    compiled drain call (its free nodes go to worker 0's list), so admitting 4 b's and 4 c's
+    (one START each) always finds the reserve short first."""
+    _, base, _ = _steps("chain", parallel_min_partitions=10**9)
+    run = make_run("chain", parallel_min_partitions=10**9)
+    w = World.build(run, threads=1)
+    w.init_shards()
+    real, seen = w.eng.drain_small_rounds, []
+
+    def starved(*args):
+        spare = int(w.pool.reserve_n[0]) - 1
+        if spare > 0:
+            w.pool.refill(0, spare)                  # reserve -> worker 0's free list
+        code, n = real(*args)
+        seen.append((int(code), int(w.round_state[RS_PHASE]), int(w.round_state[RS_STATUS])))
+        return code, n
+
+    monkeypatch.setattr(w.eng, "drain_small_rounds", starved)
+    t0 = run.start_us - run.warmup_us
+    run_step(w, t0, t0 + run.engine.step_us)
+    assert (DR_PYTHON, PH_ADMIT, ADM_NODES) in seen   # the forced path really ran
+    assert w.pending_creations() == 0
+    for t in [e.name for e in w.plan.events]:
+        ra, rb = records_of(base, t), records_of(w, t)
+        assert all(np.array_equal(ra[k], rb[k]) for k in ra), t
+
+
+def test_many_small_admission_batches_stay_compiled(monkeypatch):
+    """S1 Codex CX3's workload (60 round trips x 3 creations in one step, slabs flushed
+    mid-step), replacing S1's `created_rows_indexed` test: every creation is admitted once, and
+    admission never leaves the compiled loop."""
+    run = make_run("spawn", ["create_on_answer=1", "rounds=60"], slab_bytes=2048,
+                   parallel_min_partitions=10**9)
+    w = World.build(run, threads=1)
+    w.init_shards()
+    real, seen = w.eng.drain_small_rounds, []
+
+    def spy(*args):
+        code, n = real(*args)
+        seen.append((int(code), int(w.round_state[RS_PHASE])))
+        return code, n
+
+    monkeypatch.setattr(w.eng, "drain_small_rounds", spy)
+    t0 = run.start_us - run.warmup_us
+    stats = run_step(w, t0, t0 + run.engine.step_us)
+    assert int(w.R[RT_ADM][0]) == 3 * 60 and w.pending_creations() == 0
+    assert stats.compiled_rounds >= 60
+    assert (DR_PYTHON, PH_ADMIT) not in seen
+```
+(`NodePool.refill(w, n)` moves `n` reserve nodes to worker `w`'s free list, as Task 2's `resume_owner` test uses it; `_take_reserve_nodes` splices them back.)
+
+In `libs/simkit/tests/test_engine_rounds.py`: replace `w.pending_creates == []` by `w.pending_creations() == 0` at line 167 (the only other occurrence, line 252, is inside the test deleted next), delete `test_creations_inside_compiled_rounds_return_to_python` (superseded by `test_creations_are_admitted_inside_compiled_rounds`) and delete Task 4's `test_admission_reads_creation_payloads_in_many_small_batches` (its spy on `World.admit_created` no longer sees compiled admissions; superseded by `test_many_small_admission_batches_stay_compiled`).
 
 In `libs/simkit/tests/test_spec_validate.py::test_caps_formulas` add:
 ```python
@@ -1268,9 +1422,10 @@ Expected: FAIL with `ModuleNotFoundError: No module named 'neorisk_simkit.engine
 In `codegen.py`:
 - `_Gen.admit()` emits `admit_created(W, R, CQ, FS, limit_t, out_slots)` (not inlined):
   1. collect due rows `i < CQ.n` with `time[i] < limit_t`; order them exactly as Task 4b orders routing: stable argsorts by `src_seq`, then the six `sender_keys` of the creator's `src_g` (innermost first), then `cause`, `prio`, `time`;
-  2. `k`: for each due row, `ordinal = handle & 0xFFFFFF`; `k = ordinal - min ordinal` over the due rows with the same `(src_g, cause, ns)` (the fix wave's rule; a commit's creations are always routed together);
-  3. per row, in order: `adm = R[RT_ADM]`; if `adm[0] + 1 > adm[1]` → return `(ADM_CAP, i)`; owner type `t` and ptype come from generated per-namespace constants (`_NS_TYPE`, `_NS_PTYPE` tuples; plan-structural, not population-dependent); `ls = fs_take1(FS, t)`, `-1` → `(ADM_LIVE, i)`; nodes needed = number of `on_created(ns)` processes; reserve short (`R[RT_POOL][P_FREE_N][0] < need`) → put `ls` back at the ring front and return `(ADM_NODES, i)`; else `adm[0] += 1`, `g = FS.base[t] + ls`, write the hidden fields as S1 `_reset_slots` does (`pid = self_id = handle`, `alive = 1`, `clock = rseq = cseq = pending = susp_delta = 0`, `occ[g, :] = 0`, `ordn[g, :] = 0`, `retire_at = susp_t = I64_MAX`, `last_t = I64_MIN`, `inst = mix4(inst[src_g], cause, ns, k)` viewed as int64, `ckey[g] = (time, cause, inst[src_g], k)` per Task 4b), reset every `Local` row of the type's processes (`ref` → `NULL`, else 0; 2-D rows whole), copy `pay[i, j]` into state column `j`, `q_push` one `START` per started process (reserve pool, worker 0) with `cause`, `mark_touched(R, g)`, append `g` to the woken list and `out_slots`;
-  4. compact `CQ` (keep rows not admitted, in their order) and return `(ADM_OK, n_admitted)`.
+  2. `k` is read from `CQ.k` (computed once by `route_outbox` when the row was queued, F-10); it is never recomputed over the remaining due rows, so a retry cannot shift it;
+  3. node check, all or nothing (F-10): `need = Σ _NS_NSTART[ns[i]]` over the due rows (`_NS_NSTART`: generated per-namespace tuple, the number of `on_created(ns)` processes); if the reserve is short (`R[RT_POOL][P_FREE_N][0] < need`) return `(ADM_NODES, need)` before touching any row, slot or counter;
+  4. per row, in order: `adm = R[RT_ADM]`; if `adm[0] + 1 > adm[1]` → return `(ADM_CAP, i)`; owner type `t` and ptype come from generated per-namespace constants (`_NS_TYPE`, `_NS_PTYPE` tuples; plan-structural, not population-dependent); `ls = fs_take1(FS, t)`, `-1` → `(ADM_LIVE, i)` (both fatal: `World` raises, so a partly admitted `CQ` is never resumed); else `adm[0] += 1`, `g = FS.base[t] + ls`, write the hidden fields as S1 `_reset_slots` does (`pid = self_id = handle`, `alive = 1`, `clock = rseq = cseq = pending = susp_delta = 0`, `occ[g, :] = 0`, `ordn[g, :] = 0`, `retire_at = susp_t = I64_MAX`, `last_t = I64_MIN`, `inst = mix4(inst[src_g], cause, ns, CQ.k[i])` viewed as int64, `ckey[g] = (time, cause, inst[src_g], CQ.k[i])` per Task 4b), reset every `Local` row of the type's processes (`ref` → `NULL`, else 0; 2-D rows whole), copy `pay[i, j]` into state column `j`, `q_push` one `START` per started process (reserve pool, worker 0; step 3 guaranteed the nodes) with `cause`, `mark_touched(R, g)`, append `g` to the woken list and `out_slots`;
+  5. compact `CQ` (keep rows not admitted, in their order, with their `k`) and return `(ADM_OK, n_admitted)`.
 - `drain_small_rounds`: new parameters `CQ, FS` after `R` and `adm_buf` last; `h = horizon(R, t1, cq_min(CQ))`; after `PH_ROUTE2`:
   ```
   "    rs[_RS_PHASE] = _PH_ADMIT",
@@ -1285,7 +1440,8 @@ In `codegen.py`:
 - `admit_population` takes slots with `self.FS.take(self.owner_type[part.name], k)` (raising `CapExceeded("live_partition_state", ...)` as before when fewer are free).
 - `admit_created(limit_t)` loops on the generated function as listed in Interfaces; `begin_step` resets `R[RT_ADM][0] = 0`; `pending_creations()` is `int(self.CQ.n[0])`; `horizon(t1)` uses `cq_min(self.CQ.as_tuple())`.
 - `route()` no longer builds `_Creation`s: it passes `CQ` to `route_outbox` and handles `NEED_CREATES`. Delete `_Creation` and `pending_creates`.
-- `rounds.run_step`: enter `_drain` whenever `stats.rounds > 0 and len(runnable) < small`; `_closed` tests `world.pending_creations() == 0`; `_python_round` resuming at `PH_ADMIT` first handles the status (`ADM_NODES` → refill and continue), then admits.
+- `rounds.run_step`: enter `_drain` whenever `stats.rounds > 0 and len(runnable) < small` (pass the new arguments `CQ`, `FS` and `adm_buf` in `rounds._drain`'s call); `_closed` tests `world.pending_creations() == 0`; `_python_round` resuming at `PH_ADMIT` first handles the status (`ADM_NODES` → `_take_reserve_nodes(need)` and continue; nothing was admitted), then admits.
+- `route.route_outbox`: when queuing `OB_CREATE` row `i`, compute `k` as in Interfaces (scan back and forward from `i` while `pay[j, 7] == pay[i, 7]` and `cause[j] == cause[i]`; min ordinal over that block's `OB_CREATE` rows with `bnd[j] == bnd[i]`, the namespace code) and store it in `CQ.k`.
 - `seal._free_retired`: `world.FS.give(world.owner_type[part.name], hid.lslot[mine])`.
 - `caps.compute_caps`: `requests_and_inboxes` adds `budget.max_admissions_per_step * CreationQueue.row_bytes` (import lazily, as `hidden_bytes` does).
 
@@ -1318,7 +1474,7 @@ Claude-Session: https://claude.ai/code/session_01BKddEJ7kY3XR8oXDK9HriN"
 **Files:**
 - Create: `libs/simkit/tests/fixtures/ledger/{datagen.toml,specs/pack.py,specs/kernels.py}`
 - Create: `libs/simkit/src/neorisk_simkit/io/consts.py`
-- Modify: `libs/simkit/src/neorisk_simkit/spec/pack.py` (`Pack.postings`), `spec/plan.py` (`EventDef.group`), `io/seal.py` (`SealedStep.postings`), `io/writer.py` (`postings/` directory), `io/step_index.py` (events only), `io/manifest.py` + `io/dataset.py` (`posting_counts`), `io/schema/schema_json.py` (kind `"posting"`), `io/schema/sql.py` (postings get the event DDL treatment), `io/read.py` (`read_postings`), `checks/structural.py` (check postings too), `engine/run.py` (`rows_per_table` includes postings)
+- Modify: `libs/simkit/src/neorisk_simkit/spec/pack.py` (`Pack.postings`), `spec/plan.py` (`EventDef.group`), `io/seal.py` (`SealedStep.postings`), `io/writer.py` (`postings/` directory), `io/step_index.py` (events only), `io/manifest.py` + `io/dataset.py` (`posting_counts`), `io/schema/schema_json.py` (kind `"posting"`), `io/schema/sql.py` (postings get the event DDL treatment), `io/read.py` (`read_postings`), `io/replay/*` (import the io constants from `io/consts.py`), `checks/structural.py` (check postings too), `engine/run.py` (`rows_per_table` includes postings)
 - Test: `libs/simkit/tests/test_spec_postings.py`
 
 **Interfaces:**
@@ -1326,8 +1482,8 @@ Claude-Session: https://claude.ai/code/session_01BKddEJ7kY3XR8oXDK9HriN"
 - Produces:
   - `Pack.postings(name, *, cols, owner=None, shard=None, doc="") -> str` (same checks as `Pack.event`; names shared with events and change groups).
   - `EventDef.group: str = "events"` (`"postings"` for posting tables). Every `plan.events` consumer that means "exported events" filters `group == "events"`.
-  - `SealedStep.postings: dict[str, pa.Table]` (keyword field with default `{}`); `SealedStep.events` holds events only.
-  - Files `postings/<name>/date=YYYY-MM-DD/step-NNNNNN.parquet`; manifest `posting_counts: {name: rows}`; `schema.json` table kind `"posting"`; `io.read.read_postings(dir, names=None) -> dict[str, pl.DataFrame]`.
+  - `SealedStep.postings: dict[str, pa.Table] = field(default_factory=dict)` (a keyword field of the frozen dataclass; a literal `{}` default is not allowed); `SealedStep.events` holds events only.
+  - Files `postings/<name>/date=YYYY-MM-DD/step-NNNNNN.parquet`; manifest `posting_counts: {name: rows}` with every declared posting table present (0 when it wrote nothing); `schema.json` table kind `"posting"`; `io.read.read_postings(dir, names=None) -> dict[str, pl.DataFrame]`.
 
 - [ ] **Step 1: Write the `ledger` fixture**
 
@@ -1500,7 +1656,7 @@ Claude-Session: https://claude.ai/code/session_01BKddEJ7kY3XR8oXDK9HriN"
   - `AccumulatorDef(name, code, ltype)`; `Plan.accumulators: tuple[AccumulatorDef, ...]` (default `()`).
   - Kernel call `out.add_<name>(value)` → generated `_add_<name>(out, ctx, v)`: `acc = out[OUT_ACC]; acc[code] = std.checked_add(acc[code], v)`.
   - `World.take_accumulators() -> dict[str, int]`: sums every worker's `acc`, zeroes them.
-  - `SealedStep.accumulators: dict[str, int]` (this step's delta, warm-up steps included); manifest `accumulators: {name: total over exported steps}`; step index `acc__<name>` (delta on exported steps, 0 on warm-up steps).
+  - `SealedStep.accumulators: dict[str, int] = field(default_factory=dict)` (this step's delta, warm-up steps included); manifest `accumulators: {name: total over exported steps}`; step index `acc__<name>` (delta on exported steps, 0 on warm-up steps).
 
 - [ ] **Step 1: Extend the fixture**
 
@@ -1557,6 +1713,18 @@ def test_totals_cover_exported_steps_only(tmp_path):
     idx = read_step_index(r.out_dir).to_pydict()
     assert sum(idx["acc__fees"]) == m["accumulators"]["fees"]
     assert idx["acc__fees"][0] == 0                     # step 0 is warm-up
+
+
+def test_an_empty_run_writes_zeros(tmp_path):
+    """Review Focus #5: `accts=1` opens its single account in warm-up (initial 0.5 of 1 rounds
+    to 1; no arrivals are left), so nothing is exported: zero counts, zero postings and every
+    accumulator at 0 (Task 9 adds the laws' `checked = 0`)."""
+    r = run_to_dataset(FIXTURES / "ledger", "sample", ["accts=1"], out_dir=tmp_path / "empty",
+                       threads=1)
+    m = json.loads((r.out_dir / "manifest.json").read_text())
+    assert sum(m["counts"].values()) == 0
+    assert m["posting_counts"] == {"entry": 0}
+    assert m["accumulators"] == {"fees": 0}
 
 
 def test_an_add_before_reject_is_a_write_in_checked_mode(tmp_path):
@@ -1703,7 +1871,7 @@ Claude-Session: https://claude.ai/code/session_01BKddEJ7kY3XR8oXDK9HriN"
 
 **Files:**
 - Create: `libs/simkit/src/neorisk_simkit/checks/laws.py`
-- Modify: `libs/simkit/src/neorisk_simkit/spec/law.py` (`total_le`, `balanced`), `spec/validate.py` (law paths; drop the "not evaluated until S2" warning), `spec/project.py` (`budget.max_checker_keys`), `spec/caps.py` (`checker_state`), `engine/errors.py` (`LawViolation`), `engine/run.py` (`Simulation` owns a `LawBook`; `check_s`), `io/dataset.py` + `io/manifest.py` (manifest `laws`; `stage_seconds["check"]`), `checks/__init__.py` (docstring), `apps/datagen/src/datagen/run_cmds.py` + `apps/datagen/src/datagen/benchmark.py` (exit 4, D58), `libs/simkit/tests/fixtures/ledger/specs/{pack.py,kernels.py}`
+- Modify: `libs/simkit/src/neorisk_simkit/spec/law.py` (`total_le`, `balanced`), `spec/validate.py` (law paths; drop the "not evaluated until S2" warning), `spec/project.py` (`budget.max_checker_keys`), `spec/caps.py` (`checker_state`), `engine/errors.py` (`LawViolation`), `engine/run.py` (`Simulation` owns a `LawBook`, feeds it every step; `check_s`), `io/seal.py` (`seal_step(..., law_tables=)`, `SealedStep.warmup_rows`; F-01), `io/dataset.py` + `io/manifest.py` (manifest `laws`; `stage_seconds["check"]`), `checks/__init__.py` (docstring), `apps/datagen/src/datagen/run_cmds.py` + `apps/datagen/src/datagen/benchmark.py` (exit 4, D58), `libs/simkit/tests/fixtures/ledger/specs/{pack.py,kernels.py}`
 - Test: `libs/simkit/tests/test_checks_laws.py`, `apps/datagen/tests/test_datagen_run_cli.py` (append)
 
 **Interfaces:**
@@ -1712,10 +1880,12 @@ Claude-Session: https://claude.ai/code/session_01BKddEJ7kY3XR8oXDK9HriN"
   - `law.total_le(lhs: str, limit: int) -> LawSpec`; `law.balanced(table: str, *, amount: str = "amount", side: str = "side", by: tuple[str, ...] = ("partition_id", "lamport")) -> LawSpec`.
   - `errors.LawViolation(check_id, table, partition_id, seq, action_id, detail)`; attributes of the same names; message `f"law {check_id} violated in {table} at (partition_id {partition_id}, seq {seq}), action {action_id}: {detail}"` (state laws: `table = "state <path>"`, `seq = -1`, `action_id = -1`).
   - `checks.laws.resolve_path(plan, path) -> tuple[str, str, str]`: `("event", table, column)` for an event or posting column, `("owner", partition, column)` for an owner table column, `("shard", partition, field)` for a shard state field; `ValueError(f"unknown path {path!r}")` otherwise.
-  - `checks.laws.LawBook(plan, *, max_keys: int)`: `step(sealed, world) -> dict[str, int]` (rows checked per check this step; raises `LawViolation` for a required law); `finish(end_us: int) -> None`; `report() -> dict[str, dict]` = `{id: {"law": kind, "required": bool, "checked": int, "violations": int, "censored": int, "first": None | {"table", "partition_id", "seq", "action_id", "detail"}}}`; `keys -> int` (carried keys; above `max_keys` raises `CapExceeded("checker_state", 24 * max_keys, 24 * keys)`).
+  - `checks.laws.LawBook(plan, *, max_keys: int)`: `tables -> frozenset[str]` (the event and posting tables any check reads); `step(sealed, world, *, exported: bool = True) -> dict[str, int]` (rows checked per check this step; raises `LawViolation` for a required law). With `exported=False` (a warm-up step, F-01: §11 reducers start from the opening snapshot) it reads `sealed.warmup_rows` instead of `sealed.events` / `sealed.postings`, updates carried state only — `total_le` running totals, `at_most_once` key sets (Task 10: `sum_le` sums, open `resolved` keys) — and returns `0` for every check: nothing is counted in `checked` or `violations` and nothing raises (a duplicate inside warm-up is not judged); state laws and `balanced` do nothing on warm-up steps. `finish(end_us: int) -> None`; `report() -> dict[str, dict]` = `{id: {"law": kind, "required": bool, "checked": int, "violations": int, "censored": int, "first": None | {"table", "partition_id", "seq", "action_id", "detail"}}}`; `keys -> int` (carried keys; above `max_keys` raises `CapExceeded("checker_state", 24 * max_keys, 24 * keys)`).
   - Laws evaluated here: `never_negative` (event column: each row; owner/shard state: every live value at each exported seal), `total_le` (running total over the run), `at_most_once` (keys seen across the run, carried as a sorted int64 array; multi-column keys are hashed with `rng.mix` per row), `balanced` (per step: Σ debit − Σ credit = 0 per `by` group; `side` values `"debit"`/`"credit"`). Task 10 adds `sum_le` and `resolved`; until then `step` counts them as `checked = 0`.
+  - `seal.seal_step(world, step, t0, t1, exported, id_bases, *, law_tables: frozenset[str] = frozenset())`: on a warm-up step it also builds `SealedStep.warmup_rows: dict[str, pa.Table] = field(default_factory=dict)` = `{name: event_table(e, records[name], dict(id_bases), seed)}` for each event or posting table named in `law_tables`, from the full (remapped) rows before D20 empties them; `dict(id_bases)` is a throwaway copy, so exported `event_id`s are unchanged. On exported steps `warmup_rows` stays empty.
+  - `Simulation.steps()`: `seal_step(..., law_tables=self.laws.tables)`, then for every step `self.laws.step(sealed, self.world, exported=sealed.exported)`, then `sealed.warmup_rows.clear()` (never written).
   - `Simulation.stats["laws"] = LawBook.report()` after the run; `stats["check_s"]`; `run_stats.json` `stage_seconds["check"]`; manifest `laws`.
-  - `Budget.max_checker_keys: int` (toml `budget.max_checker_keys`, default `50_000_000`); `caps` `checker_state` = `24 × max_checker_keys` when the plan declares checks, else 0.
+  - `Budget.max_checker_keys: int` (toml `budget.max_checker_keys`, default `50_000_000`); `caps` `checker_state` = `24 × max_checker_keys` when the plan declares checks, else 0 (keys carried from warm-up count too). `compute_caps` keeps all 11 `CAP_ITEMS`, `entity_buffers` included (only the `checker_state` entry changes).
   - `datagen run` exits 4 on `LawViolation`; the benchmark child too.
 
 - [ ] **Step 1: Extend the `ledger` fixture**
@@ -1784,7 +1954,13 @@ def _table(rows, cats=()):
 def _sealed(t0, t1, events=None, postings=None):
     return SimpleNamespace(step=0, t_start=t0, t_end=t1, exported=True,
                            events=events or {}, postings=postings or {}, history={},
-                           entities={}, stats={})
+                           entities={}, stats={}, warmup_rows={})
+
+
+def _warm(t0, t1, rows):
+    """A warm-up step: nothing exported; the law tables' rows ride in `warmup_rows` (F-01)."""
+    return SimpleNamespace(step=0, t_start=t0, t_end=t1, exported=False, events={},
+                           postings={}, history={}, entities={}, stats={}, warmup_rows=rows)
 
 
 def test_paths_resolve():
@@ -1830,6 +2006,31 @@ def test_at_most_once_within_and_across_steps():
     book.step(_sealed(0, 10, {"opened": _table([{"t": 1, "acct_id": 4, "amount": 1},
                                                 {"t": 2, "acct_id": 5, "amount": 1}])}), None)
     assert book.keys == 2
+    with pytest.raises(LawViolation, match="acct_id 4 seen before"):
+        book.step(_sealed(10, 20, {"opened": _table([{"t": 11, "acct_id": 4, "amount": 1}])}),
+                  None)
+
+
+def test_warmup_rows_build_state_without_judging():
+    """F-01 (§11: reducers start from the opening snapshot): warm-up rows feed running totals
+    and key sets but are never counted, cited or judged."""
+    book = LawBook(_plan(("chk.cap", law.total_le("opened.amount", 10), True),
+                         ("chk.once", law.at_most_once("opened", key="acct_id"), True)),
+                   max_keys=10)
+    warm = _table([{"t": 1, "acct_id": 4, "amount": 6}, {"t": 2, "acct_id": 4, "amount": 1}])
+    assert book.step(_warm(0, 10, {"opened": warm}), None, exported=False) == \
+        {"chk.cap": 0, "chk.once": 0}               # the warm-up duplicate of 4 is not judged
+    assert book.report()["chk.cap"]["checked"] == book.report()["chk.once"]["checked"] == 0
+    with pytest.raises(LawViolation, match="total 11 exceeds 10"):   # 7 from warm-up + 4
+        book.step(_sealed(10, 20, {"opened": _table([{"t": 11, "acct_id": 5, "amount": 4}])}),
+                  None)
+
+
+def test_a_key_seen_in_warmup_is_seen_before():
+    book = LawBook(_plan(("chk.once", law.at_most_once("opened", key="acct_id"), True)),
+                   max_keys=10)
+    book.step(_warm(0, 10, {"opened": _table([{"t": 1, "acct_id": 4, "amount": 1}])}), None,
+              exported=False)
     with pytest.raises(LawViolation, match="acct_id 4 seen before"):
         book.step(_sealed(10, 20, {"opened": _table([{"t": 11, "acct_id": 4, "amount": 1}])}),
                   None)
@@ -1883,6 +2084,17 @@ def test_a_required_violation_fails_the_run(tmp_path):
     with pytest.raises(LawViolation, match="chk.opened_positive"):
         run_to_dataset(FIXTURES / "ledger", "sample", ["bad=1"], out_dir=out, threads=1)
     assert not out.exists() and not out.with_suffix(".partial").exists()
+
+
+def test_an_empty_run_checks_nothing(tmp_path):
+    """Review Focus #5: the single account opens in warm-up (Task 7's `accts=1` run): the row
+    laws pass vacuously with `checked = 0`, even though `bad=1` makes the warm-up row negative
+    (warm-up rows are never judged, F-01)."""
+    r = run_to_dataset(FIXTURES / "ledger", "sample", ["accts=1", "bad=1"],
+                       out_dir=tmp_path / "empty", threads=1)
+    laws = json.loads((r.out_dir / "manifest.json").read_text())["laws"]
+    for k in ("chk.opened_positive", "chk.entries_balance"):
+        assert (laws[k]["checked"], laws[k]["violations"]) == (0, 0), k
 ```
 
 Append to `apps/datagen/tests/test_datagen_run_cli.py`:
@@ -1907,14 +2119,15 @@ Expected: FAIL with `ModuleNotFoundError: No module named 'neorisk_simkit.checks
   - Checks run in declaration order; within a check, a required violation raises at its first offending row in canonical order; a non-required one increments `violations` and keeps the first citation.
 - `law.total_le`, `law.balanced` as in Interfaces.
 - `validate.py`: for each check, `resolve_path` every path; per kind: `never_negative` path must resolve; `sum_le`/`total_le` sides must be event columns; `resolved` and `at_most_once` event names must exist with the key columns; `balanced` table must exist with `amount`, `side` (a `cat` holding `"debit"` and `"credit"`) and every `by` column (common columns allowed). Errors are `f"check {id}: {reason}"`. Remove the "checks declared but not evaluated until S2" warning.
-- `Simulation`: `self.laws = LawBook(run.plan, max_keys=run.budget.max_checker_keys)`; after each exported seal `sealed.stats["laws"] = self.laws.step(sealed, self.world)` timed into `stats["check_s"]`; after the last step `self.laws.finish(end)` and `self.stats["laws"] = self.laws.report()`.
+- `Simulation`: `self.laws = LawBook(run.plan, max_keys=run.budget.max_checker_keys)`; every `seal_step` call passes `law_tables=self.laws.tables`; after each seal, warm-up or exported, `sealed.stats["laws"] = self.laws.step(sealed, self.world, exported=sealed.exported)` timed into `stats["check_s"]`, then `sealed.warmup_rows.clear()`; after the last step `self.laws.finish(end)` and `self.stats["laws"] = self.laws.report()`.
+- `seal_step`: after the remap (step 3) and before `keep()` empties warm-up rows (D20), when `not exported` build `warmup_rows` for the names in `law_tables` as in Interfaces (posting tables included; Task 6's split happens on the same `event_table` outputs).
 - `dataset`: manifest `laws=sim.stats["laws"]`; `run_stats.json` `stage_seconds["check"] = sim.stats["check_s"]`.
 - `run_cmds.cmd_run` and `benchmark._child_main`: `except LawViolation as e: print(e, file=sys.stderr); return 4`; `benchmark.cmd_benchmark` passes child code 4 through like 2 and 3.
 
 - [ ] **Step 5: Run tests to verify they pass**
 
 Run: `uv run --all-packages pytest libs/simkit/tests/test_checks_laws.py apps/datagen/tests/test_datagen_run_cli.py libs/simkit/tests/test_spec_validate.py -v`
-Expected: PASS. `examples/ecommerce_s1` now evaluates `chk.stock_never_negative` (`inventory.on_hand`, a shard state field) on every exported seal; `apps/datagen/tests/test_example_ecom_s1.py` must stay green.
+Expected: PASS (`test_checks_laws.py`: 13 tests). `examples/ecommerce_s1` now evaluates `chk.stock_never_negative` (`inventory.on_hand`, a shard state field) on every exported seal; `apps/datagen/tests/test_example_ecom_s1.py` must stay green.
 
 - [ ] **Step 6: Full suite, lint and commit**
 
@@ -1939,7 +2152,8 @@ Claude-Session: https://claude.ai/code/session_01BKddEJ7kY3XR8oXDK9HriN"
 - Consumes: Task 9 `LawBook`, `_plan`/`_table`/`_sealed` test helpers (re-declared in the new test file; test files do not import each other).
 - Produces:
   - `sum_le(lhs, rhs, by)`: both sides `<event>.<column>`; per key (`by`, a column present in both events), in canonical order over the merged stream of both events, the running Σ lhs must stay ≤ the running Σ rhs at every lhs row; sums carried across steps (sorted key arrays). Detail: `f"{by} {k}: {lhs} total {l} exceeds {rhs} total {r}"`.
-  - `resolved(event, by, key, within)`: every `event` row opens its key; the first later row of any `by` event with the same key closes it; a key still open when the step that contains `opened_at + within` ends is a violation (`f"{key} {k} opened at {t} not resolved within {within}"`, citing the opening row); a key open at `finish(end_us)` whose deadline is `>= end_us` is censored (`report()[id]["censored"]`), one whose deadline is `< end_us` is a violation. `within=None` means "by the end of the run": still open at the end → censored. Closing rows whose key was never opened in the exported stream (opened during warm-up) are ignored and counted in `report()[id]["unmatched"]`.
+  - `resolved(event, by, key, within)`: every `event` row opens its key; the first later row of any `by` event with the same key closes it; a key still open when the step that contains `opened_at + within` ends is a violation (`f"{key} {k} opened at {t} not resolved within {within}"`, citing the opening row); a key open at `finish(end_us)` whose deadline is `>= end_us` is censored (`report()[id]["censored"]`), one whose deadline is `< end_us` is a violation. `within=None` means "by the end of the run": still open at the end → censored. Closing rows whose key was never opened (neither in warm-up nor exported) are ignored and counted in `report()[id]["unmatched"]`.
+  - Warm-up steps (`exported=False`, F-01): `sum_le` adds warm-up rows of both sides to the carried per-key sums without judging; `resolved` opens keys from warm-up rows and closes them with warm-up or exported closing rows, but a key opened in warm-up is never judged, censored or cited — at its deadline (or at `finish`) it is dropped. An exported close of a warm-up opening is therefore matched, not `unmatched`.
   - Both count toward `keys`.
   - Evaluation order (also binding for Task 9's laws): within a step, checks run in declaration order and the first required check with a violation raises.
 
@@ -1991,7 +2205,14 @@ def _sealed(t0, t1, opened=None, entry=None):
     return SimpleNamespace(step=0, t_start=t0, t_end=t1, exported=True,
                            events={} if opened is None else {"opened": opened},
                            postings={} if entry is None else {"entry": entry},
-                           history={}, entities={}, stats={})
+                           history={}, entities={}, stats={}, warmup_rows={})
+
+
+def _warm(t0, t1, opened=None, entry=None):
+    """A warm-up step (F-01): the law tables' rows ride in `warmup_rows`."""
+    rows = {k: v for k, v in (("opened", opened), ("entry", entry)) if v is not None}
+    return SimpleNamespace(step=0, t_start=t0, t_end=t1, exported=False, events={},
+                           postings={}, history={}, entities={}, stats={}, warmup_rows=rows)
 
 
 def _book(*checks):
@@ -2026,6 +2247,31 @@ def test_sum_le_carries_sums_across_steps():
     with pytest.raises(LawViolation, match="acct_id 5: opened.amount total 11 exceeds "
                                            "entry.amount total 10"):
         book.step(_sealed(20, 30, opened=_table([{"t": 21, "acct_id": 5, "amount": 2}])), None)
+
+
+def test_sum_le_counts_the_right_side_seen_in_warmup():
+    """F-01: a capture in warm-up and its refund after `start` (here: an opening in warm-up and
+    a matching posting after `start`) pass; without the warm-up sums the posting would exceed 0."""
+    book = _book(("chk.le2", law.sum_le("entry.amount", "opened.amount", by="acct_id"), True))
+    book.step(_warm(0, 10, opened=_table([{"t": 1, "acct_id": 3, "amount": 5}])), None,
+              exported=False)
+    assert book.step(_sealed(10, 20, entry=_table([{"t": 11, "acct_id": 3, "amount": 5}])),
+                     None) == {"chk.le2": 1}
+    with pytest.raises(LawViolation, match="acct_id 3: entry.amount total 6 exceeds "
+                                           "opened.amount total 5"):
+        book.step(_sealed(20, 30, entry=_table([{"t": 21, "acct_id": 3, "amount": 1}])), None)
+
+
+def test_a_close_of_a_warmup_opening_is_matched_not_judged():
+    book = _book(RES)
+    book.step(_warm(0, 10 * S, opened=_table([{"t": 1 * S, "acct_id": 9, "amount": 0},
+                                              {"t": 8 * S, "acct_id": 8, "amount": 0}])),
+              None, exported=False)          # key 9 misses its 6 s deadline in warm-up: dropped
+    book.step(_sealed(10 * S, 20 * S, entry=_table([{"t": 12 * S, "acct_id": 8, "amount": 0}])),
+              None)                          # key 8 (deadline 13 s) closes after `start`
+    book.finish(20 * S)
+    r = book.report()["chk.res"]
+    assert (r["violations"], r["censored"], r["unmatched"], r["checked"]) == (0, 0, 0, 0)
 
 
 RES = ("chk.res", law.resolved("opened", by=("entry",), key="acct_id", within="5s"), True)
@@ -2082,7 +2328,7 @@ Expected: FAIL — `sum_le`/`resolved` are still counted as `checked = 0`, so no
 - [ ] **Step 4: Run tests to verify they pass**
 
 Run: `uv run --all-packages pytest libs/simkit/tests/test_checks_laws_keyed.py libs/simkit/tests/test_checks_laws.py -v`
-Expected: PASS.
+Expected: PASS (`test_checks_laws_keyed.py`: 9 tests).
 
 - [ ] **Step 5: Full suite, lint and commit**
 
@@ -2106,13 +2352,13 @@ Claude-Session: https://claude.ai/code/session_01BKddEJ7kY3XR8oXDK9HriN"
 **Interfaces:**
 - Consumes: S1 seal remap, `id_bases`, populations, static tables.
 - Produces:
-  - `structural.ref_bounds(world, id_bases) -> dict[str, int]`: rows known per ref target: population tables → `n`; static/recipe tables → their row count; created namespaces → `id_bases[ns]` (after this step's assignment).
+  - `structural.ref_bounds(world, id_bases) -> dict[str, int]`: rows known per ref target: population tables → `pop.next` of their `World.populations` entry (owners admitted so far, not `n`: a ref to an owner that has not arrived is caught; F-05); static/recipe tables → their row count; created namespaces → `id_bases[ns]` (after this step's assignment). The range form replaces §11's "bitset over dense indices" (D48, recorded spec deviation).
   - `structural.check_ref_range(where: str, values: np.ndarray, target: str, bound: int) -> int`: rows checked (non-`NULL`); raises `EngineError(f"{where}: ref {v} outside [0, {bound}) of {target}")` for the first value outside.
   - `CHECKS` gains `"ref_in_range"`; manifest `checks["ref_in_range"]` counts checked values (exported steps; events, postings, history and created rows).
 
 - [ ] **Step 1: Add the knob**
 
-`fixtures/spawn/specs/pack.py` `Config`: `bad_ref: int = 0`. `kernels.py` `acct_main`: `out.emit_spawned(ctx.t, acct_id=ctx.self_id + 1000 * ctx.cfg.bad_ref, pay_id=pay)`.
+`fixtures/spawn/specs/pack.py` `Config`: `bad_ref: int = 0`. `kernels.py` `acct_main` emits `spawned` in two places (`create_on_answer == 0` in the `START` branch, `create_on_answer == 1` in the answer branch); both become `out.emit_spawned(ctx.t, acct_id=ctx.self_id + 1000 * ctx.cfg.bad_ref, pay_id=pay)` (F-18).
 
 - [ ] **Step 2: Write the failing tests**
 
@@ -2122,10 +2368,11 @@ import json
 
 import numpy as np
 import pytest
-from conftest import FIXTURES
+from conftest import FIXTURES, make_run
 
-from neorisk_simkit.checks.structural import check_ref_range
+from neorisk_simkit.checks.structural import check_ref_range, ref_bounds
 from neorisk_simkit.engine import EngineError
+from neorisk_simkit.engine.world import World
 from neorisk_simkit.io.dataset import run_to_dataset
 from neorisk_simkit.std import NULL
 
@@ -2146,6 +2393,16 @@ def test_a_dangling_ref_fails_the_seal(tmp_path):
                                           r"of acct"):
         run_to_dataset(FIXTURES / "spawn", "sample", ["bad_ref=1"], out_dir=tmp_path / "x",
                        threads=1)
+
+
+def test_population_refs_are_bounded_by_admitted_owners():
+    """F-05: `ledger` has 6 accounts, 3 initial (initial 0.5); before any arrival only dense
+    indices 0..2 exist, so the bound is 3, not 6."""
+    run = make_run("ledger")
+    w = World.build(run, threads=1)
+    t0 = run.start_us - run.warmup_us
+    w.admit_population(t0, t0 + 1)
+    assert ref_bounds(w, {})["acct"] == 3
 ```
 
 - [ ] **Step 3: Run tests to verify they fail**
@@ -2177,8 +2434,8 @@ Claude-Session: https://claude.ai/code/session_01BKddEJ7kY3XR8oXDK9HriN"
 - Test: `apps/datagen/tests/test_example_ecom_s2.py`
 
 **Interfaces:**
-- Consumes: Tasks 1–11 (`ref` shard state and shard `Local` remap, pairing, compiled admission, laws, `std.reservations`, `std.catalog(hot_rows=)`); S1 `std.devices`, `std.stock`.
-- Produces: project `examples/ecommerce_s2`, pack `ecommerce_s2` (`SCHEMA_VERSION = 1`), processes `shopper` (owner `user`), `inventory_desk` and `restock` (shard `inventory`); `kernels` constants used by later tasks: `CART = 4`, `HOLD_SLOTS = 64`, command ids `C_SESSION=1, C_VIEW=2, C_CHECKOUT=3, R_GRANTED=4, R_REJECTED=5` (Tasks 13 and 15 add `C_BILL=6, R_BONUS=7, R_NO_BONUS=8`), shard commands `C_RESERVE=1, C_COMMIT=2, C_RELEASE=3, C_HOLD_EXPIRE=4`; `Config` fields `users, initial_share, referred_share, skus, sku_groups, restock_period, household_share_device, journey: Journey, desk: Desk`.
+- Consumes: Tasks 1–11 (`ref` shard state and shard `Local` remap, pairing, compiled admission, accumulators, laws, `std.reservations`, `std.catalog(hot_rows=)`); S1 `std.devices`, `std.stock`.
+- Produces: project `examples/ecommerce_s2`, pack `ecommerce_s2` (`SCHEMA_VERSION = 1`), processes `shopper` (owner `user`), `inventory_desk` and `restock` (shard `inventory`); accumulator `hot_checkouts` (i64: started checkouts with at least one line in group 0, D53/F-02; manifest `accumulators.hot_checkouts` over exported steps); `kernels` constants used by later tasks: `CART = 4`, `HOLD_SLOTS = 64`, command ids `C_SESSION=1, C_VIEW=2, C_CHECKOUT=3, R_GRANTED=4, R_REJECTED=5` (Tasks 13 and 15 add `C_BILL=6, R_BONUS=7, R_NO_BONUS=8`), shard commands `C_RESERVE=1, C_COMMIT=2, C_RELEASE=3, C_HOLD_EXPIRE=4`; `Config` fields `users, initial_share, referred_share, skus, sku_groups, restock_period, household_share_device, journey: Journey, desk: Desk`.
 
 - [ ] **Step 1: Write the project files**
 
@@ -2252,8 +2509,8 @@ the shard-heavy parts of `examples/ecommerce` and `examples/payments`, as handwr
   limit, then sends one reserve request per line to the line's inventory group, waits for every
   answer, and commits all lines or releases the granted ones. About 2% of shoppers abandon a
   fully granted checkout; their holds expire after a 10-minute TTL.
-- **One hot inventory group** (group 0) holds a small set of SKUs that take about 5% of
-  reserve requests.
+- **One hot inventory group** (group 0) holds a small set of SKUs; about 5% of checkouts have
+  at least one line in it (spec §10: "one hot SKU group taking 5% of checkouts").
 - **Payments** (task 13 onward) are created by checkouts and by bill payments.
 ```
 (Tasks 13–15 append their paragraphs.)
@@ -2278,7 +2535,7 @@ Payments, the bonus pool and campaigns are added by tasks 13 to 15 of the S2 pla
 from dataclasses import dataclass, field
 
 from neorisk_simkit.spec import Pack, dist, law, std
-from neorisk_simkit.spec.types import amount, boolean, cat, i16, i32, opt, ref, ts
+from neorisk_simkit.spec.types import amount, boolean, cat, i16, i32, i64, opt, ref, ts
 
 from . import kernels as k
 
@@ -2415,6 +2672,8 @@ def define(p: Pack, cfg: Config) -> None:
                                                "quantity": i16()})
     p.event("restocked", shard="inventory", doc="Supplier delivery to an inventory group", cols={
         "sku_group": i16(), "sku_id": ref("sku"), "quantity": i32(min=1), "on_hand_after": i32()})
+    # §10 "one hot SKU group taking 5% of checkouts": started checkouts with a line in group 0
+    p.accumulator("hot_checkouts", i64())
     # ---------------------------------------------------------------- processes
     p.process("shopper", owner="user", kernel=k.shopper, config=j,
               start=p.on_created("user"), requests={"reserve": reserve},
@@ -2592,10 +2851,14 @@ def _checkout(ctx, s, loc, out):
     out.emit_checkout_started(ctx.t, user_id=ctx.self_id, session_id=loc.session,
                               checkout_id=loc.checkout, lines=loc.cart_n, subtotal=total,
                               hold_after=s.held)
+    hot = 0
     for i in range(loc.cart_n):                            # one immutable request per line
-        out.request_reserve(ctx.t, shard=ctx.reads.sku.sku_group[loc.cart_sku[i]],
-                            tag=loc.checkout, sku_id=loc.cart_sku[i], quantity=loc.cart_qty[i],
-                            line=i)
+        grp = ctx.reads.sku.sku_group[loc.cart_sku[i]]
+        if grp == 0:
+            hot = 1
+        out.request_reserve(ctx.t, shard=grp, tag=loc.checkout, sku_id=loc.cart_sku[i],
+                            quantity=loc.cart_qty[i], line=i)
+    out.add_hot_checkouts(hot)                             # D53: a checkout reaching group 0
     return COMMIT                                          # suspends: join of cart_n answers
 
 
@@ -2843,11 +3106,23 @@ def test_holds_expire_exactly_one_ttl_after_the_reserve(ev):
     assert ((x["event_time"] - x["t0"]) == timedelta(seconds=600)).all()
 
 
-def test_the_hot_group_takes_a_share_of_reserves(ev):
-    reserves = pl.concat([ev["stock_reserved"].select("sku_group"),
-                          ev["stock_rejected"].select("sku_group")])
-    share = (reserves["sku_group"] == 0).mean()
-    assert 0.03 <= share <= 0.15
+def test_two_lines_of_one_cart_can_share_a_shard(ev):
+    """Review Focus #2: two lines of one cart reserved in the same inventory group."""
+    per = ev["stock_reserved"].group_by("checkout_id", "sku_group").len()
+    assert (per["len"] >= 2).any()
+
+
+def test_the_hot_group_takes_a_share_of_checkouts(run, ev):
+    """§10 "one hot SKU group taking 5% of checkouts" (D53, F-02): the shopper's accumulator
+    equals the checkouts with a reserve to group 0; the reserve share is information only."""
+    m = json.loads((run.out_dir / "manifest.json").read_text())
+    started = ev["checkout_started"].select("checkout_id")
+    hot_ids = pl.concat([ev["stock_reserved"].select("checkout_id", "sku_group"),
+                         ev["stock_rejected"].select("checkout_id", "sku_group")]
+                        ).filter(pl.col("sku_group") == 0)["checkout_id"].unique()
+    n_hot = started.join(hot_ids.to_frame(), on="checkout_id").height
+    assert m["accumulators"]["hot_checkouts"] == n_hot > 0
+    assert 0.03 <= n_hot / started.height <= 0.25
 
 
 def test_laws_hold_and_requests_pair(run):
@@ -2882,7 +3157,7 @@ def test_a_commit_after_the_ttl_is_late_and_moves_no_stock(tmp_path):
 - [ ] **Step 3: Run tests to verify they fail**
 
 Run: `uv run --all-packages pytest apps/datagen/tests/test_example_ecom_s2.py -v`
-Expected: FAIL (`ProjectError: no datagen.toml in .../examples/ecommerce_s2` until Step 1's files exist; then failures name the first missing behavior). The first run compiles the S2 module (several minutes cold).
+Expected: Step 1 already wrote the project, so the tests run; whatever fails names the first behavior the kernels or pack get wrong (a lowering error, a law violation or an assertion), and everything may already pass. The first run compiles the S2 module (several minutes cold). (If Steps 1–2 are done in the other order, the first error is `ProjectError: no datagen.toml in .../examples/ecommerce_s2`.)
 
 - [ ] **Step 4: Make the tests pass**
 
@@ -2941,7 +3216,7 @@ class PayLife:
 ```
 `Journey` gains `bill_gap: dist.Dist = dist.exp(mean_days=20)`, `bill_median: float = 6_000.0`, `bill_sigma: float = 0.8`. `Config` gains `payments_live_ratio: float = 1.5` and `pay: PayLife = field(default_factory=PayLife)`.
 
-In `define`, after the inventory section:
+In `define`, right after the user events (see the placement note below):
 ```python
     # ---------------------------------------------------------------- payments (§09)
     payment = p.table("payment", key="payment_id", mutable=True, doc="A card payment", cols={
@@ -2970,7 +3245,7 @@ In `define`, after the inventory section:
     p.check("chk.one_capture", law.at_most_once("payment_captured", key="payment_id"),
             required=True)
 ```
-`checkout_succeeded` gains `"payment_id": ref("payment")` (place the payments section's table and owner before the events block so the ref target exists; refs resolve at plan build, so declaration order of tables only matters for `p.owner`). The `u` dict must be defined before its use here (move the payments block after the user events).
+`checkout_succeeded` gains `"payment_id": ref("payment")`. Place the whole payments block above right after the user events (after `checkout_succeeded`, where `u` is defined) and before the inventory events; refs resolve at plan build, so `checkout_succeeded` may name `payment` before `p.table("payment")` runs, and `p.owner("payment")` only has to follow `p.table("payment")` (F-16).
 
 - [ ] **Step 2: Extend the kernels**
 
@@ -2989,9 +3264,9 @@ PAY_LOCAL = Local(status="i8", captured="i64", refunded="i64", refund_hold="i64"
                   refunds="i8", dispute="i8", disputed="i64", window_end="i64",
                   idem_key="ref[4]", idem_result="i8[4]", idem_amount="i64[4]", idem_n="i8")
 ```
-- `shopper` decorator: `records` gains `"bill_payment_started": 1`, `creates` gains `"payment": 1`, `timers=2`, `requests=CART + 1`; dispatch adds `if cmd.kind == C_BILL: return _bill(ctx, out, cfg)` before the `_answer` fallthrough.
+- `shopper` decorator: `records` gains `"bill_payment_started": 1`, `creates` gains `"payment": 1`, `timers=2`, `requests=CART` (unchanged: the payment's creation message is reserved automatically, Task 4); dispatch adds `if cmd.kind == C_BILL: return _bill(ctx, out, cfg)` before the `_answer` fallthrough.
 - `_signup`: draw `bill = ctx.rng.dist_us(site=6, d=cfg.bill_gap)` before the reserve, reserve `timers=2`, and add `out.timer(ctx.t + bill, C_BILL, prio=PRIO_TIMER)`.
-- `_answer`: draw `method = ctx.rng.categorical(site=24, p=(0.7, 0.22, 0.08))` with the other draws; reserve `creates={"payment": 1}` and `requests=CART + 1`; in the commit-all branch, before `emit_checkout_succeeded`:
+- `_answer`: draw `method = ctx.rng.categorical(site=24, p=(0.7, 0.22, 0.08))` with the other draws; reserve `creates={"payment": 1}` (its `requests=CART` stays: the creation message is counted automatically); in the commit-all branch, before `emit_checkout_succeeded`:
 ```python
             pay = out.create_payment(user_id=ctx.self_id, checkout_id=loc.checkout,
                                      amount=loc.subtotal, method=method, origin="checkout")
@@ -3004,9 +3279,8 @@ def _bill(ctx, out, cfg):
                                            sigma=cfg.bill_sigma))
     method = ctx.rng.categorical(site=41, p=(0.8, 0.2, 0.0))
     nxt = ctx.rng.dist_us(site=42, d=cfg.bill_gap)
-    if not out.reserve(records={"bill_payment_started": 1}, creates={"payment": 1}, timers=1,
-                       requests=1):
-        return RETRY
+    if not out.reserve(records={"bill_payment_started": 1}, creates={"payment": 1}, timers=1):
+        return RETRY                                       # + its creation message (automatic)
     pay = out.create_payment(user_id=ctx.self_id, checkout_id=std.NULL, amount=amt,
                              method=method, origin="bill")
     out.emit_bill_payment_started(ctx.t, user_id=ctx.self_id, payment_id=pay, amount=amt)
@@ -3168,9 +3442,12 @@ def test_payments_are_their_own_partitions(ev):
 
 
 def test_payments_retire_after_their_window_and_slots_are_reused(tmp_path):
+    # F-11: nothing cancels the auth-expiry timer, so a captured payment lives until it fires;
+    # a 2 h expiry and a 1-day window keep a payment alive about a day, and bills every ~2 days
+    # keep about 600 payments live at once while more than 5,000 are made over 10 days
     over = ["users=1000", "skus=300", "sku_groups=4", "run.span=10d", "run.warmup=0s",
-            "payments_live_ratio=0.001", "pay.dispute_window_days=1",
-            "journey.bill_gap.params=[43_200_000_000.0, 0.0, 0.0]", *POOLS]
+            "payments_live_ratio=0.001", "pay.dispute_window_days=1", "pay.auth_expiry_s=7200",
+            "journey.bill_gap.params=[172_800_000_000.0, 0.0, 0.0]", *POOLS]
     r = run_to_dataset(EX, "sample", over, out_dir=tmp_path / "reuse", threads=2)
     ev = read_events(r.out_dir)
     made = ev["checkout_succeeded"].height + ev["bill_payment_started"].height
@@ -3433,7 +3710,7 @@ def test_payment_laws_hold(run):
 - [ ] **Step 4: Run tests to verify they fail, then make them pass**
 
 Run: `uv run --all-packages pytest apps/datagen/tests/test_example_ecom_s2_refunds.py -v`
-Expected first: FAIL (`KeyError: 'refund_settled'` or `unknown setting 'pay.refund_p'`); after Steps 1–2: PASS (6 tests); Tasks 12–13 tests still pass.
+Expected first: FAIL (`KeyError: 'refund_settled'` or `unknown setting 'pay.refund_p'`); after Steps 1–2: PASS (6 tests); Tasks 12–13 tests still pass — their runs have a 1-day warm-up, and a refund after `start` of a payment captured in warm-up passes `chk.refunds_le_captured` because the warm-up capture reached the law's carried sums (Task 9 F-01 feed). If it fails there, the warm-up feed is wrong, not the law.
 
 - [ ] **Step 5: Full suite, lint, commit**
 
@@ -3468,7 +3745,7 @@ Claude-Session: https://claude.ai/code/session_01BKddEJ7kY3XR8oXDK9HriN"
 
 - [ ] **Step 2: Extend the kernels**
 
-Shopper: `SHOPPER_COMMANDS` adds `R_BONUS, R_NO_BONUS`; decorator `records` adds `"referral_bonus_paid": 1, "referral_bonus_denied": 1`, `creates` adds `"claim": 1`, `requests=CART + 2`; dispatch adds `if cmd.kind == R_BONUS or cmd.kind == R_NO_BONUS: return _bonus(ctx, cmd, out)` before `_answer`; `_answer` reserves `creates={"payment": 1, "claim": 1}`, `requests=CART + 2`, and after `emit_checkout_succeeded`:
+Shopper: `SHOPPER_COMMANDS` adds `R_BONUS, R_NO_BONUS`; decorator `records` adds `"referral_bonus_paid": 1, "referral_bonus_denied": 1`, `creates` adds `"claim": 1`, `requests=CART + 1` (the claim request; the payment's creation message stays automatic); dispatch adds `if cmd.kind == R_BONUS or cmd.kind == R_NO_BONUS: return _bonus(ctx, cmd, out)` before `_answer`; `_answer` reserves `creates={"payment": 1, "claim": 1}`, `requests=CART + 1`, and after `emit_checkout_succeeded`:
 ```python
             if loc.ordered == 0:                           # the referral's first order
                 loc.ordered = 1
@@ -3965,6 +4242,7 @@ from conftest import FIXTURES
 from neorisk_simkit.engine import EngineError
 from neorisk_simkit.engine.errors import LawViolation
 from neorisk_simkit.io.dataset import run_to_dataset
+from neorisk_simkit.io.read import read_events
 
 M = FIXTURES / "mutants"
 
@@ -3997,12 +4275,26 @@ def test_a_soft_law_is_counted_not_fatal(tmp_path):
     laws = json.loads((r.out_dir / "manifest.json").read_text())["laws"]
     assert laws["chk.funded_positive"]["violations"] == 4
     assert laws["chk.funded_positive"]["first"]["detail"] == "amount = -1"
+
+
+def test_simultaneous_claims_at_the_cap_grant_exactly_one(tmp_path):
+    """Review Focus #3: all four accounts claim 100 at t0 and the claims reach the pool at the
+    same instant; with cap 100 exactly one is granted, the other three (and every later claim)
+    are denied, and `chk.pool_cap` passes."""
+    r = run_to_dataset(M, "sample", ["cap=100"], out_dir=tmp_path / "edge", threads=1)
+    ev = read_events(r.out_dir)
+    granted, denied = ev["granted"], ev["denied"]
+    assert granted.height == 1 and granted["remaining_after"].to_list() == [0]
+    t = granted["event_time"][0]
+    assert (denied["event_time"] == t).sum() == 3            # tied at the same instant
+    laws = json.loads((r.out_dir / "manifest.json").read_text())["laws"]
+    assert laws["chk.pool_cap"]["violations"] == 0 and laws["chk.pool_cap"]["checked"] == 1
 ```
 
 - [ ] **Step 3: Run tests to verify they fail, then make them pass**
 
 Run: `uv run --all-packages pytest libs/simkit/tests/test_exit_mutants.py -v`
-Expected first: FAIL (`no datagen.toml in .../fixtures/mutants` until Step 1). After Step 1: PASS (9 tests). A fault that trips a different law than listed means the evaluation order or a law is wrong (Task 10's order rule) — fix the library, not the parametrization.
+Expected first: FAIL (`no datagen.toml in .../fixtures/mutants` until Step 1). After Step 1: PASS (10 tests). A fault that trips a different law than listed means the evaluation order or a law is wrong (Task 10's order rule) — fix the library, not the parametrization.
 
 - [ ] **Step 4: Full suite, lint, commit**
 
@@ -4021,10 +4313,39 @@ Claude-Session: https://claude.ai/code/session_01BKddEJ7kY3XR8oXDK9HriN"
 
 **Files:**
 - Create: `libs/simkit/tests/test_exit_invariance_s2.py`
+- Modify (tests): `libs/simkit/tests/conftest.py` (gains `KEY`, `created_namespaces`, `created_owner_codes`, `canonicalize_ids`), `libs/simkit/tests/test_exit_invariance.py` (imports them from `conftest`; its local definitions are deleted)
 
 **Interfaces:**
-- Consumes: `test_exit_invariance.created_namespaces(project, overrides)` and `canonicalize_ids(dir, created)` (signatures as landed in `230a571`), `conftest.event_dicts`, `conftest.dataset_tree`; the S2 project.
-- Produces: the §10/§12 invariance exit test for a workload that creates owners per checkout and per bill, routes tied requests and holds handles in shards.
+- Consumes: `canonicalize_ids` and `created_namespaces` as left by the S1 Codex fix round in `test_exit_invariance.py` at BASE: `canonicalize_ids(d: Path, created: frozenset[str] | None = None, owner_codes: frozenset[int] = frozenset()) -> dict[str, list[dict]]`. With `owner_codes` (the `ptype_code`s of created owner types) it renames every created ID namespace by first appearance, renames created owners' `partition_id`s, and orders rows partition-free by `(event_time, lamport, type, every other non-ID column)` (non-ID = not `event_id`, not `partition_id`, not a ref to a created namespace), asserting that order is unambiguous; `event_id` becomes the position. So the comparison is a multiset of records after ID canonicalization: only the order among rows that tie on `(event_time, lamport)` across partitions is ignored, and every value is compared exactly. `conftest.event_dicts`, `conftest.dataset_tree`; the S2 project.
+- Produces:
+  - `conftest.created_namespaces(project: Path, overrides: list[str]) -> frozenset[str]` (no defaults: the S1 defaults `EX`, `SMALL` belong to the S1 test), `conftest.created_owner_codes(project: Path, overrides: list[str], created: frozenset[str]) -> frozenset[int]`, `conftest.canonicalize_ids(d: Path, created: frozenset[str], owner_codes: frozenset[int] = frozenset())` (`created` now required; body otherwise unchanged), `conftest.KEY` (F-09: test files do not import each other, Task 10).
+  - The §10/§12 invariance exit test for a workload that creates owners per checkout and per bill, routes tied requests and holds handles in shards.
+
+- [ ] **Step 0: Move the comparison helpers into `conftest.py`**
+
+Append to `libs/simkit/tests/conftest.py`:
+```python
+KEY = ["event_time", "lamport", "partition_id", "seq"]
+
+
+def _plan_of(project: Path, overrides: list[str]):
+    from neorisk_simkit.spec.project import load_project, resolve_run  # lazy: conftest loads first
+    return resolve_run(load_project(project), "sample", list(overrides)).plan
+
+
+def created_namespaces(project: Path, overrides: list[str]) -> frozenset[str]:
+    """The ID namespaces the engine hands out at seal (creatable tables and `ids`): only their
+    dense indices legitimately depend on step boundaries (D13)."""
+    return frozenset(_plan_of(project, overrides).namespaces)
+
+
+def created_owner_codes(project: Path, overrides: list[str],
+                        created: frozenset[str]) -> frozenset[int]:
+    """`ptype_code`s of owner types whose table is created: their `partition_id`s are renamed."""
+    return frozenset(p.ptype_code for p in _plan_of(project, overrides).partitions
+                     if p.kind == "owner" and p.table in created)
+```
+and move `canonicalize_ids` from `test_exit_invariance.py` verbatim (docstring and body), with the signature `canonicalize_ids(d: Path, created: frozenset[str], owner_codes: frozenset[int] = frozenset()) -> dict[str, list[dict]]` and its first line (`created = created_namespaces() if created is None else created`) deleted; its imports go inside the function (`import polars as pl` may stay at module top; `load_schema`, `read_events` lazily). In `test_exit_invariance.py`: delete `KEY`, `created_namespaces`, `canonicalize_ids` and `_creators_plan`; import `from conftest import canonicalize_ids, created_namespaces, created_owner_codes, dataset_tree, event_dicts`; `test_step_lengths_give_identical_logical_records` uses `created = created_namespaces(EX, SMALL)` and `canonicalize_ids(d, created)` for both runs; `test_created_owners_identical_across_step_lengths` uses `created_namespaces(CREATORS, [])` and `codes = created_owner_codes(CREATORS, [], created)`. Run `uv run --all-packages pytest libs/simkit/tests/test_exit_invariance.py -q`: PASS, unchanged.
 
 - [ ] **Step 1: Write the test**
 
@@ -4038,8 +4359,13 @@ import json
 from pathlib import Path
 
 import pytest
-from conftest import dataset_tree, event_dicts
-from test_exit_invariance import canonicalize_ids, created_namespaces
+from conftest import (
+    canonicalize_ids,
+    created_namespaces,
+    created_owner_codes,
+    dataset_tree,
+    event_dicts,
+)
 
 from neorisk_simkit.io.dataset import run_to_dataset
 
@@ -4089,10 +4415,16 @@ def test_threads_and_slabs_give_identical_records(runs, step):
 
 
 def test_step_lengths_give_identical_logical_records(runs):
+    """§12 as read by D37: identical logical records as a multiset after ID canonicalization.
+    Created IDs and created payments' `partition_id`s are renamed and rows are compared in the
+    partition-free order, so only the order among rows tying on (event_time, lamport) across
+    partitions is ignored; every value is compared exactly."""
     created = created_namespaces(EX2, SMALL2)
     assert {"payment", "checkout", "hold", "claim"} <= created
-    assert canonicalize_ids(runs[(1, "4MB", "6h")], created) == \
-        canonicalize_ids(runs[(4, "16KB", "1d")], created)
+    codes = created_owner_codes(EX2, SMALL2, created)
+    assert len(codes) == 1                               # `payment`, the created owner type
+    assert canonicalize_ids(runs[(1, "4MB", "6h")], created, codes) == \
+        canonicalize_ids(runs[(4, "16KB", "1d")], created, codes)
 
 
 def test_identical_replay_is_byte_identical(runs, tmp_path):
@@ -4105,13 +4437,13 @@ def test_identical_replay_is_byte_identical(runs, tmp_path):
 - [ ] **Step 2: Run it**
 
 Run: `uv run --all-packages pytest libs/simkit/tests/test_exit_invariance_s2.py -v`
-Expected: PASS (5 tests). A failure here is an engine bug in Tasks 1–5 or 4b (handles, pairing, admission, routing order); find it with `superpowers:systematic-debugging` and fix the engine, never the comparison. If `created_namespaces`/`canonicalize_ids` have different signatures at HEAD, adapt the calls only.
+Expected: PASS (5 tests). A failure here is an engine bug in Tasks 1–5 or 4b (handles, pairing, admission, routing order); find it with `superpowers:systematic-debugging` and fix the engine, never the comparison. If `canonicalize_ids` trips its own `"partition-free order is ambiguous"` assertion, two rows are identical in every non-ID column (`seq` is already in the key, so the preflight's "add the creator's seq" adds nothing); do not weaken the assertion or the comparison: stop and report the two rows to the controller.
 
 - [ ] **Step 3: Lint, commit**
 
 Run: `uv run ruff check $(ls -d libs apps examples/ecommerce_s1 examples/ecommerce_s2 benchmarks 2>/dev/null)`
 ```bash
-git add libs/simkit/tests/test_exit_invariance_s2.py
+git add libs/simkit/tests/conftest.py libs/simkit/tests/test_exit_invariance.py libs/simkit/tests/test_exit_invariance_s2.py
 git commit -m "test: thread/slab/step invariance exit test on the S2 slice
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
@@ -4125,16 +4457,18 @@ Claude-Session: https://claude.ai/code/session_01BKddEJ7kY3XR8oXDK9HriN"
 §19: "Hot shards serialize ... the S2-pool workload measures it; shard sizes are reported." §10: "exported events, histories, cases, snapshots, postings and labels are counted separately."
 
 **Files:**
-- Modify: `libs/simkit/src/neorisk_simkit/engine/world.py` (`stats["shard_load"]`), `engine/run.py` (round and admission totals), `io/dataset.py` (`run_stats.json` fields)
+- Modify: `libs/simkit/src/neorisk_simkit/engine/world.py` (`stats["shard_load"]`), `engine/codegen.py` (`RS_SHARD_NS`; the drain times its shard phase), `engine/rounds.py` (`RoundStats.shard_ns`; Python rounds time their shard phase), `engine/run.py` (round, admission and shard-phase totals), `io/dataset.py` (`run_stats.json` fields)
 - Test: `libs/simkit/tests/test_engine_shard_stats.py`
 
 **Interfaces:**
-- Consumes: Task 2 `RT_SHARD_REQ`; hidden `occ`; Task 5 compiled rounds and admissions; manifest counts.
-- Produces, in `run_stats.json`:
-  - `shard_load: {shard partition: {"shards": n, "requests": [per shard], "commands": [per shard], "max_share": max(commands) / Σ commands (0 when none)}}` (commands = commits and rejects over the run, from `occ` summed over the partition's processes).
-  - `commands` (all executed commands), `shard_commands`, `shard_command_share = shard_commands / commands`.
-  - `rounds_total`, `compiled_rounds_total`, `admissions_total`.
-  - `counts` (events per type), `posting_counts`, `entity_counts` (copied from the manifest), `events_by_partition: {partition: exported events}`, `populations: {table: n}`.
+- Consumes: Task 2 `RT_SHARD_REQ`; hidden `occ`; Task 5 compiled rounds and admissions; manifest counts and accumulators; `id_bases`.
+- Produces, in `run_stats.json` (each value's counting window in brackets, F-25):
+  - `shard_load: {shard partition: {"shards": n, "requests": [per shard], "commands": [per shard], "max_share": max(commands) / Σ commands (0 when none)}}` (commands = commits and rejects, from `occ` summed over the partition's processes) [whole run].
+  - `commands` (all executed commands), `shard_commands`, `shard_command_share = shard_commands / commands` [whole run].
+  - `rounds_total`, `compiled_rounds_total`, `admissions_total` [whole run].
+  - `counts` (events per type), `posting_counts`, `entity_counts`, `accumulators` (copied from the manifest) [exported], `events_by_partition: {partition: exported events}` [exported], `populations: {table: n}` [whole run], `ids_allocated: {namespace: id_bases[ns] at the end}` (rows of every created table and `p.ids` namespace, warm-up included) [whole run].
+  - Shard-phase rate (D55, F-03) [exported]: `shard_phase_seconds` = Σ `RoundStats.shard_ns` / 1e9 over exported steps; `shard_events` = Σ `events_by_partition[p]` over shard partitions `p`; `shard_events_per_second = shard_events / shard_phase_seconds` (0.0 when no shard time).
+  - `RoundStats.shard_ns: int` (default 0): wall nanoseconds spent in shard phases this step. Python rounds wrap the shard `_run_phase` in `time.perf_counter_ns()`; the compiled drain adds `_now_ns() - t_` around its `PH_SHARDS` phase into `rs[RS_SHARD_NS]` (round-state index after `RS_NLOG`; the round-state array grows by one), where generated `_now_ns()` is `with objmode(t="int64"): t = time.perf_counter_ns()` / `return t` (numba `objmode`; two calls per compiled round). `run_step` zeroes `rs[RS_SHARD_NS]` at step start and adds it to `stats.shard_ns` at the end.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -4176,15 +4510,25 @@ def test_output_is_counted_by_kind_and_partition(mini):
     st, m = mini
     assert st["counts"] == m["counts"] and st["entity_counts"] == m["entity_counts"]
     assert st["posting_counts"] == m["posting_counts"] == {}
+    assert st["accumulators"] == m["accumulators"] == {}
     assert sum(st["events_by_partition"].values()) == st["exported_events"]
     assert set(st["events_by_partition"]) == {"user", "bin"}
     assert st["populations"] == {"user": 200}
+
+
+def test_shard_phase_rate_is_reported(mini):
+    """D55 / F-03: shard-emitted exported events over the seconds spent in shard phases."""
+    st, _ = mini
+    assert st["shard_phase_seconds"] > 0
+    assert st["shard_events"] == st["events_by_partition"]["bin"] > 0
+    assert st["shard_events_per_second"] == st["shard_events"] / st["shard_phase_seconds"]
 
 
 def test_admissions_are_counted(tmp_path):
     r = run_to_dataset(FIXTURES / "chain", "sample", out_dir=tmp_path / "c", threads=1)
     st = json.loads((r.out_dir / "run_stats.json").read_text())
     assert st["admissions_total"] == 8                    # 4 b + 4 c
+    assert st["ids_allocated"] == {"b": 4, "c": 4}
 ```
 
 - [ ] **Step 2: Run tests to verify they fail**
@@ -4192,7 +4536,7 @@ def test_admissions_are_counted(tmp_path):
 Run: `uv run --all-packages pytest libs/simkit/tests/test_engine_shard_stats.py -v`
 Expected: FAIL with `KeyError: 'shard_load'`.
 
-- [ ] **Step 3: Implement**: `World.stats["shard_load"]` from `R[RT_SHARD_REQ]` and `hidden.occ` over each shard partition's slots and `occ_col`s; `Simulation` keeps running `rounds_total`, `compiled_rounds_total` (from `RoundStats.compiled_rounds`), `admissions_total` (sum of `R[RT_ADM][0]` at each step end) and `shard_commands` (Σ `shard_cmds`); `dataset._run_stats` adds the fields above.
+- [ ] **Step 3: Implement**: `World.stats["shard_load"]` from `R[RT_SHARD_REQ]` and `hidden.occ` over each shard partition's slots and `occ_col`s; `Simulation` keeps running `rounds_total`, `compiled_rounds_total` (from `RoundStats.compiled_rounds`), `admissions_total` (sum of `R[RT_ADM][0]` at each step end), `shard_commands` (Σ `shard_cmds`) and, on exported steps only, `shard_ns` (Σ `RoundStats.shard_ns`); `RS_SHARD_NS`, `_now_ns` and the two timing points as in Interfaces; `dataset._run_stats` adds the fields above (`ids_allocated` from the run's final `id_bases`, namespace keys only, not `event:<n>`). The README (Task 21) states each field's window.
 
 - [ ] **Step 4: Run tests, full suite, lint, commit**
 
@@ -4218,9 +4562,10 @@ Claude-Session: https://claude.ai/code/session_01BKddEJ7kY3XR8oXDK9HriN"
 - Consumes: Task 19 stats; S1 `benchmark.Workload`, `evaluate`, `run_benchmark`.
 - Produces:
   - Expectations: `{around, tolerance}` (S1), `{at_least = x}`, `{at_most = x}`; checks report `limit` as `[x, null]` / `[null, x]`.
-  - Gate keys: `warm_seconds`, `peak_rss_gb` (S1), `min_events_per_second` (check name `events_per_second`, value `stats["events_per_second"]`).
-  - `benchmark.derived(stats)` adds: `payments = counts.payment_authorized + counts.payment_declined`; `postings_per_payment_event = posting_counts.ledger / events_by_partition.payment`; `hot_share_of_reserves = shard_load.inventory.requests[0] / Σ requests`; `shard_command_share` (from stats); `campaign_member_share = (populations.campaign + counts.member_joined) / populations.user`. Each is computed only when its inputs exist (S1 reports are unchanged).
-  - Profiles in `examples/ecommerce_s2/datagen.toml`: `full` (the s2 shape, D59) and `pool` (the s2_pool shape, D59); the calibration knobs live in their `set` tables (S1 ruling: calibration in the profile, not pack defaults).
+  - Gate keys: `warm_seconds`, `peak_rss_gb` (S1), `min_events_per_second` (check name `events_per_second`, value `stats["events_per_second"]`), `min_shard_events_per_second` (check name `shard_events_per_second`, value `stats["shard_events_per_second"]`, D55/F-03).
+  - `benchmark.derived(stats)` adds (window per F-25): `payments = counts.payment_authorized + counts.payment_declined` [exported]; `postings_per_payment_event = posting_counts.ledger / events_by_partition.payment` [exported]; `hot_share_of_checkouts = accumulators.hot_checkouts / counts.checkout_started` [exported; gated, F-02]; `hot_share_of_reserves = shard_load.inventory.requests[0] / Σ requests` [whole run; information only]; `shard_command_share` (from stats) [whole run]; `campaign_member_share = (populations.campaign + ids_allocated.member) / populations.user` [whole run: every campaign and member of the run over every user]. Each is computed only when its inputs exist (S1 reports are unchanged).
+  - The benchmark report (`--out` JSON) and `summary` carry both `events_per_second` and `shard_events_per_second` (with `shard_phase_seconds`, `shard_events`) for every workload.
+  - Profiles in `examples/ecommerce_s2/datagen.toml`: `full` (the s2 shape, D59) and `pool` (the s2_pool shape, D59); the calibration knobs live in their `set` tables (S1 ruling: calibration in the profile, not pack defaults). `pool` sizes its own engine pools for 2M users (F-23); `full` keeps the base pools.
 
 - [ ] **Step 1: Write the workload files and profiles**
 
@@ -4248,7 +4593,7 @@ span = "90d"
 exported_events = { around = 100_000_000, tolerance = 0.05 }
 payments = { around = 30_000_000, tolerance = 0.05 }
 postings_per_payment_event = { around = 2.5, tolerance = 0.04 }
-hot_share_of_reserves = { around = 0.05, tolerance = 0.01 }
+hot_share_of_checkouts = { around = 0.05, tolerance = 0.01 }   # §10 "5% of checkouts" (F-02)
 
 [gate]
 warm_seconds = 600
@@ -4259,7 +4604,8 @@ reference = "16 cores / 64 GB"
 `benchmarks/s2_pool.toml`:
 ```toml
 # S2-pool workload (spec §10 and §18): a global capped bonus pool every referral claim
-# reaches, bounty hunters at 1% of users. Shard-dominated (D55).
+# reaches, bounty hunters at 1% of users. Shard-dominated (D55): gated end to end and on the
+# shard path (§18 "shard path >= 80k events/s").
 [workload]
 name = "s2_pool"
 project = "../examples/ecommerce_s2"
@@ -4276,10 +4622,11 @@ span = "30d"
 [expect]
 exported_events = { around = 10_000_000, tolerance = 0.05 }
 campaign_member_share = { around = 0.01, tolerance = 0.002 }
-shard_command_share = { at_least = 0.35 }
+shard_command_share = { at_least = 0.5 }         # shard-dominated: at least half the commands
 
 [gate]
-min_events_per_second = 80_000
+min_events_per_second = 80_000                  # end to end (§10 shard-dominated band)
+min_shard_events_per_second = 80_000            # shard path: shard events / shard-phase s
 threads = 16
 reference = "16 cores / 64 GB"
 ```
@@ -4307,6 +4654,12 @@ referred_share = 0.5
 "journey.views_mean" = 1.5
 "journey.checkout_p" = 0.9
 "journey.signup_delay.params" = [259_200_000_000.0, 0.0, 0.0]
+# engine pools sized for 2M users (F-23; the base pools are sized for the 20M-user `full`
+# profile, which keeps them): one tenth of the base values
+"engine.timer_nodes" = 9_000_000
+"engine.payload_slots" = 400_000
+"engine.max_messages_per_step" = 800_000
+"budget.max_admissions_per_step" = 200_000
 ```
 
 - [ ] **Step 2: Write the failing tests**
@@ -4326,14 +4679,18 @@ GIB = 1024**3
 
 def _stats(**kw):
     base = {"engine_seconds": 500.0, "peak_rss_bytes": 20 * GIB, "exported_events": 101_000_000,
-            "events_per_second": 202_000.0, "proposals": 300_000_000, "commands": 400_000_000,
+            "events_per_second": 202_000.0, "shard_events_per_second": 120_000.0,
+            "shard_phase_seconds": 250.0, "shard_events": 30_000_000,
+            "proposals": 300_000_000, "commands": 400_000_000,
             "shard_command_share": 0.25, "requests_by_boundary": {"reserve": 9_000_000},
             "counts": {"payment_authorized": 29_000_000, "payment_declined": 900_000,
-                       "member_joined": 15_000},
+                       "checkout_started": 10_000_000},
+            "accumulators": {"hot_checkouts": 500_000},
             "posting_counts": {"ledger": 150_000_000},
             "events_by_partition": {"payment": 60_000_000},
             "shard_load": {"inventory": {"requests": [450_000] + [10] * 511}},
             "populations": {"user": 2_000_000, "campaign": 5_000},
+            "ids_allocated": {"member": 15_000},
             "threads": 16, "machine": {"arch": "x86_64", "cpus": 16, "ram_bytes": 64 * GIB}}
     return base | kw
 
@@ -4343,12 +4700,14 @@ def test_workloads_load():
     assert s2.project.name == pool.project.name == "ecommerce_s2"
     assert (s2.profile, pool.profile) == ("full", "pool")
     assert s2.gate["warm_seconds"] == 600 and pool.gate["min_events_per_second"] == 80_000
+    assert pool.gate["min_shard_events_per_second"] == 80_000
 
 
 def test_derived_values():
     d = derived(_stats())
     assert d["payments"] == 29_900_000
     assert d["postings_per_payment_event"] == 2.5
+    assert d["hot_share_of_checkouts"] == 0.05
     assert abs(d["hot_share_of_reserves"] - 450_000 / (450_000 + 5_110)) < 1e-12
     assert d["campaign_member_share"] == (5_000 + 15_000) / 2_000_000
     assert "payments" not in derived({"proposals": 1})           # S1 reports unchanged
@@ -4356,22 +4715,26 @@ def test_derived_values():
 
 def test_s2_gate():
     wl = load_workload(S2)
-    hot = {"inventory": {"requests": [50_000] + [1_850] * 511}}
-    ok = _stats(shard_load=hot)
+    ok = _stats()                                    # the reserve share is not an expectation
     assert evaluate(ok, wl, scale=1.0)["verdict"] == "pass"
     assert evaluate(ok | {"engine_seconds": 601.0}, wl, scale=1.0)["verdict"] == "fail"
+    cold = evaluate(ok | {"accumulators": {"hot_checkouts": 700_000}}, wl, scale=1.0)
+    c = next(c for c in cold["checks"] if c["name"] == "hot_share_of_checkouts")
+    assert not c["ok"]                               # 0.07 is outside 0.05 ± 0.01
 
 
 def test_pool_gate_and_at_least():
     wl = load_workload(POOL)
     ok = _stats(exported_events=10_100_000, events_per_second=90_000.0,
-                shard_command_share=0.4)
+                shard_events_per_second=95_000.0, shard_command_share=0.6)
     r = evaluate(ok, wl, scale=1.0)
     assert r["verdict"] == "pass", r["checks"]
     assert evaluate(ok | {"events_per_second": 79_999.0}, wl, scale=1.0)["verdict"] == "fail"
-    low = evaluate(ok | {"shard_command_share": 0.3}, wl, scale=1.0)
+    assert evaluate(ok | {"shard_events_per_second": 79_999.0}, wl,
+                    scale=1.0)["verdict"] == "fail"
+    low = evaluate(ok | {"shard_command_share": 0.45}, wl, scale=1.0)
     c = next(c for c in low["checks"] if c["name"] == "shard_command_share")
-    assert not c["ok"] and c["limit"] == [0.35, None]
+    assert not c["ok"] and c["limit"] == [0.5, None]
 
 
 def test_s2_profiles_validate():
@@ -4388,7 +4751,8 @@ def test_pool_scaled_smoke_run(tmp_path):
                  "--out", str(out)]) == 0
     rep = json.loads(out.read_text())
     assert rep["verdict"] == "skipped" and rep["exported_events"] > 0
-    for k in ("shard_command_share", "shard_load", "campaign_member_share", "events_per_second"):
+    for k in ("shard_command_share", "shard_load", "campaign_member_share", "events_per_second",
+              "shard_events_per_second", "hot_share_of_checkouts"):
         assert k in rep, k
 ```
 In `apps/datagen/tests/test_example_ecom_s2.py`, `test_project_validates` iterates `("sample", "full", "pool")`.
@@ -4398,7 +4762,7 @@ In `apps/datagen/tests/test_example_ecom_s2.py`, `test_project_validates` iterat
 Run: `uv run --all-packages pytest apps/datagen/tests/test_benchmark_s2.py -v`
 Expected: FAIL (`FileNotFoundError` for `benchmarks/s2.toml` before Step 1; then `KeyError: 'around'` from `evaluate` on `at_least`, and missing derived keys).
 
-- [ ] **Step 4: Implement** the `benchmark.py` changes in Interfaces; `summary` prints `events/s`, every derived value present, and `shard max share` per shard partition. If `test_s2_profiles_validate` fails on the budget, raise engine pools or `budget.memory` in the profile's `set` (never the workload shape); record the change in the commit body.
+- [ ] **Step 4: Implement** the `benchmark.py` changes in Interfaces; `summary` prints `events/s` and `shard-phase events/s`, every derived value present, and `shard max share` per shard partition. If `test_s2_profiles_validate` fails on the budget, raise engine pools or `budget.memory` in the profile's `set` (never the workload shape), but never set `budget.memory` above `"64GB"` (the reference machine, F-24); the caps table checked includes all 11 items, `checker_state` and `entity_buffers` among them. Record the change in the commit body.
 
 - [ ] **Step 5: Run tests, full suite, lint, commit**
 
@@ -4428,12 +4792,12 @@ Measure honestly. The gate and the workload shape are fixed by spec §10/§18; o
 - [ ] **Step 1: Calibrate `pool` (the cheaper workload first)**
 
 Run: `uv run --all-packages datagen benchmark benchmarks/s2_pool.toml --no-gate --out /tmp/s2pool-calib.json`
-Tune only the `pool` profile's `set` (`journey.session_gap_min_h`, `journey.views_mean`, `journey.checkout_p`, `referred_share`, `pool_cap`, `hunt.zombies_mean`) until `exported_events` is within 10⁷ ± 5%, `campaign_member_share` within 0.01 ± 0.002 and `shard_command_share ≥ 0.35`. Set `pool_cap` so the pool drains in the second half of the span (normal users see rejections after hunters, the §07 interference). Record each calibration run (knobs → exported events, shares) in a README table.
+Tune only the `pool` profile's `set` (`journey.session_gap_min_h`, `journey.views_mean`, `journey.checkout_p`, `journey.add_to_cart_p`, `referred_share`, `pool_cap`, `hunt.zombies_mean`, engine pools) until `exported_events` is within 10⁷ ± 5%, `campaign_member_share` within 0.01 ± 0.002 and `shard_command_share ≥ 0.5` (D55/F-03: the workload must actually be shard-dominated; raise the shard work per owner command — more lines per cart, more checkouts and claims per session, fewer views — rather than relaxing the share). Set `pool_cap` so the pool drains in the second half of the span (normal users see rejections after hunters, the §07 interference). Record each calibration run (knobs → exported events, shares) in a README table.
 
 - [ ] **Step 2: Calibrate `full`**
 
 Run: `uv run --all-packages datagen benchmark benchmarks/s2.toml --no-gate --out /tmp/s2-calib.json` (expect tens of minutes for a cold compile plus the run; use `--scale 0.05` to iterate on rates, then confirm at scale 1).
-Tune only the `full` profile's `set` (`journey.session_gap_min_h`, `journey.views_mean`, `journey.bill_gap`, `journey.checkout_p`, `journey.hot_pick_p`, `payments_live_ratio`, engine pools, budget) until `exported_events` ≈ 10⁸ ± 5%, `payments` ≈ 3·10⁷ ± 5%, `postings_per_payment_event` ≈ 2.5 ± 4% and `hot_share_of_reserves` ≈ 0.05 ± 0.01. If `postings_per_payment_event` cannot reach 2.5 with behavior knobs alone, report it — do not change the pack's posting rules to hit a number. If validation refuses the budget on this machine, report the caps table (`datagen validate examples/ecommerce_s2 --profile full`) and the machine's RAM; do not shrink users or payments.
+Tune only the `full` profile's `set` (`journey.session_gap_min_h`, `journey.views_mean`, `journey.bill_gap`, `journey.checkout_p`, `journey.hot_pick_p`, `payments_live_ratio`, engine pools, budget) until `exported_events` ≈ 10⁸ ± 5%, `payments` ≈ 3·10⁷ ± 5%, `postings_per_payment_event` ≈ 2.5 ± 4% and `hot_share_of_checkouts` ≈ 0.05 ± 0.01 (F-02: calibrate `journey.hot_pick_p` against the checkout share; `hot_share_of_reserves` is recorded, not targeted). If `postings_per_payment_event` cannot reach 2.5 with behavior knobs alone, report it — do not change the pack's posting rules to hit a number. `budget.memory` may be raised in the profile up to `"64GB"` (the reference machine) and never above (F-24). If validation refuses the budget on this machine, report the caps table (`datagen validate examples/ecommerce_s2 --profile full`: all 11 items, `checker_state` and `entity_buffers` included) against the machine's RAM; do not shrink users or payments.
 
 - [ ] **Step 3: Measure the gates**
 
@@ -4441,19 +4805,20 @@ Run, in order:
 ```
 uv run --all-packages datagen benchmark benchmarks/s2_pool.toml --cold --out benchmarks/results/s2_pool-cold.json
 uv run --all-packages datagen benchmark benchmarks/s2_pool.toml --out benchmarks/results/s2_pool-warm.json
+uv run --all-packages datagen benchmark benchmarks/s2.toml --cold --out benchmarks/results/s2-cold.json
 uv run --all-packages datagen benchmark benchmarks/s2.toml --out benchmarks/results/s2-warm.json
 uv run --all-packages datagen benchmark benchmarks/s1.toml --out benchmarks/results/s1-warm-s2.json
 ```
-Expected: verdicts as measured. `s1-warm-s2.json` re-measures S1 after D41 and the engine changes (its dataset hash changes once because step boundaries moved; its gate must still pass).
+Expected: verdicts as measured. `s2` gets its own `--cold` run (F-24): the `full` profile fixes `skus = 100_000`, which lowering may inline, so its module can differ from `pool`'s; the README records both cold compile times and both module hashes. The `s2_pool` verdict is `pass` only if both `events_per_second ≥ 80,000` and `shard_events_per_second ≥ 80,000` (with `shard_command_share ≥ 0.5`). `s1-warm-s2.json` re-measures S1 after D41 and the engine changes (its dataset hash changes once because step boundaries moved; its gate must still pass).
 
 - [ ] **Step 4: Write the README sections**
 
-`benchmarks/README.md` gains, for each S2 workload: what the file fixes (spec quote), the profile's calibrated knobs, the calibration table, the gate, and a results table:
+`benchmarks/README.md` gains, for each S2 workload: what the file fixes (spec quote), the profile's calibrated knobs, the calibration table, the gate (for `s2_pool` both gates of D55 and why both), the counting window of every derived value (F-25: exported steps for `payments`, `postings_per_payment_event`, `hot_share_of_checkouts`, `shard_events_per_second`; the whole run, warm-up included, for `shard_command_share`, `hot_share_of_reserves`, `campaign_member_share`, `shard_load`), the caps table from `datagen validate` (all 11 items with `checker_state` and `entity_buffers`; `checker_state` carries about 28M payment keys per keyed law at S2 scale, F-22) against the machine's RAM, and a results table:
 
-| Code | Date | Machine (cores / RAM) | Threads | Exported events | Payments / postings per payment event / hot share (s2) or member share / shard command share (s2_pool) | Warm s | events/s | Cold compile s | Peak RSS GiB | generate / seal / check / write s | Rounds (total / compiled) | Max shard share | Verdict |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Code | Date | Machine (cores / RAM) | Threads | Exported events | Payments / postings per payment event / hot share of checkouts (hot share of reserves) (s2) or member share / shard command share (s2_pool) | Warm s | events/s (end to end) | shard-phase events/s (shard events / shard-phase s) | Cold compile s (module hash) | Peak RSS GiB | generate / seal / check / write s | Rounds (total / compiled) | Max shard share | Verdict |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 
-and a new S1 row. Report numbers exactly as measured. For a `fail`, name the stage that misses its §10 band (generation 0.5–3M/s; merge, checks, export 0.25–2M/s each; shard-dominated end to end 80–300k/s) and the hot shard's `max_share`, and leave the verdict `fail`: Task 22 then runs.
+and a new S1 row. Next to `campaign_member_share` the `s2_pool` section states the approximation (F-08, D52): "1% of users" is (campaigns + members) ÷ users, hunters being a campaign owner with zombie members rather than an overlay cohort of user rows (M3). Report numbers exactly as measured. For a `fail`, name the stage that misses its §10 band (generation 0.5–3M/s; merge, checks, export 0.25–2M/s each; shard-dominated end to end 80–300k/s; for `s2_pool`, which of the two D55 rates misses) and the hot shard's `max_share`, and leave the verdict `fail`: Task 22 then runs.
 
 - [ ] **Step 5: Full suite, lint, commit**
 
@@ -4475,7 +4840,7 @@ The S1 precedent (Task 24b): measure where time goes, change one lever at a time
 **Files:** as the chosen levers require (`engine/codegen.py`, `engine/rounds.py`, `io/seal.py`, `io/writer.py`, `checks/laws.py`); `benchmarks/README.md`.
 
 **Interfaces:**
-- Consumes: Task 21 reports (stage seconds, rounds, `shard_load`, `admissions_total`).
+- Consumes: Task 21 reports (stage seconds, rounds, `shard_load`, `admissions_total`, `shard_phase_seconds`, `shard_events_per_second`).
 - Produces: a passing re-measurement, or a documented `fail` with every lever tried and its measured effect.
 
 - [ ] **Step 1: Capture the identity hashes before any change**
@@ -4493,7 +4858,7 @@ uv run --all-packages datagen run examples/ecommerce_s2 --profile full --seed 42
   2. **Seal conversions in parallel by table**: `event_table` per type on the pool (pure functions of their inputs).
   3. **Law evaluation by check in parallel**, or in numpy instead of polars for `never_negative`/`total_le`, if `stage_seconds.check` exceeds its §10 band.
   4. **Rounds**: tune `engine.parallel_min_partitions` in the profile (a profile knob, output-identical by the S1 compiled/Python round equivalence) and confirm `compiled_rounds_total / rounds_total`.
-  5. **Hot shard**: if `shard_load.pool.max_share` (or inventory group 0) dominates the shard phase, measure the shard phase's own events/s; the pool is one loop by design (§19), so report it rather than split it.
+  5. **Hot shard**: if `shard_load.pool.max_share` (or inventory group 0) dominates the shard phase and `shard_events_per_second` (the D55 shard-path gate) misses, report the hot shard's share of shard-phase time; the pool is one loop by design (§19), so report it rather than split it.
   For each: one test pinning output identity (the reduced-profile hash in a test is too slow; instead compare `event_dicts` of a small run before and after inside the lever's unit test) plus the measured seconds.
 
 - [ ] **Step 4: Re-measure** with the exact Task 21 commands and update the README results (keep the failing row as "before", add "after").
@@ -4522,15 +4887,53 @@ Every item S1 deferred to S2, with its fate; then new deferrals.
 - `cause_id` population (D14) → re-deferred to M3: it needs an event-id index that spans steps (a cause can lie any number of steps back, e.g. a 90-day timer), no S2 law reads it, and pairing is enforced without it (D40).
 - `benchmarks/s2.toml` and `benchmarks/s2_pool.toml` → Tasks 20–21.
 - Created-owner `partition_id` stability across step lengths (D12) → resolved by the controller's reading of §12 (D37): IDs and `partition_id`s of created owners are step-dependent and canonicalized in comparisons; values, including shard-side results of tied requests, are step-invariant through Task 4b (D61); pinned on the S2 slice by Task 18.
-- S1 obligations from contracts/rulings: explicit response tagging → Task 2; seal remap of shard state, shard locals and payload column 9 → Task 1; step cap vs adaptation → Task 3 (D41); generate below its §10 band and single-threaded rounds → measured in Task 21, levers in Task 22; cold compile (~470 s for S1) → reported per workload in Task 21 (`--cold`), not gated (spec §10 times it separately); the create-row index is fixed in S1 and becomes unused once Task 4 moves created state into the creation payload (D43); io constant consolidation → Task 6.
+- S1 obligations from contracts/rulings: explicit response tagging → Task 2; seal remap of shard state, shard locals and payload column 9 → Task 1; step cap vs adaptation → Task 3 (D41); generate below its §10 band and single-threaded rounds → measured in Task 21, levers in Task 22; cold compile (~470 s for S1) → reported per workload in Task 21 (`--cold`), not gated (spec §10 times it separately); the create-row index made incremental in S1 (8f0d693) is deleted by Task 4 once created state rides the creation payload (D43); "kernels creating owners must also reserve requests (or `_reserve_` counts them)" → Task 4 (automatic); io constant consolidation → Task 6.
 
 **New deferrals**
-- **M3**: dispute (and other) child kernels started by `spawn` (D51); the bounty-hunter *overlay* with base-schema parity, cohorts, `suppress`, labels and the interference report (D52); request and join timeouts; statistical checks and `expectations.yaml`; `datagen check`, `report.html`, `checks.json`.
+- **M3**: dispute (and other) child kernels started by `spawn` (D51); the bounty-hunter *overlay* with base-schema parity, cohorts, `suppress`, labels and the interference report (D52; S2 approximates "1% of users" by (campaigns + members) ÷ users, F-08); owner-to-owner messages (D57); per-process `max_spawn_depth` (§06, default 3) and a runtime spawn-depth counter that allows bounded recursion, with `spawn` (D42 is static and refuses every cycle, F-04); `law.sum_le` with a state column on the right side, as in the spec's example `law.sum_le("refund.amount", "payment.captured", by="payment_id")` (S2 takes event columns on both sides, F-07); request and join timeouts; statistical checks and `expectations.yaml`; `datagen check`, `report.html`, `checks.json`.
 - **M4**: label delay on payments and `labels/`; a richer `std.ledger` (accounts as a declared chart, netting is out of scope per §09).
-- **Later**: compiled law reducers by dense index initialized from opening snapshots (S2 evaluates laws in Python on sealed steps); `datagen export --single-file` for postings; replay of postings (§15 replays events only).
+- **Later**: compiled law reducers by dense index initialized from opening snapshots (S2 evaluates laws in Python on sealed steps and builds their state from warm-up steps, F-01); dropping a law's keyed state for retired owners (§10 "dropped with the case"; S2 keeps `at_most_once` / `sum_le` keys for the whole run, about 28M payment keys per law at S2 scale against `max_checker_keys`, F-22); a referential-integrity bitset over dense indices (§11; S2 uses the exact range check, D48/F-05); `datagen export --single-file` for postings; replay of postings (§15 replays events only).
 
 ## Self-review notes (planner)
 
 - **Spec coverage (§18 S2):** payments with refunds and disputes → Tasks 13–14; multi-SKU reservations with TTL → Tasks 8, 12; hot SKU group → Tasks 8, 12; capped bonus pool → Tasks 8, 15; rounds at scale → Tasks 5, 19, 22; cross-partition laws → Tasks 9–11; reference kernel tests → Task 16; mutation tests → Task 17; gates → Tasks 20–21 (and 22 if needed); invariance (§10 "Also verified") → Task 18.
 - **Interfaces checked across tasks:** route tuple indices 22–27 (Tasks 2, 4b, 5); `PAY_KIND` (Tasks 2, 5); `CREATE_HEAD.lamport` (Tasks 4, 4b, 5); `SealedStep.postings` / `.accumulators` (Tasks 6, 7, 9, 11); `LawBook.report()` keys `checked/violations/censored/unmatched/first` (Tasks 9, 10, 12–17); `run_stats.json` keys used by `benchmark.derived` (Tasks 19, 20); S2 kernel command ids (Tasks 12–15).
 - **Known risks during execution:** cold compile of the S2 module (more kernels than S1; first test run of Tasks 12–15 compiles for minutes); 20M users × 30M live payments against this machine's RAM (Task 21 reports caps vs RAM rather than shrinking); `postings_per_payment_event` is structural (2 postings per authorization, 3 per capture) and calibrates only through the event mix.
+
+## Preflight amendments
+
+Applied from `.superpowers/sdd/2026-10-17-simulator-s2/preflight.md` section C with the controller's rulings (`progress.md`); every proposed ruling is accepted except F-03, which the controller decided as "gate both". BASE moved to `f3a5582` (S1 Codex fix round landed).
+
+| Finding | Ruling | Applied in |
+|---|---|---|
+| F-01 laws ignore warm-up state | warm-up steps feed `LawBook.step(exported=False)`: state built, nothing judged | D47; Task 9 (Files, Interfaces `tables` / `step(exported=)` / `seal_step(law_tables=)` / `SealedStep.warmup_rows`, Step 4 `Simulation` and `seal_step`, tests `test_warmup_rows_build_state_without_judging`, `test_a_key_seen_in_warmup_is_seen_before`); Task 10 (Interfaces warm-up rules and `unmatched`, tests `test_sum_le_counts_the_right_side_seen_in_warmup`, `test_a_close_of_a_warmup_opening_is_matched_not_judged`); Task 14 Step 4 note; Deferred (Later) |
+| F-02 hot share measured on reserves | gate `hot_share_of_checkouts`; reserve share information only | D53, D56; Task 12 (brief, accumulator `hot_checkouts` in pack and `_checkout`, Interfaces, test `test_the_hot_group_takes_a_share_of_checkouts`); Task 19 (`accumulators` in `run_stats.json`); Task 20 (derived value, `s2.toml` expectation, tests); Task 21 Step 2 |
+| F-03 s2_pool gate not the shard path | controller: gate BOTH end-to-end `events_per_second ≥ 80k` with `shard_command_share ≥ 0.5`, AND `shard_events_per_second ≥ 80k`; report both | Goal line; D55, D56; Engine reference (`RS_SHARD_NS`); Task 19 (`RoundStats.shard_ns`, `_now_ns`, `shard_phase_seconds`, `shard_events`, `shard_events_per_second`, test `test_shard_phase_rate_is_reported`); Task 20 (`min_shard_events_per_second`, `s2_pool.toml`, report fields, tests); Task 21 Steps 1, 3, 4; Task 22 lever 5 |
+| F-04 static spawn bounds narrow §06 | accept, deviation note | D42; Deferred (M3) |
+| F-05 range check weaker for populations | accept; bound population refs by `pop.next` | D48; Task 11 (Interfaces `ref_bounds`, test `test_population_refs_are_bounded_by_admitted_owners`); Deferred (Later) |
+| F-06 pairing failures lack the §11 citation | append `(partition_id, seq), action` | Task 2 (Interfaces, Step 4 call sites and `_unpaired`, test `test_unpaired_answers_cite_partition_seq_and_action`, count 8) |
+| F-07 `sum_le` event columns only | accept for S2 | D47; Deferred (M3) |
+| F-08 dispute, hunters, owner messages approximated | accept; state the approximation in the S2-pool report | D52; Task 21 Step 4; Deferred (M3) |
+| F-09 `canonicalize_ids` signature / test imports a test | move helpers to `conftest.py` with the landed signature; never weaken | D37; File structure; Task 18 (Files, Interfaces with the real comparison semantics, new Step 0, imports, `created_owner_codes`, step-length test with `owner_codes`, Step 2 ambiguity rule, `git add`) |
+| F-10 partial admission not retry-safe | all-or-nothing node check; `k` computed by `route_outbox`, stored in `CQ`; forced-`ADM_NODES` identity test | D44; Engine reference (`CQ.k`, `ADM_NODES`); Task 5 (Interfaces `CreationQueue`, `route_outbox`, `admit_created`, `World.admit_created`; Step 4 items 2–5; Step 5 `route_outbox` and `_python_round`; test `test_admission_short_of_nodes_admits_nothing_and_retries_identically`) |
+| F-11 retire/reuse test cannot pass | test config: `pay.auth_expiry_s=7200`, bills every 2 days | Task 13 test `test_payments_retire_after_their_window_and_slots_are_reused` |
+| F-12 admission order and D44 signature | Step 4 and the 6-argument form win | D44; Task 5 Interfaces |
+| F-13 D41 names Task 22 | Task 21 | D41 |
+| F-14 D61 key has 5 parts | `(ptype, 0, pid, 0, 0, 0)` | D61 |
+| F-15 route-order test keeps `src_g = 0` | distinct senders from a mini World; file listed | Task 4b (Files, Step 4 replacement test) |
+| F-16 payments block placement contradicts itself | after the user events | Task 13 Step 1 |
+| F-17 frozen dataclass defaults; Files | `field(default_factory=dict)`; list `io/replay/*`, `io/consts.py` | Task 6 (Files, Interfaces); Task 7 Interfaces; File structure |
+| F-18 two `emit_spawned` sites | knob at both | Task 11 Step 1 |
+| F-19 "two places" | only `test_engine_rounds.py:167` | Task 5 Files and test note |
+| F-20 inaccurate expected failures | reworded | Task 4 Step 3 and Step 5; Task 12 Step 3 |
+| F-21 Review Focus cases without pins | empty run; same-shard lines; simultaneous claims at the cap | Review Focus #5; Task 7 `test_an_empty_run_writes_zeros`; Task 9 `test_an_empty_run_checks_nothing`; Task 12 `test_two_lines_of_one_cart_can_share_a_shard`; Task 17 `test_simultaneous_claims_at_the_cap_grant_exactly_one` (count 10) |
+| F-22 checker keys at S2 scale | report `checker_state` in the caps table; Deferred dropping retired keys | Task 9 Interfaces; Task 21 Steps 2, 4; Deferred (Later) |
+| F-23 smoke run allocates base pools | `pool` profile sizes its own pools for 2M users | Task 20 Interfaces and `[profiles.pool.set]` |
+| F-24 memory without ceiling; no s2 `--cold` | `budget.memory ≤ 64GB`; run `s2 --cold` too | Task 20 Step 4; Task 21 Steps 2, 3, 4 |
+| F-25 mixed counting windows | same window per derived value, stated in the README | D56; Task 19 Interfaces (`ids_allocated`, windows); Task 20 derived values; Task 21 Step 4 |
+
+Controller items beyond section C:
+- S1 contracts changed (CX1): created owners take §12 prefix-sum dense IDs again (`seal._owner_dense` gone), nested same-step creators rank by provisional handle → D37 (BASE `f3a5582`, assumptions removed), Task 4 Interfaces and Step 4 (no `seal` change; stale "whichever exist" and `_owner_dense` text removed).
+- Creation messages counted automatically in `_reserve_` / `requests` → D43, Engine reference "Reservations", Task 4 (intro, Files, Interfaces, validate outbox-fit error, codegen `reserve(p)` change, tests `test_creation_messages_count_toward_the_outbox` and `test_creates_reserve_their_creation_messages`); kernels no longer add the unit by hand: `chain` (Task 4), `relay` `acct_main` (Task 4b), shopper `requests=CART` / `_bill` (Task 13), `CART + 1` (Task 15); Deferred S1 items.
+- S1's incremental created-row index (`created_rows_indexed`, 8f0d693) → deleted in Task 4 with `test_admission_indexes_each_created_row_once` rewritten as `test_admission_reads_creation_payloads_in_many_small_batches`; Task 5 replaces that with `test_many_small_admission_batches_stay_compiled` (compiled admission is invisible to a `World.admit_created` spy).
+- New cap item `entity_buffers` → Global Constraints memory items; Task 9 Interfaces (caps keep all 11 items); Task 20 Step 4 and Task 21 Steps 2, 4 (caps tables). Task 1's `live_partition_state` test is unaffected (the entity writer is charged to `entity_buffers`, preflight P5).
