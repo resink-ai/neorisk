@@ -50,6 +50,7 @@ class Pack:
         self.processes: dict[str, dict[str, Any]] = {}
         self.change_groups: dict[str, dict[str, Any]] = {}
         self.checks: dict[str, tuple[LawSpec, bool]] = {}
+        self.accumulators: dict[str, dict[str, Any]] = {}
 
     # ------------------------------------------------------------------ helpers
     def _table(self, name: str) -> dict[str, Any]:
@@ -283,6 +284,20 @@ class Pack:
             raise PackError(f"check {id}: law must come from std.law")
         self.checks[id] = (law, bool(required))
 
+    def accumulator(self, name: str, ltype: LType) -> str:
+        """An additive accumulator (D46): kernels add to it with `out.add_<name>(value)` and
+        never read it; the manifest holds its total over exported steps."""
+        if name in self.accumulators:
+            raise PackError(f"duplicate accumulator {name!r}")
+        if not isinstance(ltype, LType) or ltype.kind not in ("i64", "amount") \
+                or ltype.nullable:
+            raise PackError(f"accumulator {name}: type must be i64 or amount")
+        if not name.isidentifier():
+            raise PackError(f"accumulator {name!r}: name must be an identifier "
+                            f"(kernels call out.add_<name>)")
+        self.accumulators[name] = {"name": name, "ltype": ltype}
+        return name
+
     # ------------------------------------------------------------------ later milestones
     def machine(self, *args, **kwargs):
         raise PackError("machine arrives in M3")
@@ -295,6 +310,3 @@ class Pack:
 
     def feature(self, *args, **kwargs):
         raise PackError("feature arrives in M3")
-
-    def accumulator(self, *args, **kwargs):
-        raise PackError("accumulator arrives in S2")

@@ -24,11 +24,13 @@ OB_REQUEST, OB_MESSAGE, OB_RESPONSE, OB_CREATE = 1, 2, 3, 4
 
 # out tuple: fixed head, then one buffer tuple per records/creates resource (resource order),
 # then the outbox, the latency table, shard sizes per boundary, the seed and the kind of the
-# command being dispatched (set by `dispatch`, read by `_continue_at`).
+# command being dispatched (set by `dispatch`, read by `_continue_at`) and the worker's partial
+# sums of the accumulators (D46, by code; folded into the step's delta by
+# `World.take_accumulators`).
 OUT_HEAD = ("cnt", "cap", "resv", "miss", "reqc", "hid", "pool", "pay", "w")
 (OUT_CNT, OUT_CAP, OUT_RESV, OUT_MISS, OUT_REQC, OUT_HID, OUT_POOL, OUT_PAY,
  OUT_W) = range(len(OUT_HEAD))
-OUT_TAIL = ("outbox", "lat", "shard_n", "seed", "cmd_kind")
+OUT_TAIL = ("outbox", "lat", "shard_n", "seed", "cmd_kind", "acc")
 
 HID_FIELDS = ("rseq", "cseq", "ordn", "gen", "self_id", "pid", "qhead")
 
@@ -121,6 +123,7 @@ class SlabSet:
         self.miss = np.zeros(1, np.int64)
         self.req_count = np.zeros(1, np.int64)
         self.cmd_kind = np.zeros(1, np.int64)
+        self.acc = np.zeros(max(1, len(plan.accumulators)), np.int64)
         force = dict(engine.force_capacity)
 
         def capacity(resource: str, row_bytes: int) -> int:
@@ -155,7 +158,7 @@ class SlabSet:
         outbox = (*self.outbox.values(), self.outbox_pay)
         return (self.cnt, self.cap, self.resv, self.miss, self.req_count, hid, pool.as_tuple(),
                 payload.as_tuple(), self.worker, *bufs, outbox, self.lat, self.shard_n,
-                int(seed), self.cmd_kind)
+                int(seed), self.cmd_kind, self.acc)
 
     def flush(self) -> StepChunk:
         """Copy the filled record and create rows out and reset those buffers."""

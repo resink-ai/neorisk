@@ -362,6 +362,12 @@ class _Gen:
                                  "ctx[CTX_ACTION]"], args)
         self.fn(f"_emit_{e.name}", ", ".join(["out", "ctx", "t", *args]), body)
 
+    def accumulate(self, a) -> None:
+        """`_add_<name>(out, ctx, v)`: checked int64 add into this worker's partial sum (D46)."""
+        self.fn(f"_add_{a.name}", "out, ctx, v", [
+            "acc = out[OUT_ACC]",
+            f"acc[{a.code}] = std.checked_add(acc[{a.code}], v)"])
+
     def change(self, grp) -> None:
         spec = self.specs[f"records:{grp.name}"]
         table = self.plan.table(grp.table)
@@ -661,6 +667,7 @@ class _Gen:
         body = ["g = ctx[CTX_G]",
                 "hid = out[OUT_HID]",
                 "cnt0 = out[OUT_CNT].copy()",
+                "acc0 = out[OUT_ACC].copy()",
                 "cseq0 = hid[HID_CSEQ][g]",
                 "ordn0 = hid[HID_ORDN][g].copy()"]
         for p in self.plan.processes:
@@ -678,7 +685,8 @@ class _Gen:
                      "    rc = dispatch(action, ctx, cmd, ws, out)",
                      "    if rc != COMMIT:",
                      (f"        ok = _unchanged_{a}(ws, g, snap) and _same(cnt0, out[OUT_CNT]) "
-                      "and cseq0 == hid[HID_CSEQ][g] and _same(ordn0, hid[HID_ORDN][g])"),
+                      "and _same(acc0, out[OUT_ACC]) and cseq0 == hid[HID_CSEQ][g] "
+                      "and _same(ordn0, hid[HID_ORDN][g])"),
                      "        if not ok:",
                      "            if rc == RETRY:",
                      f"                raise AbiViolation({_q(f'process {p.name} wrote before returning RETRY')})",
@@ -1061,6 +1069,8 @@ class _Gen:
             self.emit(e)
         for grp in self.plan.change_groups:
             self.change(grp)
+        for a in self.plan.accumulators:
+            self.accumulate(a)
         tables = {t.name for t in self.plan.tables}
         for code, ns in enumerate(self.plan.namespaces):
             if ns in tables:

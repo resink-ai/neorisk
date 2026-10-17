@@ -48,7 +48,8 @@ class Simulation:
             "steps": 0, "rows_per_table": {}, "late_messages": 0,
             "rejects": {p.name: 0 for p in plan.processes}, "retries": 0, "continuations": 0,
             "rounds_per_step": [], "round_detail": [], "generate_s": 0.0, "seal_s": 0.0,
-            "proposals": 0, "requests_by_boundary": {}, "pairing": {}}
+            "proposals": 0, "requests_by_boundary": {}, "pairing": {},
+            "accumulators": {a.name: 0 for a in plan.accumulators}}   # exported totals (D46)
         self._shard_commands = 0
 
     # ------------------------------------------------------------------ entities
@@ -124,6 +125,10 @@ class Simulation:
         for name, tbl in (*sealed.events.items(), *sealed.postings.items(),
                           *sealed.history.items()):
             rows[name] = rows.get(name, 0) + tbl.num_rows
+        if sealed.exported:
+            acc = st["accumulators"]
+            for name, v in sealed.accumulators.items():
+                acc[name] += v
         st["rounds_per_step"].append(rounds.rounds)
         st["round_detail"].append({"owners_run": list(rounds.owners_run),
                                    "shard_cmds": list(rounds.shard_cmds)})

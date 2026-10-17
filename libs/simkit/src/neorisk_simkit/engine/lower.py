@@ -601,6 +601,11 @@ class _Lowerer(ast.NodeTransformer):
         if m.startswith("create_") and lay.creates.get(m[7:]) is not None:
             self._positional(node, what, 0, 0)
             return _call(f"_{m}", out, ctx, *self._columns(node, lay.creates[m[7:]], kw, what))
+        if m.startswith("add_") and m[4:] in lay.accumulators:
+            (v,) = self._positional(node, what, 1, 1)
+            if kw:
+                self.err(node, f"{what}: unknown argument {min(kw)!r}")
+            return _call(f"_{m}", out, ctx, self.visit(v))
         if m == "new_id":
             (ns,) = self._positional(node, what, 1, 1)
             if not (self._is_str(ns) and ns.value in lay.creates) or kw:

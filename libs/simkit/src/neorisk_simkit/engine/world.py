@@ -956,6 +956,21 @@ class World:
         self.step_rows = self.step_bytes = 0
         return out
 
+    def take_accumulators(self) -> dict[str, int]:
+        """This step's delta of every accumulator (D46): the sum of every worker's partial sum,
+        exact (Python ints, so independent of how commands fell on workers), then zeroed."""
+        total = [0] * len(self.plan.accumulators)
+        for slab in self.slabs:
+            for a in self.plan.accumulators:
+                total[a.code] += int(slab.acc[a.code])
+            slab.acc[:] = 0
+        out = {}
+        for a in self.plan.accumulators:
+            if not -_I64_MAX - 1 <= total[a.code] <= _I64_MAX:
+                raise OverflowError(f"accumulator {a.name}: step delta overflows int64")
+            out[a.name] = total[a.code]
+        return out
+
     @property
     def stats(self) -> dict[str, Any]:
         c = self.counters.sum(axis=0)

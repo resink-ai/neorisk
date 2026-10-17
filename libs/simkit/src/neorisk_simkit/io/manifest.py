@@ -75,12 +75,14 @@ def write_manifest(run_dir: Path, run: Any, files: list[FileEntry], counts: dict
                    entity_counts: dict[str, int] | None = None,
                    project_dir: Path | None = None,
                    pairing: dict[str, dict[str, int]] | None = None,
-                   posting_counts: dict[str, int] | None = None) -> dict[str, Any]:
+                   posting_counts: dict[str, int] | None = None,
+                   accumulators: dict[str, int] | None = None) -> dict[str, Any]:
     """Build and write `manifest.json`.
 
     `counts` is rows per event type; posting tables (D45), history groups and entity tables are
     counted apart in `posting_counts`, `history_counts` and `entity_counts`.
-    `pairing` is `{request boundary: {"requests": delivered, "responses": routed}}` (D40)."""
+    `pairing` is `{request boundary: {"requests": delivered, "responses": routed}}` (D40).
+    `accumulators` is each accumulator's total over exported steps (D46)."""
     plan = run.plan
     options = writer_options(run.writer, *plan_columns(plan))
     writer = {k: (sorted(v) if isinstance(v, list) else v) for k, v in options.items()}
@@ -99,6 +101,7 @@ def write_manifest(run_dir: Path, run: Any, files: list[FileEntry], counts: dict
         "counts": dict(sorted(counts.items())),
         "history_counts": dict(sorted((history_counts or {}).items())),
         "posting_counts": dict(sorted((posting_counts or {}).items())),
+        "accumulators": dict(sorted((accumulators or {}).items())),
         "entity_counts": dict(sorted((entity_counts or {}).items())),
         "checks": dict(checks),
         "late_messages": int(late_messages),

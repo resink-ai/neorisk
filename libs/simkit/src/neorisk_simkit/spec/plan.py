@@ -122,6 +122,13 @@ class CheckDef:
     required: bool
 
 
+@dataclass(frozen=True)
+class AccumulatorDef:
+    name: str
+    code: int
+    ltype: LType                      # kind "i64" or "amount" (D46)
+
+
 def _find(items, name: str, what: str):
     for it in items:
         if it.name == name:
@@ -144,6 +151,7 @@ class Plan:
     change_groups: tuple[ChangeGroupDef, ...]
     checks: tuple[CheckDef, ...]
     cfg: Any
+    accumulators: tuple[AccumulatorDef, ...] = ()
 
     def table(self, name: str) -> TableDef:
         return _find(self.tables, name, "table")
@@ -270,8 +278,11 @@ def build_plan(pack_module, cfg, specs_dir: Path) -> Plan:
 
     checks = tuple(CheckDef(id=k, law=law, required=req) for k, (law, req) in p.checks.items())
 
+    accumulators = tuple(AccumulatorDef(name=d["name"], code=i, ltype=d["ltype"])
+                         for i, d in enumerate(p.accumulators.values()))
+
     return Plan(pack=p.name, schema_version=p.schema_version,
                 revision=pack_revision(Path(specs_dir)), tables=tables, events=events,
                 namespaces=namespaces, partitions=partitions, boundaries=boundaries,
                 processes=processes, populations=populations, change_groups=change_groups,
-                checks=checks, cfg=cfg)
+                checks=checks, cfg=cfg, accumulators=accumulators)

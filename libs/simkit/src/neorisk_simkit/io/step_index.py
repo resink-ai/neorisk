@@ -1,5 +1,6 @@
-"""`_index/steps.parquet`: one row per step with the first and last canonical key and the
-number of rows per event type (postings are not indexed, D45)."""
+"""`_index/steps.parquet`: one row per step with the first and last canonical key, the
+number of rows per event type (postings are not indexed, D45) and each accumulator's delta
+(`acc__<name>`, 0 on warm-up steps, D46)."""
 
 from __future__ import annotations
 
@@ -40,21 +41,24 @@ def step_index_row(sealed: SealedStep, plan: Any) -> dict:
         key = pick(keys) if keys else (None,) * 4
         for (name, _), v in zip(_KEY, key, strict=True):
             row[f"{prefix}_{name}"] = v
+    for a in plan.accumulators:
+        row[f"acc__{a.name}"] = sealed.accumulators.get(a.name, 0) if sealed.exported else 0
     return row
 
 
 def write_step_index(run_dir: Path, rows: list[dict], options: dict | None = None):
-    """Write the index (columns: step, t_start, t_end, rows, first_*, last_*, rows__<type>...)
-    and return the written file's path."""
+    """Write the index (columns: step, t_start, t_end, rows, first_*, last_*, rows__<type>...,
+    acc__<name>...) and return the written file's path."""
     names = list(rows[0]) if rows else ["step", "t_start", "t_end", "rows"]
     head = ["step", "t_start", "t_end", "rows"]
     first = [f"first_{n}" for n, _ in _KEY]
     last = [f"last_{n}" for n, _ in _KEY]
     per_type = [n for n in names if n.startswith("rows__")]
+    per_acc = [n for n in names if n.startswith("acc__")]
     types = {"step": pa.int32(), "t_start": TS, "t_end": TS, "rows": pa.int64(),
              **{f"first_{n}": t for n, t in _KEY}, **{f"last_{n}": t for n, t in _KEY},
-             **{n: pa.int64() for n in per_type}}
-    cols = [*head, *first, *last, *per_type]
+             **{n: pa.int64() for n in (*per_type, *per_acc)}}
+    cols = [*head, *first, *last, *per_type, *per_acc]
     schema = pa.schema([pa.field(c, types[c]) for c in cols])
     arrays = [pa.array([r.get(c) for r in rows], types[c]) for c in cols]
     path = Path(run_dir) / INDEX_PATH

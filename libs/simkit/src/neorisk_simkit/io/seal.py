@@ -63,6 +63,8 @@ class SealedStep:
     entities: dict[str, pa.Table]                # created table -> rows created this step
     stats: dict[str, Any]
     postings: dict[str, pa.Table] = dataclasses.field(default_factory=dict)  # D45
+    # this step's delta per accumulator (D46), warm-up steps included
+    accumulators: dict[str, int] = dataclasses.field(default_factory=dict)
 
 
 # ---------------------------------------------------------------------------- Arrow columns
@@ -361,6 +363,7 @@ def seal_step(world: Any, step: int, t0: int, t1: int, exported: bool,
     world.flush_all()
     counted = int(world.step_rows)        # everything the step cap counts, p.ids included (D41)
     chunks = world.take_chunks()
+    accumulators = world.take_accumulators()
     specs = buffer_specs(plan)
     records = {s.name: _merge(chunks, s) for s in specs if s.kind != "create"}
     creates = {s.name: _merge(chunks, s) for s in specs if s.kind == "create"}
@@ -436,7 +439,7 @@ def seal_step(world: Any, step: int, t0: int, t1: int, exported: bool,
              "history": {k: t.num_rows for k, t in history.items()},
              "entities": {k: t.num_rows for k, t in entities.items()}}
     sealed = SealedStep(int(step), int(t0), int(t1), bool(exported), events, history, entities,
-                        stats, postings=postings)
+                        stats, postings=postings, accumulators=accumulators)
     if exported:
         stats["checks"] = check_step(sealed, plan)                # 9.
     return sealed

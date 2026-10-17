@@ -15,6 +15,7 @@ SCHEMA_VERSION = 1
 @dataclass(frozen=True)
 class Config:
     accts: int = 6
+    add_then_reject: int = 0
 
 
 def define(p: Pack, cfg: Config) -> None:
@@ -26,5 +27,6 @@ def define(p: Pack, cfg: Config) -> None:
     p.postings("entry", owner="acct", doc="Double-entry postings of an opening", cols={
         "acct_id": ref("acct"), "account": cat("cash", "revenue"),
         "side": cat("debit", "credit"), "amount": amount(asset="USD")})
+    p.accumulator("fees", amount(asset="USD"))
     p.process("acct_main", owner="acct", kernel=k.acct_main, config=cfg,
               start=p.on_created("acct"), commands=(0,))

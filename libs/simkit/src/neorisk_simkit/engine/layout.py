@@ -70,6 +70,7 @@ class KernelLayout:
     out_payload: dict[str, list[tuple[str, LType]]] = field(default_factory=dict)  # by b
     response_payload: dict[str, list[tuple[str, LType]]] = field(default_factory=dict)  # by b
     resources: tuple[str, ...] = ()                   # resource_names(plan)
+    accumulators: dict[str, int] = field(default_factory=dict)    # every accumulator -> code
 
 
 def resource_names(plan: Plan) -> list[str]:
@@ -215,7 +216,8 @@ def _layout(plan: Plan, pd, recipes: list[Any], resources: tuple[str, ...]) -> K
         refs=refs, payload_slots=slots, events=events, creates=creates, requests=requests,
         messages=messages, responses=responses, change_groups=change_groups, read_n=read_n,
         read_cats=read_cats, boundary_of=boundary_of, out_payload=out_payload,
-        response_payload=response_payload, resources=resources)
+        response_payload=response_payload, resources=resources,
+        accumulators={a.name: a.code for a in plan.accumulators})
 
 
 def kernel_layouts(plan: Plan) -> dict[str, KernelLayout]:
