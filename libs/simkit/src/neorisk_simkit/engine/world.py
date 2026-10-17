@@ -591,7 +591,10 @@ class World:
                   np.zeros(G, np.int64), np.zeros(1, np.int64),
                   self._tmask, self._tlist, self._tn,
                   np.zeros(G, np.int64), np.zeros(1, np.int64), np.zeros(G, np.uint8),
-                  self._bnd_array(lambda b: 0), np.zeros(G, np.int64))
+                  self._bnd_array(lambda b: 0), np.zeros(G, np.int64),
+                  self._bnd_array(lambda b: 0),                      # RT_BND_RESP
+                  np.zeros(max(1, G - self.shard_lo), np.int64),     # RT_SHARD_REQ
+                  np.array([self.shard_lo], np.int64))               # RT_SHARD_LO
         self.pending_creates: list[_Creation] = []
         self.admissions = 0                               # created owners admitted this step
         self.run_buf = np.zeros(G, np.int64)              # runnable slots (compiled rounds)
@@ -1038,4 +1041,7 @@ class World:
                 "commands": int(c[COUNTERS.index("commands")]),
                 "requests_by_boundary": {b.name: int(self.R[rt.RT_BND_REQ][b.code])
                                          for b in self.plan.boundaries
-                                         if b.kind == "request"}}
+                                         if b.kind == "request"},
+                "pairing": {b.name: {"requests": int(self.R[rt.RT_BND_REQ][b.code]),
+                                     "responses": int(self.R[rt.RT_BND_RESP][b.code])}
+                            for b in self.plan.boundaries if b.kind == "request"}}

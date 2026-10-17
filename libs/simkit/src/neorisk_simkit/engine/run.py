@@ -47,7 +47,7 @@ class Simulation:
             "steps": 0, "rows_per_table": {}, "late_messages": 0,
             "rejects": {p.name: 0 for p in plan.processes}, "retries": 0, "continuations": 0,
             "rounds_per_step": [], "round_detail": [], "generate_s": 0.0, "seal_s": 0.0,
-            "proposals": 0, "requests_by_boundary": {}}
+            "proposals": 0, "requests_by_boundary": {}, "pairing": {}}
         self._shard_commands = 0
 
     # ------------------------------------------------------------------ entities
@@ -134,3 +134,4 @@ class Simulation:
         self._shard_commands += sum(rounds.shard_cmds)
         st["proposals"] = ws["commands"] - self._shard_commands
         st["requests_by_boundary"] = dict(ws["requests_by_boundary"])
+        st["pairing"] = dict(ws["pairing"])

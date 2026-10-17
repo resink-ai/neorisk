@@ -73,11 +73,13 @@ def write_manifest(run_dir: Path, run: Any, files: list[FileEntry], counts: dict
                    checks: dict[str, int], late_messages: int, *,
                    history_counts: dict[str, int] | None = None,
                    entity_counts: dict[str, int] | None = None,
-                   project_dir: Path | None = None) -> dict[str, Any]:
+                   project_dir: Path | None = None,
+                   pairing: dict[str, dict[str, int]] | None = None) -> dict[str, Any]:
     """Build and write `manifest.json`.
 
     `counts` is rows per event type; history groups and entity tables are counted apart in
-    `history_counts` and `entity_counts`, so equal names in different kinds cannot collide."""
+    `history_counts` and `entity_counts`, so equal names in different kinds cannot collide.
+    `pairing` is `{request boundary: {"requests": delivered, "responses": routed}}` (D40)."""
     plan = run.plan
     options = writer_options(run.writer, *plan_columns(plan))
     writer = {k: (sorted(v) if isinstance(v, list) else v) for k, v in options.items()}
@@ -98,6 +100,7 @@ def write_manifest(run_dir: Path, run: Any, files: list[FileEntry], counts: dict
         "entity_counts": dict(sorted((entity_counts or {}).items())),
         "checks": dict(checks),
         "late_messages": int(late_messages),
+        "pairing": dict(sorted((pairing or {}).items())),
         "files": [{"path": f.path, "rows": f.rows, "sha256": f.sha256}
                   for f in sorted(files, key=lambda f: f.path)],
     }

@@ -20,6 +20,9 @@ Route tuple `R` (indices `RT_*`):
             as a min-heap on susp_t + delta, each listed once (see `note_suspended`)
   bnd_req   int64[boundaries]: requests delivered per boundary code over the run (run stats)
   spos      int64[G]: heap position of each listed suspended owner
+  bnd_resp  int64[boundaries]: responses routed per boundary code over the run (D40)
+  shard_req int64[max(1, G - shard_lo)]: requests delivered per shard slot over the run
+  shard_lo  int64[1]: the first shard slot
 """
 
 from __future__ import annotations
@@ -27,13 +30,13 @@ from __future__ import annotations
 import numpy as np
 from numba import njit
 
-from neorisk_simkit.engine.cmdq import P_FREE_N, PAYLOAD_W, pay_alloc, q_push
+from neorisk_simkit.engine.cmdq import P_FREE_N, PAY_KIND, PAYLOAD_W, pay_alloc, q_push
 from neorisk_simkit.engine.codegen import COUNTERS
 from neorisk_simkit.engine.slabs import OB_CREATE, OB_REQUEST, OB_RESPONSE, OUTBOX_COLS
 
 (RT_QHEAD, RT_CSEQ, RT_GEN, RT_ALIVE, RT_PENDING, RT_SUSP_T, RT_SUSP_DELTA, RT_POOL, RT_PAY,
  RT_BND_BASE, RT_COUNTERS, RT_MSG, RT_WOKEN, RT_WOKEN_N, RT_TMASK, RT_TLIST, RT_TN, RT_SUSP,
- RT_SUSP_N, RT_SMASK, RT_BND_REQ, RT_SPOS) = range(22)
+ RT_SUSP_N, RT_SMASK, RT_BND_REQ, RT_SPOS, RT_BND_RESP, RT_SHARD_REQ, RT_SHARD_LO) = range(25)
 
 # route_outbox statuses
 ROUTED, NEED_MESSAGES, NEED_NODES, NEED_PAYLOAD, HAS_CREATE = 0, 1, 2, 3, 4
@@ -205,14 +208,15 @@ def _append(nxt, heads, tails, k, node):
 
 
 @njit(cache=True, nogil=True)
-def resume_owner(P, qhead, g):
+def resume_owner(P, pay_rows, qhead, g):
     """Blocking suspension: the owner resumes at T_r, the latest time among its delivered
     responses, and runs nothing dated before it. Its queue becomes: the responses, then the
     other commands dated before T_r, then those dated exactly T_r (each group in its (time,
     key, seq) order), all re-dated to T_r — the effective time max(time, T_r) — then the rest.
     The queue stays sorted by time.
 
-    In S1 an owner receives only responses, so its payload-carrying nodes are the responses.
+    A node is a response iff its payload row carries the delivered kind `OB_RESPONSE` in
+    column `PAY_KIND` (D39); timers, continuations and delivered messages are not.
 
     Commands pushed at T_r while that re-dated prefix is still queued (a `continue_at`, or a
     timer at `ctx.t` from the response handler): `q_push` walks the queue and inserts before
@@ -228,7 +232,7 @@ def resume_owner(P, qhead, g):
     t_r = np.int64(-(2 ** 63))
     node = qhead[g]
     while node >= 0:
-        if ppay[node] >= 0:
+        if ppay[node] >= 0 and pay_rows[ppay[node], PAY_KIND] == OB_RESPONSE:
             t_r = max(t_r, ptime[node])
         node = nxt[node]
     heads = np.full(3, -1, np.int32)      # 0 responses, 1 earlier commands, 2 commands at t_r
@@ -237,7 +241,10 @@ def resume_owner(P, qhead, g):
     while node >= 0 and ptime[node] <= t_r:
         nx = nxt[node]
         nxt[node] = -1
-        k = 0 if ppay[node] >= 0 else (1 if ptime[node] < t_r else 2)
+        if ppay[node] >= 0 and pay_rows[ppay[node], PAY_KIND] == OB_RESPONSE:
+            k = 0
+        else:
+            k = 1 if ptime[node] < t_r else 2
         ptime[node] = t_r
         _append(nxt, heads, tails, k, node)
         node = nx
@@ -266,7 +273,10 @@ def route_outbox(R, ob, n, skip_creates):
     Requests go to the shard queue at the request time, messages to the shard queue at their
     delivery time, responses to the requesting owner if its slot generation still matches
     (then `pending -= 1`; otherwise `late_messages += 1`). Every delivered command gets a
-    payload row copied from the outbox and the receiver's next command seq. `OB_CREATE` rows
+    payload row copied from the outbox, with the delivered kind written into its `PAY_KIND`
+    column once a response's generation check has read it (D39), and the receiver's next
+    command seq. Responses routed and requests delivered are counted per boundary
+    (`RT_BND_RESP`, `RT_BND_REQ`) and per shard slot (`RT_SHARD_REQ`). `OB_CREATE` rows
     are left to the caller (`skip_creates`), or make the call return `HAS_CREATE` untouched.
     Nothing is delivered unless the step's message budget and both reserves cover every row.
     """
@@ -291,7 +301,8 @@ def route_outbox(R, ob, n, skip_creates):
                                         R[RT_PENDING])
     bnd_base, counters = R[RT_BND_BASE], R[RT_COUNTERS]
     woken, wn = R[RT_WOKEN], R[RT_WOKEN_N]
-    bnd_req = R[RT_BND_REQ]
+    bnd_req, bnd_resp, shard_req = R[RT_BND_REQ], R[RT_BND_RESP], R[RT_SHARD_REQ]
+    shard_lo = R[RT_SHARD_LO][0]
     src = ob[_PAYC]
     rows = PA[0]
     order = route_order(ob, n)
@@ -302,16 +313,20 @@ def route_outbox(R, ob, n, skip_creates):
             continue
         if kind == OB_RESPONSE:
             g = ob[_DST][i]
-            if alive[g] == 0 or np.int64(gen[g]) != src[i, PAYLOAD_W - 1]:
+            if alive[g] == 0 or np.int64(gen[g]) != src[i, PAY_KIND]:
                 counters[0, _LATE] += 1
                 continue
         else:
             g = bnd_base[ob[_BND][i]] + ob[_DST][i]
             if kind == OB_REQUEST:
                 bnd_req[ob[_BND][i]] += 1
+                shard_req[g - shard_lo] += 1
         row = pay_alloc(PA, 0)
         for c in range(PAYLOAD_W):
             rows[row, c] = src[i, c]
+        rows[row, PAY_KIND] = kind             # the delivered kind (D39)
+        if kind == OB_RESPONSE:
+            bnd_resp[ob[_BND][i]] += 1
         sq = cseq[g]
         cseq[g] = sq + 1
         q_push(P, 0, qhead, g, ob[_TIME][i], ob[_PRIO][i], ob[_CAUSE][i], sq, ob[_RESP_KIND][i],
@@ -321,7 +336,7 @@ def route_outbox(R, ob, n, skip_creates):
             pending[g] -= 1
             if pending[g] == 0:
                 _unlist_suspended(R, g)
-                resume_owner(P, qhead, g)
+                resume_owner(P, rows, qhead, g)
                 woken[wn[0]] = g
                 wn[0] += 1
     return ROUTED, k

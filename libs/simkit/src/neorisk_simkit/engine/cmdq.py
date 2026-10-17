@@ -10,7 +10,11 @@ from __future__ import annotations
 import numpy as np
 from numba import njit
 
-PAYLOAD_W = 12          # cols 0..6 user payload, 7 src_g, 8 src_gen, 9 src_self_id, 10 src_action
+PAYLOAD_W = 12          # cols 0..6 user payload, 7 src_g, 8 src_gen, 9 src_self_id, 10 src_action,
+#                         11 PAY_KIND
+# payload column 11: in the outbox, a response's requester generation; once delivered, the
+# delivered kind (D39)
+PAY_KIND = 11
 PAY_CONTINUE = -2       # n_pay marker: the node is a continuation and n_tag is its cursor
 
 # Positions in `NodePool.as_tuple()` that generated code reads (the worker free lists).

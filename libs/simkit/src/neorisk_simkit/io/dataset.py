@@ -83,7 +83,8 @@ def _simulate(run: Any, project_dir: Path, work: Path, threads: int, checked: bo
     write_s += time.perf_counter() - w0
     manifest = write_manifest(
         work, run, files, counts, checks, sim.stats["late_messages"],
-        history_counts=history_counts, entity_counts=entities.counts(), project_dir=project_dir)
+        history_counts=history_counts, entity_counts=entities.counts(), project_dir=project_dir,
+        pairing=sim.stats["pairing"])
     t_done = time.perf_counter()
     return sim, manifest, {"build_s": t_built - t_start, "write_s": write_s,
                            "total_s": t_done - t_start, "manifest_at": t_done}

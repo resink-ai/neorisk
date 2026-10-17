@@ -51,7 +51,7 @@ def validate(run, threads: int | None = None) -> ValidationReport:
             if part_kind.get(b.frm) != "owner" or part_kind.get(b.to) != "shard":
                 errs.append(f"boundary {b.name}: requests go from an owner to a shard")
         elif part_kind.get(b.frm) == "owner" and part_kind.get(b.to) == "owner":
-            errs.append(f"boundary {b.name}: owner-to-owner messages arrive in S2")
+            errs.append(f"boundary {b.name}: owner-to-owner messages arrive in M3")
         elif part_kind.get(b.frm) != "owner":
             errs.append(f"boundary {b.name}: messages go from an owner to a shard")
 

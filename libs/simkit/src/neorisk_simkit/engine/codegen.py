@@ -100,7 +100,9 @@ from neorisk_simkit import std
 from neorisk_simkit.engine.abi import (
     COMMIT, PRIO_CONTINUE, PRIO_EXPIRY, PRIO_MESSAGE, PRIO_TIMER, RETRY, START, reject,
 )
-from neorisk_simkit.engine.cmdq import P_FREE_N, PAY_CONTINUE, pay_free, q_free, q_push, q_remove
+from neorisk_simkit.engine.cmdq import (
+    P_FREE_N, PAY_CONTINUE, PAY_KIND, pay_free, q_free, q_push, q_remove,
+)
 from neorisk_simkit.engine.errors import AbiViolation, EngineError
 from neorisk_simkit.engine.identity import make_handle
 from neorisk_simkit.engine.rng import (
@@ -119,8 +121,8 @@ _JIT = "@njit(cache=True, nogil=True, boundscheck=CHECKED)"
 # runner-level functions (dispatch, run_partitions, ...) stay ordinary calls.
 _JIT_INLINE = "@njit(cache=True, nogil=True, boundscheck=CHECKED, inline='always')"
 # Generated functions that stay real calls (everything else is inlined into its caller).
-_NOT_INLINED = frozenset({"dispatch", "periodic_time", "_out_of_order", "run_partitions",
-                          "drain_small_rounds", "_same", "_checked_dispatch"})
+_NOT_INLINED = frozenset({"dispatch", "periodic_time", "_out_of_order", "_unpaired",
+                          "run_partitions", "drain_small_rounds", "_same", "_checked_dispatch"})
 _NOT_INLINED_PREFIXES = ("_snap_", "_unchanged_")
 
 _PKG = Path(__file__).resolve().parents[1]           # neorisk_simkit/
@@ -647,15 +649,21 @@ class _Gen:
         body.append('raise EngineError("dispatch: unknown action ", action)')
         self.fn("_checked_dispatch", "action, ctx, cmd, ws, out", body)
 
+    @staticmethod
+    def command_labels(p: ProcessDef) -> dict[int, str]:
+        """Command kind -> label (`start`, `request b`, `message b`, `response b.r`)."""
+        labels = {0: "start"}
+        labels.update({k: f"request {b}" for b, k in p.on_request.items()})
+        labels.update({k: f"message {b}" for b, k in p.on_message.items()})
+        labels.update({k: f"response {b}.{r}" for (b, r), k in p.on_response.items()})
+        return labels
+
     def out_of_order(self) -> None:
         """The monotonic-time guard's error: names partition type, process and command."""
         body = []
         for p in self.plan.processes:
             part = self.plan.partition(p.partition)
-            labels = {0: "start"}
-            labels.update({k: f"request {b}" for b, k in p.on_request.items()})
-            labels.update({k: f"message {b}" for b, k in p.on_message.items()})
-            labels.update({k: f"response {b}.{r}" for (b, r), k in p.on_response.items()})
+            labels = self.command_labels(p)
             who = f"{part.kind} {part.name}: {p.name} would run"
             tail = f"{_q(' before its last command at ')}, last)"
             body.append(f"if a == {p.action_id}:")
@@ -666,6 +674,34 @@ class _Gen:
                         f"{tail}")
         body.append('raise EngineError("command out of time order at ", t)')
         self.fn("_out_of_order", "a, kind, t, last", body)
+
+    def unpaired(self) -> None:
+        """The pairing guard's error (D40): a request not answered exactly once by a commit, or
+        an answer from a command that was not a request. Names process and boundary and cites
+        (partition_id, seq) and the action id (§11, F-06)."""
+        def cite(text: str) -> str:
+            """`text` then the citation, as EngineError arguments."""
+            return (f"{_q(text + ' at (partition_id ')}, pid_, {_q(', seq ')}, seq_, "
+                    f"{_q('), action ')}, a)")
+
+        body = []
+        for p in self.plan.processes:
+            requests = {k: b for b, k in p.on_request.items()}
+            body.append(f"if a == {p.action_id}:")
+            for k, label in sorted(self.command_labels(p).items()):
+                body.append(f"    if kind == {k}:")
+                if k in requests:
+                    head = f"{p.name}: request {requests[k]} must be answered exactly once"
+                    body.append(f"        raise EngineError({_q(head + ' (answered ')}, nresp, "
+                                f"{_q(', returned ')}, rc, {cite(')')}")
+                else:
+                    msg = f"{p.name}: {label} answered a request it was not given"
+                    body.append(f"        raise EngineError({cite(msg)}")
+            body.append(f"    raise EngineError({_q(f'{p.name}: command ')}, kind, "
+                        f"{cite(' answered a request it was not given')}")
+        body.append(f"raise EngineError({_q('command ')}, kind, "
+                    f"{cite(' answered a request it was not given')}")
+        self.fn("_unpaired", "a, kind, rc, nresp, pid_, seq_", body)
 
     def run_partitions(self) -> None:
         disp = "_checked_dispatch" if self.checked else "dispatch"
@@ -762,6 +798,15 @@ class _Gen:
             "            return _NEED_SWAP, i",
             "        if rc < RETRY:",
             '            raise EngineError("kernel returned an invalid code ", rc)',
+            "        nresp = 0",
+            "        for r_ in range(ob0, cnt[R_REQUESTS]):",
+            "            if obx[OBX_KIND][r_] == OB_RESPONSE:",
+            "                nresp += 1",
+            "        asked = prow >= 0 and PA[0][prow, PAY_KIND] == OB_REQUEST",
+            "        if asked and (rc != COMMIT or nresp != 1):",
+            "            _unpaired(a, kind, rc, nresp, pid[g], P[2][node])",
+            "        if not asked and nresp != 0:",
+            "            _unpaired(a, kind, rc, nresp, pid[g], P[2][node])",
             "        counters[_C_RETRY_STREAK] = 0",
             "        counters[_C_COMMANDS] += 1",
             "        occ[g, oc] += 1",
@@ -871,6 +916,7 @@ class _Gen:
         if self.checked:
             self.checked_dispatch()
         self.out_of_order()
+        self.unpaired()
         self.run_partitions()
         self.drain_small_rounds()
         return self.funcs

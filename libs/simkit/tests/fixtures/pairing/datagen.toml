@@ -1,0 +1,40 @@
+[project]
+name = "pairing"
+pack = "specs/pack.py"
+
+[paths]
+out = "out"
+
+[defaults]
+seed = 5
+start = "2026-03-02T00:00:00Z"
+mode = "time"
+span = "1h"
+warmup = "0s"
+
+[budget]
+threads = 2
+memory = "1GB"
+max_step_rows = 100_000
+max_step_bytes = "64MB"
+max_spawn_depth = 3
+max_admissions_per_step = 1_000
+
+[writer]
+compression = "zstd"
+compression_level = 3
+row_group_rows = 131_072
+
+[engine]
+step = "1h"
+step_min = "1h"
+step_max = "1d"
+adapt = false
+slab_bytes = "256KB"
+timer_nodes = 10_000
+payload_slots = 1_000
+max_messages_per_step = 10_000
+parallel_min_partitions = 64
+
+[profiles.sample]
+set = {}
