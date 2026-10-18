@@ -115,13 +115,13 @@ def derived(stats: dict[str, Any]) -> dict[str, Any]:
     if hot is not None and "checkout_started" in counts:
         out["hot_share_of_checkouts"] = _ratio(hot, counts["checkout_started"])
     inv = stats.get("shard_load", {}).get("inventory")
-    if inv is not None and inv.get("requests"):
+    if hot is not None and inv is not None and inv.get("requests"):   # shard 0 is the hot group
         out["hot_share_of_reserves"] = _ratio(inv["requests"][0], sum(inv["requests"]))
     if "shard_command_share" in stats:
         out["shard_command_share"] = stats["shard_command_share"]
     pops = stats.get("populations", {})
-    if "campaign" in pops and "user" in pops:
-        members = stats.get("ids_allocated", {}).get("member", 0)
+    members = stats.get("ids_allocated", {}).get("member")
+    if "campaign" in pops and "user" in pops and members is not None:
         out["campaign_member_share"] = _ratio(pops["campaign"] + members, pops["user"])
     return out
 

@@ -293,7 +293,7 @@ four owner commands and no shard command.
 
 ### Calibration
 
-| Run | Scale (users) | Knobs (changes) | Exported events (at 2M) | Shard command share | Member share | Notes |
+| Run | Scale (users) | Knobs (changes) | Exported events (at the run's scale; scale-0.1 rows are 200k-user counts) | Shard command share | Member share | Notes |
 |---|---|---|---|---|---|---|
 | Task 20 profile | 0.1 (200k) | — | 7,126,488 (~71M) | 0.1133 | 0.0095 | pool drained in the warm-up: no exported grant |
 | pA | 0.1 | bill 10 y, views 4, add 1, checkout 1, referred 1, gap 300 h | 4,677,163 | 0.3187 | 0.0095 | |
@@ -338,7 +338,9 @@ expectation stays `≥ 0.5`, and the verdict is `fail`.
 
 The last grant (2026-01-21 15:28:49, `remaining_after = 0`) went to a hunter, on day 20.6 of 30
 exported days. Hunters take 71% of the exported grants, and every normal user who claims after
-that is rejected: 999 normal referrals lose their bonus to the hunters.
+that is rejected (999 normal referrals). The pool drained from all grants, normal users' and
+hunters' alike, plus the warm-up's 6.6k claims, so those 999 rejections are not losses to the
+hunters alone; the hunters' share of what ran the pool dry is their 71%.
 
 ### Caps (`datagen validate examples/ecommerce_s2 --profile pool`)
 
@@ -385,11 +387,14 @@ day), so they time compilation.
 
 ### `s2_pool`: fail
 
-Both D55 rates pass on this machine: 110,956 events/s end to end and 95,433 shard-phase
-events/s, each against 80,000. The verdict is `fail` on the expectation
-`shard_command_share ≥ 0.5`: 0.1708, because the workload is not shard-dominated (see the
-`s2_pool.toml` section: a kernel-shape limit of 0.46, measured 0.17 at 10⁷ events). So the
-end-to-end rate is not yet a shard-path rate, and the gate is not met. By stage: generate runs at
+The shard-path rate (§18) passes at 95,433 shard-phase events/s against 80,000. The end-to-end
+rate was measured at 110,956 events/s, but on a workload that is not shard-dominated
+(`shard_command_share` 0.17 < 0.5), so D55 part (1) is unmet: it is not a shard-path rate. The
+verdict is `fail` on that expectation. The S2 kernel shape caps the share at ~0.46 (see the
+`s2_pool.toml` section: four cart lines, measured 0.17 at 10⁷ events), so no profile knob can
+meet it. Options for the user: accept a lower share threshold for D55 part (1), or a
+shard-heavier pool workload (an M3 overlay: more lines per cart, more checkouts or claims per
+session). By stage: generate runs at
 122k events/s (9.97M in 81.56 s), under §10's generation band of 0.5–3M/s; seal (2.1M/s), checks
 (17M/s) and export (4.0M/s) are at or above their 0.25–2M/s bands. The pool shard is the hot
 shard (`max_share` 1.0, by design n = 1); the busiest inventory group has 11.8% of inventory
@@ -399,7 +404,7 @@ commands.
 
 The scaled runs (1M users, same module, same per-user shape) take 25.2 s warm for 5.97M exported
 events, 237k events/s end to end; generate 12.78 s (467k/s), seal 6.34 s (941k/s), check
-3.03 s (1.97M/s), write 2.61 s (2.29M/s). `check_s` at 1M users is 3.03 s over 21 steps.
+3.03 s (1.97M/s), write 2.61 s (2.28M/s). `check_s` at 1M users is 3.03 s over 21 steps.
 No scale-1 `check_s` is given: it is not measured, and it does not scale linearly. A step's check
 cost grows with the keys carried so far (`one_capture` alone reaches ~28M keys at 20M users,
 extrapolated), and the step count grows too (step adaptation targets a row count, so ~120+ steps
@@ -420,4 +425,25 @@ exported events and inventory share 0.0774, exactly as before. D41 moved the ste
 29 steps (was 28) and 1,388,004 rounds (was 1,388,003). Warm time rose from 43.97 s (task 24b
 row) to 54.90 s, all of it in generate (36.41 → 47.14 s): the S2 engine changes since that row
 (D38–D44, D61 sender keys, Task 19 shard-phase timing) cost ~11 s on S1; this task did not
-profile which. Its margin to the 60 s gate is now 5 s.
+profile which. Its margin to the 60 s gate is now 5 s. Against the more recent task 24c row
+(45.1 s, a plain `datagen run`) the rise is ~10 s. This re-measure's dataset hash was not
+recorded (D41 changed the step boundaries, hence the bytes, once).
+
+The S2 final review localised the rise from the per-task S1 reduced-profile timings
+(`--profile full --set users=400000 --set run.span=30d`, warm): 8.26 s at the S2 base, 8.49 s
+after Task 3 (D41 boundaries), 9.43–9.59 s after Task 4b (the largest single step, about
++1.0 s: D61 sender keys, six key arrays and one more stable sort per routing call, twice per
+round, and 74-byte command nodes compared on more fields at ties), 10.21 s at Task 18 and
+10.32 s at Task 19: +25%, the same share as the full profile. The second contributor is
+admission work S1 cannot use (it creates no owners): every compiled round called the
+non-inlined `admit_created`, which allocated even with nothing pending. That is a cause
+analysis from timings, not a profile.
+
+The final fix wave removed the cheap, output-identical part of that work: no admission call
+(compiled or Python) and no allocation when no creation is pending, and, when no routed row
+comes from a created owner, one shared zero array for the unused sender-key columns and no
+separate sort by partition type (a population or shard `partition_id` already starts with its
+type, D12). S1 reduced profile, warm, this machine, median of 3 runs after a warm-up run:
+**10.02 s before → 9.28 s after (−7.4%)**, dataset hash unchanged
+(`4659ac00c0af3e400065aee6cf9d7d89d26a42a4c3a635a0e9d593fada09695d`). The full S1 benchmark
+was not re-run (the same share would put it near 51 s: an estimate, not a measurement).

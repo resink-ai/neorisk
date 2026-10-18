@@ -28,6 +28,9 @@ def test_each_fault_trips_its_law(tmp_path, fault, check):
         run_to_dataset(M, "sample", [f"fault={fault}"], out_dir=tmp_path / "x", threads=1)
     assert e.value.check_id == check
     assert not (tmp_path / "x").exists()
+    if fault == 7:                       # a state law cites the state, seq -1, action -1 (D47)
+        assert (e.value.table, e.value.seq, e.value.action_id) == ("state pool.remaining", -1,
+                                                                   -1)
 
 
 def test_an_unanswered_request_trips_pairing(tmp_path):

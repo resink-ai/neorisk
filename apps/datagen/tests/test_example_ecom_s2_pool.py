@@ -49,7 +49,10 @@ def test_each_claim_is_decided_once(ev):
     assert d["claim_id"].n_unique() == d.height > 0
 
 
-def test_hunters_crowd_out_normal_users(ev):
+def test_both_sources_draw_and_users_are_rejected(ev):
+    """Both claim sources reach the pool and normal users are rejected once it runs dry. In
+    this drain workload users alone would exhaust it, so this is not a crowd-out measurement
+    (that is the `pool` profile's interference table in benchmarks/README.md)."""
     d = _decisions(ev)
     assert set(d.filter(pl.col("ok"))["source"]) == {"user", "campaign"}
     assert d.filter(~pl.col("ok") & (pl.col("source") == "user")).height > 0
@@ -67,7 +70,8 @@ def test_campaigns_finish_with_their_members(ev):
     fin = ev["campaign_finished"]
     assert fin.height > 0
     orders = ev["member_ordered"].group_by("campaign_id").len()
-    j = fin.join(orders, on="campaign_id")
+    j = fin.join(orders, on="campaign_id", how="left").with_columns(pl.col("len").fill_null(0))
+    assert j.height == fin.height                  # a campaign with no order is kept, as 0
     assert ((j["paid"].cast(pl.UInt32) + j["denied"].cast(pl.UInt32)) == j["len"]).all()
 
 

@@ -45,6 +45,38 @@ def test_derived_values():
     assert "payments" not in derived({"proposals": 1})           # S1 reports unchanged
 
 
+def test_derived_values_need_their_inputs():
+    """Task 20 M1/M3: the hot reserve share needs the `hot_checkouts` accumulator (S1 also has an
+    `inventory` shard, with no hot group), the member share needs `ids_allocated.member`."""
+    st = _stats()
+    del st["accumulators"]
+    del st["ids_allocated"]
+    d = derived(st)
+    assert "hot_share_of_reserves" not in d and "campaign_member_share" not in d
+
+
+def test_at_most_and_a_malformed_expectation(tmp_path, capsys):
+    """Task 20 M2: the `at_most` form, and a malformed form refused before any run (exit 1)."""
+    import dataclasses
+
+    import pytest
+
+    wl = dataclasses.replace(load_workload(POOL), expect={"shard_command_share": {"at_most": 0.3}})
+    over = evaluate(_stats(), wl, scale=1.0)
+    assert [(c["ok"], c["limit"]) for c in over["checks"]
+            if c["name"] == "shard_command_share"] == [(True, [None, 0.3])]
+    under = evaluate(_stats(shard_command_share=0.31), wl, scale=1.0)
+    assert under["verdict"] == "fail"
+    bad = tmp_path / "bad.toml"
+    bad.write_text(POOL.read_text().replace(
+        "shard_command_share = { at_least = 0.5 }", "shard_command_share = { at_leest = 0.5 }"))
+    assert bad.read_text() != POOL.read_text()
+    with pytest.raises(ValueError, match="expectation 'shard_command_share' must be"):
+        load_workload(bad)
+    assert main(["benchmark", str(bad)]) == 1
+    assert "expectation 'shard_command_share' must be" in capsys.readouterr().err
+
+
 def test_s2_gate():
     wl = load_workload(S2)
     ok = _stats()                                    # the reserve share is not an expectation
