@@ -95,6 +95,7 @@ class ProcessDef:
     commands: tuple[int, ...]
     every_us: int | None
     jitter: Dist | None
+    max_spawn_depth: int | None = None              # None: budget.max_spawn_depth (D72)
 
 
 @dataclass(frozen=True)
@@ -259,7 +260,8 @@ def build_plan(pack_module, cfg, specs_dir: Path) -> Plan:
                    messages=_frozen(d["messages"]), on_request=_frozen(d["on_request"]),
                    on_response=_frozen(d["on_response"]), on_message=_frozen(d["on_message"]),
                    reads=_frozen(d["reads"]), refs=_frozen(d["refs"]), commands=d["commands"],
-                   every_us=every_us(d["name"], d["every"]), jitter=d["jitter"])
+                   every_us=every_us(d["name"], d["every"]), jitter=d["jitter"],
+                   max_spawn_depth=d["max_spawn_depth"])
         for i, d in enumerate(p.processes.values()))
 
     populations = tuple(

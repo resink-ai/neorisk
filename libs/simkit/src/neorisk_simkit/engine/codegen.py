@@ -32,7 +32,7 @@ from pathlib import Path
 import numba
 
 from neorisk_simkit.engine import slabs
-from neorisk_simkit.engine.admit import ADM_CAP, ADM_LIVE, ADM_NODES, ADM_OK
+from neorisk_simkit.engine.admit import ADM_CAP, ADM_DEPTH, ADM_LIVE, ADM_NODES, ADM_OK
 from neorisk_simkit.engine.cmdq import PAYLOAD_W
 from neorisk_simkit.engine.errors import LoweringError
 from neorisk_simkit.engine.layout import (
@@ -72,9 +72,11 @@ DONE, NEED_SWAP, NEED_NODES = 0, 1, 2
 #             the smallest delta among those requests (the safe horizon reads both).
 #   ostate    one entry per owner partition type (plan order): its state column arrays in table
 #             order (admission writes a created owner's columns there, D44)
+#   max_depth int64[actions]: the spawn depth a process may create at, its own
+#             max_spawn_depth or budget.max_spawn_depth (D72)
 WORLD_FIELDS = ("hid", "pool", "pay", "state", "args", "seed", "counters", "rejects", "occ_col",
                 "retire", "every", "jitter", "sim_start", "kc", "nopay", "node_cap", "bnd_delta",
-                "ostate")
+                "ostate", "max_depth")
 # `commands` counts executed commands (commits and rejects); rounds use it to measure progress.
 COUNTERS = ("retries", "continuations", "late_messages", "retry_streak", "commands")
 
@@ -256,7 +258,7 @@ class _Gen:
                   f"_RS_NLOG = {RS_NLOG}", f"_RS_SHARD_NS = {RS_SHARD_NS}",
                   f"_I64_MIN = {-(2 ** 63)}",
                   f"_ADM_OK = {ADM_OK}", f"_ADM_CAP = {ADM_CAP}", f"_ADM_LIVE = {ADM_LIVE}",
-                  f"_ADM_NODES = {ADM_NODES}"]
+                  f"_ADM_NODES = {ADM_NODES}", f"_ADM_DEPTH = {ADM_DEPTH}"]
         ns_type, ns_nstart = self._admission_tables()
         lines += [f"_NS_TYPE = {tuple(ns_type)!r}", f"_NS_NSTART = {tuple(ns_nstart)!r}"]
         return "\n".join(lines) + "\n"
@@ -919,11 +921,13 @@ class _Gen:
         Admits every queued creation with time < limit_t in routing order (time, prio, cause,
         the creator's sender key, src_seq; D61) with the records S1's Python admission made.
         All or nothing: before touching anything it checks the admission limit (`_ADM_CAP`),
-        free local slots per owner type (`_ADM_LIVE`; both return the CQ row that does not
-        fit) and the reserve's command nodes for every START (`_ADM_NODES`, value = nodes
+        the creating process's spawn depth (`_ADM_DEPTH`, D72: the created owner's depth is its
+        creator's + 1), free local slots per owner type (`_ADM_LIVE`; these three return the CQ
+        row that does not fit) and the reserve's command nodes for every START (`_ADM_NODES`, value = nodes
         needed), so a retry after any non-OK status sees `CQ` exactly as before (F-10)."""
         hid = ["pid", "alive", "clock", "rseq", "cseq", "pending", "susp_delta", "occ", "ordn",
-               "retire_at", "susp_t", "last_t", "inst", "self_id", "ckey", "created", "qhead"]
+               "retire_at", "susp_t", "last_t", "inst", "self_id", "ckey", "created", "qhead",
+               "depth"]
         body = ["if CQ[CQ_N][0] == 0:                 # nothing pending: no allocation",
                 "    return np.int64(_ADM_OK), np.int64(0)",
                 "due = cq_due(CQ, limit_t)",
@@ -935,10 +939,15 @@ class _Gen:
                 "free = FS[FS_N]",
                 "taken = np.zeros(free.shape[0], np.int64)",
                 "need = np.int64(0)",
+                "hid = W[_W_HID]"]
+        body += [f"{n} = hid[_WH_{n.upper()}]" for n in hid]
+        body += ["maxdep = W[_W_MAX_DEPTH]",
                 "for j in range(nd):",
                 "    i = due[j]",
                 "    if adm[0] + j + 1 > adm[1]:",
                 "        return np.int64(_ADM_CAP), np.int64(i)",
+                "    if np.int64(depth[CQ[CQ_SRC_G][i]]) + 1 > maxdep[CQ[CQ_ACTION][i]]:",
+                "        return np.int64(_ADM_DEPTH), np.int64(i)",
                 "    ns = CQ[CQ_NS][i]",
                 "    t = _NS_TYPE[ns]",
                 "    taken[t] += 1",
@@ -947,9 +956,7 @@ class _Gen:
                 "    need += _NS_NSTART[ns]",
                 "P = R[RT_POOL]",
                 "if P[P_FREE_N][0] < need:",
-                "    return np.int64(_ADM_NODES), need",
-                "hid = W[_W_HID]"]
-        body += [f"{n} = hid[_WH_{n.upper()}]" for n in hid]
+                "    return np.int64(_ADM_NODES), need"]
         body += ["pay = CQ[CQ_PAYLOAD]",
                  "woken = R[RT_WOKEN]",
                  "wn = R[RT_WOKEN_N]",
@@ -984,7 +991,8 @@ class _Gen:
                  "    ckey[g, 1] = cause",
                  "    ckey[g, 2] = ci",
                  "    ckey[g, 3] = k",
-                 "    created[g] = 1"]
+                 "    created[g] = 1",
+                 "    depth[g] = depth[CQ[CQ_SRC_G][i]] + 1"]
         owners = self._owner_parts()
         for code, ns in enumerate(self.plan.namespaces):
             t = next((t for t, p in enumerate(owners) if p.table == ns), None)

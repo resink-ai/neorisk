@@ -26,6 +26,7 @@ from neorisk_simkit.engine import route as rt
 from neorisk_simkit.engine.abi import PRIO_MESSAGE, START
 from neorisk_simkit.engine.admit import (
     ADM_CAP,
+    ADM_DEPTH,
     ADM_LIVE,
     ADM_NODES,
     ADM_OK,
@@ -73,6 +74,9 @@ HIDDEN_DTYPES: tuple[tuple[str, str, int | str], ...] = (
     # inst, k), written at admission; 0 for population owners and shards (D61)
     ("ckey", "int64", 4),
     ("created", "uint8", 1),       # 1 for a created owner's slot (its sender key is ckey, D61)
+    # spawn depth of the slot's owner: 0 for population owners and shards, creator + 1 for a
+    # created owner (D72)
+    ("depth", "uint8", 1),
 )
 
 
@@ -522,6 +526,8 @@ class World:
         self.counters = np.zeros((self.threads, len(COUNTERS)), np.int64)
         self.rejects = np.zeros((self.threads, len(plan.processes)), np.int64)
         self.kc = np.zeros((self.threads, 33), np.int64)
+        self.max_depth = np.array([pd.max_spawn_depth or self.run.budget.max_spawn_depth
+                                   for pd in plan.processes] or [0], np.int64)
         parts = {
             "hid": tuple(getattr(hid, n) for n, _, _ in HIDDEN_DTYPES),
             "pool": self.pool.as_tuple(), "pay": self.payload.as_tuple(),
@@ -531,7 +537,8 @@ class World:
             "kc": self.kc, "nopay": np.zeros((1, PAYLOAD_W), np.int64),
             "node_cap": int(self._node_cap()),
             "bnd_delta": self._bnd_array(lambda b: b.min_latency_us),
-            "ostate": tuple(self.state[p.name] for p in plan.partitions if p.kind == "owner")}
+            "ostate": tuple(self.state[p.name] for p in plan.partitions if p.kind == "owner"),
+            "max_depth": self.max_depth}
         self._W = tuple(parts[f] for f in WORLD_FIELDS)
 
     def _bnd_array(self, value) -> np.ndarray:
@@ -653,6 +660,7 @@ class World:
         hid.self_id[g] = self_id
         hid.ckey[g] = 0                     # a created owner's key is written by admit_created
         hid.created[g] = 0
+        hid.depth[g] = 0
         lslots = hid.lslot[g]
         for p in self.plan.processes:
             if p.partition == part.name and p.kernel.local is not None:
@@ -686,7 +694,11 @@ class World:
             if st == ADM_NODES:
                 self._take_reserve_nodes(v)
                 continue
-            proc = self.plan.processes[int(self.CQ.action[v])].name
+            a = int(self.CQ.action[v])
+            proc = self.plan.processes[a].name
+            if st == ADM_DEPTH:
+                depth = int(self.hidden.depth[int(self.CQ.src_g[v])]) + 1
+                raise CapExceeded("max_spawn_depth", int(self.max_depth[a]), depth, process=proc)
             if st == ADM_CAP:
                 limit = int(self._adm[1])
                 raise CapExceeded("max_admissions_per_step", limit, limit + 1, process=proc)

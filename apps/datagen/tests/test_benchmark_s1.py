@@ -1,8 +1,12 @@
 import json
 from pathlib import Path
 
+import pytest
+
 from datagen.benchmark import evaluate, load_workload
 from datagen.cli import main
+
+pytestmark = pytest.mark.large
 
 S1 = Path(__file__).resolve().parents[3] / "benchmarks" / "s1.toml"
 

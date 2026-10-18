@@ -28,7 +28,7 @@ import numpy as np
 from numba import njit
 
 # admission statuses of the generated `admit_created`
-ADM_OK, ADM_CAP, ADM_LIVE, ADM_NODES = 0, 1, 2, 3
+ADM_OK, ADM_CAP, ADM_LIVE, ADM_NODES, ADM_DEPTH = 0, 1, 2, 3, 4
 CQ_PAY = 7                       # user payload columns carried by a creation (D43)
 
 (CQ_TIME, CQ_PRIO, CQ_CAUSE, CQ_SRC_PID, CQ_SRC_SEQ, CQ_NS, CQ_HANDLE, CQ_SRC_G, CQ_ACTION,

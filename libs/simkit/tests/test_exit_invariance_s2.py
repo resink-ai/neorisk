@@ -25,6 +25,8 @@ from neorisk_simkit.engine.world import World
 from neorisk_simkit.io.dataset import run_to_dataset
 from neorisk_simkit.io.read import read_events
 
+pytestmark = pytest.mark.large
+
 EX2 = Path(__file__).resolve().parents[3] / "examples" / "ecommerce_s2"
 DAY = 86_400_000_000.0
 SMALL2 = ["users=1500", "skus=400", "sku_groups=6", "journey.hot_skus=20",

@@ -9,6 +9,8 @@ from neorisk_simkit.io.dataset import run_to_dataset
 from neorisk_simkit.io.read import read_events, read_postings
 from neorisk_simkit.spec.project import load_project, resolve_run
 
+pytestmark = pytest.mark.large
+
 EX = Path(__file__).resolve().parents[3] / "examples" / "ecommerce_s2"
 POOLS = ["engine.timer_nodes=600_000", "engine.payload_slots=100_000",
          "engine.max_messages_per_step=300_000", "budget.max_admissions_per_step=50_000",

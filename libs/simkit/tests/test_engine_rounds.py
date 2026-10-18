@@ -249,6 +249,7 @@ def test_safe_horizon_saturates():
     ("spawn", ["create_on_answer=1", "rounds=20"]), ("creators", ["accts=40"]),
     ("trace_shopper", []), ("mini", ["behavior.note_p=0.5"]), ("chain", []),
 ])
+@pytest.mark.checked
 def test_creating_fixtures_respect_their_reservations(name, overrides):
     """Checked mode (D3) over every fixture that creates rows, with slabs small enough to swap:
     a kernel that writes more than it reserved (e.g. an owner create's creation message

@@ -90,6 +90,7 @@ for res, n in minima.items():
 """
 
 
+@pytest.mark.checked
 @pytest.mark.parametrize("mode", ["checked", "uncompiled"])
 def test_checked_and_uncompiled_runs_match(mode, baseline, tmp_path):
     env = dict(os.environ)

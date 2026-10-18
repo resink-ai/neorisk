@@ -53,6 +53,7 @@ def test_an_empty_run_writes_zeros(tmp_path):
         assert (m["laws"][k]["checked"], m["laws"][k]["violations"]) == (0, 0), k
 
 
+@pytest.mark.checked
 def test_an_add_before_reject_is_a_write_in_checked_mode(tmp_path):
     with pytest.raises(AbiViolation, match="process acct_main wrote before returning reject"):
         run_to_dataset(FIXTURES / "ledger", "sample", ["add_then_reject=1"],

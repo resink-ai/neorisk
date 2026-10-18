@@ -88,6 +88,7 @@ def test_full_outbox_is_moved_aside_instead_of_livelocking():
     (2, EngineError, "timer scheduled before current time"),
     (3, AbiViolation, "wrote before returning RETRY"),
 ])
+@pytest.mark.checked
 def test_checked_mode_catches_abi_violations(mode, exc, msg):
     run, w = _world("bad_abi", overrides=[f"mode={mode}"], checked=True)
     slots = w.admit_population(run.start_us, run.start_us + 1)
@@ -102,6 +103,7 @@ def test_unchecked_mode_still_rejects_time_travel():
         w.run_slots(0, slots, run.start_us + H, owners=True)
 
 
+@pytest.mark.checked
 def test_checked_calendar_rejects_lost_pushes_and_window_gaps():
     """Contract from Task 7: contiguous collect windows, no push below the collected horizon."""
     from neorisk_simkit.engine import calendar as cal

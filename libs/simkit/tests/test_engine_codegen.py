@@ -37,6 +37,7 @@ def _ctx(g=3, t=1_000, lamport=4, pid=(1 << 56) | 3, action=0):
     return make_ctx(t, 3, pid, g, 11, action, 0, np.zeros(33, np.int64), 7, (), (), (), lamport, 0)
 
 
+@pytest.mark.checked
 def test_build_is_cached_by_content(run):
     a, b = build_engine(run.plan), build_engine(run.plan)
     assert a.__file__ == b.__file__ and a.RESOURCES == [
@@ -63,6 +64,7 @@ def test_reserve_and_emit_until_slab_is_full(run):
     assert gen._reserve_user_main(out, vec)          # flush made room again
 
 
+@pytest.mark.checked
 def test_checked_mode_catches_emit_without_reservation(run):
     gen, _, _, _, out = _setup(run, checked=True)
     with pytest.raises(AbiViolation, match="emit beyond reservation: ping"):
@@ -167,6 +169,7 @@ def test_module_name_tracks_the_runtime_library(run, monkeypatch):
     assert a.__file__ != b.__file__ and "changed-library" in Path(b.__file__).read_text()
 
 
+@pytest.mark.checked
 def test_checked_dispatch_drops_leftover_reservations(run):
     """A command that reserved more than it used must not let the next command emit freely."""
     from neorisk_simkit.engine.codegen import generate_module

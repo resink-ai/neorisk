@@ -7,6 +7,8 @@ import pytest
 from neorisk_simkit.io.dataset import run_to_dataset
 from neorisk_simkit.io.read import read_events
 
+pytestmark = pytest.mark.large
+
 EX = Path(__file__).resolve().parents[3] / "examples" / "ecommerce_s2"
 DAY = 86_400_000_000.0
 POOLS = ["engine.timer_nodes=600_000", "engine.payload_slots=100_000",

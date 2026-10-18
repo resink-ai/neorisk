@@ -84,7 +84,7 @@ def test_hidden_bytes_follow_the_world_dtype_table(run):
     from neorisk_simkit.spec import caps as caps_mod
     per = {1: 1, "A": 3, "N_NS": 2}
     expect = sum(np.dtype(dt).itemsize * per.get(m, m) for _, dt, m in HIDDEN_DTYPES)
-    assert hidden_bytes(3, 2) == expect == 9 * 8 + 4 * 5 + 2 + 1 + 4 * 3 + 4 * 2 + 8 * 4 + 1
+    assert hidden_bytes(3, 2) == expect == 9 * 8 + 4 * 5 + 2 + 1 + 4 * 3 + 4 * 2 + 8 * 4 + 1 + 1
     names = [n for n, _, _ in HIDDEN_DTYPES]
     assert "susp_t" in names and "susp_delta" in names and len(names) == len(set(names))
     assert caps_mod.hidden_bytes(run.plan) == hidden_bytes(1, len(run.plan.namespaces))
@@ -218,10 +218,10 @@ def _run_of(fixture_project, name, overrides=()):
     return resolve_run(load_project(fixture_project(name)), "sample", list(overrides))
 
 
-def test_chain_depth_two_is_valid_and_bounded(fixture_project):
+def test_chain_validates_whatever_the_budget_depth(fixture_project):
+    """D72: depth is checked at runtime (test_engine_spawn_depth.py), not by validate."""
     assert validate(_run_of(fixture_project, "chain")).ok
-    errs = validate(_run_of(fixture_project, "chain", ["budget.max_spawn_depth=1"])).errors
-    assert "spawn depth 2 exceeds budget.max_spawn_depth 1 (processes a_main -> b_main)" in errs
+    assert validate(_run_of(fixture_project, "chain", ["budget.max_spawn_depth=1"])).ok
 
 
 def test_spawn_depth_zero_is_refused(fixture_project):
@@ -232,13 +232,12 @@ def test_spawn_depth_zero_is_refused(fixture_project):
         assert "budget.max_spawn_depth must be >= 1" in errs, name
 
 
-def test_creation_cycle_is_an_unbounded_spawn(fixture_project):
+def test_creation_cycle_validates(fixture_project):
     from neorisk_simkit.engine import Res
     run = _run_of(fixture_project, "spawn")
-    bad = _with_kernel(run, "pay_main", max=Res(records={"paid": 1}, creates={"pay": 1},
+    cyc = _with_kernel(run, "pay_main", max=Res(records={"paid": 1}, creates={"pay": 1},
                                                  requests=1))
-    assert ("unbounded spawn: owner creation cycle pay -> pay (processes pay_main)"
-            in validate(bad).errors)
+    assert validate(cyc).ok
 
 
 def test_created_owner_tables_fit_a_creation_message(fixture_project):

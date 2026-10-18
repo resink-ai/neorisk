@@ -32,3 +32,7 @@ extend-exclude = ["docs"]
 
 [tool.pytest.ini_options]
 testpaths = ["libs", "apps"]
+markers = [
+    "checked: builds or runs the checked engine; run once at the milestone review (-m checked)",
+    "large: compiles an ecommerce_s2- or ecommerce-sized module (45-90 min cold)",
+]

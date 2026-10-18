@@ -1,8 +1,12 @@
 import json
 from pathlib import Path
 
+import pytest
+
 from datagen.benchmark import derived, evaluate, load_workload
 from datagen.cli import main
+
+pytestmark = pytest.mark.large
 
 ROOT = Path(__file__).resolve().parents[3] / "benchmarks"
 S2, POOL = ROOT / "s2.toml", ROOT / "s2_pool.toml"

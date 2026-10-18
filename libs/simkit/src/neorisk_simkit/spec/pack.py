@@ -245,7 +245,8 @@ class Pack:
     def process(self, name: str, *, kernel, owner: str | None = None, shard: str | None = None,
                 config=None, start: Trigger | None = None, requests=None, messages=None,
                 on_request=None, on_response=None, on_message=None, reads=None, refs=None,
-                commands=(), every=None, jitter: Dist | None = None) -> None:
+                commands=(), every=None, jitter: Dist | None = None,
+                max_spawn_depth: int | None = None) -> None:
         if name in self.processes:
             raise PackError(f"duplicate process {name!r}")
         if (owner is None) == (shard is None):
@@ -275,7 +276,8 @@ class Pack:
             "start": start, "requests": requests, "messages": messages,
             "on_request": dict(on_request or {}), "on_response": dict(on_response or {}),
             "on_message": dict(on_message or {}), "reads": reads, "refs": dict(refs or {}),
-            "commands": tuple(commands) or spec.commands, "every": every, "jitter": jitter}
+            "commands": tuple(commands) or spec.commands, "every": every, "jitter": jitter,
+            "max_spawn_depth": max_spawn_depth}
 
     def check(self, id: str, law: LawSpec, required: bool = False) -> None:
         if id in self.checks:

@@ -21,6 +21,8 @@ from neorisk_simkit.io.read import read_events
 from neorisk_simkit.io.seal import public_ids
 from neorisk_simkit.spec.project import load_project, resolve_run
 
+pytestmark = pytest.mark.large
+
 EX = Path(__file__).resolve().parents[3] / "examples" / "ecommerce_s2"
 DAY = 86_400_000_000.0
 HOLD_SLOTS = 64                                          # kernels.HOLD_SLOTS of the S2 pack

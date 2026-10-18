@@ -13,6 +13,8 @@ import pytest
 from neorisk_simkit import std
 from neorisk_simkit.engine import COMMIT, reject
 
+pytestmark = pytest.mark.large
+
 KERNELS = (Path(__file__).resolve().parents[3] / "examples" / "ecommerce_s2" / "specs"
            / "kernels.py")
 _spec = importlib.util.spec_from_file_location("ecom_s2_kernels", KERNELS)

@@ -43,85 +43,6 @@ def _owner_tables(plan) -> dict[str, str]:
     return {p.table: p.name for p in plan.partitions if p.kind == "owner" and p.table}
 
 
-def creation_graph(plan) -> dict[str, list[tuple[str, str]]]:
-    """Owner-creation edges (D42): partition -> [(created owner partition, process)], every
-    partition in plan order, edges in process order."""
-    owner_of = _owner_tables(plan)
-    graph: dict[str, list[tuple[str, str]]] = {p.name: [] for p in plan.partitions}
-    for p in plan.processes:
-        for ns in p.kernel.max.creates:
-            if ns in owner_of:
-                graph[p.partition].append((owner_of[ns], p.name))
-    return graph
-
-
-def _creation_cycle(graph: dict[str, list[tuple[str, str]]]) -> tuple[list[str], list[str]]:
-    """The first creation cycle a depth-first search in plan order finds, as (partitions on it,
-    closing with the first again; processes on its edges); empty lists when acyclic."""
-    done: set[str] = set()
-    path: list[str] = []                              # partitions on the DFS stack
-    via: list[str] = []                               # via[i]: process of edge path[i] -> path[i+1]
-
-    def visit(n: str) -> tuple[list[str], list[str]] | None:
-        path.append(n)
-        for dst, proc in graph[n]:
-            via.append(proc)
-            if dst in path:
-                i = path.index(dst)
-                return [*path[i:], dst], via[i:]
-            if dst not in done:
-                found = visit(dst)
-                if found:
-                    return found
-            via.pop()
-        path.pop()
-        done.add(n)
-        return None
-
-    for n in graph:
-        if n not in done:
-            found = visit(n)
-            if found:
-                return found
-    return [], []
-
-
-def _longest_spawn_chain(graph: dict[str, list[tuple[str, str]]]) -> list[str]:
-    """Processes along the longest creation chain of an acyclic graph (first in plan order on
-    ties); its length is the static spawn depth."""
-    memo: dict[str, list[str]] = {}
-
-    def chain(n: str) -> list[str]:
-        if n not in memo:
-            best: list[str] = []
-            for dst, proc in graph[n]:
-                c = [proc, *chain(dst)]
-                if len(c) > len(best):
-                    best = c
-            memo[n] = best
-        return memo[n]
-
-    best: list[str] = []
-    for n in graph:
-        if len(chain(n)) > len(best):
-            best = chain(n)
-    return best
-
-
-def _spawn_errors(run) -> list[str]:
-    graph = creation_graph(run.plan)
-    parts, procs = _creation_cycle(graph)
-    if parts:
-        return [(f"unbounded spawn: owner creation cycle {' -> '.join(parts)} "
-                 f"(processes {', '.join(procs)})")]
-    chain = _longest_spawn_chain(graph)
-    m = run.budget.max_spawn_depth
-    if len(chain) > m >= 1:
-        return [(f"spawn depth {len(chain)} exceeds budget.max_spawn_depth {m} "
-                 f"(processes {' -> '.join(chain)})")]
-    return []
-
-
 def _law_reason(plan, law) -> str | None:
     """Why a declared law cannot be evaluated (D47), or None."""
     from neorisk_simkit.checks.laws import resolve_path
@@ -241,7 +162,6 @@ def validate(run, threads: int | None = None) -> ValidationReport:
         if bad is not None:
             errs.append(f"created owner table {t.name}: column {bad.name} is {bad.ltype.kind}; "
                         "a creation message carries only int64 values")
-    errs += _spawn_errors(run)
     errs += _shadow_errors(plan)
 
     slab_rows = {n: eng.slab_bytes // max(1, rb) for n, rb in row_bytes.items()}
@@ -269,6 +189,8 @@ def validate(run, threads: int | None = None) -> ValidationReport:
             errs.append(f"{p.name}: declared maximum of requests {k.max.requests} plus "
                         f"{n_create} creation message(s) exceeds the outbox capacity "
                         f"{outbox_cap}")
+        if p.max_spawn_depth is not None and p.max_spawn_depth < 1:
+            errs.append(f"{p.name}: max_spawn_depth must be >= 1")
         commands = set(p.commands) | set(k.commands)
         if p.every_us is not None and part_kind.get(p.partition) != "shard":
             errs.append(f"{p.name}: every= is only for shard processes (D26)")
