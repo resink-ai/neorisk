@@ -924,7 +924,9 @@ class _Gen:
         needed), so a retry after any non-OK status sees `CQ` exactly as before (F-10)."""
         hid = ["pid", "alive", "clock", "rseq", "cseq", "pending", "susp_delta", "occ", "ordn",
                "retire_at", "susp_t", "last_t", "inst", "self_id", "ckey", "created", "qhead"]
-        body = ["due = cq_due(CQ, limit_t)",
+        body = ["if CQ[CQ_N][0] == 0:                 # nothing pending: no allocation",
+                "    return np.int64(_ADM_OK), np.int64(0)",
+                "due = cq_due(CQ, limit_t)",
                 "nd = due.shape[0]",
                 "if nd == 0:",
                 "    return np.int64(_ADM_OK), np.int64(0)",
@@ -1021,6 +1023,7 @@ class _Gen:
     def drain_small_rounds(self) -> None:
         """Whole rounds on worker 0 in compiled code (D4); see the contract at the top."""
         py = ["        rs[_RS_STATUS] = st", "        return _DR_PYTHON, n_run"]
+        py2 = ["    " + ln for ln in py]
         self.fn("drain_small_rounds",
                 ("W, out, R, CQ, FS, run, n_run, t1, min_par, shard_lo, shard_hi, sbuf, log, rs, "
                  "adm_buf"), [
@@ -1060,9 +1063,11 @@ class _Gen:
                     "    st, k_ = route_outbox(R, CQ, obx, cnt[R_REQUESTS])",
                     "    if st != 0:", *py,
                     "    cnt[R_REQUESTS] = 0",
-                    "    rs[_RS_PHASE] = _PH_ADMIT",
-                    "    st, na_ = admit_created(W, R, CQ, FS, t1, adm_buf)",
-                    "    if st != _ADM_OK:", *py,
+                    "    na_ = np.int64(0)",
+                    "    if CQ[CQ_N][0] > 0:                  # no call when nothing is pending",
+                    "        rs[_RS_PHASE] = _PH_ADMIT",
+                    "        st, na_ = admit_created(W, R, CQ, FS, t1, adm_buf)",
+                    "        if st != _ADM_OK:", *py2,
                     "    sc = command_count(counters) - c0",
                     "    if n_run == 0 and sc == 0 and na_ == 0:",
                     "        return _DR_NO_PROGRESS, n_run",

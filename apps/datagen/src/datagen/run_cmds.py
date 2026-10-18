@@ -63,8 +63,8 @@ def cmd_run(args: argparse.Namespace) -> int:
         return 4
     m, st = res.manifest, res.stats
     print(f"wrote {res.out_dir}")
-    for key, label in (("counts", "event"), ("history_counts", "history"),
-                       ("entity_counts", "entity")):
+    for key, label in (("counts", "event"), ("posting_counts", "posting"),
+                       ("history_counts", "history"), ("entity_counts", "entity")):
         for name, n in sorted(m.get(key, {}).items()):
             print(f"  {label} {name}: {n} rows")
     print(f"rounds {sum(st['rounds_per_step'])} · {st['timings']['total_s']:.2f} s")

@@ -61,7 +61,8 @@ class Simulation:
             "accumulators": {a.name: 0 for a in plan.accumulators},   # exported totals (D46)
             # whole run (warm-up included)
             "commands": 0, "shard_commands": 0, "rounds_total": 0, "compiled_rounds_total": 0,
-            "admissions_total": 0, "shard_load": {}, "populations": {}, "ids_allocated": {},
+            "admissions_total": 0, "compiled_admissions_total": 0, "shard_load": {},
+            "populations": {}, "ids_allocated": {},
             # exported steps only
             "events_by_partition": {p.name: 0 for p in plan.partitions}, "shard_ns": 0}
         self._event_partition = {e.name: e.partition for e in plan.events
@@ -122,6 +123,8 @@ class Simulation:
             rounds = run_step(w, t, t1)
             c1 = time.perf_counter()
             self.stats["admissions_total"] += int(w.admissions[0])   # reset by begin_step
+            self.stats["compiled_admissions_total"] += (int(w.admissions[0])
+                                                        - rounds.python_admissions)
             sealed = seal_step(w, step, t, t1, t >= start, self.id_bases,
                                law_tables=self.laws.tables)
             c2 = time.perf_counter()

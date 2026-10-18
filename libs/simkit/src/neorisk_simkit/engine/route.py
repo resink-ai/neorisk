@@ -272,19 +272,30 @@ def sender_keys(R, src_g, n):
     changes. A created owner (hidden `created` flag, per slot) keys as `(ptype, 1, created_at, creator
     commit lamport, creator inst, k)` from `ckey`, written at its admission: its `pid` is a
     provisional handle in its creation step and a per-step dense index afterwards, so it
-    would order the owner differently under different step lengths."""
+    would order the owner differently under different step lengths.
+
+    When no row comes from a created owner (all of S1), k1 and k3..k5 are one shared zero
+    array: they are only read, so the values are the same and three allocations are saved."""
     ptype, pid, ckey = R[RT_HID]
     created = R[RT_CREATED]
-    k0, k1, k2 = np.zeros(n, np.int64), np.zeros(n, np.int64), np.zeros(n, np.int64)
-    k3, k4, k5 = np.zeros(n, np.int64), np.zeros(n, np.int64), np.zeros(n, np.int64)
+    k0, k2 = np.empty(n, np.int64), np.empty(n, np.int64)
+    any_created = False
     for i in range(n):
         g = src_g[i]
         k0[i] = ptype[g]
+        k2[i] = pid[g]
+        if created[g]:
+            any_created = True
+    if not any_created:
+        z = np.zeros(n, np.int64)
+        return k0, z, k2, z, z, z
+    k1 = np.zeros(n, np.int64)
+    k3, k4, k5 = np.zeros(n, np.int64), np.zeros(n, np.int64), np.zeros(n, np.int64)
+    for i in range(n):
+        g = src_g[i]
         if created[g]:
             k1[i] = 1
             k2[i], k3[i], k4[i], k5[i] = ckey[g, 0], ckey[g, 1], ckey[g, 2], ckey[g, 3]
-        else:
-            k2[i] = pid[g]
     return k0, k1, k2, k3, k4, k5
 
 
@@ -306,14 +317,15 @@ def route_order(ob, n, R):
 def _route_order(ob, n, keys):
     k0, k1, k2, k3, k4, k5 = keys
     order = np.argsort(ob[_SRC_SEQ][:n], kind="mergesort")
-    if k1.any():                          # k3..k5 are zero unless a created owner sent a row
+    created = k1.any()                    # k1, k3..k5 are zero unless a created owner sent a row
+    if created:
         order = _then_by(order, k5)
         order = _then_by(order, k4)
         order = _then_by(order, k3)
     order = _then_by(order, k2)
-    if k1.any():
-        order = _then_by(order, k1)
-    order = _then_by(order, k0)
+    if created:                           # otherwise k2 = pid = ptype << 56 | index with ptype
+        order = _then_by(order, k1)       # = k0 <= 31 (D12): k2 already orders by k0 first
+        order = _then_by(order, k0)
     order = _then_by(order, ob[_CAUSE][:n])
     order = _then_by(order, ob[_PRIO][:n])
     return _then_by(order, ob[_TIME][:n])

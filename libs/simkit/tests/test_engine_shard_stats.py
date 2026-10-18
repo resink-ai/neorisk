@@ -67,3 +67,41 @@ def test_compiled_clock_reads_the_perf_counter_clock():
     c = now()
     b = time.perf_counter_ns()
     assert a <= c <= b
+
+
+def test_clock_falls_back_to_zero_without_a_compiled_clock():
+    """Task 19 M1: a platform other than macOS or Linux gets the constant 0 (compiled shard
+    phases go untimed) instead of a TypingError that would break the compiled engine."""
+    from llvmlite import ir
+
+    from neorisk_simkit.engine.clock import clock_ir, clock_source
+
+    assert clock_source("darwin") == "clock_gettime_nsec_np"
+    assert clock_source("linux") == "clock_gettime"
+    assert clock_source("win32") is None and clock_source("freebsd14") is None
+    emitted = {}
+    for source in ("clock_gettime_nsec_np", "clock_gettime", None):
+        mod = ir.Module()
+        fn = ir.Function(mod, ir.FunctionType(ir.IntType(64), []), "now")
+        b = ir.IRBuilder(fn.append_basic_block())
+        b.ret(clock_ir(b, source))
+        emitted[source] = str(mod)
+    assert "ret i64 0" in emitted[None] and "declare" not in emitted[None]
+    assert '@"clock_gettime_nsec_np"(i32 8)' in emitted["clock_gettime_nsec_np"]
+    assert '@"clock_gettime"(i32 1' in emitted["clock_gettime"]
+
+
+def test_compiled_rounds_time_their_shard_phases(monkeypatch, tmp_path):
+    """Task 19 M2: with Python rounds' timer stopped, the shard-phase time comes from the
+    compiled drain alone, and it is nonzero."""
+    from types import SimpleNamespace
+
+    from neorisk_simkit.engine import rounds
+
+    monkeypatch.setattr(rounds, "time", SimpleNamespace(perf_counter_ns=lambda: 0))
+    r = run_to_dataset(FIXTURES / "mini", "sample", ["behavior.take_p=0.8"],
+                       out_dir=tmp_path / "run", threads=1,
+                       engine_overrides={"parallel_min_partitions": 10**9})
+    st = json.loads((r.out_dir / "run_stats.json").read_text())
+    assert st["compiled_rounds_total"] > 0 and st["shard_events"] > 0
+    assert st["shard_phase_seconds"] > 0

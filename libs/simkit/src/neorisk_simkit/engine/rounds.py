@@ -49,6 +49,8 @@ from neorisk_simkit.engine.codegen import (
 )
 from neorisk_simkit.engine.errors import EngineError
 
+_NO_SLOTS = np.zeros(0, np.int64)
+
 
 @dataclass
 class RoundStats:
@@ -56,6 +58,7 @@ class RoundStats:
     owners_run: list[int] = field(default_factory=list)      # per round
     shard_cmds: list[int] = field(default_factory=list)      # per round
     compiled_rounds: int = 0
+    python_admissions: int = 0           # created owners admitted by Python rounds this step
     shard_ns: int = 0                    # wall nanoseconds spent in shard phases this step
 
 
@@ -113,7 +116,8 @@ def _python_round(world: Any, runnable: np.ndarray, t1: int, pool: ThreadPoolExe
     shard_cmds = world.command_count() - c0
     # from PH_ADMIT the compiled admission changed nothing (all or nothing, F-10): admit again,
     # which refills a short node reserve or raises the cap error itself
-    admitted = world.admit_created(t1)
+    admitted = world.admit_created(t1) if world.pending_creations() else _NO_SLOTS
+    stats.python_admissions += len(admitted)
     if not len(runnable) and not shard_cmds and not len(admitted):
         raise EngineError(f"no progress in round {stats.rounds + 1}")
     stats.rounds += 1

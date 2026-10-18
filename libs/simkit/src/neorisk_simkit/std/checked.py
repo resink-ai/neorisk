@@ -1,5 +1,11 @@
-"""Checked int64 arithmetic: identical results compiled and uncompiled (no wrap-around)."""
+"""Checked int64 arithmetic: identical results compiled and uncompiled (no wrap-around).
 
+Operands are widened to int64 first. Compiled, Numba already computes narrower ints in int64;
+uncompiled (`NUMBA_DISABLE_JIT`), NumPy 2 would keep a narrow operand's type, so a bound such as
+`I64_MAX // b` with an int16 `b` raised `OverflowError` on a product that fits.
+"""
+
+import numpy as np
 from numba import njit
 
 I64_MAX = 9_223_372_036_854_775_807
@@ -9,6 +15,7 @@ NULL = I64_MIN
 
 @njit(cache=True)
 def checked_add(a, b):
+    a, b = np.int64(a), np.int64(b)
     if b > 0 and a > I64_MAX - b:
         raise OverflowError("int64 overflow")
     if b < 0 and a < I64_MIN - b:
@@ -18,6 +25,7 @@ def checked_add(a, b):
 
 @njit(cache=True)
 def checked_sub(a, b):
+    a, b = np.int64(a), np.int64(b)
     if b < 0 and a > I64_MAX + b:
         raise OverflowError("int64 overflow")
     if b > 0 and a < I64_MIN + b:
@@ -27,6 +35,7 @@ def checked_sub(a, b):
 
 @njit(cache=True)
 def checked_mul(a, b):
+    a, b = np.int64(a), np.int64(b)
     if a == 0 or b == 0:
         return 0
     if (a > 0) != (b > 0):

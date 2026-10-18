@@ -5,8 +5,6 @@ A shard keeps a fixed table of holds in its process `Local`; a free slot is
 with reason `busy`.
 """
 
-NO_SLOT = -1
-
 
 def fields(slots: int) -> dict[str, str]:
     """`Local` fields of a hold table with `slots` slots."""

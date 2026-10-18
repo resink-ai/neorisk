@@ -77,3 +77,11 @@ def test_required_law_violation_exits_4(tmp_path):
     assert main(["run", str(FIXTURES / "ledger"), "--profile", "sample", "--set", "bad=1",
                  "--out", str(tmp_path / "x")]) == 4
     assert not (tmp_path / "x").exists()
+
+
+def test_run_summary_counts_postings(tmp_path, capsys):
+    """Final review M3: the summary lists posting tables next to events and entities."""
+    out = tmp_path / "ledger"
+    assert main(["run", str(FIXTURES / "ledger"), "--threads", "1", "--out", str(out)]) == 0
+    n = json.loads((out / "manifest.json").read_text())["posting_counts"]["entry"]
+    assert n > 0 and f"  posting entry: {n} rows" in capsys.readouterr().out

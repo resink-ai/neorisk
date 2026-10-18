@@ -93,6 +93,25 @@ def test_checked_arithmetic_compiled_matches():
     assert std.NULL == -(2**63)
 
 
+def test_checked_arithmetic_widens_narrow_ints_uncompiled():
+    """Task 15 (a): uncompiled (`NUMBA_DISABLE_JIT`, here `py_func`) a narrow operand is
+    widened to int64 first, as compiled code does; NumPy 2 kept it narrow and raised on
+    `I64_MAX // b` for a product that fits."""
+    import numpy as np
+
+    a, b = np.int64(2**40), np.int16(30_000)
+    mul = numba.njit(lambda x, y: std.checked_mul(x, y))
+    assert std.checked_mul.py_func(a, b) == mul(a, b) == 2**40 * 30_000
+    assert std.checked_mul.py_func(np.int16(-3), a) == mul(np.int16(-3), a) == -3 * 2**40
+    assert std.checked_add.py_func(np.int8(5), np.int64(2**62)) == 5 + 2**62
+    assert std.checked_sub.py_func(np.int16(-7), np.int64(2**62)) == -7 - 2**62
+    for f, x, y in ((std.checked_mul, np.int64(2**62), np.int16(4)),
+                    (std.checked_add, np.int64(2**63 - 1), np.int8(1)),
+                    (std.checked_sub, np.int64(-(2**63)), np.int16(1))):
+        with pytest.raises(OverflowError, match="int64 overflow"):
+            f.py_func(x, y)
+
+
 def test_cap_exceeded_message():
     e = CapExceeded("timer_heaps", 10, 11)
     assert e.item == "timer_heaps" and "timer_heaps" in str(e) and "limit 10" in str(e)

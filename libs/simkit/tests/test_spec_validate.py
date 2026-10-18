@@ -224,6 +224,14 @@ def test_chain_depth_two_is_valid_and_bounded(fixture_project):
     assert "spawn depth 2 exceeds budget.max_spawn_depth 1 (processes a_main -> b_main)" in errs
 
 
+def test_spawn_depth_zero_is_refused(fixture_project):
+    """Final review M4: `max_spawn_depth = 0` does not disable the depth check; validate refuses
+    it (and any value below 1), with or without creation edges."""
+    for name in ("chain", "mini"):
+        errs = validate(_run_of(fixture_project, name, ["budget.max_spawn_depth=0"])).errors
+        assert "budget.max_spawn_depth must be >= 1" in errs, name
+
+
 def test_creation_cycle_is_an_unbounded_spawn(fixture_project):
     from neorisk_simkit.engine import Res
     run = _run_of(fixture_project, "spawn")

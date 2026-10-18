@@ -211,6 +211,7 @@ def _accounting(sim: Simulation, manifest: dict[str, Any]) -> dict[str, Any]:
         "rounds_total": st["rounds_total"],
         "compiled_rounds_total": st["compiled_rounds_total"],
         "admissions_total": st["admissions_total"],
+        "compiled_admissions_total": st["compiled_admissions_total"],
         "counts": dict(manifest["counts"]),
         "posting_counts": dict(manifest["posting_counts"]),
         "entity_counts": dict(manifest["entity_counts"]),
