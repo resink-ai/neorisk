@@ -5,6 +5,7 @@ from __future__ import annotations
 import dataclasses
 import hashlib
 import shutil
+import sys
 import time
 from collections.abc import Iterable
 from dataclasses import dataclass
@@ -192,6 +193,19 @@ def _run_stats(sim: Simulation, manifest: dict[str, Any], timing: dict[str, floa
     return out
 
 
+def _shard_rate(shard_events: int, shard_s: float) -> dict[str, Any]:
+    """The shard-phase rate (D55), or null with the reason when compiled shard phases cannot be
+    timed on this platform (`engine.clock`): a rate over Python rounds alone would overstate
+    it."""
+    from neorisk_simkit.engine.clock import compiled_clock_available
+
+    if not compiled_clock_available():
+        return {"shard_events_per_second": None,
+                "shard_timing": f"unavailable: no compiled clock on {sys.platform}"}
+    return {"shard_events_per_second": shard_events / shard_s if shard_s > 0 else 0.0,
+            "shard_timing": "measured"}
+
+
 def _accounting(sim: Simulation, manifest: dict[str, Any]) -> dict[str, Any]:
     """Shard load, command shares, rounds and output by kind (Task 19). Windows (F-25): whole
     run for `shard_load`, commands, rounds, admissions, `populations` and `ids_allocated`;
@@ -221,5 +235,5 @@ def _accounting(sim: Simulation, manifest: dict[str, Any]) -> dict[str, Any]:
         "ids_allocated": dict(st["ids_allocated"]),
         "shard_phase_seconds": shard_s,
         "shard_events": shard_events,
-        "shard_events_per_second": shard_events / shard_s if shard_s > 0 else 0.0,
+        **_shard_rate(shard_events, shard_s),
     }

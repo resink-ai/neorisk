@@ -5,8 +5,10 @@ into the caller: `clock_gettime_nsec_np(CLOCK_UPTIME_RAW)` (mach_absolute_time) 
 `clock_gettime(CLOCK_MONOTONIC)` on Linux. The symbol is resolved by name when the module is
 loaded, so a function that calls it caches like any other (`cache=True`), inlines, and holds no
 GIL (~10 ns a call). On any other platform it compiles to the constant 0: the compiled engine
-still builds and runs, and only compiled shard phases go untimed (`shard_phase_seconds` then
-counts Python rounds alone). Uncompiled (`NUMBA_DISABLE_JIT=1`) it is `time.perf_counter_ns`
+still builds and runs, but compiled shard phases go untimed, so `compiled_clock_available()`
+is False and the run reports its shard timing as unavailable (`run_stats.json`
+`shard_events_per_second = null`, `shard_timing` says why); the benchmark's shard-phase gate
+is then "not measured", never a pass. Uncompiled (`NUMBA_DISABLE_JIT=1`) it is `time.perf_counter_ns`
 itself, since an intrinsic cannot run as Python. It replaces an `objmode` call to
 `time.perf_counter_ns`, which must take the GIL each time and slowed the S1 reduced profile's
 compiled rounds by about 6% (Task 19 report).
@@ -49,6 +51,12 @@ def clock_ir(builder: ir.IRBuilder, source: str | None) -> ir.Value:
     sec = builder.load(cgutils.gep_inbounds(builder, ts, 0, 0))
     nsec = builder.load(cgutils.gep_inbounds(builder, ts, 0, 1))
     return builder.add(builder.mul(sec, ir.Constant(i64, _NS)), nsec)
+
+
+def compiled_clock_available() -> bool:
+    """Whether `clock_ns` reads a real clock here: compiled with a C clock for this platform,
+    or uncompiled (`time.perf_counter_ns`)."""
+    return bool(config.DISABLE_JIT) or clock_source(sys.platform) is not None
 
 
 @intrinsic

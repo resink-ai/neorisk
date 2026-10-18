@@ -105,3 +105,25 @@ def test_compiled_rounds_time_their_shard_phases(monkeypatch, tmp_path):
     st = json.loads((r.out_dir / "run_stats.json").read_text())
     assert st["compiled_rounds_total"] > 0 and st["shard_events"] > 0
     assert st["shard_phase_seconds"] > 0
+
+
+def test_shard_timing_is_unavailable_without_a_compiled_clock(monkeypatch, tmp_path):
+    """Codex fix-confirm CX5: where `clock_ns` compiles to 0, compiled shard phases go
+    untimed, so the run reports no shard-phase rate (null, with the reason) rather than a rate
+    over Python rounds alone."""
+    from neorisk_simkit.engine import clock
+
+    assert clock.compiled_clock_available()               # macOS or Linux here
+    monkeypatch.setattr(clock, "clock_source", lambda platform: None)
+    assert not clock.compiled_clock_available()
+    r = run_to_dataset(FIXTURES / "mini", "sample", ["behavior.take_p=0.8"],
+                       out_dir=tmp_path / "run", threads=1)
+    st = json.loads((r.out_dir / "run_stats.json").read_text())
+    assert st["shard_events_per_second"] is None
+    assert st["shard_timing"].startswith("unavailable: no compiled clock on ")
+    assert st["shard_events"] > 0
+
+
+def test_shard_timing_is_measured_with_a_compiled_clock(mini):
+    st, _ = mini
+    assert st["shard_timing"] == "measured"

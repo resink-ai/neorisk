@@ -77,6 +77,29 @@ def test_at_most_and_a_malformed_expectation(tmp_path, capsys):
     assert "expectation 'shard_command_share' must be" in capsys.readouterr().err
 
 
+def test_unavailable_shard_timing_is_not_measured_never_a_pass():
+    """Codex fix-confirm CX5: without a compiled clock the run reports no shard-phase rate;
+    the shard gate is then "not measured", and the verdict is never `pass`."""
+    from datagen.benchmark import summary
+
+    wl = load_workload(POOL)
+    ok = _stats(exported_events=10_100_000, events_per_second=90_000.0,
+                shard_events_per_second=None, shard_command_share=0.6,
+                shard_timing="unavailable: no compiled clock on win32")
+    r = evaluate(ok, wl, scale=1.0)
+    c = next(c for c in r["checks"] if c["name"] == "shard_events_per_second")
+    assert (c["ok"], c["status"], c["value"]) == (None, "not measured", None)
+    assert c["reason"] == "unavailable: no compiled clock on win32"
+    assert r["verdict"] == "not measured"
+    assert evaluate(ok | {"events_per_second": 1.0}, wl, scale=1.0)["verdict"] == "fail"
+    text = summary(r | ok | {"report_path": "x.json", "cold": False, "workload": "s2_pool",
+                             "scale": 1.0, "engine_seconds": 1.0, "cold_compile_seconds": 1.0,
+                             "stage_seconds": {}, "rounds_per_step": [1], "machine": {},
+                             "shard_load": {}})
+    assert "NOT MEASURED (unavailable: no compiled clock on win32)" in text
+    assert "verdict           not measured" in text
+
+
 def test_s2_gate():
     wl = load_workload(S2)
     ok = _stats()                                    # the reserve share is not an expectation

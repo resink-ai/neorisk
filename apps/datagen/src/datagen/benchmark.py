@@ -18,7 +18,10 @@ Expectations are `{around, tolerance}`: for a count (`around > 1`) the tolerance
 
 Gate keys: `warm_seconds` and `peak_rss_gb` (upper limits), `min_events_per_second` (exported
 events ÷ warm `engine_seconds`) and `min_shard_events_per_second` (shard events ÷ shard-phase
-seconds, D55); the two rate gates are lower limits and report `limit` as `[x, null]`.
+seconds, D55); the two rate gates are lower limits and report `limit` as `[x, null]`. When
+the run could not time its compiled shard phases (`shard_events_per_second` null, reason in
+`shard_timing`), the shard-phase check is `"not measured"` (`ok` null) and the verdict is
+`not measured` unless another check fails: never a pass.
 
 Memory is reported in GiB (2³⁰ bytes): the gate's `peak_rss_gb` limit is read as GiB and the
 report's check is named `peak_rss_gib`. A failing child keeps its exit code (D35: 2 validation,
@@ -149,7 +152,13 @@ def evaluate(stats: dict[str, Any], wl: Workload, *, scale: float) -> dict[str, 
     for key, name in (("min_events_per_second", "events_per_second"),
                       ("min_shard_events_per_second", "shard_events_per_second")):
         if key in gate:
-            v, lim = float(stats[name]), float(gate[key])
+            lim = float(gate[key])
+            if stats.get(name) is None:                   # timing unavailable (engine.clock)
+                checks.append({"name": name, "value": None, "limit": [lim, None], "ok": None,
+                               "status": "not measured",
+                               "reason": stats.get("shard_timing", "no value")})
+                continue
+            v = float(stats[name])
             checks.append({"name": name, "value": v, "limit": [lim, None], "ok": v >= lim})
     values = stats | derived(stats)
     for name, spec in wl.expect.items():
@@ -168,8 +177,12 @@ def evaluate(stats: dict[str, Any], wl: Workload, *, scale: float) -> dict[str, 
         checks.append({"name": name, "value": v, "limit": limit, "ok": ok})
     if scale != 1:
         verdict = "skipped"
+    elif any(c["ok"] is False for c in checks):
+        verdict = "fail"
+    elif any(c["ok"] is None for c in checks):
+        verdict = "not measured"
     else:
-        verdict = "pass" if all(c["ok"] for c in checks) else "fail"
+        verdict = "pass"
     return {"verdict": verdict, "checks": checks,
             "reference_hardware": reference_hardware(stats.get("machine", {}))}
 
@@ -291,9 +304,11 @@ def summary(rep: dict[str, Any]) -> str:
         ("threads", rep.get("threads")),
         ("exported events", f"{rep['exported_events']:,}"),
         ("events/s", f"{rep.get('events_per_second', 0):,.0f}"),
-        ("shard-phase ev/s", (f"{rep.get('shard_events_per_second', 0):,.0f} "
+        ("shard-phase ev/s", (f"{rep['shard_events_per_second']:,.0f} "
                               f"({rep.get('shard_events', 0):,} shard events in "
-                              f"{rep.get('shard_phase_seconds', 0):.2f} s)")),
+                              f"{rep.get('shard_phase_seconds', 0):.2f} s)"
+                              if rep.get("shard_events_per_second") is not None
+                              else rep.get("shard_timing", "not measured"))),
         ("engine s (warm)", f"{rep['engine_seconds']:.2f}"),
         ("cold compile s", f"{rep['cold_compile_seconds']:.2f}"
                            + (" (cold cache)" if rep["cold"] else " (cache as found)")),
@@ -307,6 +322,10 @@ def summary(rep: dict[str, Any]) -> str:
              for name, load in rep.get("shard_load", {}).items()]
     lines = [f"{k:<18}{v}" if len(k) < 18 else f"{k} {v}" for k, v in rows]
     for c in rep["checks"]:
+        if c["ok"] is None:
+            lines.append(f"check {c['name']:<32}{'—':>16}  limit {c['limit']}  "
+                         f"NOT MEASURED ({c.get('reason')})")
+            continue
         lines.append(f"check {c['name']:<32}{c['value']:>16,.4f}  limit {c['limit']}  "
                      f"{'ok' if c['ok'] else 'FAIL'}")
     lines.append(f"verdict           {rep['verdict']}  → {rep['report_path']}")
@@ -323,7 +342,7 @@ def cmd_benchmark(args: argparse.Namespace) -> int:
     except (OSError, KeyError, ValueError, RuntimeError, tomllib.TOMLDecodeError) as e:
         print(e, file=sys.stderr)
         return 1
-    if rep["verdict"] == "fail" and not args.no_gate:
+    if rep["verdict"] in ("fail", "not measured") and not args.no_gate:
         return 1
     return 0
 
