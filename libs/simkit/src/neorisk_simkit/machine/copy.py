@@ -63,8 +63,12 @@ class _Rewrite(ast.NodeTransformer):
         if (isinstance(f, ast.Attribute) and isinstance(f.value, ast.Attribute)
                 and f.value.attr == "rng"):
             for kw in node.keywords:
-                if kw.arg == "site" and isinstance(kw.value, ast.Constant):
-                    kw.value = ast.Constant(L.action_site(self.copy, int(kw.value.value)))
+                if kw.arg != "site":
+                    continue
+                if not (isinstance(kw.value, ast.Constant) and type(kw.value.value) is int):
+                    raise PackError(f"{self.where}: site= must be an int literal (it is moved "
+                                    "into the machine's action site block)")
+                kw.value = ast.Constant(L.action_site(self.copy, kw.value.value))
         return self.generic_visit(node)
 
 
