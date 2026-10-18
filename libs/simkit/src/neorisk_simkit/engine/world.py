@@ -985,4 +985,25 @@ class World:
                                          if b.kind == "request"},
                 "pairing": {b.name: {"requests": int(self.R[rt.RT_BND_REQ][b.code]),
                                      "responses": int(self.R[rt.RT_BND_RESP][b.code])}
-                            for b in self.plan.boundaries if b.kind == "request"}}
+                            for b in self.plan.boundaries if b.kind == "request"},
+                "shard_load": self._shard_load()}
+
+    def _shard_load(self) -> dict[str, dict[str, Any]]:
+        """Per shard partition, whole run: requests delivered to each shard (`RT_SHARD_REQ`),
+        commands each shard executed (commits and rejects: its `occ` columns summed over the
+        partition's processes; shard slots are never reset) and the busiest shard's share."""
+        plan, req = self.plan, self.R[rt.RT_SHARD_REQ]
+        out: dict[str, dict[str, Any]] = {}
+        for part in plan.partitions:
+            if part.kind != "shard":
+                continue
+            lo = self.slot_base[part.name]
+            n_procs = sum(1 for p in plan.processes if p.partition == part.name)
+            cmds = self.hidden.occ[lo:lo + part.n, :n_procs].astype(np.int64).sum(axis=1)
+            total = int(cmds.sum())
+            out[part.name] = {
+                "shards": int(part.n),
+                "requests": [int(v) for v in req[lo - self.shard_lo:lo - self.shard_lo + part.n]],
+                "commands": [int(v) for v in cmds],
+                "max_share": int(cmds.max()) / total if total else 0}
+        return out

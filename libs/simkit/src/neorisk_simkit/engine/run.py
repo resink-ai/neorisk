@@ -6,6 +6,10 @@ at or before `start` are warm-up (not exported). With `engine.adapt` the next st
 follows `next_step_length` (deterministic: it depends only on row counts). Every sealed step,
 warm-up included (F-01), is fed to the run's `LawBook` (D47); a required law that fails raises
 `LawViolation`.
+
+`stats` also keeps the run's shard, round and output accounting (Task 19), each over its own
+window: whole run (warm-up included) for commands, rounds, admissions, shard load, populations
+and allocated IDs; exported steps only for `events_by_partition` and `shard_ns`.
 """
 
 from __future__ import annotations
@@ -54,8 +58,14 @@ class Simulation:
             "rounds_per_step": [], "round_detail": [], "generate_s": 0.0, "seal_s": 0.0,
             "check_s": 0.0, "laws": self.laws.report(),
             "proposals": 0, "requests_by_boundary": {}, "pairing": {},
-            "accumulators": {a.name: 0 for a in plan.accumulators}}   # exported totals (D46)
-        self._shard_commands = 0
+            "accumulators": {a.name: 0 for a in plan.accumulators},   # exported totals (D46)
+            # whole run (warm-up included)
+            "commands": 0, "shard_commands": 0, "rounds_total": 0, "compiled_rounds_total": 0,
+            "admissions_total": 0, "shard_load": {}, "populations": {}, "ids_allocated": {},
+            # exported steps only
+            "events_by_partition": {p.name: 0 for p in plan.partitions}, "shard_ns": 0}
+        self._event_partition = {e.name: e.partition for e in plan.events
+                                 if e.group == "events"}
 
     # ------------------------------------------------------------------ entities
     def static_entities(self) -> dict[str, pa.Table]:
@@ -111,6 +121,7 @@ class Simulation:
             c0 = time.perf_counter()
             rounds = run_step(w, t, t1)
             c1 = time.perf_counter()
+            self.stats["admissions_total"] += int(w.admissions[0])   # reset by begin_step
             sealed = seal_step(w, step, t, t1, t >= start, self.id_bases,
                                law_tables=self.laws.tables)
             c2 = time.perf_counter()
@@ -129,6 +140,9 @@ class Simulation:
                 length = next_step_length(length, sealed.stats["counted_rows"], eng, budget)
         self.laws.finish(end)
         self.stats["laws"] = self.laws.report()
+        self.stats["shard_load"] = w.stats["shard_load"]
+        self.stats["populations"] = {pop.table: int(pop.next) for pop in w.populations}
+        self.stats["ids_allocated"] = {ns: int(self.id_bases[ns]) for ns in run.plan.namespaces}
 
     def _account(self, sealed: SealedStep, rounds: Any, gen_s: float, seal_s: float) -> None:
         st = self.stats
@@ -141,7 +155,13 @@ class Simulation:
             acc = st["accumulators"]
             for name, v in sealed.accumulators.items():
                 acc[name] += v
+            by_part = st["events_by_partition"]
+            for name, tbl in sealed.events.items():
+                by_part[self._event_partition[name]] += tbl.num_rows
+            st["shard_ns"] += rounds.shard_ns
         st["rounds_per_step"].append(rounds.rounds)
+        st["rounds_total"] += rounds.rounds
+        st["compiled_rounds_total"] += rounds.compiled_rounds
         st["round_detail"].append({"owners_run": list(rounds.owners_run),
                                    "shard_cmds": list(rounds.shard_cmds)})
         st["generate_s"] += gen_s
@@ -150,7 +170,8 @@ class Simulation:
         for k in ENGINE_COUNTERS:
             st[k] = dict(ws[k]) if isinstance(ws[k], dict) else int(ws[k])
         # proposals: owner commands executed (commits and rejects; retries are not commands)
-        self._shard_commands += sum(rounds.shard_cmds)
-        st["proposals"] = ws["commands"] - self._shard_commands
+        st["commands"] = ws["commands"]
+        st["shard_commands"] += sum(rounds.shard_cmds)
+        st["proposals"] = ws["commands"] - st["shard_commands"]
         st["requests_by_boundary"] = dict(ws["requests_by_boundary"])
         st["pairing"] = dict(ws["pairing"])

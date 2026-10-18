@@ -16,10 +16,15 @@ generated `drain_small_rounds` (one compiled loop on the calling thread, D4; cre
 admitted there too) until a round is large or a slab, pool, route or admission status needs
 Python; Python then finishes that round from the phase where the compiled loop stopped, so both
 paths run the same rounds.
+
+Both paths time their shard phases (D55, F-03): Python rounds wrap the shard `_run_phase` in
+`time.perf_counter_ns()`, the compiled loop adds into `round_state[RS_SHARD_NS]`; the step's
+total is `RoundStats.shard_ns`.
 """
 
 from __future__ import annotations
 
+import time
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from typing import Any
@@ -39,6 +44,7 @@ from neorisk_simkit.engine.codegen import (
     RS_H,
     RS_NLOG,
     RS_PHASE,
+    RS_SHARD_NS,
     RS_STATUS,
 )
 from neorisk_simkit.engine.errors import EngineError
@@ -50,6 +56,7 @@ class RoundStats:
     owners_run: list[int] = field(default_factory=list)      # per round
     shard_cmds: list[int] = field(default_factory=list)      # per round
     compiled_rounds: int = 0
+    shard_ns: int = 0                    # wall nanoseconds spent in shard phases this step
 
 
 @dataclass(frozen=True)
@@ -96,7 +103,9 @@ def _python_round(world: Any, runnable: np.ndarray, t1: int, pool: ThreadPoolExe
                 world.handle_status(0, resume.status)
         shards = world.shards_below(h)
         world.mark_touched(shards)
+        ts = time.perf_counter_ns()
         _run_phase(world, shards, h, False, pool)
+        stats.shard_ns += time.perf_counter_ns() - ts
     else:
         c0 = resume.c0
     if phase <= PH_ROUTE2:
@@ -150,6 +159,7 @@ def run_step(world: Any, t0: int, t1: int) -> RoundStats:
     runnable = np.union1d(world.collect(t0, t1), admitted).astype(np.int64)
     small = world.run.engine.parallel_min_partitions
     stats = RoundStats()
+    world.round_state[RS_SHARD_NS] = 0            # the compiled loop adds its shard phases here
     pool = ThreadPoolExecutor(world.threads) if world.threads > 1 else None
     try:
         while True:
@@ -167,5 +177,6 @@ def run_step(world: Any, t0: int, t1: int) -> RoundStats:
     finally:
         if pool is not None:
             pool.shutdown()
+    stats.shard_ns += int(world.round_state[RS_SHARD_NS])
     world.end_step(t1)
     return stats

@@ -188,4 +188,37 @@ def _run_stats(sim: Simulation, manifest: dict[str, Any], timing: dict[str, floa
     }
     for k in ENGINE_COUNTERS:
         out[k] = dict(st[k]) if isinstance(st[k], dict) else st[k]
+    out.update(_accounting(sim, manifest))
     return out
+
+
+def _accounting(sim: Simulation, manifest: dict[str, Any]) -> dict[str, Any]:
+    """Shard load, command shares, rounds and output by kind (Task 19). Windows (F-25): whole
+    run for `shard_load`, commands, rounds, admissions, `populations` and `ids_allocated`;
+    exported steps for the copied manifest counts, `events_by_partition` and the shard-phase
+    rate (D55): `shard_events` (exported events emitted by shard partitions) over
+    `shard_phase_seconds` (shard phases of exported steps)."""
+    st, plan = sim.stats, sim.run.plan
+    commands = st["commands"]
+    by_part = dict(st["events_by_partition"])
+    shard_events = sum(by_part[p.name] for p in plan.partitions if p.kind == "shard")
+    shard_s = st["shard_ns"] / 1e9
+    return {
+        "shard_load": st["shard_load"],
+        "commands": commands,
+        "shard_commands": st["shard_commands"],
+        "shard_command_share": st["shard_commands"] / commands if commands else 0.0,
+        "rounds_total": st["rounds_total"],
+        "compiled_rounds_total": st["compiled_rounds_total"],
+        "admissions_total": st["admissions_total"],
+        "counts": dict(manifest["counts"]),
+        "posting_counts": dict(manifest["posting_counts"]),
+        "entity_counts": dict(manifest["entity_counts"]),
+        "accumulators": dict(manifest["accumulators"]),
+        "events_by_partition": by_part,
+        "populations": dict(st["populations"]),
+        "ids_allocated": dict(st["ids_allocated"]),
+        "shard_phase_seconds": shard_s,
+        "shard_events": shard_events,
+        "shard_events_per_second": shard_events / shard_s if shard_s > 0 else 0.0,
+    }
