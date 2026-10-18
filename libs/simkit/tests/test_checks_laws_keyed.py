@@ -295,11 +295,39 @@ def test_sum_le_stops_when_a_sum_leaves_int64():
         book.step(_sealed(10, 20, opened=_table([{"t": 11, "acct_id": 2, "amount": 1}])), None)
 
 
-def test_checker_state_charges_each_reducers_layout():
-    """Codex C3: each keyed law is charged its real bytes per key, `checker_state` is
-    `max_keys` keys of the widest one, and state is reserved before it grows."""
-    import numpy as np
+@pytest.mark.parametrize("side", ["entry", "opened"])
+def test_sum_le_stops_when_a_carried_sum_at_int64_min_goes_lower(side):
+    """Codex fix-confirm CX1: a per-key sum carried at exactly INT64_MIN (where an int64 abs
+    wraps) followed by -1 in a later step is a loud error, never a wrap to INT64_MAX; on
+    either side of the law."""
+    from neorisk_simkit.engine.errors import EngineError
 
+    book = _book(("chk.le", law.sum_le("opened.amount", "entry.amount", by="acct_id"), False))
+    first = _table([{"t": 1, "acct_id": 3, "amount": I64_MIN}])
+    book.step(_sealed(0, 10, **{side: first}), None)
+    law_ = book._laws[0]
+    assert (law_.rsum if side == "entry" else law_.lsum).tolist() == [I64_MIN]
+    with pytest.raises(EngineError, match=f"for acct_id 3 reaches {I64_MIN - 1}, outside int64"):
+        book.step(_sealed(10, 20, **{side: _table([{"t": 11, "acct_id": 3, "amount": -1}])}),
+                  None)
+
+
+def test_total_le_at_int64_min():
+    """CX1: a carried total at INT64_MIN goes lower exactly (no violation, no wrap), and is
+    still judged exactly when it climbs back past the limit (balanced at INT64_MIN:
+    test_checks_laws.py)."""
+    low = _book(("chk.low", law.total_le("opened.amount", 0), True))
+    low.step(_sealed(0, 10, opened=_table([{"t": 1, "acct_id": 1, "amount": I64_MIN}])), None)
+    low.step(_sealed(10, 20, opened=_table([{"t": 11, "acct_id": 1, "amount": -1}])), None)
+    assert low._laws[0].total == I64_MIN - 1 and low.report()["chk.low"]["violations"] == 0
+    with pytest.raises(LawViolation, match=f"total {I64_MIN - 1 + 2 * I64_MAX} exceeds 0"):
+        low.step(_sealed(20, 30, opened=_table([{"t": 21, "acct_id": 1, "amount": I64_MAX},
+                                                {"t": 22, "acct_id": 1, "amount": I64_MAX}])),
+                 None)
+
+
+def test_checker_state_charges_each_reducers_layout():
+    """Codex C3: each keyed law carries its real bytes per key; the laws share `checker_state`."""
     once = ("chk.once", law.at_most_once("opened", key=("acct_id", "amount")), False)
     book = _book(once, LE, RES)
     rows = [{"t": i, "acct_id": i, "amount": i} for i in range(1, 4)]
@@ -310,12 +338,66 @@ def test_checker_state_charges_each_reducers_layout():
     assert le.keys() * 24 == le.skeys.nbytes + le.lsum.nbytes + le.rsum.nbytes
     assert res.keys() * 56 == sum(v.nbytes for v in res.open.values())
     assert book.state_bytes == sum(x.keys() * x.key_bytes for x in book._laws) > 0
-    assert book.cap_bytes == 100 * 56
+    assert book.cap_bytes == 66 * 100 + 64 * 100                # resolved's peak, 100 keys
 
-    one = LawBook(_plan(RES), max_keys=1)                  # one open key: 56 B, within the cap
+
+def _measured_peak(lw, n0, both):
+    """(bytes the law's update to n0 + 10 keys held at its peak: state before plus the peak of
+    new allocations, traced from the start; keys after)."""
+    import tracemalloc
+
+    tracemalloc.start()
+    try:
+        book = LawBook(_plan(("x", lw, False)), max_keys=10**8)
+        t = _table([{"t": 1, "acct_id": i, "amount": i} for i in range(n0)])
+        book.step(_sealed(0, 10 * S, opened=t, entry=t if both else None), None)
+        nt = _table([{"t": 10 * S + 1, "acct_id": n0 + i, "amount": 1} for i in range(10)])
+        before = book.state_bytes
+        tracemalloc.reset_peak()
+        base = tracemalloc.get_traced_memory()[0]
+        book.step(_sealed(10 * S, 20 * S, opened=nt, entry=nt if both else None), None)
+        return before + tracemalloc.get_traced_memory()[1] - base, n0 + 10
+    finally:
+        tracemalloc.stop()
+
+
+@pytest.mark.parametrize("lw,both", [
+    (law.at_most_once("opened", key="acct_id"), False),
+    (law.at_most_once("opened", key=("acct_id", "amount")), False),
+    (law.sum_le("opened.amount", "entry.amount", by="acct_id"), True),
+    (law.resolved("opened", by=("entry",), key="acct_id", within="100d"), False),
+    (law.resolved("opened", by=("entry",), key="acct_id", within="100d"), True)])
+def test_an_update_stays_within_its_reserved_peak(lw, both):
+    """Codex fix-confirm CX2: the bytes an update really holds at once (old and new arrays,
+    merge masks, matching chunk; numpy allocations traced) stay within `law_peak_bytes`, which
+    the reservation charges before allocating. Slack: the step's own few rows."""
+    from neorisk_simkit.spec.caps import law_peak_bytes
+
+    peak, n = _measured_peak(lw, 200_000, both)
+    assert peak <= law_peak_bytes(lw, n) + 16_384, (peak, law_peak_bytes(lw, n))
+    assert peak >= 0.9 * law_peak_bytes(lw, n) - 64 * 65_536    # the bound is not loose
+
+
+def test_a_reservation_near_the_cap_raises_before_allocating():
+    """CX2: `checker_state` covers an update's peak beside the other laws' state; the update
+    that would pass it raises `CapExceeded` with the state untouched."""
+    import numpy as np
+
+    one = LawBook(_plan(RES), max_keys=1)                  # cap: one key's peak, 66 + 64 B
     one.step(_sealed(0, S, opened=_table([{"t": 1, "acct_id": 1, "amount": 0}])), None)
-    assert one.state_bytes == 56 == one.cap_bytes
-    with pytest.raises(CapExceeded, match=r"limit 56, attempted 112"):
+    assert one.state_bytes == 56 and one.cap_bytes == 130
+    with pytest.raises(CapExceeded, match=r"limit 130, attempted 260"):
         one.step(_sealed(S, 2 * S, opened=_table([{"t": S + 1, "acct_id": 2, "amount": 0}])),
                  None)
     assert one.keys == 1 and np.array_equal(one._laws[0].open["key"], [1])
+
+    book = LawBook(_plan(LE, ("chk.once", law.at_most_once("opened", key="acct_id"), False)),
+                   max_keys=4)                              # cap 4 x 33 = 132
+    rows = [{"t": i, "acct_id": i, "amount": 0} for i in range(1, 4)]
+    book.step(_sealed(0, 10, opened=_table(rows), entry=_table(rows)), None)
+    le, once = book._laws
+    assert book.cap_bytes == 132 and (le.keys(), once.keys()) == (3, 3)
+    # sum_le grows to 4 keys: 4 x 33 + once's 3 x 8 = 156 > 132, so the step raises first
+    with pytest.raises(CapExceeded, match=r"limit 132, attempted 156"):
+        book.step(_sealed(10, 20, entry=_table([{"t": 11, "acct_id": 9, "amount": 0}])), None)
+    assert le.keys() == 3 and np.array_equal(le.skeys, [1, 2, 3])

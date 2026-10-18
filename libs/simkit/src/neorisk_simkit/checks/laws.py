@@ -16,9 +16,11 @@ Within a step, checks run in declaration order and the first required check with
 raises. `finish(end_us)` censors `resolved` keys still open whose deadline is at or after the
 end (reported in `censored`, never a violation).
 
-Carried state is capped at `checker_state` = `max_keys` x the widest keyed law's bytes per key
-(`spec.caps.law_key_bytes`: each reducer's real layout). The laws share that cap byte for byte;
-a law reserves its grown state before allocating it and `CapExceeded` is raised instead. Running
+Carried state is capped at `checker_state` = the largest peak a declared keyed law reaches while
+it updates `max_keys` keys (`spec.caps.law_peak_bytes`: old and new arrays plus the update's
+workspace). The laws share that cap: before allocating, a law reserves its update's peak beside
+the state the others carry (`spec.caps.law_key_bytes`, each reducer's real layout), and
+`CapExceeded` is raised instead when it does not fit. Running
 totals are exact: a total that leaves int64 is judged exactly (`total_le`, `balanced`) or stops the
 run with an `EngineError` (`sum_le`, whose per-key sums are carried as int64). Evaluation reads
 only the sealed tables and the world state, so it is identical across thread counts.
@@ -34,7 +36,12 @@ import pyarrow.compute as pc
 
 from neorisk_simkit.engine.errors import CapExceeded, EngineError, LawViolation
 from neorisk_simkit.io.consts import NULL
-from neorisk_simkit.spec.caps import checker_key_bytes, law_key_bytes
+from neorisk_simkit.spec.caps import (
+    RESOLVED_CHUNK,
+    checker_state_bytes,
+    law_key_bytes,
+    law_peak_bytes,
+)
 
 _NONE = np.zeros(0, np.int64)
 _M1 = np.uint64(0xBF58476D1CE4E5B9)
@@ -125,7 +132,7 @@ def row_keys(t: pa.Table, col: str) -> tuple[np.ndarray, np.ndarray]:
 def exact_cumsum(v: np.ndarray, base: int = 0) -> np.ndarray:
     """`base + cumsum(v)` without wrapping: int64 when no partial sum can leave int64, else
     exact Python integers (an object array)."""
-    if abs(base) + float(np.abs(v.astype(np.float64)).sum()) < _SAFE:
+    if abs(int(base)) + float(np.abs(v.astype(np.float64)).sum()) < _SAFE:
         return np.cumsum(v) + np.int64(base)
     return np.cumsum(np.concatenate([np.array([base], object), v.astype(object)]))[1:]
 
@@ -150,14 +157,16 @@ class _Law:
         self.censored = 0
         self.first: dict[str, Any] | None = None
         self.t_end = 0                                   # end of the step being fed
+        self.lw = cdef.law
         self.key_bytes = law_key_bytes(cdef.law)         # carried bytes per key
 
     def keys(self) -> int:
         return 0
 
     def reserve(self, keys: int) -> None:
-        """Called before carried state grows to `keys` keys; `LawBook` raises `CapExceeded`
-        when that would pass `checker_state`."""
+        """Called before an update that leaves `keys` keys allocates anything; `LawBook` raises
+        `CapExceeded` when the update's peak (`law_peak_bytes`) beside the other laws' state
+        would pass `checker_state`."""
 
     def finish(self, end_us: int) -> None:
         """The run ended at `end_us`."""
@@ -292,7 +301,7 @@ class _AtMostOnce(_Law):
         new = new[np.argsort(h[new], kind="stable")]
         self.reserve(len(self.seen) + len(new))
         pos = np.searchsorted(self.seen, h[new], side="right")
-        self.seen = np.insert(self.seen, pos, h[new])
+        self.seen = np.insert(self.seen, pos, h[new])      # the old array is freed here
         if self.cols is not None:
             self.cols = np.insert(self.cols, pos, cols[new], axis=0)
 
@@ -494,7 +503,8 @@ class _SumLe(_Law):
         for sums, side in ((self.lsum, 1), (self.rsum, 0)):
             a = np.where(s["side"] == side, s["amt"], 0)
             base = np.where(hit, sums[pos] if len(sums) else 0, 0)
-            exact = float(np.abs(base).max(initial=0)) + float(np.abs(a.astype(np.float64)).sum())
+            exact = (float(np.abs(base.astype(np.float64)).max(initial=0))   # no abs(INT64_MIN)
+                     + float(np.abs(a.astype(np.float64)).sum()))
             if exact >= _SAFE:                           # a per-key sum may leave int64
                 a, base = a.astype(object), base.astype(object)
             c = np.cumsum(a)                             # a wrap of this global sum cancels
@@ -503,14 +513,16 @@ class _SumLe(_Law):
                 r = self._fit(r, ks, side)
             running.append(r)
         run_l, run_r = running
-        keys = np.concatenate([self.skeys, uniq[~hit]])
-        new = []
-        for sums, r in ((self.lsum, run_l), (self.rsum, run_r)):
-            sums = sums.copy()
-            sums[pos[hit]] = r[ends][hit]
-            new.append(np.concatenate([sums, r[ends][~hit]]))
-        order = np.argsort(keys, kind="stable")
-        self.skeys, self.lsum, self.rsum = keys[order], new[0][order], new[1][order]
+        lend, rend = run_l[ends], run_r[ends]
+        if hit.any():                                    # carried keys: updated in place
+            self.lsum[pos[hit]] = lend[hit]
+            self.rsum[pos[hit]] = rend[hit]
+        fresh = ~hit
+        if fresh.any():                                  # new keys, sorted and absent:
+            at = np.searchsorted(self.skeys, uniq[fresh])    # inserted, never re-sorted
+            self.skeys = np.insert(self.skeys, at, uniq[fresh])
+            self.lsum = np.insert(self.lsum, at, lend[fresh])
+            self.rsum = np.insert(self.rsum, at, rend[fresh])
         return s, run_l, run_r
 
     def _fit(self, r: np.ndarray, ks: np.ndarray, side: int) -> np.ndarray:
@@ -589,16 +601,18 @@ class _Resolved(_Law):
         dl = (new["event_time"] + self.within_us if self.within_us is not None
               else np.full(n_new, _I64_MAX, np.int64))
         o = self.open
-        self.reserve(len(o["key"]) + n_new)
-        op = {"key": np.concatenate([o["key"], new["key"][new_order]]),
-              "t": np.concatenate([o["t"], new["event_time"][new_order]]),
-              "deadline": np.concatenate([o["deadline"], dl[new_order]]),
-              "pid": np.concatenate([o["pid"], new["partition_id"][new_order]]),
-              "seq": np.concatenate([o["seq"], new["seq"][new_order]]),
-              "action": np.concatenate([o["action"], new["action"][new_order]]),
-              "warm": np.concatenate([o["warm"], np.full(n_new, 0 if exported else 1, np.int64)])}
-        orank = np.concatenate([np.full(len(o["key"]), -1, np.int64), rank[:n_new][new_order]])
-        n_op = len(op["key"])
+        n_old = len(o["key"])
+        n_op = n_old + n_new
+        self.reserve(n_op)
+        fresh = {"key": new["key"], "t": new["event_time"], "deadline": dl,
+                 "pid": new["partition_id"], "seq": new["seq"], "action": new["action"]}
+        fresh = {k: v[new_order] for k, v in fresh.items()}
+        fresh["warm"] = np.full(n_new, 0 if exported else 1, np.int64)
+        op = {}
+        for k in self._OPEN:                             # one column at a time: the old one
+            op[k] = np.concatenate([o[k], fresh[k]])     # is freed before the next grows
+            o[k] = None
+        nrank = rank[:n_new][new_order]                  # an old opening ranks -1
         match = np.zeros(n_op, bool)
         used = 0
         if n_cl and n_op:
@@ -608,29 +622,49 @@ class _Resolved(_Law):
             uniq, gid = np.unique(ck, return_inverse=True)
             m = np.int64(len(order) + 2)
             comp = gid.astype(np.int64) * m + (cr + 1)
-            g = np.minimum(np.searchsorted(uniq, op["key"]), len(uniq) - 1)
-            j = np.searchsorted(comp, g * m + (orank + 1), side="right")
-            jj = np.minimum(j, n_cl - 1)
-            match = ((uniq[g] == op["key"]) & (j < n_cl) & (gid[jj] == g)
-                     & (ct[jj] <= op["deadline"]))   # a close past the deadline is too late
-            used = len(np.unique(jj[match]))
-        warm = op["warm"] == 1
-        expired = ~match & (op["deadline"] < t_end)
-        judged = ~warm & (match | expired)
-        bad = np.flatnonzero(~warm & expired)
-        self.open = {k: v[~match & ~expired] for k, v in op.items()}
+            closed = np.zeros(n_cl, bool)
+            for lo in range(0, n_op, RESOLVED_CHUNK):    # bounded matching workspace
+                hi = min(lo + RESOLVED_CHUNK, n_op)
+                key = op["key"][lo:hi]
+                orank = np.full(hi - lo, -1, np.int64)
+                if hi > n_old:
+                    s0 = max(lo, n_old)
+                    orank[s0 - lo:] = nrank[s0 - n_old:hi - n_old]
+                g = np.minimum(np.searchsorted(uniq, key), len(uniq) - 1)
+                j = np.searchsorted(comp, g * m + (orank + 1), side="right")
+                jj = np.minimum(j, n_cl - 1)
+                mc = ((uniq[g] == key) & (j < n_cl) & (gid[jj] == g)
+                      & (ct[jj] <= op["deadline"][lo:hi]))   # a close past the deadline is late
+                match[lo:hi] = mc
+                closed[jj[mc]] = True
+            used = int(closed.sum())
+        expired = ~match
+        expired &= op["deadline"] < t_end
+        live = op["warm"] == 0
+        n_judged = int((live & (match | expired)).sum())
+        live &= expired                                  # exported openings that expired
+        n_bad = int(live.sum())
+        first = int(np.argmax(live)) if n_bad else -1    # openings are kept in canonical order
+        cite = None if first < 0 else {k: int(op[k][first]) for k in ("key", "t", "pid", "seq",
+                                                                        "action")}
+        del live
+        match |= expired                                 # resolved or expired: dropped
+        np.logical_not(match, out=match)
+        del expired
+        for k in self._OPEN:                             # filtered one column at a time
+            op[k] = op[k][match]
+        self.open = op
         if not exported:
             return 0
         self.unmatched += n_cl - used
-        if len(bad):
-            self._fail_open(op, bad)
-        return int(judged.sum())
+        if n_bad:
+            self._fail_open(cite, n_bad)
+        return n_judged
 
-    def _fail_open(self, op: dict[str, np.ndarray], bad: np.ndarray) -> None:
-        i = int(bad[0])                                  # openings are kept in canonical order
-        self._fail(self.event, (int(op["pid"][i]), int(op["seq"][i]), int(op["action"][i])),
-                   f"{self.key} {int(op['key'][i])} opened at {int(op['t'][i])} not resolved "
-                   f"within {self.within}", len(bad))
+    def _fail_open(self, cite: dict[str, int], n: int) -> None:
+        self._fail(self.event, (cite["pid"], cite["seq"], cite["action"]),
+                   f"{self.key} {cite['key']} opened at {cite['t']} not resolved "
+                   f"within {self.within}", n)
 
     def warm(self, rows):
         self._advance(rows, self.t_end, exported=False)
@@ -646,7 +680,9 @@ class _Resolved(_Law):
         self.checked += len(bad)
         self.open = {k: v[:0] for k, v in op.items()}
         if len(bad):
-            self._fail_open(op, bad)
+            i = int(bad[0])
+            self._fail_open({k: int(op[k][i]) for k in ("key", "t", "pid", "seq", "action")},
+                            len(bad))
 
     def report(self) -> dict[str, Any]:
         return {**super().report(), "unmatched": self.unmatched}
@@ -685,15 +721,15 @@ class LawBook:
 
     def __init__(self, plan: Any, *, max_keys: int):
         self.max_keys = int(max_keys)
-        self.cap_bytes = self.max_keys * checker_key_bytes(plan)   # `checker_state`
+        self.cap_bytes = checker_state_bytes(plan, self.max_keys)   # `checker_state`
         self._laws = [_build(plan, c) for c in plan.checks]
         for law in self._laws:
             law.reserve = lambda keys, law=law: self._reserve(law, keys)
         self.end_us: int | None = None
 
     def _reserve(self, law: _Law, keys: int) -> None:
-        need = keys * law.key_bytes + sum(o.keys() * o.key_bytes for o in self._laws
-                                          if o is not law)
+        need = law_peak_bytes(law.lw, keys) + sum(o.keys() * o.key_bytes for o in self._laws
+                                                  if o is not law)
         if need > self.cap_bytes:
             raise CapExceeded("checker_state", self.cap_bytes, need)
 

@@ -272,9 +272,10 @@ def test_creation_messages_count_toward_the_outbox(fixture_project):
 
 
 def test_laws_must_resolve_and_count_checker_state(fixture_project):
-    """D47: every law path and table resolves; `checker_state` is `max_checker_keys` keys of the
-    widest keyed law (`at_most_once` 8 B per key column plus a hash for several, `sum_le` 24 B,
-    `resolved` 56 B), reserved only when a keyed law is declared."""
+    """D47: every law path and table resolves; `checker_state` is the largest update peak of a
+    declared keyed law at `max_checker_keys` keys (`at_most_once` 2 x key bytes + 1 per key,
+    `sum_le` 33 B, `resolved` 66 B plus one matching chunk), reserved only when a keyed law is
+    declared."""
     from neorisk_simkit.spec import law
     from neorisk_simkit.spec.plan import CheckDef
 
@@ -288,16 +289,18 @@ def test_laws_must_resolve_and_count_checker_state(fixture_project):
     keyed = dataclasses.replace(led, plan=dataclasses.replace(led.plan, checks=(
         *led.plan.checks, CheckDef("once", law.at_most_once("opened", key="acct_id"), True))))
     caps = {c.name: c for c in compute_caps(keyed)}
-    assert caps["checker_state"].hard_bytes == 8 * keyed.budget.max_checker_keys
+    k = keyed.budget.max_checker_keys
+    assert caps["checker_state"].hard_bytes == 17 * k
     with pytest.raises(BudgetError, match="checker_state"):
         check_budget(compute_caps(keyed), small.budget)
-    for lw, size in ((law.at_most_once("opened", key=("acct_id", "amount")), 24),
-                     (law.sum_le("opened.amount", "entry.amount", by="acct_id"), 24),
-                     (law.resolved("opened", by=("entry",), key="acct_id"), 56)):
+    for lw, size in ((law.at_most_once("opened", key=("acct_id", "amount")), 49 * k),
+                     (law.sum_le("opened.amount", "entry.amount", by="acct_id"), 33 * k),
+                     (law.resolved("opened", by=("entry",), key="acct_id"),
+                      66 * k + 64 * 65_536)):
         wider = dataclasses.replace(keyed, plan=dataclasses.replace(keyed.plan, checks=(
             *keyed.plan.checks, CheckDef("wide", lw, True))))
         caps = {c.name: c for c in compute_caps(wider)}
-        assert caps["checker_state"].hard_bytes == size * keyed.budget.max_checker_keys
+        assert caps["checker_state"].hard_bytes == size
     checks = (("a", law.never_negative("acct.nope")), ("b", law.total_le("acct.bal", 5)),
               ("c", law.at_most_once("opened", key="nope")), ("d", law.balanced("nope")),
               ("e", law.balanced("entry", side="account")))

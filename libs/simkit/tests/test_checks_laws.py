@@ -240,3 +240,16 @@ def test_balanced_sums_never_wrap():
     with pytest.raises(LawViolation, match=f"debits {2**63} != credits {-(2**63)}"):
         book.step(_sealed(0, 10, postings={"entry": _table(rows, cats=("account", "side"))}),
                   None)
+
+
+def test_balanced_sums_at_int64_min_never_wrap():
+    """Codex fix-confirm CX1: debits INT64_MIN and -1 sum to -2**63 - 1, which wraps to
+    INT64_MAX, the credit; summed exactly they differ."""
+    book = LawBook(_plan(("chk.bal", law.balanced("entry"), True)), max_keys=10)
+    rows = [{"t": 1, "lamport": 3, "pid": 9, "seq": i, "acct_id": 1, "account": "cash",
+             "side": side, "amount": a}
+            for i, (side, a) in enumerate((("debit", -(2**63)), ("debit", -1),
+                                           ("credit", 2**63 - 1)))]
+    with pytest.raises(LawViolation, match=f"debits {-(2**63) - 1} != credits {2**63 - 1}"):
+        book.step(_sealed(0, 10, postings={"entry": _table(rows, cats=("account", "side"))}),
+                  None)

@@ -164,7 +164,7 @@ Expectations: `exported_events` 10⁸ ± 5%, `payments` 3·10⁷ ± 5%, `posting
 | `journey.bill_gap` | exp, mean 20 d | exp, mean 50 d | 30M exported payments, nearly all bills |
 | `payments_live_ratio` | 1.5 | 1.8 | 1.69 payments per user over the run, every one live to its end |
 | `budget.max_checker_keys` | 60M (project) | 80M | the keyed laws peak at 62–70M keys at 20M users (×20 of the 3.10–3.5M measured at 1M users) |
-| `budget.memory` | 32GB (project) | 40GB | the caps total 34.8 GiB (32.5 GiB before the final fix's C3 accounting); ≤ 64GB (F-24) |
+| `budget.memory` | 32GB (project) | 40GB | the caps total 35.6 GiB (32.5 GiB before the final fix's checker accounting); ≤ 64GB (F-24) |
 
 Engine pools keep the project's base values (sized for 20M users).
 
@@ -183,8 +183,8 @@ here; restock events, 12k per run, do not scale and are under 0.3% of the total)
 | keys 3.5M / 4M | final, `max_checker_keys` 3.5M / 4M | runs through: the peak is 3.10–3.5M keys at 1M users | | | |
 
 The two `keys` rows ran before the final fix, when `checker_state` capped the key count. Since
-the final fix's C3 the cap is in bytes (`max_checker_keys` keys of the widest keyed law), so the
-same settings now admit more keys; see the caps table below.
+the final fix the cap is in bytes (the update peak of the widest keyed law at
+`max_checker_keys` keys), so the same settings now admit more keys; see the caps table below.
 
 **Two expectations cannot be met by the profile's knobs, and are reported as such:**
 
@@ -217,26 +217,30 @@ same settings now admit more keys; see the caps table below.
 | requests_and_inboxes | 2,090.5 |
 | fanout_bursts | 0.0 |
 | read_inputs | 1,453.0 |
-| checker_state | 4,272.5 |
+| checker_state | 5,039.4 |
 | scorer | 0.0 |
 | entity_buffers | 141.6 |
-| **total** | **35,681.5 (34.8 GiB)** |
+| **total** | **36,448.4 (35.6 GiB)** |
 
-Validation passes against the profile's `40GB` budget. `checker_state` is `max_checker_keys` ×
-the bytes per key of the widest keyed law: `holds_resolved` carries 56 B per open hold (key,
-opened at, deadline, partition, seq, action, warm-up flag), so 80M × 56 B. Before the final
-fix's C3 it was budgeted at 24 B per key (1,831.1 MiB, total 33,240.1 MiB), less than an open
-hold really holds. The cap is shared byte for byte: `one_capture` and `refund_settles_once`
-carry 8 B per key, `refunds_le_captured` 24 B. The key counts are extrapolated, not measured, at
+Validation passes against the profile's `40GB` budget. `checker_state` is the peak the widest
+keyed law reaches while it updates `max_checker_keys` keys (`spec.caps.law_peak_bytes`: the old
+and new arrays live together plus the update's workspace, measured with `tracemalloc` in the
+tests). `holds_resolved` carries 56 B per open hold (key, opened at, deadline, partition, seq,
+action, warm-up flag) and peaks at 66 B per key plus one 65,536-key matching chunk (4 MiB),
+so 80M × 66 B + 4 MiB. Before the final fix it was budgeted at 24 B per key (1,831.1 MiB,
+total 33,240.1 MiB), less than an open hold holds, and the fix's first round charged state only
+(80M × 56 B, 4,272.5 MiB, total 35,681.5 MiB) without the update peak. The laws share the cap:
+an update must fit beside the other laws' state. `one_capture` and `refund_settles_once` carry
+8 B per key (17 B at the update peak), `refunds_le_captured` 24 B (33 B at the peak). The key counts are extrapolated, not measured, at
 20M users: one key per payment for `one_capture` and for `refunds_le_captured`, about 28M each
 at S2 scale (F-22), and a 62–70M-key peak in total (×20 of the 3.10–3.5M keys measured at 1M
 users). A probe at 1M users after the fix (`--profile full --set users=1000000`, seed 42;
 not a benchmark run) peaked at 3,095,781 keys = 49.1 MB of checker state: 1.52M keys each for
 `one_capture` (8 B) and `refunds_le_captured` (24 B), 54k for `refund_settles_once`, 2k for
-`one_grant_per_claim`, no hold open at the peak. ×20 that is ~0.98 GB, well inside the
-4.17 GiB cap. `live_partition_state` is 20M users plus 36M payment slots.
+`one_grant_per_claim`, no hold open at the peak. ×20 that is ~0.98 GB of state, ~1.4 GB
+with `refunds_le_captured`'s update peak, well inside the 4.92 GiB cap. `live_partition_state` is 20M users plus 36M payment slots.
 
-This machine has 36 GiB of RAM (14 cores), below the 64 GB reference. 34.8 GiB of hard caps
+This machine has 36 GiB of RAM (14 cores), below the 64 GB reference. 35.6 GiB of hard caps
 plus the interpreter, Numba and Polars cannot run without swapping, and a swapping run
 measures the disk, not the engine. **So the scale-1 `s2` run was not attempted here**
 (controller ruling): the `s2` verdict is **not measured — needs the 64 GB reference machine**.
@@ -354,14 +358,14 @@ hunters alone; the hunters' share of what ran the pool dry is their 71%.
 | requests_and_inboxes | 575.3 |
 | fanout_bursts | 0.0 |
 | read_inputs | 145.6 |
-| checker_state | 3,204.3 |
+| checker_state | 3,780.6 |
 | scorer | 0.0 |
 | entity_buffers | 108.5 |
-| **total** | **9,797.5 (9.6 GiB)** |
+| **total** | **10,373.8 (10.1 GiB)** |
 
 Against this machine's 36 GiB and the project's 32GB budget. `checker_state` is the project's
-60M keys × 56 B (the widest keyed law, `holds_resolved`; 1,373.3 MiB at 24 B per key and a
-7,966.5 MiB total before the final fix's C3); the pool run's 0.13M payments need a small
+60M keys at `holds_resolved`'s update peak, 66 B per key plus one 4 MiB matching chunk
+(1,373.3 MiB at 24 B per key and a 7,966.5 MiB total before the final fix); the pool run's 0.13M payments need a small
 fraction of it. The runs below were measured before that change, which alters no output.
 
 ## Results (S2 workloads and the S1 re-measure)
@@ -378,7 +382,7 @@ concern does not materialize), and each `--cold` run compiled it from empty cach
 | s2_pool warm (`s2_pool-warm.json`) | 2026-10-18 UTC | arm64 14 / 36 GiB (not reference) | 14 | 9,966,583 | 0.0095 / 0.1708 | 89.82 | 110,956 | 95,433 (1,525,466 / 15.98) | 1.59 (warm cache; gen_4ca683764e6339a0) | 3.51 | 81.56 / 4.71 / 0.58 / 2.51 | 1,222,197 / 1,222,150 | inventory 0.1176 of 128; pool 1.0 of 1 | **fail** (`shard_command_share`) |
 | s2 cold, scale 0.05 (`s2-cold-scale0.05.json`) | 2026-10-18 UTC | arm64 14 / 36 GiB (not reference) | 14 | 5,965,504 (1M users) | 1,494,461 / 2.3737 / 0.0498 (0.0486) | 25.33 | 235,525 | 72,946 (59,200 / 0.81) | 3,981.34 (gen_4ca683764e6339a0) | 3.74 | 12.98 / 6.33 / 3.02 / 2.60 | 94,440 / 94,398 | inventory 0.0656 of 512; pool 1.0 of 1 | skipped (scale 0.05) |
 | s2 warm, scale 0.05 (`s2-warm-scale0.05.json`) | 2026-10-18 UTC | arm64 14 / 36 GiB (not reference) | 14 | 5,965,504 (1M users) | 1,494,461 / 2.3737 / 0.0498 (0.0486) | 25.15 | 237,168 | 72,050 (59,200 / 0.82) | 1.62 (warm cache; gen_4ca683764e6339a0) | 3.74 | 12.78 / 6.34 / 3.03 / 2.61 | 94,440 / 94,398 | inventory 0.0656 of 512; pool 1.0 of 1 | skipped (scale 0.05) |
-| s2 at scale 1 | — | — | — | — | — | — | — | — | — | — | — | — | — | **not measured — needs the 64 GB reference machine** (caps 32.5 GiB; 34.8 GiB after the final fix's C3) |
+| s2 at scale 1 | — | — | — | — | — | — | — | — | — | — | — | — | — | **not measured — needs the 64 GB reference machine** (caps 32.5 GiB; 35.6 GiB after the final fix's checker accounting) |
 | S1 re-measure (`s1-warm-s2.json`) | 2026-10-18 UTC | arm64 14 / 36 GiB (not reference) | 14 | 10,022,123 | — (inventory share of proposals 0.0774) | 54.90 | 182,550 | 191,706 (1,060,936 / 5.53) | 1.28 (warm cache; gen_782c5b94e9346bb8) | 2.73 | 47.14 / 4.49 / 0.00 / 2.86 | 1,388,004 / 1,387,972 | inventory 0.0942 of 512 | **pass** |
 
 The two `--cold` compile times are the same module compiled twice from empty caches

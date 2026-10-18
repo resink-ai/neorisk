@@ -37,10 +37,40 @@ def law_key_bytes(lw) -> int:
     return 0
 
 
-def checker_key_bytes(plan: Plan) -> int:
-    """Bytes per key `checker_state` reserves: the widest keyed law's (0 when none is declared).
-    The cap is `max_checker_keys` keys of that width; the laws share it byte for byte."""
-    return max((law_key_bytes(c.law) for c in plan.checks), default=0)
+RESOLVED_CHUNK = 1 << 16            # `resolved` matches its open keys in chunks of this many
+
+
+def law_peak_bytes(lw, keys: int) -> int:
+    """Peak bytes a keyed law holds while it updates its state to `keys` keys: the old and the
+    new arrays live together, plus the update's own workspace (`checks.laws`; spec section 10
+    `checker_state`). Upper bounds from the arrays the update keeps alive at once (measured
+    with `tracemalloc` in `test_checks_laws_keyed`); the step's own rows (a few arrays the
+    size of the step) are not counted here:
+
+    - `at_most_once`: `np.insert` builds the new key array (then the new column array) while
+      the old one is alive, with a 1-byte mask per key: `2 x key bytes + 1` per key.
+    - `sum_le`: three `np.insert`s (keys, then the two sums), each freeing its old array; the
+      last holds the new keys and sums plus the old rhs and a mask: `8 x old + 25 x new`,
+      at most 33 B per key.
+    - `resolved`: the open table grows one column at a time (each old column freed as it is
+      replaced), is matched in chunks of `RESOLVED_CHUNK` keys and filtered one column at a
+      time: the 56 B table, a 1-byte mask and one 8-byte column copy, rounded up to 66 B per
+      key, plus 64 B per key of one chunk for the matching temporaries.
+    """
+    if lw.kind == "at_most_once":
+        return (2 * law_key_bytes(lw) + 1) * keys
+    if lw.kind == "sum_le":
+        return 33 * keys
+    if lw.kind == "resolved":
+        return 66 * keys + 64 * min(keys, RESOLVED_CHUNK)
+    return 0
+
+
+def checker_state_bytes(plan: Plan, max_keys: int) -> int:
+    """`checker_state`: the largest peak any declared keyed law reaches at `max_keys` keys (0
+    when none is declared). The laws share it: a law's update must fit beside the state the
+    others carry (`checks.laws.LawBook`)."""
+    return max((law_peak_bytes(c.law, max_keys) for c in plan.checks), default=0)
 
 
 @dataclass(frozen=True)
@@ -223,8 +253,8 @@ def compute_caps(run, threads: int | None = None) -> list[CapItem]:
         "fanout_bursts": (sum(p.kernel.substep * max_row for p in plan.processes
                               if p.kernel.substep), ""),
         "read_inputs": (read, ""),
-        "checker_state": (checker_key_bytes(plan) * bud.max_checker_keys,
-                          "max_checker_keys x bytes per key of the widest keyed law (D47)"),
+        "checker_state": (checker_state_bytes(plan, bud.max_checker_keys),
+                          "peak update bytes of the widest keyed law at max_checker_keys (D47)"),
         "scorer": (0, "not used in S1"),
         "entity_buffers": (sum(entity_buffer_bytes(plan, run.writer.row_group_rows)),
                            "row groups buffered by the entity writer, plus one being written"),
