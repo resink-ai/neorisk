@@ -13,7 +13,12 @@ A workload (`benchmarks/*.toml`) is an ordinary run of a project and profile. Th
 must not change with it (the child asserts it), and the verdict is then `skipped`.
 
 Expectations are `{around, tolerance}`: for a count (`around > 1`) the tolerance is relative
-(10⁷ ± 5%), for a share (`around <= 1`) it is absolute (8% ± 2 points).
+(10⁷ ± 5%), for a share (`around <= 1`) it is absolute (8% ± 2 points). `{at_least = x}` and
+`{at_most = x}` are one-sided (D56); their checks report `limit` as `[x, null]` / `[null, x]`.
+
+Gate keys: `warm_seconds` and `peak_rss_gb` (upper limits), `min_events_per_second` (exported
+events ÷ warm `engine_seconds`) and `min_shard_events_per_second` (shard events ÷ shard-phase
+seconds, D55); the two rate gates are lower limits and report `limit` as `[x, null]`.
 
 Memory is reported in GiB (2³⁰ bytes): the gate's `peak_rss_gb` limit is read as GiB and the
 report's check is named `peak_rss_gib`. A failing child keeps its exit code (D35: 2 validation,
@@ -66,6 +71,8 @@ def load_workload(path: str | Path) -> Workload:
     path = Path(path).resolve()
     doc = tomllib.loads(path.read_text())
     wl = doc["workload"]
+    for name, spec in doc.get("expect", {}).items():     # refuse a bad form before the run
+        _expect_form(name, spec)
     return Workload(
         name=str(wl["name"]), project=(path.parent / wl["project"]).resolve(),
         profile=str(wl.get("profile", "sample")), seed=int(wl.get("seed", 0)),
@@ -73,12 +80,50 @@ def load_workload(path: str | Path) -> Workload:
         gate=dict(doc.get("gate", {})), shape=dict(wl.get("shape", {})), path=path)
 
 
+def _expect_form(name: str, spec: Any) -> str:
+    """The form of one expectation: `around` (with `tolerance`), `at_least` or `at_most`."""
+    keys = set(spec) if isinstance(spec, dict) else set()
+    for form, want in (("around", {"around", "tolerance"}), ("at_least", {"at_least"}),
+                       ("at_most", {"at_most"})):
+        if keys == want:
+            return form
+    raise ValueError(f"expectation {name!r} must be {{around, tolerance}}, {{at_least}} or "
+                     f"{{at_most}}, got {spec!r}")
+
+
 # ---------------------------------------------------------------- evaluation
+def _ratio(num: float, den: float) -> float:
+    return num / den if den else 0.0
+
+
 def derived(stats: dict[str, Any]) -> dict[str, Any]:
-    """Quantities computed from `run_stats.json` that expectations may name."""
+    """Quantities computed from `run_stats.json` that expectations may name (D56). Each is
+    computed only when its inputs exist, so S1 reports are unchanged. Windows (F-25): exported
+    steps for `payments`, `postings_per_payment_event` and `hot_share_of_checkouts`; the whole
+    run for `hot_share_of_reserves`, `shard_command_share` and `campaign_member_share`."""
     proposals = stats.get("proposals") or 0
     reserve = stats.get("requests_by_boundary", {}).get("reserve", 0)
-    return {"inventory_share_of_proposals": reserve / proposals if proposals else 0.0}
+    out: dict[str, Any] = {"inventory_share_of_proposals": _ratio(reserve, proposals)}
+    counts = stats.get("counts", {})
+    if "payment_authorized" in counts and "payment_declined" in counts:
+        out["payments"] = counts["payment_authorized"] + counts["payment_declined"]
+    ledger = stats.get("posting_counts", {}).get("ledger")
+    pay_events = stats.get("events_by_partition", {}).get("payment")
+    if ledger is not None and pay_events is not None:
+        out["postings_per_payment_event"] = _ratio(ledger, pay_events)
+    hot = stats.get("accumulators", {}).get("hot_checkouts")
+    if hot is not None and "checkout_started" in counts:
+        out["hot_share_of_checkouts"] = _ratio(hot, counts["checkout_started"])
+    inv = stats.get("shard_load", {}).get("inventory")
+    if inv is not None and inv.get("requests"):
+        out["hot_share_of_reserves"] = _ratio(inv["requests"][0], sum(inv["requests"]))
+    if "shard_command_share" in stats:
+        out["shard_command_share"] = stats["shard_command_share"]
+    pops = stats.get("populations", {})
+    if "campaign" in pops and "user" in pops:
+        members = stats.get("ids_allocated", {}).get("member", 0)
+        out["campaign_member_share"] = _ratio(pops["campaign"] + members, pops["user"])
+    return out
 
 
 def _within(value: float, around: float, tolerance: float) -> tuple[bool, float]:
@@ -101,13 +146,26 @@ def evaluate(stats: dict[str, Any], wl: Workload, *, scale: float) -> dict[str, 
     if "peak_rss_gb" in gate:
         v, lim = stats["peak_rss_bytes"] / _GIB, float(gate["peak_rss_gb"])     # GiB
         checks.append({"name": "peak_rss_gib", "value": v, "limit": lim, "ok": v <= lim})
+    for key, name in (("min_events_per_second", "events_per_second"),
+                      ("min_shard_events_per_second", "shard_events_per_second")):
+        if key in gate:
+            v, lim = float(stats[name]), float(gate[key])
+            checks.append({"name": name, "value": v, "limit": [lim, None], "ok": v >= lim})
     values = stats | derived(stats)
     for name, spec in wl.expect.items():
         v = float(values[name])
-        around, tol = float(spec["around"]), float(spec["tolerance"])
-        ok, width = _within(v, around, tol)
-        checks.append({"name": name, "value": v, "limit": [around - width, around + width],
-                       "ok": ok})
+        form = _expect_form(name, spec)
+        if form == "around":
+            around, tol = float(spec["around"]), float(spec["tolerance"])
+            ok, width = _within(v, around, tol)
+            limit: list[float | None] = [around - width, around + width]
+        elif form == "at_least":
+            x = float(spec["at_least"])
+            ok, limit = v >= x, [x, None]
+        else:
+            x = float(spec["at_most"])
+            ok, limit = v <= x, [None, x]
+        checks.append({"name": name, "value": v, "limit": limit, "ok": ok})
     if scale != 1:
         verdict = "skipped"
     else:
@@ -233,7 +291,9 @@ def summary(rep: dict[str, Any]) -> str:
         ("threads", rep.get("threads")),
         ("exported events", f"{rep['exported_events']:,}"),
         ("events/s", f"{rep.get('events_per_second', 0):,.0f}"),
-        ("inventory share", f"{rep['inventory_share_of_proposals']:.4f}"),
+        ("shard-phase ev/s", (f"{rep.get('shard_events_per_second', 0):,.0f} "
+                              f"({rep.get('shard_events', 0):,} shard events in "
+                              f"{rep.get('shard_phase_seconds', 0):.2f} s)")),
         ("engine s (warm)", f"{rep['engine_seconds']:.2f}"),
         ("cold compile s", f"{rep['cold_compile_seconds']:.2f}"
                            + (" (cold cache)" if rep["cold"] else " (cache as found)")),
@@ -241,7 +301,11 @@ def summary(rep: dict[str, Any]) -> str:
         ("peak RSS GiB", f"{rep['peak_rss_bytes'] / _GIB:.2f}"),
         ("rounds/step max", max(rep.get("rounds_per_step") or [0])),
     ]
-    lines = [f"{k:<18}{v}" for k, v in rows]
+    rows += [(k, f"{v:,}" if isinstance(v, int) else f"{v:.4f}")
+             for k, v in derived(rep).items()]
+    rows += [(f"shard max share {name}", f"{load['max_share']:.4f} of {load['shards']} shards")
+             for name, load in rep.get("shard_load", {}).items()]
+    lines = [f"{k:<18}{v}" if len(k) < 18 else f"{k} {v}" for k, v in rows]
     for c in rep["checks"]:
         lines.append(f"check {c['name']:<32}{c['value']:>16,.4f}  limit {c['limit']}  "
                      f"{'ok' if c['ok'] else 'FAIL'}")
@@ -256,7 +320,7 @@ def cmd_benchmark(args: argparse.Namespace) -> int:
     except ChildFailed as e:
         print(e, file=sys.stderr)
         return e.code if e.code in (2, 3, 4) else 1
-    except (OSError, KeyError, RuntimeError, tomllib.TOMLDecodeError) as e:
+    except (OSError, KeyError, ValueError, RuntimeError, tomllib.TOMLDecodeError) as e:
         print(e, file=sys.stderr)
         return 1
     if rep["verdict"] == "fail" and not args.no_gate:

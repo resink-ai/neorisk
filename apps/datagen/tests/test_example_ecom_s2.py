@@ -35,8 +35,9 @@ def _fates(ev):
 
 
 def test_project_validates():
-    rep = validate(resolve_run(load_project(EX), "sample", []))
-    assert rep.ok, rep.errors
+    for profile in ("sample", "full", "pool"):
+        rep = validate(resolve_run(load_project(EX), profile, []))
+        assert rep.ok, (profile, rep.errors)
 
 
 def test_carts_have_several_lines(ev):

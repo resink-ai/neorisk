@@ -113,8 +113,11 @@ uv run --all-packages datagen schema   examples/ecommerce_s2 --format sql --dial
 | Profile | Shape |
 |---|---|
 | `sample` | 20k users, 5,000 SKUs in 64 inventory groups, 21 days after a 3-day warm-up; room for 60k live payments (`payments_live_ratio = 3`: none outlives its 90-day dispute window in 24 days) |
+| `full` | [`benchmarks/s2.toml`](../../benchmarks/s2.toml): 20M users, 100,000 SKUs in 512 inventory groups, 90 days after the 14-day warm-up; first sessions spread over a week (`journey.signup_delay`); room for 50M live payments (`payments_live_ratio = 2.5` against the target ~35M payments over the run, 1.73 per user) and `budget.memory = "40GB"` (the caps total 36.0 GiB); the base engine pools |
+| `pool` | [`benchmarks/s2_pool.toml`](../../benchmarks/s2_pool.toml): 2M users, 20,000 SKUs in 128 inventory groups, 30 days after a 3-day warm-up; half the shoppers referred (each first qualifying order claims from the pool), bounty hunters at `hunt.share` = 1% of users, short sessions (`journey.views_mean = 1.5`) that mostly check out (`journey.checkout_p = 0.9`); room for 8M live payments (`payments_live_ratio = 4`); engine pools at one tenth of the base values |
 
-The `full` (benchmark `s2.toml`) and `pool` (benchmark `s2_pool.toml`) profiles arrive with
-Task 20 of the S2 plan.
+The `full` and `pool` journeys are calibrated against their workloads' expectations in Task 21
+of the S2 plan; until then their event counts and payment rates are the pack defaults' (a
+`full` run at reduced users creates ~6 payments per user and stops at the payment cap).
 
 `out/`, `reports/` and `logs/` are empty until the first run.

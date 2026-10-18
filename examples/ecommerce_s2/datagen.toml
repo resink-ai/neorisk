@@ -56,3 +56,41 @@ payments_live_ratio = 3
 "engine.max_messages_per_step" = 1_000_000
 "budget.max_admissions_per_step" = 200_000
 "budget.max_checker_keys" = 5_000_000
+
+[profiles.full]                          # benchmarks/s2.toml; calibrated in Task 21
+[profiles.full.set]
+users = 20_000_000
+skus = 100_000
+sku_groups = 512
+"journey.signup_delay.params" = [604_800_000_000.0, 0.0, 0.0]   # spread first sessions (S1 ruling)
+"pay.dispute_window_days" = 90
+# a payment stays live until its 90-day dispute window closes, so nearly every payment of the
+# 104-day run (90 d + 14 d warm-up) is live at its end: the target 30M exported payments mean
+# ~35M over the run (1.73 per user); 2.5 leaves ~45% margin for calibration (Task 21)
+payments_live_ratio = 2.5
+# the caps then total 36.0 GiB (live_partition_state 20.8 GiB), over the base 32GB budget;
+# 40GB stays under the 64 GB reference machine (F-24)
+"budget.memory" = "40GB"
+
+[profiles.pool]                          # benchmarks/s2_pool.toml; calibrated in Task 21
+span = "30d"
+warmup = "3d"
+
+[profiles.pool.set]
+users = 2_000_000
+skus = 20_000
+sku_groups = 128
+referred_share = 0.5
+"hunt.share" = 0.01
+"journey.views_mean" = 1.5
+"journey.checkout_p" = 0.9
+"journey.signup_delay.params" = [259_200_000_000.0, 0.0, 0.0]
+# every payment of the 33-day run outlives it (90-day dispute window); the uncalibrated pool
+# shape creates 2.58 payments per user (20k-user run), so 4 covers calibration runs too
+payments_live_ratio = 4
+# engine pools sized for 2M users (F-23; the base pools are sized for the 20M-user `full`
+# profile, which keeps them): one tenth of the base values
+"engine.timer_nodes" = 9_000_000
+"engine.payload_slots" = 400_000
+"engine.max_messages_per_step" = 800_000
+"budget.max_admissions_per_step" = 200_000
