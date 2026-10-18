@@ -1,8 +1,11 @@
 import json
+import time
 
 import pytest
 from conftest import FIXTURES
+from numba import njit
 
+from neorisk_simkit.engine.clock import clock_ns
 from neorisk_simkit.io.dataset import run_to_dataset
 
 
@@ -53,3 +56,14 @@ def test_admissions_are_counted(tmp_path):
     st = json.loads((r.out_dir / "run_stats.json").read_text())
     assert st["admissions_total"] == 8                    # 4 b + 4 c
     assert st["ids_allocated"] == {"b": 4, "c": 4}
+
+
+def test_compiled_clock_reads_the_perf_counter_clock():
+    """The compiled shard-phase timer (`engine.clock.clock_ns`) reads the clock Python rounds
+    time with (`time.perf_counter_ns`), so both paths add comparable nanoseconds."""
+    now = njit(lambda: clock_ns())
+    now()
+    a = time.perf_counter_ns()
+    c = now()
+    b = time.perf_counter_ns()
+    assert a <= c <= b
