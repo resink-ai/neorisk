@@ -60,7 +60,9 @@ def _plan_of(project: Path, overrides: list[str]):
 
 def created_namespaces(project: Path, overrides: list[str]) -> frozenset[str]:
     """The ID namespaces the engine hands out at seal (creatable tables and `ids`): only their
-    dense indices legitimately depend on step boundaries (D13)."""
+    dense indices legitimately depend on step boundaries (D13). Population and static IDs
+    (`user`, `sku`, `device`) and partition IDs of population owners and shards are fixed
+    before the run starts."""
     return frozenset(_plan_of(project, overrides).namespaces)
 
 
@@ -72,7 +74,8 @@ def created_owner_codes(project: Path, overrides: list[str],
 
 
 def canonicalize_ids(d: Path, created: frozenset[str],
-                     owner_codes: frozenset[int] = frozenset()) -> dict[str, list[dict]]:
+                     owner_codes: frozenset[int] = frozenset(), *,
+                     everything: bool = False) -> dict[str, list[dict]]:
     """Rename every created ID namespace by first appearance in global canonical order and
     number events by their canonical position (D13); every other column is kept as is.
 
@@ -83,16 +86,25 @@ def canonicalize_ids(d: Path, created: frozenset[str],
     by creator `partition_id` in its creation step, so rows of different created owners that
     tie on `(event_time, lamport)` may change relative order with the step length; "identical
     logical records" then means equal records under this partition-free order. Each table's
-    rows are returned in that order (`event_id` = position)."""
+    rows are returned in that order (`event_id` = position).
+
+    With `everything`, posting tables join the event tables (same columns first, same order),
+    and every entity table is returned too, as `entities/<name>`: its created IDs (`id` of a
+    created table, created refs) take the names the events gave them; an ID no event names (an
+    owner created in warm-up) is named in the order of the entity rows sorted by every other
+    column, then the rows are sorted by their renamed values."""
     import polars as pl
 
-    from neorisk_simkit.io.read import read_events  # lazy: conftest loads before io exists
+    from neorisk_simkit.io.read import read_events, read_postings  # lazy: conftest loads first
     from neorisk_simkit.io.schema.schema_json import load_schema
 
     schema, events = load_schema(d), read_events(d)
+    kinds = ("event", "posting") if everything else ("event",)
+    if everything:
+        events = {**events, **read_postings(d)}
     refs = {t["name"]: {c["name"]: c["ref"] for c in t["columns"]
                         if c.get("ref") in created}
-            for t in schema["tables"] if t["kind"] == "event"}
+            for t in schema["tables"] if t["kind"] in kinds}
     out = {name: e.to_dicts() for name, e in events.items()}
     if owner_codes:
         ids = {"event_id", "partition_id"}
@@ -123,4 +135,43 @@ def canonicalize_ids(d: Path, created: frozenset[str],
             p = rename.setdefault("partition", {})
             row["partition_id"] = p.setdefault(row["partition_id"], len(p))
         row["event_id"] = pos
-    return {name: sorted(rows, key=lambda r: r["event_id"]) for name, rows in out.items()}
+    result = {name: sorted(rows, key=lambda r: r["event_id"]) for name, rows in out.items()}
+    if everything:
+        for t in schema["tables"]:
+            if t["kind"] == "entity":
+                result[f"entities/{t['name']}"] = _canonical_entities(d, t, created, rename)
+    return result
+
+
+def _canonical_entities(d: Path, table: dict, created: frozenset[str],
+                        rename: dict[str, dict[int, int]]) -> list[dict]:
+    """One entity table's rows with created IDs renamed (see `canonicalize_ids`)."""
+    import polars as pl
+
+    files = sorted((d / "entities" / table["name"]).glob("*.parquet"))
+    rows = pl.concat([pl.read_parquet(f) for f in files]).to_dicts() if files else []
+    ren = {c["name"]: c["ref"] for c in table["columns"] if c.get("ref") in created}
+    if table["name"] in created:
+        ren["id"] = table["name"]
+
+    def key(row: dict) -> tuple:
+        out = []
+        for c, v in sorted(row.items()):
+            if c not in ren:
+                out.append((v is None, v))
+            elif v is None:
+                out.append((2, 0))
+            else:
+                m = rename.get(ren[c], {}).get(v)
+                out.append((1, 0) if m is None else (0, m))
+        return tuple(out)
+
+    rows.sort(key=key)
+    keys = [key(r) for r in rows]
+    assert len(set(keys)) == len(keys), f"entity order of {table['name']} is ambiguous"
+    for row in rows:
+        for c, ns in ren.items():
+            if row[c] is not None:
+                names = rename.setdefault(ns, {})
+                row[c] = names.setdefault(row[c], len(names))
+    return sorted(rows, key=lambda r: tuple((v is None, v) for _, v in sorted(r.items())))
