@@ -52,6 +52,7 @@ class Pack:
         self.checks: dict[str, tuple[LawSpec, bool]] = {}
         self.accumulators: dict[str, dict[str, Any]] = {}
         self.exposed_owners: list[str] = []
+        self.machines: dict[str, Any] = {}           # name -> machine.spec.Machine builder
 
     # ------------------------------------------------------------------ helpers
     def _table(self, name: str) -> dict[str, Any]:
@@ -271,7 +272,7 @@ class Pack:
                 on_request=None, on_response=None, on_message=None, reads=None, refs=None,
                 commands=(), every=None, jitter: Dist | None = None,
                 max_spawn_depth: int | None = None) -> None:
-        if name in self.processes:
+        if name in self.processes or name in self.machines:
             raise PackError(f"duplicate process {name!r}")
         if (owner is None) == (shard is None):
             raise PackError(f"process {name}: give exactly one of owner= or shard=")
@@ -324,10 +325,29 @@ class Pack:
         self.accumulators[name] = {"name": name, "ltype": ltype}
         return name
 
-    # ------------------------------------------------------------------ later milestones
-    def machine(self, *args, **kwargs):
-        raise PackError("machine arrives in M3")
+    # ------------------------------------------------------------------ machines
+    def machine(self, name: str, *, owner: str, initial: str, start: Trigger | None = None,
+                config=None, max_instances: int = 1, fields=None, reads=None, refs=None,
+                max_spawn_depth: int | None = None, **extra):
+        """Declare a state machine on an owner partition (spec §04); returns its builder
+        (`.state(...)`, `.final(...)`). `build_plan` validates and compiles it."""
+        from neorisk_simkit.machine.spec import Machine
+        if name in self.machines or name in self.processes:
+            raise PackError(f"duplicate machine {name!r}")
+        part = self.partitions.get(owner)
+        if part is None or part["kind"] != "owner":
+            raise PackError(f"machine {name}: machines live on owner partitions (got {owner!r})")
+        if start is not None and not isinstance(start, Trigger):
+            raise PackError(f"machine {name}: start= must come from p.on_created(...)")
+        for t in (reads or {}).values():
+            self._table(t)
+        m = Machine(name, owner, initial=initial, start=start, config=config,
+                    max_instances=max_instances, fields=fields, reads=reads, refs=refs,
+                    max_spawn_depth=max_spawn_depth, **extra)
+        self.machines[name] = m
+        return m
 
+    # ------------------------------------------------------------------ later tasks, milestones
     def expose(self, *args, **kwargs):
         raise PackError("expose arrives in M3")
 
@@ -335,4 +355,4 @@ class Pack:
         raise PackError("expose_param arrives in M3")
 
     def feature(self, *args, **kwargs):
-        raise PackError("feature arrives in M3")
+        raise PackError("feature arrives in M4 (D-deferred)")

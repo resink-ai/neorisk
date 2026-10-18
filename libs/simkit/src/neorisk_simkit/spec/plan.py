@@ -157,6 +157,7 @@ class Plan:
     accumulators: tuple[AccumulatorDef, ...] = ()
     exposed_owners: tuple[str, ...] = ()          # p.expose_owner, in declaration order (D74)
     member_tables: tuple[str, ...] = ()           # tables of acted-for partitions (D74, D75)
+    machines: tuple[Any, ...] = ()                # machine.spec.MachineDef (spec §04)
 
     def table(self, name: str) -> TableDef:
         return _find(self.tables, name, "table")
@@ -206,6 +207,10 @@ def build_plan(pack_module, cfg, specs_dir: Path) -> Plan:
 
     p = Pack(pack_module.PACK, pack_module.SCHEMA_VERSION)
     pack_module.define(p, cfg)
+    from neorisk_simkit.machine.spec import build_machines  # machine.spec imports spec.pack
+    machines, errs = build_machines(p)
+    if errs:
+        raise PackError("\n".join(errs))
 
     ref_targets = set(p.tables) | set(p.ids_names)
 
@@ -303,4 +308,5 @@ def build_plan(pack_module, cfg, specs_dir: Path) -> Plan:
                 namespaces=namespaces, partitions=partitions, boundaries=boundaries,
                 processes=processes, populations=populations, change_groups=change_groups,
                 checks=checks, cfg=cfg, accumulators=accumulators,
-                exposed_owners=tuple(p.exposed_owners), member_tables=tuple(member_tables))
+                exposed_owners=tuple(p.exposed_owners), member_tables=tuple(member_tables),
+                machines=machines)

@@ -1,4 +1,5 @@
-"""Kernel ABI surface: return codes, priorities, resource vectors, the @kernel decorator."""
+"""Kernel ABI surface: return codes, priorities, resource vectors, the @kernel and @action
+decorators."""
 
 from __future__ import annotations
 
@@ -82,6 +83,7 @@ class KernelSpec:
     max: Res
     substep: int | None
     params: tuple[str, ...]
+    source: str | None = None     # generated authoring-dialect text (machines, D62)
 
 
 def kernel(state, local=None, commands=(), max=Res(), substep=None) -> Callable:  # noqa: B008
@@ -112,3 +114,51 @@ def kernel(state, local=None, commands=(), max=Res(), substep=None) -> Callable:
 
 def is_kernel(fn: Any) -> bool:
     return isinstance(getattr(fn, "__kernel__", None), KernelSpec)
+
+
+@dataclass(frozen=True)
+class ActionSpec:
+    name: str
+    func: Callable[..., Any]
+    module_file: str
+    state: str
+    max: Res
+    fields: Mapping[str, str]
+
+
+class ActionRef:
+    """An `@action` function as a machine part (D65): `.then(...)` / `.otherwise(...)` compose."""
+
+    __slots__ = ("spec",)
+
+    def __init__(self, spec: ActionSpec):
+        self.spec = spec
+
+    def then(self, other):
+        from neorisk_simkit.machine.helpers import as_chain
+        return as_chain(self).then(other)
+
+    def otherwise(self, other):
+        from neorisk_simkit.machine.helpers import as_chain
+        return as_chain(self).otherwise(other)
+
+    def __repr__(self) -> str:
+        return f"ActionRef({self.spec.name})"
+
+
+def action(state, max=Res(), fields=None) -> Callable:  # noqa: B008
+    """Decorate `(ctx, s, m, cmd, out)`: validate, then commit; never `out.reserve` (the calling
+    machine reserves `max`, D65); `m.id`, `m.parent_id`, `m.<field>` name the instance."""
+    fields = dict(fields or {})
+    for name, decl in fields.items():
+        if _LOCAL_RE.match(decl) is None or "[" in decl:
+            raise ValueError(f"action field {name!r}: {decl!r} is not a scalar local type")
+
+    def deco(fn: Callable) -> ActionRef:
+        params = tuple(inspect.signature(fn).parameters)
+        if params != ("ctx", "s", "m", "cmd", "out"):
+            raise TypeError(f"action {fn.__name__} must take (ctx, s, m, cmd, out)")
+        return ActionRef(ActionSpec(fn.__name__, fn, inspect.getsourcefile(fn) or "", state,
+                                    max, MappingProxyType(fields)))
+
+    return deco

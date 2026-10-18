@@ -78,9 +78,9 @@ def test_revision_is_stable(fixture_project):
 def test_unsupported_vocabulary_names_milestone():
     p = Pack("x", 1)
     with pytest.raises(PackError, match="arrives in M3"):
-        p.machine("fulfillment", owner="user", initial="placed")
-    with pytest.raises(PackError, match="arrives in M3"):
-        p.expose(signup=None)
+        p.expose(signup=None)                         # until Task 10
+    with pytest.raises(PackError, match="arrives in M4"):
+        p.feature("device_users_24h")
 
 
 def test_pack_rejects_duplicates_and_unknown_refs():

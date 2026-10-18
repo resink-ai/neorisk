@@ -1,5 +1,28 @@
-"""Standard library for kernels and packs (checked arithmetic, sources, handoff)."""
+"""Standard library for kernels and packs (checked arithmetic, sources, handoff, the machine
+vocabulary)."""
 
+from neorisk_simkit.machine.helpers import (
+    actor,
+    add_field,
+    after,
+    col,
+    cond,
+    create_owner,
+    emit,
+    field,
+    label,
+    near,
+    new_id,
+    now,
+    p_by,
+    parent,
+    pick_ref,
+    request,
+    send,
+    send_parent,
+    set_field,
+    spawn,
+)
 from neorisk_simkit.spec import law
 from neorisk_simkit.spec.sources import generated, rows
 from neorisk_simkit.std import capped_pool, handoff, reservations
@@ -19,6 +42,9 @@ __all__ = [
     "I64_MAX",
     "I64_MIN",
     "NULL",
+    "actor",
+    "add_field",
+    "after",
     "capped_pool",
     "catalog",
     "checked_add",
@@ -26,11 +52,28 @@ __all__ = [
     "checked_min",
     "checked_mul",
     "checked_sub",
+    "col",
+    "cond",
+    "create_owner",
     "devices",
+    "emit",
+    "field",
     "generated",
     "handoff",
+    "label",
     "law",
+    "near",
+    "new_id",
+    "now",
+    "p_by",
+    "parent",
+    "pick_ref",
+    "request",
     "reservations",
     "rows",
+    "send",
+    "send_parent",
+    "set_field",
+    "spawn",
     "stock",
 ]
