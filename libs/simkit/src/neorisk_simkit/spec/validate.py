@@ -149,6 +149,14 @@ def validate(run, threads: int | None = None) -> ValidationReport:
         elif part_kind.get(b.frm) != "owner":
             errs.append(f"boundary {b.name}: messages go from an owner to a shard")
 
+    populated = {pop.table for pop in plan.populations}
+    for t in plan.member_tables:
+        if t not in populated or plan.table(t).creatable:
+            # D75: member IDs follow the population; a created table would share its namespace
+            # with created owners, whose rows member rows could not be told from
+            errs.append(f"member table {t}: an owner acting for its partition needs a "
+                        f"population of {t!r} and no created rows (child_of)")
+
     for e in plan.events:
         for c in e.cols[8:]:                      # after the common columns
             if c.ltype.kind == "text" and not c.ltype.nullable:
@@ -182,15 +190,22 @@ def validate(run, threads: int | None = None) -> ValidationReport:
         if k.state != p.partition:
             errs.append(f"process {p.name} runs in partition '{p.partition}' "
                         f"but its kernel state is '{k.state}'")
+        # D74: an owner acting for another may also write its records and send its boundaries
+        acts = {p.partition, plan.partition(p.partition).acts_for} - {None}
         for name in k.max.records:
             if name not in record_owner:
                 errs.append(f"{p.name} reserves unknown record type '{name}'")
-            elif record_owner[name] != p.partition:
+            elif record_owner[name] not in acts:
                 errs.append(f"{p.name} reserves records of '{name}' owned by partition "
                             f"'{record_owner[name]}'")
             elif k.max.records[name] > slab_rows[name]:
                 errs.append(f"{p.name}: declared maximum of records of {name} "
                             "exceeds slab capacity")
+        for local, b in (*p.requests.items(), *p.messages.items()):
+            frm = plan.boundary(b).frm
+            if frm not in acts:
+                errs.append(f"{p.name} sends boundary '{b}' ({local}) from partition '{frm}', "
+                            f"not its own")
         for name in k.max.creates:
             if name not in plan.namespaces:
                 errs.append(f"{p.name} reserves unknown namespace '{name}'")

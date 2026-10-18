@@ -61,6 +61,7 @@ class PartitionDef:
     state: Mapping[str, str]          # shard: field -> "T" or "T[<items>]"; owner: empty
     init: Any                         # shard state init (dict of Dist / recipe), or None
     retire_when_idle: bool
+    acts_for: str | None = None       # owner: the exposed owner partition it executes for (D74)
 
 
 @dataclass(frozen=True)
@@ -154,6 +155,8 @@ class Plan:
     checks: tuple[CheckDef, ...]
     cfg: Any
     accumulators: tuple[AccumulatorDef, ...] = ()
+    exposed_owners: tuple[str, ...] = ()          # p.expose_owner, in declaration order (D74)
+    member_tables: tuple[str, ...] = ()           # tables of acted-for partitions (D74, D75)
 
     def table(self, name: str) -> TableDef:
         return _find(self.tables, name, "table")
@@ -224,7 +227,15 @@ def build_plan(pack_module, cfg, specs_dir: Path) -> Plan:
                  creatable=d["child_of"] is not None or (
                      d["name"] in owner_tables and d["name"] not in p.populations))
         for i, d in enumerate(p.tables.values()))
+    # member tables (D74): the table of every partition some owner acts for, first appearance
+    member_tables: list[str] = []
+    for d in p.partitions.values():
+        acted = d.get("acts_for")
+        if acted is not None and p.partitions[acted]["table"] not in member_tables:
+            member_tables.append(p.partitions[acted]["table"])
+    # D75: creatable tables, p.ids, then member tables, so base codes never move
     namespaces = tuple(t.name for t in tables if t.creatable) + tuple(p.ids_names)
+    namespaces += tuple(t for t in member_tables if t not in namespaces)
 
     common = tuple(Column(n, t) for n, t in COMMON_COLUMNS)
     events = tuple(
@@ -236,7 +247,7 @@ def build_plan(pack_module, cfg, specs_dir: Path) -> Plan:
         PartitionDef(name=d["name"], kind=d["kind"], ptype_code=1 + i, table=d["table"],
                      n=d["n"], max_live=d["max_live"], items=d["items"], key=d["key"],
                      state=_frozen(d["state"]), init=d["init"],
-                     retire_when_idle=d["retire_when_idle"])
+                     retire_when_idle=d["retire_when_idle"], acts_for=d.get("acts_for"))
         for i, d in enumerate(p.partitions.values()))
 
     kind_of = {pd.name: pd.kind for pd in partitions}
@@ -291,4 +302,5 @@ def build_plan(pack_module, cfg, specs_dir: Path) -> Plan:
                 revision=pack_revision(Path(specs_dir)), tables=tables, events=events,
                 namespaces=namespaces, partitions=partitions, boundaries=boundaries,
                 processes=processes, populations=populations, change_groups=change_groups,
-                checks=checks, cfg=cfg, accumulators=accumulators)
+                checks=checks, cfg=cfg, accumulators=accumulators,
+                exposed_owners=tuple(p.exposed_owners), member_tables=tuple(member_tables))

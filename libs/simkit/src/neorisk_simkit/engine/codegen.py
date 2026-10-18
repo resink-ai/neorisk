@@ -220,6 +220,12 @@ class _Gen:
     def procs_of_partition(self, part: str) -> list[ProcessDef]:
         return [p for p in self.plan.processes if p.partition == part]
 
+    def procs_acting_as(self, part: str) -> list[ProcessDef]:
+        """Processes of `part` and of every owner that acts for it (D74)."""
+        actors = {p.name for p in self.plan.partitions
+                  if p.name == part or getattr(p, "acts_for", None) == part}
+        return [p for p in self.plan.processes if p.partition in actors]
+
     # ------------------------------------------------------------------ constants
     def constants(self) -> str:
         lines = [f"CHECKED = {self.checked}",
@@ -307,7 +313,9 @@ class _Gen:
     def reserve(self, p: ProcessDef) -> None:
         """`_reserve_<proc>(out, vec)`: all or nothing over every resource. Creating an owner
         also takes an outbox row for its creation message (D43), so the `requests` need is
-        `vec[requests]` plus the `creates:<owner table>` entries."""
+        `vec[requests]` plus the `creates:<owner table>` entries. A member table (D74) is an
+        owner table too, so reserving member rows also reserves outbox rows that `_member_<t>`
+        never writes: a harmless over-reservation."""
         q = self.resources.index("requests")
         owners = self._owner_tables()
         made = [i for i, r in enumerate(self.resources)
@@ -357,7 +365,7 @@ class _Gen:
 
     def emit(self, e) -> None:
         spec = self.specs[f"records:{e.name}"]
-        procs = self.procs_of_partition(e.partition)
+        procs = self.procs_acting_as(e.partition)
         args = [f"c{i}" for i in range(len(spec.cols))]
         body = ["if t != ctx[CTX_T]:",
                 *self.by_proc(procs, "EngineError", lambda p: [
@@ -408,14 +416,18 @@ class _Gen:
     # values of `slabs.CREATE_HEAD`, in order
     CREATE_HEAD_VALUES = ("h", "ctx[CTX_PID]", "o_", "ctx[CTX_T]", "g", "ctx[CTX_LAMPORT]")
 
-    def create(self, ns: str, code: int) -> None:
+    def create(self, ns: str, code: int, outbox: bool = True) -> None:
+        """`_create_<ns>(out, ctx, *cols) -> handle`: a created row; an owner row also writes
+        its creation message (D43). With `outbox=False` this is `_member_<ns>` (D74): the same
+        row in `creates:<ns>`, never a creation message, so the row is never admitted."""
         spec = self.specs[f"creates:{ns}"]
         procs = list(self.plan.processes)
         args = [f"c{i}" for i in range(len(spec.cols))]
-        body = self.resv_check(spec.resource, procs, f"create beyond reservation: {ns}")
+        verb = "create" if outbox else "add_member"
+        body = self.resv_check(spec.resource, procs, f"{verb} beyond reservation: {ns}")
         body += self._handle(ns, code, procs)
         body += self._row(spec, [*self.CREATE_HEAD_VALUES], args)
-        if ns in self._owner_tables():
+        if outbox and ns in self._owner_tables():
             body += self.resv_check("requests", procs, f"create beyond reservation: {ns} "
                                     "(creation message)")
             # the created row's columns ride the creation message (D43; validate keeps them
@@ -424,7 +436,8 @@ class _Gen:
                      "pay = out[OUT_OUTBOX][OBX_PAY]"]
             body += [f"pay[i, {j}] = np.int64({a})" for j, a in enumerate(args)]
         body.append("return h")
-        self.fn(f"_create_{ns}", ", ".join(["out", "ctx", *args]), body)
+        self.fn(f"_{'create' if outbox else 'member'}_{ns}", ", ".join(["out", "ctx", *args]),
+                body)
 
     def new_id(self) -> None:
         procs = list(self.plan.processes)
@@ -915,9 +928,11 @@ class _Gen:
         entry each, so the generated tuples are never empty)."""
         owners = self._owner_parts()
         by_table = {p.table: (t, p) for t, p in enumerate(owners)}
+        members = set(self.plan.member_tables)
         ns_type, ns_nstart = [], []
         for ns in self.plan.namespaces:
-            t, part = by_table.get(ns, (-1, None))
+            # member rows (D74) are never admitted: no creation message names their namespace
+            t, part = (-1, None) if ns in members else by_table.get(ns, (-1, None))
             ns_type.append(t)
             ns_nstart.append(0 if part is None else len(self._started(part, ns)))
         return (ns_type or [-1]), (ns_nstart or [0])
@@ -1004,7 +1019,7 @@ class _Gen:
         owners = self._owner_parts()
         for code, ns in enumerate(self.plan.namespaces):
             t = next((t for t, p in enumerate(owners) if p.table == ns), None)
-            if t is None:
+            if t is None or ns in self.plan.member_tables:
                 continue
             part = owners[t]
             body += [f"    if ns == {code}:", f"        st_ = W[_W_OSTATE][{t}]"]
@@ -1104,9 +1119,10 @@ class _Gen:
         for a in self.plan.accumulators:
             self.accumulate(a)
         tables = {t.name for t in self.plan.tables}
+        members = set(self.plan.member_tables)
         for code, ns in enumerate(self.plan.namespaces):
             if ns in tables:
-                self.create(ns, code)
+                self.create(ns, code, outbox=ns not in members)
         self.new_id()
         self.timer()
         self.continue_at()

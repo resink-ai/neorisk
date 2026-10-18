@@ -70,32 +70,50 @@ def _check_table(where: str, t: pa.Table, time_col: str, cols, sealed: Any,
     counts["time_in_step"] += t.num_rows
 
 
-def ref_bounds(world: Any, id_bases: dict[str, int]) -> dict[str, int]:
+Bound = int | tuple[int, int, int]
+
+
+def ref_bounds(world: Any, id_bases: dict[str, int]) -> dict[str, Bound]:
     """Rows known per ref target (D48): population tables count the owners admitted so far
     (`pop.next`, not `n`, F-05), static / recipe tables their rows, created namespaces
-    `id_bases[ns]` (after this step's assignment)."""
-    bounds = {name: len(next(iter(cols.values()))) if cols else 0
-              for name, cols in world.tables.items()}
+    `id_bases[ns]` (after this step's assignment). Each is an int `b` = `[0, b)`, except a
+    member table (D75): `(a, b, c)` = `[0, a) ∪ [b, c)` - admitted population owners, then the
+    member rows from `n` on."""
+    bounds: dict[str, Bound] = {name: len(next(iter(cols.values()))) if cols else 0
+                                for name, cols in world.tables.items()}
+    members = set(world.plan.member_tables)
+    pops = {}
     for pop in world.populations:
+        pops[pop.table] = pop
         bounds[pop.table] = max(bounds.get(pop.table, 0), int(pop.next))
     for ns in world.plan.namespaces:
-        if ns in id_bases:
+        if ns in members and ns in pops:
+            n = len(pops[ns].times)
+            bounds[ns] = (int(pops[ns].next), n, max(n, int(id_bases.get(ns, n))))
+        elif ns in id_bases:
             bounds[ns] = max(bounds.get(ns, 0), int(id_bases[ns]))
     return bounds
 
 
-def check_ref_range(where: str, values: np.ndarray, target: str, bound: int,
+def check_ref_range(where: str, values: np.ndarray, target: str, bound: Bound,
                     cite: tuple[np.ndarray, ...] | None = None) -> int:
-    """Check that every non-`NULL` dense ref lies in `[0, bound)`; returns the values checked.
+    """Check that every non-`NULL` dense ref lies in `[0, bound)` (an int) or in
+    `[0, a) ∪ [b, c)` (`bound = (a, b, c)`, a member table, D75); returns the values checked.
 
     `cite` = `(partition_id, seq, action_id)` arrays parallel to `values`; the first offending
     row is named in the error (§11: failures cite (partition_id, seq) and action ID)."""
     v = np.asarray(values, np.int64)
     keep = v != NULL
     v = v[keep]
-    bad = np.flatnonzero((v < 0) | (v >= bound))
+    if isinstance(bound, tuple):
+        a, b, c = bound
+        bad = np.flatnonzero((v < 0) | ((v >= a) & (v < b)) | (v >= c))
+        rng = f"[0, {a}) ∪ [{b}, {c})"
+    else:
+        bad = np.flatnonzero((v < 0) | (v >= bound))
+        rng = f"[0, {bound})"
     if len(bad):
-        msg = f"{where}: ref {int(v[bad[0]])} outside [0, {bound}) of {target}"
+        msg = f"{where}: ref {int(v[bad[0]])} outside {rng} of {target}"
         if cite is not None:
             pid, seq, action = (int(np.asarray(c)[keep][bad[0]]) for c in cite)
             msg += f" at (partition_id {pid}, seq {seq}), action {action}"
@@ -104,7 +122,7 @@ def check_ref_range(where: str, values: np.ndarray, target: str, bound: int,
 
 
 def check_refs(plan: Any, records: dict[str, dict[str, np.ndarray]],
-               creates: dict[str, dict[str, np.ndarray]], bounds: dict[str, int]) -> int:
+               creates: dict[str, dict[str, np.ndarray]], bounds: dict[str, Bound]) -> int:
     """Range-check every ref column of the step's events, postings, history and created rows
     (dense values, after the remap and before public IDs are drawn)."""
     n = 0

@@ -19,6 +19,13 @@ def test_range_check_skips_null_and_names_the_column():
         check_ref_range("event e.x", np.array([1, 4], np.int64), "item", 4)
 
 
+def test_member_tables_have_a_two_range_bound():
+    """D75, F-04: a member table's bound `(a, b, c)` is `[0, a) ∪ [b, c)`."""
+    assert check_ref_range("t", np.array([1, 5]), "user", (2, 5, 7)) == 2
+    with pytest.raises(EngineError, match=r"t: ref 3 outside \[0, 2\) ∪ \[5, 7\) of user"):
+        check_ref_range("t", np.array([3]), "user", (2, 5, 7))
+
+
 def test_runs_count_checked_refs(tmp_path):
     r = run_to_dataset(FIXTURES / "mini", "sample", out_dir=tmp_path / "ok", threads=1)
     assert json.loads((r.out_dir / "manifest.json").read_text())["checks"]["ref_in_range"] > 0

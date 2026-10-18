@@ -71,6 +71,9 @@ class KernelLayout:
     response_payload: dict[str, list[tuple[str, LType]]] = field(default_factory=dict)  # by b
     resources: tuple[str, ...] = ()                   # resource_names(plan)
     accumulators: dict[str, int] = field(default_factory=dict)    # every accumulator -> code
+    # member table -> columns (`out.add_member_<table>`); non-empty only for processes of an
+    # owner that acts for another (D74)
+    members: dict[str, list[tuple[str, LType]]] = field(default_factory=dict)
 
 
 def resource_names(plan: Plan) -> list[str]:
@@ -133,6 +136,7 @@ def _add_slots(slots: dict[str, int], cols: tuple[Column, ...], where: str) -> N
 
 def _layout(plan: Plan, pd, recipes: list[Any], resources: tuple[str, ...]) -> KernelLayout:
     part = plan.partition(pd.partition)
+    acted = plan.partition(part.acts_for) if getattr(part, "acts_for", None) else None
     state_fields: dict[str, int] = {}
     state_cats: dict[str, tuple[str, ...]] = {}
     array_fields: dict[str, int] = {}
@@ -184,11 +188,14 @@ def _layout(plan: Plan, pd, recipes: list[Any], resources: tuple[str, ...]) -> K
                    f"process {pd.name}, responses of {b}")
 
     events = {e.name: _cols(e.cols[_N_COMMON:]) for e in plan.events
-              if e.partition == part.name}
+              if e.partition == part.name or (acted is not None and e.partition == acted.name)}
+    # a member table (D75) is a population table, never `create_`-able: its rows come from
+    # the population or from `members`
     creates: dict[str, list[tuple[str, LType]] | None] = {}
-    table_names = {t.name for t in plan.tables}
+    creatable = {t.name for t in plan.tables if t.creatable}
     for ns in plan.namespaces:
-        creates[ns] = _cols(plan.table(ns).cols) if ns in table_names else None
+        creates[ns] = _cols(plan.table(ns).cols) if ns in creatable else None
+    members = {acted.table: _cols(plan.table(acted.table).cols)} if acted is not None else {}
 
     boundary_of: dict[str, str] = {}
     out_payload: dict[str, list[tuple[str, LType]]] = {}
@@ -217,7 +224,7 @@ def _layout(plan: Plan, pd, recipes: list[Any], resources: tuple[str, ...]) -> K
         messages=messages, responses=responses, change_groups=change_groups, read_n=read_n,
         read_cats=read_cats, boundary_of=boundary_of, out_payload=out_payload,
         response_payload=response_payload, resources=resources,
-        accumulators={a.name: a.code for a in plan.accumulators})
+        accumulators={a.name: a.code for a in plan.accumulators}, members=members)
 
 
 def kernel_layouts(plan: Plan) -> dict[str, KernelLayout]:

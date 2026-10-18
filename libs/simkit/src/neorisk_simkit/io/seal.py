@@ -55,6 +55,7 @@ _PAY_SENDER = 9                                  # payload column 9: src_self_id
 HISTORY_HEAD = ("entity_id", "valid_from", "lamport", "partition_id", "seq")
 ENTITY_HEAD = ("id", "created_at", "origin")
 ORIGIN_CREATED = "created"
+ORIGIN_MEMBER = "member"                         # a member row of an acted-for table (D74)
 
 
 @dataclass(frozen=True)
@@ -418,6 +419,7 @@ def seal_step(world: Any, step: int, t0: int, t1: int, exported: bool,
         id_bases[ns] = base + len(d)
         dense_of[ns] = d
         pt = owner_ptype.get(ns)
+        # member rows (D74) never become partitions; their pid values are computed but unused
         pids.append((np.int64(pt) << np.int64(56)) | d if pt is not None else d)
     if plan.namespaces:
         remap = _Remap(np.concatenate([creates[ns]["handle"] for ns in plan.namespaces]),
@@ -477,8 +479,10 @@ def seal_step(world: Any, step: int, t0: int, t1: int, exported: bool,
     postings = {e.name: records_out[e.name] for e in plan.events if e.group == "postings"}
     history = {g.name: history_table(g, keep(records[g.name]), seed)
                for g in plan.change_groups}
+    members = set(plan.member_tables)
     entities = {ns: entity_table(ns, tables[ns].cols, dense_of[ns], creates[ns]["created_at"],
-                                 ORIGIN_CREATED, creates[ns], seed) for ns in entity_ns}
+                                 ORIGIN_MEMBER if ns in members else ORIGIN_CREATED,
+                                 creates[ns], seed) for ns in entity_ns}
     stats = {"rows": int(n_rows), "counted_rows": counted, "bytes": int(n_bytes),
              "freed_slots": len(freed),
              "events": {k: t.num_rows for k, t in events.items()},

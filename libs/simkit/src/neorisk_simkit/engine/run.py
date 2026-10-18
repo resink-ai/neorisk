@@ -50,6 +50,8 @@ class Simulation:
         plan = run.plan
         self.id_bases: dict[str, int] = {ns: 0 for ns in plan.namespaces}
         self.id_bases.update({f"event:{e.name}": 0 for e in plan.events})
+        for t in plan.member_tables:            # D75: member rows follow the population
+            self.id_bases[t] = next((pop.n for pop in plan.populations if pop.table == t), 0)
         self.laws = LawBook(plan, max_keys=run.budget.max_checker_keys)
         self._started = False
         self.stats: dict[str, Any] = {

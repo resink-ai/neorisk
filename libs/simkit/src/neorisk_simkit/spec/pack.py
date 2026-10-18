@@ -51,6 +51,7 @@ class Pack:
         self.change_groups: dict[str, dict[str, Any]] = {}
         self.checks: dict[str, tuple[LawSpec, bool]] = {}
         self.accumulators: dict[str, dict[str, Any]] = {}
+        self.exposed_owners: list[str] = []
 
     # ------------------------------------------------------------------ helpers
     def _table(self, name: str) -> dict[str, Any]:
@@ -107,9 +108,18 @@ class Pack:
 
     # ------------------------------------------------------------------ partitions
     def owner(self, name: str, *, table: str, max_live: int, children=(),
-              retire_when_idle: bool = True, execution_owner: str | None = None) -> str:
+              retire_when_idle: bool = True, execution_owner: str | None = None,
+              acts_for: str | None = None) -> str:
+        """`acts_for` (D74): this owner executes on behalf of the exposed owner partition
+        `acts_for` - its processes may emit that partition's records, send its boundaries and
+        create member rows of its table (`out.add_member_<table>`)."""
         self._new_partition(name)
         t = self._table(table)
+        if acts_for is not None:
+            self._partition(acts_for, "owner")
+            if acts_for not in self.exposed_owners:
+                raise PackError(f"owner {name}: acts_for {acts_for!r} needs "
+                                f"p.expose_owner({acts_for!r}) in the base pack")
         if not t["mutable"]:
             raise PackError(f"owner {name}: table {table!r} must be mutable")
         if max_live < 1:
@@ -119,8 +129,15 @@ class Pack:
         self.partitions[name] = {
             "kind": "owner", "name": name, "table": table, "n": None, "max_live": int(max_live),
             "items": None, "key": t["key"], "state": {}, "init": None,
-            "retire_when_idle": retire_when_idle, "doc": ""}
+            "retire_when_idle": retire_when_idle, "doc": "", "acts_for": acts_for}
         return name
+
+    def expose_owner(self, name: str) -> None:
+        """Expose owner partition `name` as an execution-owner extension point (D74): an owner
+        declared with `acts_for=name` may act for it."""
+        self._partition(name, "owner")
+        if name not in self.exposed_owners:
+            self.exposed_owners.append(name)
 
     def shard(self, name: str, *, key: str, n: int, items: str | None, state: dict[str, str],
               init=None, doc: str = "") -> str:
@@ -149,7 +166,7 @@ class Pack:
         self.partitions[name] = {
             "kind": "shard", "name": name, "table": None, "n": int(n), "max_live": int(n),
             "items": items, "key": key, "state": dict(state), "init": init,
-            "retire_when_idle": False, "doc": doc}
+            "retire_when_idle": False, "doc": doc, "acts_for": None}
         return name
 
     # ------------------------------------------------------------------ boundaries
