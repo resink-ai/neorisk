@@ -615,6 +615,11 @@ class _Lowerer(ast.NodeTransformer):
             if not (self._is_str(ns) and ns.value in lay.creates) or kw:
                 self.err(node, "out.new_id takes one namespace name as a string literal")
             return _call("_new_id", out, ctx, ast.Constant(list(lay.creates).index(ns.value)))
+        if m == "mstat":
+            if kw:
+                self.err(node, f"{what}: unknown argument {min(kw)!r}")
+            i, v = self._positional(node, what, 2, 2)
+            return _call("_mstat", out, ctx, self.visit(i), self.visit(v))
         if m == "timer":
             pos = self._positional(node, what, 2, 4)
             t, kind = self.visit(pos[0]), self.visit(pos[1])

@@ -185,6 +185,16 @@ def test_machine_declaration_errors():
         m.state("c", join={"a": "x", "b": "y"})
 
 
+def test_implicit_field_names_come_from_the_instance_layout():
+    from neorisk_simkit.machine.layout import IMPLICIT
+    from neorisk_simkit.machine.spec import IMPLICIT_FIELDS
+    assert IMPLICIT_FIELDS == tuple(f for f, _ in IMPLICIT) and "mr" in IMPLICIT_FIELDS
+    p = _pack()
+    p.machine("m", owner="acct", initial="a", fields={"mr": "i16"}).state(
+        "a", branch={"b": (1.0, None, None)}).final("b")
+    assert "machine m: field 'mr' is an implicit instance field (D63)" in _errors(p)
+
+
 def test_build_plan_joins_every_machine_error():
     p = _pack()
     p.machine("m", owner="acct", initial="nowhere").state("a").final("b")

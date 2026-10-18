@@ -11,13 +11,13 @@ from typing import Any
 
 from neorisk_simkit.engine.abi import _LOCAL_RE, ActionSpec
 from neorisk_simkit.machine import helpers as h
+from neorisk_simkit.machine.layout import IMPLICIT
 from neorisk_simkit.spec.dist import Dist
 from neorisk_simkit.spec.pack import PackError, Trigger
 
 MAX_MACHINES, MAX_STATES, MAX_INSTANCES = 16, 32, 64
 LATE = ("ignore", "count")
-IMPLICIT_FIELDS = ("st", "gen", "ep", "rep", "t0", "dep", "par", "pm", "pep", "ord", "kids",
-                   "jb", "jn", "jl", "actor", "pactor")      # D63
+IMPLICIT_FIELDS = tuple(f for f, _ in IMPLICIT)              # D63 (single source: layout)
 
 
 @dataclass(frozen=True)

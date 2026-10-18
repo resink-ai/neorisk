@@ -1030,6 +1030,22 @@ class World:
             out[a.name] = total[a.code]
         return out
 
+    def take_machine_stats(self) -> dict[str, dict[str, Any]]:
+        """Machine counters since the last call (D82), summed over workers, then zeroed:
+        per machine `late, rejects, spawned, late_grants` and entries per state and final."""
+        from neorisk_simkit.machine.layout import stat_layout
+        tot = sum(s.mstat for s in self.slabs)
+        for s in self.slabs:
+            s.mstat[:] = 0
+        out: dict[str, dict[str, Any]] = {}
+        for md in self.plan.machines:
+            b = stat_layout(self.plan.machines)[md.name]
+            names = [st.name for st in md.states] + list(md.finals)
+            out[md.name] = {"late": int(tot[b]), "rejects": int(tot[b + 1]),
+                            "spawned": int(tot[b + 2]), "late_grants": int(tot[b + 3]),
+                            "entries": {n: int(tot[b + 4 + j]) for j, n in enumerate(names)}}
+        return out
+
     @property
     def stats(self) -> dict[str, Any]:
         c = self.counters.sum(axis=0)

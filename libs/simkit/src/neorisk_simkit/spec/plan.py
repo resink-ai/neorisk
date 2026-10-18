@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 import hashlib
 from collections.abc import Mapping
 from dataclasses import dataclass
@@ -98,6 +99,7 @@ class ProcessDef:
     every_us: int | None
     jitter: Dist | None
     max_spawn_depth: int | None = None              # None: budget.max_spawn_depth (D72)
+    machine_partition: str | None = None            # set on the generated `mx_<p>` (D62)
 
 
 @dataclass(frozen=True)
@@ -158,6 +160,7 @@ class Plan:
     exposed_owners: tuple[str, ...] = ()          # p.expose_owner, in declaration order (D74)
     member_tables: tuple[str, ...] = ()           # tables of acted-for partitions (D74, D75)
     machines: tuple[Any, ...] = ()                # machine.spec.MachineDef (spec §04)
+    machine_sources: Mapping[str, str] = MappingProxyType({})   # partition -> generated text
 
     def table(self, name: str) -> TableDef:
         return _find(self.tables, name, "table")
@@ -201,8 +204,10 @@ def _frozen(d: dict) -> Mapping:
     return MappingProxyType(dict(d))
 
 
-def build_plan(pack_module, cfg, specs_dir: Path) -> Plan:
-    """Run the pack's `define(p, cfg)` and normalize the declarations into a `Plan`."""
+def build_plan(pack_module, cfg, specs_dir: Path, *, default_spawn_depth: int = 3) -> Plan:
+    """Run the pack's `define(p, cfg)` and normalize the declarations into a `Plan`; machines
+    compile into one generated process `mx_<partition>` per owner partition, appended after the
+    pack's processes (D62). `default_spawn_depth` is `budget.max_spawn_depth` (D72, F-21)."""
     from neorisk_simkit.spec.project import parse_duration  # project imports this module
 
     p = Pack(pack_module.PACK, pack_module.SCHEMA_VERSION)
@@ -303,10 +308,24 @@ def build_plan(pack_module, cfg, specs_dir: Path) -> Plan:
     accumulators = tuple(AccumulatorDef(name=d["name"], code=i, ltype=d["ltype"])
                          for i, d in enumerate(p.accumulators.values()))
 
-    return Plan(pack=p.name, schema_version=p.schema_version,
+    plan0 = Plan(pack=p.name, schema_version=p.schema_version,
                 revision=pack_revision(Path(specs_dir)), tables=tables, events=events,
                 namespaces=namespaces, partitions=partitions, boundaries=boundaries,
                 processes=processes, populations=populations, change_groups=change_groups,
                 checks=checks, cfg=cfg, accumulators=accumulators,
                 exposed_owners=tuple(p.exposed_owners), member_tables=tuple(member_tables),
                 machines=machines)
+    if not machines:
+        return plan0
+    from neorisk_simkit.machine.compile import compile_machines  # machine imports spec
+    mx = compile_machines(plan0, default_spawn_depth)
+    base = len(plan0.processes)
+    extra = tuple(ProcessDef(
+        name=x.name, partition=x.partition, action_id=base + j, kernel=x.kernel,
+        config=x.config, start=x.start, requests=x.requests, messages=x.messages,
+        on_request=_frozen({}), on_response=x.on_response, on_message=_frozen({}),
+        reads=x.reads, refs=x.refs, commands=x.commands, every_us=None, jitter=None,
+        max_spawn_depth=x.max_spawn_depth, machine_partition=x.partition)
+        for j, x in enumerate(mx))
+    return dataclasses.replace(plan0, processes=plan0.processes + extra,
+                               machine_sources=_frozen({x.partition: x.text for x in mx}))

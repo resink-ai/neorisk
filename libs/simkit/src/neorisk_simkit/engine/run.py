@@ -66,7 +66,12 @@ class Simulation:
             "admissions_total": 0, "compiled_admissions_total": 0, "shard_load": {},
             "populations": {}, "ids_allocated": {},
             # exported steps only
-            "events_by_partition": {p.name: 0 for p in plan.partitions}, "shard_ns": 0}
+            "events_by_partition": {p.name: 0 for p in plan.partitions}, "shard_ns": 0,
+            # machine counters (D82), whole run
+            "machines": {md.name: {"late": 0, "rejects": 0, "spawned": 0, "late_grants": 0,
+                                   "entries": {n: 0 for n in (*(st.name for st in md.states),
+                                                              *md.finals)}}
+                         for md in plan.machines}}
         self._event_partition = {e.name: e.partition for e in plan.events
                                  if e.group == "events"}
 
@@ -124,6 +129,7 @@ class Simulation:
             c0 = time.perf_counter()
             rounds = run_step(w, t, t1)
             c1 = time.perf_counter()
+            self._add_machine_stats(w.take_machine_stats())
             self.stats["admissions_total"] += int(w.admissions[0])   # reset by begin_step
             self.stats["compiled_admissions_total"] += (int(w.admissions[0])
                                                         - rounds.python_admissions)
@@ -148,6 +154,16 @@ class Simulation:
         self.stats["shard_load"] = w.stats["shard_load"]
         self.stats["populations"] = {pop.table: int(pop.next) for pop in w.populations}
         self.stats["ids_allocated"] = {ns: int(self.id_bases[ns]) for ns in run.plan.namespaces}
+
+    def _add_machine_stats(self, step: dict[str, dict[str, Any]]) -> None:
+        for m, d in step.items():
+            tot = self.stats["machines"][m]
+            for k, v in d.items():
+                if k == "entries":
+                    for n, x in v.items():
+                        tot["entries"][n] += x
+                else:
+                    tot[k] += v
 
     def _account(self, sealed: SealedStep, rounds: Any, gen_s: float, seal_s: float) -> None:
         st = self.stats

@@ -22,8 +22,14 @@ def cmd_validate(args: argparse.Namespace) -> int:
     except ProjectError as e:
         print(e, file=sys.stderr)
         return 2
-    report = validate(run)
     plan = run.plan
+    if args.dump_machines is not None:              # the inspectable dispatch module (§04)
+        out = Path(args.dump_machines)
+        out.mkdir(parents=True, exist_ok=True)
+        for part, text in plan.machine_sources.items():
+            (out / f"{part}.py").write_text(text)
+            print(f"wrote {out / f'{part}.py'}")
+    report = validate(run)
     print(f"pack {plan.pack} @ {plan.revision} · schema_version {plan.schema_version}")
     print("partitions: " + ", ".join(p.name for p in plan.partitions))
     print("events: " + ", ".join(e.name for e in plan.events))

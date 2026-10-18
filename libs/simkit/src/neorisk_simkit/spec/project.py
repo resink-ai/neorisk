@@ -336,12 +336,14 @@ def resolve_run(project: Project, profile: str, overrides: Iterable[str] = (),
             raise ProjectError(f"[defaults].{k} is required")
     seed = _int("seed", run_raw["seed"]) if seed is None else int(seed)
 
-    plan = build_plan(module, cfg, project.pack_path.parent)
+    budget = _settings(Budget, "budget", _BUDGET, tables["budget"])
+    plan = build_plan(module, cfg, project.pack_path.parent,
+                      default_spawn_depth=budget.max_spawn_depth)   # D72, F-21
     return RunSpec(
         name=f"{profile}-s{seed}", profile=profile, seed=seed,
         start_us=parse_time(run_raw["start"]), span_us=parse_duration(run_raw["span"]),
         warmup_us=parse_duration(run_raw.get("warmup", "0s")), mode=mode,
-        budget=_settings(Budget, "budget", _BUDGET, tables["budget"]),
+        budget=budget,
         writer=_settings(WriterSettings, "writer", _WRITER, tables["writer"]),
         engine=_settings(EngineSettings, "engine", _ENGINE, tables["engine"]),
         cfg=cfg, plan=plan, overrides=overrides)

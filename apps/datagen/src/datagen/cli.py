@@ -25,6 +25,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     gen.add_argument("--out", required=True)
     val = sub.add_parser("validate", help="validate a project folder and print memory caps")
     _project_args(val)
+    val.add_argument("--dump-machines", default=None, metavar="DIR",
+                     help="write each partition's generated machine module")
     run = sub.add_parser("run", help="run a project profile into a dataset folder")
     _project_args(run)
     run.add_argument("--seed", type=int, default=None)

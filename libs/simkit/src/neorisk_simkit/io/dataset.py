@@ -192,6 +192,8 @@ def _run_stats(sim: Simulation, manifest: dict[str, Any], timing: dict[str, floa
     }
     for k in ENGINE_COUNTERS:
         out[k] = dict(st[k]) if isinstance(st[k], dict) else st[k]
+    out["machines"] = {m: {**d, "entries": dict(d["entries"])}            # D82 ({} without)
+                       for m, d in st["machines"].items()}
     out.update(_accounting(sim, manifest))
     return out
 

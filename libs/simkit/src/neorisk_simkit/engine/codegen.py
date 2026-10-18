@@ -1124,6 +1124,7 @@ class _Gen:
             if ns in tables:
                 self.create(ns, code, outbox=ns not in members)
         self.new_id()
+        self.fn("_mstat", "out, ctx, i, v", ["ms = out[OUT_MSTAT]", "ms[i] += v"])   # D82
         self.timer()
         self.continue_at()
         self.outbox_row()
@@ -1167,7 +1168,8 @@ def _top_level_names(source: str) -> set[str]:
 
 
 def lowered_kernels(plan: Plan) -> list[str]:
-    """Lower every kernel module of the plan (one module per kernel source file)."""
+    """Lower every kernel module of the plan (one module per kernel source file; a machine
+    process's `KernelSpec.source`, its file followed by the generated text, replaces it)."""
     layouts = kernel_layouts(plan)
     by_file: dict[str, dict[str, str]] = {}
     for p in plan.processes:
@@ -1175,7 +1177,13 @@ def lowered_kernels(plan: Plan) -> list[str]:
         if funcs.setdefault(p.kernel.name, p.name) != p.name:
             raise LoweringError(f"kernel {p.kernel.name} is used by processes "
                                 f"{funcs[p.kernel.name]} and {p.name}; give each its own kernel")
-    return [lower_module(Path(f).read_text(), layouts, funcs, filename=f)
+    sources: dict[str, str] = {}          # generated machine text replaces its file (D62)
+    for p in plan.processes:
+        src = p.kernel.source
+        if src is not None and sources.setdefault(p.kernel.module_file, src) != src:
+            raise LoweringError(f"{p.kernel.module_file}: processes give different generated "
+                                "sources for one kernels file")
+    return [lower_module(sources.get(f) or Path(f).read_text(), layouts, funcs, filename=f)
             for f, funcs in by_file.items()]
 
 
