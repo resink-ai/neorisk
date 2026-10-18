@@ -37,13 +37,16 @@ def _ctx(g=3, t=1_000, lamport=4, pid=(1 << 56) | 3, action=0):
     return make_ctx(t, 3, pid, g, 11, action, 0, np.zeros(33, np.int64), 7, (), (), (), lamport, 0)
 
 
-@pytest.mark.checked
 def test_build_is_cached_by_content(run):
     a, b = build_engine(run.plan), build_engine(run.plan)
     assert a.__file__ == b.__file__ and a.RESOURCES == [
         "records:user_joined", "records:ping", "records:took", "records:item_taken",
         "records:take_failed", "creates:note", "creates:visit", "timers", "requests"]
-    assert build_engine(run.plan, checked=True).__file__ != a.__file__
+
+
+@pytest.mark.checked
+def test_checked_build_is_a_separate_module(run):
+    assert build_engine(run.plan, checked=True).__file__ != build_engine(run.plan).__file__
 
 
 def test_reserve_and_emit_until_slab_is_full(run):

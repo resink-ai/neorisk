@@ -34,6 +34,10 @@ def _narrow_int(t) -> bool:
     return dt.kind in "iu" and dt.itemsize < 8
 
 
+# D72: the hidden per-slot `depth` is uint8 and a machine instance's `dep` is i8 (D63), whose
+# default is budget.max_spawn_depth; a larger limit would let the stored depth wrap
+MAX_SPAWN_DEPTH = 127
+
 # D43: a created owner's initial state rides the user columns 0..6 of its creation message
 CREATION_PAYLOAD_COLS = 7
 
@@ -191,6 +195,8 @@ def validate(run, threads: int | None = None) -> ValidationReport:
                         f"{outbox_cap}")
         if p.max_spawn_depth is not None and p.max_spawn_depth < 1:
             errs.append(f"{p.name}: max_spawn_depth must be >= 1")
+        if p.max_spawn_depth is not None and p.max_spawn_depth > MAX_SPAWN_DEPTH:
+            errs.append(f"{p.name}: max_spawn_depth must be <= {MAX_SPAWN_DEPTH}")
         commands = set(p.commands) | set(k.commands)
         if p.every_us is not None and part_kind.get(p.partition) != "shard":
             errs.append(f"{p.name}: every= is only for shard processes (D26)")
@@ -214,6 +220,8 @@ def validate(run, threads: int | None = None) -> ValidationReport:
 
     if run.budget.max_spawn_depth < 1:
         errs.append("budget.max_spawn_depth must be >= 1")
+    if run.budget.max_spawn_depth > MAX_SPAWN_DEPTH:
+        errs.append(f"budget.max_spawn_depth must be <= {MAX_SPAWN_DEPTH}")
 
     workers = run.budget.threads if threads is None else threads
     if workers < 1:

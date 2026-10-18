@@ -45,4 +45,13 @@ def test_chain_fixture_fails_at_runtime_beyond_the_budget(tmp_path):
     with pytest.raises(CapExceeded) as e:
         run_to_dataset(FIXTURES / "chain", "sample", ["budget.max_spawn_depth=1"],
                        out_dir=tmp_path / "c", threads=1)
-    assert e.value.item == "max_spawn_depth" and e.value.process == "b_main"
+    assert (e.value.item, e.value.limit, e.value.attempted, e.value.process) == (
+        "max_spawn_depth", 1, 2, "b_main")
+
+
+def test_spawn_depth_limits_fit_the_stored_counter():
+    """The depth counter is uint8 and a machine's `dep` i8 (D63): limits stop at 127."""
+    assert validate(make_run("recur", ["max_depth=127", "budget.max_spawn_depth=127"])).ok
+    errs = validate(make_run("recur", ["max_depth=128", "budget.max_spawn_depth=128"])).errors
+    assert "grow: max_spawn_depth must be <= 127" in errs
+    assert "budget.max_spawn_depth must be <= 127" in errs
