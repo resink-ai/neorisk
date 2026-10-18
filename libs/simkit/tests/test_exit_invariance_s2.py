@@ -94,3 +94,18 @@ def test_identical_replay_is_byte_identical(runs, tmp_path):
     run_to_dataset(EX2, "sample", SMALL2 + ["engine.slab_bytes='4MB'", "engine.step='6h'"],
                    out_dir=again, threads=4, engine_overrides=ENGINE)
     assert dataset_tree(runs[(4, "4MB", "6h")]) == dataset_tree(again)
+
+
+def test_a_hold_ttl_past_15_minutes_runs_clean(tmp_path):
+    """Final review I1: `chk.holds_resolved` takes its window from `desk.hold_ttl_s`, so holds
+    that expire by a 20-minute TTL are resolved, not violations."""
+    d = tmp_path / "ttl"
+    run_to_dataset(EX2, "sample", SMALL2 + ["desk.hold_ttl_s=1200", "engine.slab_bytes='4MB'",
+                                            "engine.step='6h'"],
+                   out_dir=d, threads=4, engine_overrides=ENGINE)
+    law = json.loads((d / "manifest.json").read_text())["laws"]["chk.holds_resolved"]
+    assert law["violations"] == 0 and law["checked"] > 0
+    ev = read_events(d)
+    held = ev["stock_expired"].join(ev["stock_reserved"], on="hold_id", suffix="_r")
+    assert ((held["event_time"] - held["event_time_r"]).dt.total_seconds() == 1200).all()
+    assert held.height > 0

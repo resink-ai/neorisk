@@ -1,8 +1,9 @@
 """§11: reference models replay the real kernels' decisions and agree with every one."""
 
+import ast
 import functools
 import json
-import re
+from datetime import datetime
 from pathlib import Path
 
 import numpy as np
@@ -42,11 +43,29 @@ LATE = ["users=800", "skus=300", "sku_groups=4", "desk.hold_ttl_s=0", "run.span=
         "run.warmup=0s", *POOLS]
 
 
+class Events(dict):
+    """A run's event tables, plus `pack` (its resolved pack config) and `end_us` (its end)."""
+
+
 def _events(over, tmp_path):
     out = run_to_dataset(EX, "sample", over, out_dir=tmp_path / "run", threads=4).out_dir
-    manifest = json.loads((out / "manifest.json").read_text())
-    assert manifest["config"]["run"]["warmup_us"] == 0      # the models need the whole history
-    return read_events(out)
+    config = json.loads((out / "manifest.json").read_text())["config"]
+    assert config["run"]["warmup_us"] == 0                  # the models need the whole history
+    ev = Events(read_events(out))
+    ev.pack = config["pack"]
+    start = datetime.fromisoformat(config["run"]["start"])
+    ev.end_us = int(start.timestamp()) * 1_000_000 + config["run"]["span_us"]
+    return ev
+
+
+_INVENTORY_TABLES = ("stock_reserved", "stock_rejected", "stock_committed", "stock_released",
+                     "stock_expired", "stock_commit_late", "restocked")
+
+
+def _copy(ev):
+    out = Events(ev)
+    out.pack, out.end_us = ev.pack, ev.end_us
+    return out
 
 
 @pytest.fixture(scope="module")
@@ -67,60 +86,87 @@ def _initial(over: tuple[str, ...]):
             {int(p): int(g) for p, g in zip(pub, group, strict=True)})
 
 
-def _replay_inventory(ev, over, ttl_s):
+def _replay_inventory(ev, over):
+    """The inventory model with the run's own hold TTL and end (resolved config)."""
     on_hand0, sku_group = _initial(tuple(over))
     return replay_inventory(ev, on_hand0, slots=HOLD_SLOTS, sku_group=sku_group,
-                            hold_ttl_us=ttl_s * 1_000_000)
+                            hold_ttl_us=ev.pack["desk"]["hold_ttl_s"] * 1_000_000,
+                            end_us=ev.end_us)
+
+
+def _replay_refunds(ev):
+    return replay_refunds(ev, dispute_window_us=ev.pack["pay"]["dispute_window_days"] * int(DAY))
 
 
 def test_inventory_reference(ev):
     assert ev["stock_reserved"].height > 500 and ev["stock_expired"].height > 0
-    assert _replay_inventory(ev, STRESS, ttl_s=600) == []
+    assert ev.pack["desk"]["hold_ttl_s"] == 600                          # the pack default
+    assert _replay_inventory(ev, STRESS) == []
 
 
 def test_inventory_reference_full_hold_table(tmp_path):
     ev = _events(BUSY, tmp_path)
     reasons = ev["stock_rejected"]["reason"]
     assert (reasons == "busy").sum() > 0 and (reasons == "out_of_stock").sum() > 0
-    assert _replay_inventory(ev, BUSY, ttl_s=600) == []
+    assert _replay_inventory(ev, BUSY) == []
 
 
 def test_inventory_reference_commit_after_ttl(tmp_path):
     ev = _events(LATE, tmp_path)
-    assert ev["stock_commit_late"].height > 0
-    assert _replay_inventory(ev, LATE, ttl_s=0) == []
+    assert ev["stock_commit_late"].height > 0 and ev.pack["desk"]["hold_ttl_s"] == 0
+    assert _replay_inventory(ev, LATE) == []
 
 
 def test_pool_reference(ev):
     assert ev["bonus_rejected"].height > 0
-    assert replay_pool(ev, cap=40_000) == []
+    assert replay_pool(ev, cap=ev.pack["pool_cap"]) == []
 
 
 def test_refund_reference(ev):
     assert ev["refund_replayed"].height > 0 and ev["dispute_opened"].height > 0
-    assert replay_refunds(ev, dispute_window_us=90 * int(DAY)) == []   # pack default
+    assert ev.pack["pay"]["dispute_window_days"] == 90                    # the pack default
+    assert _replay_refunds(ev) == []
 
 
 def test_refund_reference_short_dispute_window(tmp_path):
     # a 2-day window the 1-day-mean dispute delay often overruns: disputes open only inside it
     ev = _events([*STRESS, "pay.dispute_window_days=2"], tmp_path)
     assert ev["dispute_opened"].height > 0
-    assert replay_refunds(ev, dispute_window_us=2 * int(DAY)) == []
+    assert _replay_refunds(ev) == []
+
+
+def test_inventory_reference_reports_a_hold_live_past_the_end(ev):
+    """A hold whose TTL instant passed before the run's end must have expired; dropping its
+    `stock_expired` row (the last row of its group, so no later row trips the overdue check)
+    is reported at the end of the stream."""
+    import polars as pl
+    exp = ev["stock_expired"]
+    last = exp.sort("event_time").tail(1)
+    group = last["sku_group"][0]
+    later = [t for t in _INVENTORY_TABLES if ev[t].height and
+             ev[t].filter((pl.col("sku_group") == group)
+                          & (pl.col("event_time") > last["event_time"][0])).height]
+    assert not later                                     # nothing in its group follows it
+    cut = _copy(ev)
+    cut["stock_expired"] = exp.filter(pl.col("hold_id") != last["hold_id"][0])
+    lines = _replay_inventory(cut, STRESS)
+    assert len(lines) == 1 and lines[0].startswith(f"end of stream (sku_group {group}): hold "
+                                                   f"{last['hold_id'][0]} live past its TTL")
 
 
 def test_references_catch_a_wrong_decision(ev):
     import polars as pl
-    flipped = dict(ev)
+    flipped = _copy(ev)
     g = ev["bonus_granted"]
     flipped["bonus_granted"] = g.with_columns(
         pl.when(pl.int_range(pl.len()) == 0).then(pl.col("remaining_after") + 1)
         .otherwise(pl.col("remaining_after")).alias("remaining_after"))
-    assert replay_pool(flipped, cap=40_000)          # a tampered stream is caught
+    assert replay_pool(flipped, cap=ev.pack["pool_cap"])     # a tampered stream is caught
 
 
 def _bump(ev, table, col, by=1):
     import polars as pl
-    out = dict(ev)
+    out = _copy(ev)
     out[table] = ev[table].with_columns(
         pl.when(pl.int_range(pl.len()) == 0).then(pl.col(col) + by).otherwise(pl.col(col))
         .alias(col))
@@ -129,15 +175,15 @@ def _bump(ev, table, col, by=1):
 
 def _swap(ev, table, col, a, b):
     import polars as pl
-    out = dict(ev)
+    out = _copy(ev)
     out[table] = ev[table].with_columns(pl.col(col).cast(pl.String).replace({a: b, b: a}))
     return out
 
 
 def test_inventory_and_refund_references_catch_tampering(ev):
-    assert _replay_inventory(_bump(ev, "stock_committed", "on_hand_after"), STRESS, ttl_s=600)
+    assert _replay_inventory(_bump(ev, "stock_committed", "on_hand_after"), STRESS)
     rej = _swap(ev, "stock_rejected", "reason", "out_of_stock", "busy")
-    assert len(_replay_inventory(rej, STRESS, ttl_s=600)) == ev["stock_rejected"].height
+    assert len(_replay_inventory(rej, STRESS)) == ev["stock_rejected"].height
     assert replay_refunds(_bump(ev, "dispute_opened", "amount"))
     assert replay_refunds(_bump(ev, "refund_settled", "refunded_after"))
     flipped = _swap(ev, "refund_replayed", "result", "requested", "rejected")
@@ -145,8 +191,13 @@ def test_inventory_and_refund_references_catch_tampering(ev):
 
 
 def test_reference_constants_match_the_kernels():
-    # a kernel module cannot be imported outside its pack, so read the constants from its text
-    src = (EX / "specs" / "kernels.py").read_text()
-    lines = re.finditer(r"^(\w+_SLOTS) = (\d+)", src, re.MULTILINE)
-    found = {m[1]: int(m[2]) for m in lines}
+    # a kernel module cannot be imported outside its pack, so read its module-level constants
+    # from the parsed source (any spelling of the assignment; other constants are ignored)
+    tree = ast.parse((EX / "specs" / "kernels.py").read_text())
+    found = {}
+    for node in tree.body:
+        if isinstance(node, ast.Assign | ast.AnnAssign) and node.value is not None:
+            for t in (node.targets if isinstance(node, ast.Assign) else [node.target]):
+                if isinstance(t, ast.Name) and t.id in ("HOLD_SLOTS", "IDEM_SLOTS"):
+                    found[t.id] = ast.literal_eval(node.value)
     assert found == {"HOLD_SLOTS": HOLD_SLOTS, "IDEM_SLOTS": IDEM_SLOTS}

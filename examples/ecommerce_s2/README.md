@@ -92,7 +92,8 @@ Accumulators: `hot_checkouts` (started checkouts with at least one line in group
 
 Laws (required): `chk.stock_never_negative`, `chk.reserved_never_negative`,
 `chk.user_hold_never_negative`, `chk.holds_resolved` (every `stock_reserved` hold is committed,
-released or expired within 15 minutes), `chk.postings_balanced` (`ledger` debits equal credits
+released or expired within `desk.hold_ttl_s` plus 5 minutes: 15 minutes for the default
+600 s TTL), `chk.postings_balanced` (`ledger` debits equal credits
 per commit), `chk.one_capture` (at most one `payment_captured` per payment),
 `chk.refunds_le_captured` (Σ `refund_settled.amount` ≤ `payment_captured.amount` per payment),
 `chk.refund_settles_once` (at most one `refund_settled` per refund ID),

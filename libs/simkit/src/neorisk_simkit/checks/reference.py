@@ -66,14 +66,15 @@ _INVENTORY = {
 
 def replay_inventory(events: dict[str, pl.DataFrame], on_hand0: dict[int, int],
                      slots: int, sku_group: dict[int, int] | None = None,
-                     hold_ttl_us: int | None = None) -> list[str]:
+                     hold_ttl_us: int | None = None, end_us: int | None = None) -> list[str]:
     """Replay every inventory group's decisions. `on_hand0` maps public SKU IDs to their
     initial stock; `slots` is the hold-table size; `sku_group`, when given, maps public SKU IDs
     to their group, and every row's SKU must belong to the row's group. Every hold ID is issued
     once. With `hold_ttl_us`, TTL timing is replayed too: a hold expires exactly `hold_ttl_us`
     after its reserve and never outlives that instant, a commit or release at or before it is on
     time (messages run before the TTL timer at an equal instant, D49), a late commit comes after
-    it. A reserve is granted iff
+    it. With `end_us` (the run's end) as well, a hold still live at the end of the stream whose
+    TTL instant came before `end_us` is reported too. A reserve is granted iff
     `on_hand - reserved >= quantity` and fewer than `slots` holds are live; a rejection says
     `out_of_stock` when stock is short, else `busy`. Commits, releases and expiries name a live
     hold of that SKU, checkout and quantity and free it; `stock_commit_late` names a hold of this
@@ -161,6 +162,13 @@ def replay_inventory(events: dict[str, pl.DataFrame], on_hand0: dict[int, int],
                 if r["on_hand_after"] != on_hand[hsku]:
                     out.append(_miss(r, "on_hand_after", on_hand[hsku], r["on_hand_after"]))
                     on_hand[hsku] = r["on_hand_after"]
+    if hold_ttl_us is not None and end_us is not None:     # the end of the stream
+        for g, holds in sorted(live.items()):
+            for h in holds:
+                if due[h] < end_us and h not in overdue:
+                    out.append(f"end of stream (sku_group {g}): hold {h} live past its TTL "
+                               f"instant: expected expired at {due[h]}, observed live at "
+                               f"{end_us}")
     return out
 
 

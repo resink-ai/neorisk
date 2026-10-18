@@ -60,6 +60,9 @@ class Journey:
     invitee_bonus: int = 1_000              # claimed from the pool by a qualifying referral
 
 
+HOLD_SLACK_S = 300                         # chk.holds_resolved: the window past the hold TTL
+
+
 @dataclass(frozen=True)
 class Desk:
     """Inventory desk; consumed by kernels.inventory_desk."""
@@ -325,9 +328,12 @@ def define(p: Pack, cfg: Config) -> None:
     p.check("chk.reserved_never_negative", law.never_negative("inventory.reserved"),
             required=True)
     p.check("chk.user_hold_never_negative", law.never_negative("user.held"), required=True)
+    # a live hold is committed or released at or before its TTL expiry, which ends it exactly
+    # `hold_ttl_s` after the reserve (D49: messages run first at an equal instant), so the TTL
+    # alone is exact; HOLD_SLACK_S keeps the window at 15m for the default 600 s TTL
     p.check("chk.holds_resolved", law.resolved(
         "stock_reserved", by=("stock_committed", "stock_released", "stock_expired"),
-        key="hold_id", within="15m"), required=True)
+        key="hold_id", within=f"{cfg.desk.hold_ttl_s + HOLD_SLACK_S}s"), required=True)
     p.check("chk.one_grant_per_claim", law.at_most_once("bonus_granted", key="claim_id"),
             required=True)
     p.check("chk.pool_cap", law.total_le("bonus_granted.amount", cfg.pool_cap), required=True)
