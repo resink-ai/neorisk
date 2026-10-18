@@ -210,6 +210,13 @@ class Pack:
         apart from events in `postings/`, counted in `posting_counts`, never replayed."""
         return self._record("postings", "postings", name, cols, owner, shard, doc)
 
+    def labels(self, name: str, *, cols: dict[str, LType], owner: str | None = None,
+               shard: str | None = None, doc: str = "") -> str:
+        """Hidden label records (D76): written like an event (`out.emit_<name>`), kept apart in
+        `labels/`, counted in `label_counts`, never exported as events, indexed or replayed,
+        and never read by a law (F-24)."""
+        return self._record("labels", "labels", name, cols, owner, shard, doc)
+
     def _record(self, what: str, group: str, name: str, cols: dict[str, LType],
                 owner: str | None, shard: str | None, doc: str) -> str:
         self._new_record_type(what, name)

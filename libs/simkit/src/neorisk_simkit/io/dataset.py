@@ -54,6 +54,7 @@ def _simulate(run: Any, project_dir: Path, work: Path, threads: int, checked: bo
     entities = EntityWriter(work, run.writer, plan)
     counts = {e.name: 0 for e in plan.events if e.group == "events"}
     posting_counts = {e.name: 0 for e in plan.events if e.group == "postings"}
+    label_counts = {e.name: 0 for e in plan.events if e.group == "labels"}
     history_counts = {g.name: 0 for g in plan.change_groups}
     checks: dict[str, int] = {}
     write_s = 0.0
@@ -71,6 +72,8 @@ def _simulate(run: Any, project_dir: Path, work: Path, threads: int, checked: bo
                 counts[name] += t.num_rows
             for name, t in sealed.postings.items():
                 posting_counts[name] += t.num_rows
+            for name, t in sealed.labels.items():
+                label_counts[name] += t.num_rows
             for name, t in sealed.history.items():
                 history_counts[name] += t.num_rows
             for name, n in sealed.stats.get("checks", {}).items():
@@ -88,7 +91,7 @@ def _simulate(run: Any, project_dir: Path, work: Path, threads: int, checked: bo
     manifest = write_manifest(
         work, run, files, counts, checks, sim.stats["late_messages"],
         history_counts=history_counts, entity_counts=entities.counts(), project_dir=project_dir,
-        pairing=sim.stats["pairing"], posting_counts=posting_counts,
+        pairing=sim.stats["pairing"], posting_counts=posting_counts, label_counts=label_counts,
         accumulators=sim.stats["accumulators"], laws=sim.stats["laws"])
     t_done = time.perf_counter()
     return sim, manifest, {"build_s": t_built - t_start, "write_s": write_s,

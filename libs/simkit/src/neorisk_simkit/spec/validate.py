@@ -52,8 +52,15 @@ def _law_reason(plan, law) -> str | None:
     from neorisk_simkit.checks.laws import resolve_path
 
     events = {e.name: {c.name: c.ltype for c in e.cols} for e in plan.events}
+    labels = {e.name for e in plan.events if e.group == "labels"}
+
+    def label(name: str) -> str | None:
+        # F-24: `LawBook` reads events and postings only
+        return f"label table {name} cannot be checked by a law" if name in labels else None
 
     def event_cols(name: str, cols) -> str | None:
+        if (r := label(name)) is not None:
+            return r
         if name not in events:
             return f"unknown event or posting table '{name}'"
         missing = [c for c in cols if c not in events[name]]
@@ -61,18 +68,20 @@ def _law_reason(plan, law) -> str | None:
 
     def event_path(path: str) -> str | None:
         try:
-            kind = resolve_path(plan, path)[0]
+            kind, table, _ = resolve_path(plan, path)
         except ValueError as e:
             return str(e)
+        if kind == "event" and (r := label(table)) is not None:
+            return r
         return None if kind == "event" else f"{path!r} is not an event or posting column"
 
     k = law.kind
     if k == "never_negative":
         try:
-            resolve_path(plan, law.arg("path"))
+            kind, table, _ = resolve_path(plan, law.arg("path"))
         except ValueError as e:
             return str(e)
-        return None
+        return label(table) if kind == "event" else None
     if k == "total_le":
         return event_path(law.arg("lhs"))
     if k == "sum_le":
@@ -106,7 +115,7 @@ def _shadow_errors(plan) -> list[str]:
                  f"{c.name!r} (entities/ write {', '.join(ENTITY_HEAD)} first)"
                  for c in t.cols if c.name in entity]
     for e in plan.events:
-        what = "posting" if e.group == "postings" else "event"
+        what = {"postings": "posting", "labels": "label"}.get(e.group, "event")
         errs += [f"{what} {e.name}: column {c.name!r} shadows the reserved common column "
                  f"{c.name!r}" for c in e.cols[len(COMMON_COLUMNS):] if c.name in common]
     for g in plan.change_groups:

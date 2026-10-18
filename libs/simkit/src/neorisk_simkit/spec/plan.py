@@ -45,7 +45,7 @@ class EventDef:
     kind: str                         # "owner" | "shard"
     doc: str
     cols: tuple[Column, ...]          # the 8 common columns first
-    group: str = "events"             # "events" | "postings" (D45)
+    group: str = "events"             # "events" | "postings" (D45) | "labels" (D76)
 
 
 @dataclass(frozen=True)

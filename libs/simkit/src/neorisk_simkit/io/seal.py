@@ -69,6 +69,7 @@ class SealedStep:
     entities: dict[str, pa.Table]                # created table -> rows created this step
     stats: dict[str, Any]
     postings: dict[str, pa.Table] = dataclasses.field(default_factory=dict)  # D45
+    labels: dict[str, pa.Table] = dataclasses.field(default_factory=dict)    # D76
     # this step's delta per accumulator (D46), warm-up steps included
     accumulators: dict[str, int] = dataclasses.field(default_factory=dict)
     # warm-up steps only: the rows of the tables the laws read, before D20 drops them (F-01);
@@ -477,6 +478,7 @@ def seal_step(world: Any, step: int, t0: int, t1: int, exported: bool,
                    for e in plan.events}
     events = {e.name: records_out[e.name] for e in plan.events if e.group == "events"}
     postings = {e.name: records_out[e.name] for e in plan.events if e.group == "postings"}
+    labels = {e.name: records_out[e.name] for e in plan.events if e.group == "labels"}
     history = {g.name: history_table(g, keep(records[g.name]), seed)
                for g in plan.change_groups}
     members = set(plan.member_tables)
@@ -487,10 +489,11 @@ def seal_step(world: Any, step: int, t0: int, t1: int, exported: bool,
              "freed_slots": len(freed),
              "events": {k: t.num_rows for k, t in events.items()},
              "postings": {k: t.num_rows for k, t in postings.items()},
+             "labels": {k: t.num_rows for k, t in labels.items()},
              "history": {k: t.num_rows for k, t in history.items()},
              "entities": {k: t.num_rows for k, t in entities.items()}}
     sealed = SealedStep(int(step), int(t0), int(t1), bool(exported), events, history, entities,
-                        stats, postings=postings, accumulators=accumulators,
+                        stats, postings=postings, labels=labels, accumulators=accumulators,
                         warmup_rows=warmup_rows, retired=freed)
     if exported:
         stats["checks"] = check_step(sealed, plan)                # 9.

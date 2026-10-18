@@ -154,7 +154,7 @@ class Simulation:
         st["steps"] += 1
         rows = st["rows_per_table"]
         for name, tbl in (*sealed.events.items(), *sealed.postings.items(),
-                          *sealed.history.items()):
+                          *sealed.labels.items(), *sealed.history.items()):
             rows[name] = rows.get(name, 0) + tbl.num_rows
         if sealed.exported:
             acc = st["accumulators"]
