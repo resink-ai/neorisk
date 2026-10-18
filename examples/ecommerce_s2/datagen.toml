@@ -80,9 +80,10 @@ sku_groups = 512
 payments_live_ratio = 1.8
 # the keyed laws (one_capture, refunds_le_captured, ...) hold one key per payment: the
 # calibrated shape peaks between 3.1M and 3.5M keys at 1M users (60M x 0.05 = 3M overflows),
-# so 62-70M at 20M users; 80M (1.79 GiB) leaves ~14% margin (F-22)
+# so 62-70M at 20M users; 80M leaves ~14% margin (F-22). checker_state reserves 80M keys of the
+# widest keyed law (holds_resolved, 56 B per open hold): 4.17 GiB
 "budget.max_checker_keys" = 80_000_000
-# the caps then total ~32.5 GiB (live_partition_state ~16.8 GiB), over the base 32GB budget;
+# the caps then total ~34.8 GiB (live_partition_state ~16.8 GiB), over the base 32GB budget;
 # 40GB stays under the 64 GB reference machine (F-24)
 "budget.memory" = "40GB"
 

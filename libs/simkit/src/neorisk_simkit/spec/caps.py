@@ -20,12 +20,27 @@ CAP_ITEMS = ("output_slabs", "step_output", "merge_working_space", "live_partiti
 NODE_BYTES = _cmdq.NODE_BYTES
 PAYLOAD_W = _cmdq.PAYLOAD_W
 OUTBOX_ROW_BYTES = 8 * 12 + 8 * PAYLOAD_W
-
-CHECKER_KEY_BYTES = 24              # spec section 10: keyed aggregates x bytes per key (D47)
-KEYED_LAWS = ("at_most_once", "sum_le", "resolved")   # laws carrying keys across steps
-
 _LOCAL_TYPE_BYTES = {"i8": 1, "u8": 1, "i16": 2, "i32": 4, "u32": 4, "i64": 8, "f64": 8, "ref": 8}
 _ORDERING_COLS_BYTES = 5 * 8        # entity_id, valid_from, lamport, partition_id, seq
+
+
+def law_key_bytes(lw) -> int:
+    """Bytes a keyed law's reducer carries per key, from its real layout (spec section 10:
+    keyed aggregates x bytes per key; D47). `checks.laws` charges exactly these sizes."""
+    if lw.kind == "at_most_once":
+        n = len(lw.arg("key"))
+        return 8 if n == 1 else 8 * (1 + n)   # the value; or the hash index plus every column
+    if lw.kind == "sum_le":
+        return 3 * 8                          # key, sum of lhs, sum of rhs
+    if lw.kind == "resolved":
+        return 7 * 8                          # key, opened at, deadline, pid, seq, action, warm
+    return 0
+
+
+def checker_key_bytes(plan: Plan) -> int:
+    """Bytes per key `checker_state` reserves: the widest keyed law's (0 when none is declared).
+    The cap is `max_checker_keys` keys of that width; the laws share it byte for byte."""
+    return max((law_key_bytes(c.law) for c in plan.checks), default=0)
 
 
 @dataclass(frozen=True)
@@ -208,9 +223,8 @@ def compute_caps(run, threads: int | None = None) -> list[CapItem]:
         "fanout_bursts": (sum(p.kernel.substep * max_row for p in plan.processes
                               if p.kernel.substep), ""),
         "read_inputs": (read, ""),
-        "checker_state": ((CHECKER_KEY_BYTES * bud.max_checker_keys
-                           if any(c.law.kind in KEYED_LAWS for c in plan.checks) else 0),
-                          "keyed law reducers x 24 B per key (D47)"),
+        "checker_state": (checker_key_bytes(plan) * bud.max_checker_keys,
+                          "max_checker_keys x bytes per key of the widest keyed law (D47)"),
         "scorer": (0, "not used in S1"),
         "entity_buffers": (sum(entity_buffer_bytes(plan, run.writer.row_group_rows)),
                            "row groups buffered by the entity writer, plus one being written"),

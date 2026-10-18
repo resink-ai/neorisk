@@ -163,8 +163,8 @@ Expectations: `exported_events` 10⁸ ± 5%, `payments` 3·10⁷ ± 5%, `posting
 | `journey.hot_pick_p` | 0.05 | 0.05 | single-line carts, so the checkout share ≈ the pick share |
 | `journey.bill_gap` | exp, mean 20 d | exp, mean 50 d | 30M exported payments, nearly all bills |
 | `payments_live_ratio` | 1.5 | 1.8 | 1.69 payments per user over the run, every one live to its end |
-| `budget.max_checker_keys` | 60M (project) | 80M | the keyed laws peak at 62–70M keys at 20M users |
-| `budget.memory` | 32GB (project) | 40GB | the caps total 32.5 GiB; ≤ 64GB (F-24) |
+| `budget.max_checker_keys` | 60M (project) | 80M | the keyed laws peak at 62–70M keys at 20M users (×20 of the 3.10–3.5M measured at 1M users) |
+| `budget.memory` | 32GB (project) | 40GB | the caps total 34.8 GiB (32.5 GiB before the final fix's C3 accounting); ≤ 64GB (F-24) |
 
 Engine pools keep the project's base values (sized for 20M users).
 
@@ -181,6 +181,10 @@ here; restock events, 12k per run, do not scale and are under 0.3% of the total)
 | **final** | as fA, bill 50 d, ratio 1.8 | **5,965,504 (119.3M)** | **1,494,461 (29.9M)** | **2.374** | **0.0498 (0.0486)** |
 | keys 2M / 3M | final, `max_checker_keys` 2M / 3M | `CapExceeded: checker_state` (2.17M / 3.10M keys attempted) | | | |
 | keys 3.5M / 4M | final, `max_checker_keys` 3.5M / 4M | runs through: the peak is 3.10–3.5M keys at 1M users | | | |
+
+The two `keys` rows ran before the final fix, when `checker_state` capped the key count. Since
+the final fix's C3 the cap is in bytes (`max_checker_keys` keys of the widest keyed law), so the
+same settings now admit more keys; see the caps table below.
 
 **Two expectations cannot be met by the profile's knobs, and are reported as such:**
 
@@ -213,17 +217,26 @@ here; restock events, 12k per run, do not scale and are under 0.3% of the total)
 | requests_and_inboxes | 2,090.5 |
 | fanout_bursts | 0.0 |
 | read_inputs | 1,453.0 |
-| checker_state | 1,831.1 |
+| checker_state | 4,272.5 |
 | scorer | 0.0 |
 | entity_buffers | 141.6 |
-| **total** | **33,240.1 (32.5 GiB)** |
+| **total** | **35,681.5 (34.8 GiB)** |
 
-Validation passes against the profile's `40GB` budget. `checker_state` is
-`max_checker_keys` × 24 B: one key per payment for each keyed law (`one_capture`,
-`refunds_le_captured`), about 28M payment keys per keyed law at S2 scale (F-22), measured at a
-62–70M-key peak in total. `live_partition_state` is 20M users plus 36M payment slots.
+Validation passes against the profile's `40GB` budget. `checker_state` is `max_checker_keys` ×
+the bytes per key of the widest keyed law: `holds_resolved` carries 56 B per open hold (key,
+opened at, deadline, partition, seq, action, warm-up flag), so 80M × 56 B. Before the final
+fix's C3 it was budgeted at 24 B per key (1,831.1 MiB, total 33,240.1 MiB), less than an open
+hold really holds. The cap is shared byte for byte: `one_capture` and `refund_settles_once`
+carry 8 B per key, `refunds_le_captured` 24 B. The key counts are extrapolated, not measured, at
+20M users: one key per payment for `one_capture` and for `refunds_le_captured`, about 28M each
+at S2 scale (F-22), and a 62–70M-key peak in total (×20 of the 3.10–3.5M keys measured at 1M
+users). A probe at 1M users after the fix (`--profile full --set users=1000000`, seed 42;
+not a benchmark run) peaked at 3,095,781 keys = 49.1 MB of checker state: 1.52M keys each for
+`one_capture` (8 B) and `refunds_le_captured` (24 B), 54k for `refund_settles_once`, 2k for
+`one_grant_per_claim`, no hold open at the peak. ×20 that is ~0.98 GB, well inside the
+4.17 GiB cap. `live_partition_state` is 20M users plus 36M payment slots.
 
-This machine has 36 GiB of RAM (14 cores), below the 64 GB reference. 32.5 GiB of hard caps
+This machine has 36 GiB of RAM (14 cores), below the 64 GB reference. 34.8 GiB of hard caps
 plus the interpreter, Numba and Polars cannot run without swapping, and a swapping run
 measures the disk, not the engine. **So the scale-1 `s2` run was not attempted here**
 (controller ruling): the `s2` verdict is **not measured — needs the 64 GB reference machine**.
@@ -339,13 +352,15 @@ that is rejected: 999 normal referrals lose their bonus to the hunters.
 | requests_and_inboxes | 575.3 |
 | fanout_bursts | 0.0 |
 | read_inputs | 145.6 |
-| checker_state | 1,373.3 |
+| checker_state | 3,204.3 |
 | scorer | 0.0 |
 | entity_buffers | 108.5 |
-| **total** | **7,966.5 (7.8 GiB)** |
+| **total** | **9,797.5 (9.6 GiB)** |
 
 Against this machine's 36 GiB and the project's 32GB budget. `checker_state` is the project's
-60M keys × 24 B; the pool run's 0.13M payments need a small fraction of it.
+60M keys × 56 B (the widest keyed law, `holds_resolved`; 1,373.3 MiB at 24 B per key and a
+7,966.5 MiB total before the final fix's C3); the pool run's 0.13M payments need a small
+fraction of it. The runs below were measured before that change, which alters no output.
 
 ## Results (S2 workloads and the S1 re-measure)
 
@@ -361,7 +376,7 @@ concern does not materialize), and each `--cold` run compiled it from empty cach
 | s2_pool warm (`s2_pool-warm.json`) | 2026-10-18 UTC | arm64 14 / 36 GiB (not reference) | 14 | 9,966,583 | 0.0095 / 0.1708 | 89.82 | 110,956 | 95,433 (1,525,466 / 15.98) | 1.59 (warm cache; gen_4ca683764e6339a0) | 3.51 | 81.56 / 4.71 / 0.58 / 2.51 | 1,222,197 / 1,222,150 | inventory 0.1176 of 128; pool 1.0 of 1 | **fail** (`shard_command_share`) |
 | s2 cold, scale 0.05 (`s2-cold-scale0.05.json`) | 2026-10-18 UTC | arm64 14 / 36 GiB (not reference) | 14 | 5,965,504 (1M users) | 1,494,461 / 2.3737 / 0.0498 (0.0486) | 25.33 | 235,525 | 72,946 (59,200 / 0.81) | 3,981.34 (gen_4ca683764e6339a0) | 3.74 | 12.98 / 6.33 / 3.02 / 2.60 | 94,440 / 94,398 | inventory 0.0656 of 512; pool 1.0 of 1 | skipped (scale 0.05) |
 | s2 warm, scale 0.05 (`s2-warm-scale0.05.json`) | 2026-10-18 UTC | arm64 14 / 36 GiB (not reference) | 14 | 5,965,504 (1M users) | 1,494,461 / 2.3737 / 0.0498 (0.0486) | 25.15 | 237,168 | 72,050 (59,200 / 0.82) | 1.62 (warm cache; gen_4ca683764e6339a0) | 3.74 | 12.78 / 6.34 / 3.03 / 2.61 | 94,440 / 94,398 | inventory 0.0656 of 512; pool 1.0 of 1 | skipped (scale 0.05) |
-| s2 at scale 1 | — | — | — | — | — | — | — | — | — | — | — | — | — | **not measured — needs the 64 GB reference machine** (caps 32.5 GiB) |
+| s2 at scale 1 | — | — | — | — | — | — | — | — | — | — | — | — | — | **not measured — needs the 64 GB reference machine** (caps 32.5 GiB; 34.8 GiB after the final fix's C3) |
 | S1 re-measure (`s1-warm-s2.json`) | 2026-10-18 UTC | arm64 14 / 36 GiB (not reference) | 14 | 10,022,123 | — (inventory share of proposals 0.0774) | 54.90 | 182,550 | 191,706 (1,060,936 / 5.53) | 1.28 (warm cache; gen_782c5b94e9346bb8) | 2.73 | 47.14 / 4.49 / 0.00 / 2.86 | 1,388,004 / 1,387,972 | inventory 0.0942 of 512 | **pass** |
 
 The two `--cold` compile times are the same module compiled twice from empty caches
@@ -384,10 +399,17 @@ commands.
 
 The scaled runs (1M users, same module, same per-user shape) take 25.2 s warm for 5.97M exported
 events, 237k events/s end to end; generate 12.78 s (467k/s), seal 6.34 s (941k/s), check
-3.03 s (1.97M/s), write 2.61 s (2.29M/s). `check_s` at 1M users is 3.03 s over 21 steps
-(Task 9 measured the `sum_le` rebuild at ~0.21 s per step at 30M keys). A linear ×20 would be
-~500 s at 20M users, but neither memory nor round counts are linear in users, so this is no
-measurement of the gate. Independently of the time, the expectations `exported_events`
+3.03 s (1.97M/s), write 2.61 s (2.29M/s). `check_s` at 1M users is 3.03 s over 21 steps.
+No scale-1 `check_s` is given: it is not measured, and it does not scale linearly. A step's check
+cost grows with the keys carried so far (`one_capture` alone reaches ~28M keys at 20M users,
+extrapolated), and the step count grows too (step adaptation targets a row count, so ~120+ steps
+at 20M users against 21 here). When these runs were made, `at_most_once` re-sorted its whole key
+set every step (`np.union1d`: 8.0 s for 30M keys plus 250k new ones on this machine), which
+alone would have cost minutes at scale 1. The final fix (I2) inserts each step's new keys
+instead (0.044 s for the same inputs, identical result); the `sum_le` rebuild still copies its
+key arrays each step (Task 9: ~0.21 s per step at 30M keys). A probe of the same scaled run
+after the fix (not a benchmark run) spent 1.70 s in checks over 21 steps, at most 0.12 s per
+step. Independently of the time, the expectations `exported_events`
 (~119M vs 10⁸ ± 5%) and `postings_per_payment_event` (2.374 vs 2.4–2.6) miss (see above), so a
 scale-1 run on the reference machine would report `fail` on those even inside 600 s.
 

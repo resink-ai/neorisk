@@ -206,3 +206,116 @@ def test_carried_keys_are_capped():
     with pytest.raises(CapExceeded, match="checker_state"):
         book.step(_sealed(0, 10, entry=_table([{"t": 1, "acct_id": a, "amount": 1}
                                                for a in (1, 2, 3)])), None)
+
+
+# ---------------------------------------------------------------- final fix: C1, C2, C3, I2
+I64_MAX, I64_MIN = 2**63 - 1, -(2**63)
+X = 6238072747940578789                    # (0, 0) and (1, X) share the `rng.mix` hash 0
+
+
+def test_composite_keys_compare_whole_tuples():
+    """Codex C1: a hash only indexes composite keys; colliding tuples stay distinct."""
+    import numpy as np
+
+    from neorisk_simkit.checks.laws import key_hash
+
+    assert list(key_hash(np.array([[0, 0], [1, X]], np.int64))) == [0, 0]
+    book = _book(("chk.once", law.at_most_once("opened", key=("acct_id", "amount")), False))
+    book.step(_sealed(0, 10, opened=_table([{"t": 1, "acct_id": 0, "amount": 0},
+                                            {"t": 2, "acct_id": 1, "amount": X}])), None)
+    assert book.report()["chk.once"]["violations"] == 0 and book.keys == 2
+    book.step(_sealed(10, 20, opened=_table([{"t": 11, "acct_id": 2, "amount": 2},
+                                             {"t": 12, "acct_id": 1, "amount": X},
+                                             {"t": 13, "acct_id": 0, "amount": 0},
+                                             {"t": 14, "acct_id": 2, "amount": 2}])), None)
+    r = book.report()["chk.once"]
+    assert (r["checked"], r["violations"], book.keys) == (6, 3, 3)
+    assert r["first"]["detail"] == "acct_id 1 seen before"
+
+
+def test_at_most_once_merges_like_union1d():
+    """Final I2: new keys are merged into the sorted set, which equals `np.union1d` of
+    everything seen (one column and composite keys, warm-up and exported steps alike)."""
+    import numpy as np
+
+    rng = np.random.default_rng(7)
+    one = _book(("a", law.at_most_once("opened", key="acct_id"), False))
+    two = _book(("b", law.at_most_once("opened", key=("acct_id", "amount")), False))
+    for b in (one, two):
+        b.max_keys = 10**6
+        b.cap_bytes = 24 * 10**6
+    seen1, seen2 = np.zeros(0, np.int64), set()
+    for step in range(12):
+        a = rng.integers(-50, 50, 40)
+        m = rng.integers(0, 3, 40)
+        rows = [{"t": step * 10 + 1, "acct_id": int(x), "amount": int(y)} for x, y in zip(a, m)]
+        mk = _warm if step < 3 else _sealed
+        for b in (one, two):
+            b.step(mk(step * 10, step * 10 + 10, opened=_table(rows)), None,
+                   exported=step >= 3)
+        seen1 = np.union1d(seen1, a)
+        seen2 |= set(zip(a.tolist(), m.tolist()))
+    assert np.array_equal(one._laws[0].seen, seen1)
+    law2 = two._laws[0]
+    assert sorted(map(tuple, law2.cols.tolist())) == sorted(seen2)
+    assert np.all(np.diff(law2.seen) >= 0)
+
+
+def test_total_le_never_wraps():
+    """Codex C2: a total past int64 exceeds the limit, within a step and across steps; a total
+    below int64 is not a violation."""
+    cap = ("chk.cap", law.total_le("opened.amount", I64_MAX), True)
+    with pytest.raises(LawViolation, match=f"total {I64_MAX + 1} exceeds {I64_MAX}"):
+        _book(cap).step(_sealed(0, 10, opened=_table([{"t": 1, "acct_id": 1, "amount": I64_MAX},
+                                                      {"t": 2, "acct_id": 1, "amount": 1}])),
+                        None)
+    book = _book(cap)
+    book.step(_sealed(0, 10, opened=_table([{"t": 1, "acct_id": 1, "amount": I64_MAX}])), None)
+    with pytest.raises(LawViolation, match=f"total {I64_MAX + 1} exceeds"):
+        book.step(_sealed(10, 20, opened=_table([{"t": 11, "acct_id": 1, "amount": 1}])), None)
+    low = _book(("chk.low", law.total_le("opened.amount", 0), True))
+    low.step(_sealed(0, 10, opened=_table([{"t": 1, "acct_id": 1, "amount": I64_MIN}])), None)
+    low.step(_sealed(10, 20, opened=_table([{"t": 11, "acct_id": 1, "amount": -1}])), None)
+    assert low.report()["chk.low"]["violations"] == 0
+
+
+def test_sum_le_stops_when_a_sum_leaves_int64():
+    """Codex C2: a per-key sum past int64 is a loud error, never a wrapped pass."""
+    from neorisk_simkit.engine.errors import EngineError
+
+    entry = _table([{"t": 1, "acct_id": 2, "amount": I64_MAX}])
+    with pytest.raises(EngineError, match=f"opened.amount for acct_id 2 reaches {I64_MAX + 1}"):
+        _book(LE).step(_sealed(0, 10, entry=entry, opened=_table([
+            {"t": 2, "acct_id": 2, "amount": I64_MAX}, {"t": 3, "acct_id": 2, "amount": 1}])),
+            None)
+    book = _book(LE)
+    book.step(_sealed(0, 10, entry=entry,
+                      opened=_table([{"t": 2, "acct_id": 2, "amount": I64_MAX}])), None)
+    with pytest.raises(EngineError, match="outside int64"):
+        book.step(_sealed(10, 20, opened=_table([{"t": 11, "acct_id": 2, "amount": 1}])), None)
+
+
+def test_checker_state_charges_each_reducers_layout():
+    """Codex C3: each keyed law is charged its real bytes per key, `checker_state` is
+    `max_keys` keys of the widest one, and state is reserved before it grows."""
+    import numpy as np
+
+    once = ("chk.once", law.at_most_once("opened", key=("acct_id", "amount")), False)
+    book = _book(once, LE, RES)
+    rows = [{"t": i, "acct_id": i, "amount": i} for i in range(1, 4)]
+    book.step(_sealed(0, 10, opened=_table(rows), entry=_table(rows)), None)
+    a, le, res = book._laws
+    assert (a.key_bytes, le.key_bytes, res.key_bytes) == (24, 24, 56)
+    assert a.keys() * 24 == a.seen.nbytes + a.cols.nbytes
+    assert le.keys() * 24 == le.skeys.nbytes + le.lsum.nbytes + le.rsum.nbytes
+    assert res.keys() * 56 == sum(v.nbytes for v in res.open.values())
+    assert book.state_bytes == sum(x.keys() * x.key_bytes for x in book._laws) > 0
+    assert book.cap_bytes == 100 * 56
+
+    one = LawBook(_plan(RES), max_keys=1)                  # one open key: 56 B, within the cap
+    one.step(_sealed(0, S, opened=_table([{"t": 1, "acct_id": 1, "amount": 0}])), None)
+    assert one.state_bytes == 56 == one.cap_bytes
+    with pytest.raises(CapExceeded, match=r"limit 56, attempted 112"):
+        one.step(_sealed(S, 2 * S, opened=_table([{"t": S + 1, "acct_id": 2, "amount": 0}])),
+                 None)
+    assert one.keys == 1 and np.array_equal(one._laws[0].open["key"], [1])

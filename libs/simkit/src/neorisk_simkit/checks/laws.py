@@ -14,8 +14,14 @@ sealed step is fed to `LawBook.step`:
 
 Within a step, checks run in declaration order and the first required check with a violation
 raises. `finish(end_us)` censors `resolved` keys still open whose deadline is at or after the
-end (reported in `censored`, never a violation). Carried keys are capped at `max_keys` (`checker_state`, 24 B per key). Evaluation reads only
-the sealed tables and the world state, so it is identical across thread counts.
+end (reported in `censored`, never a violation).
+
+Carried state is capped at `checker_state` = `max_keys` x the widest keyed law's bytes per key
+(`spec.caps.law_key_bytes`: each reducer's real layout). The laws share that cap byte for byte;
+a law reserves its grown state before allocating it and `CapExceeded` is raised instead. Running
+totals are exact: a total that leaves int64 is judged exactly (`total_le`, `balanced`) or stops the
+run with an `EngineError` (`sum_le`, whose per-key sums are carried as int64). Evaluation reads
+only the sealed tables and the world state, so it is identical across thread counts.
 """
 
 from __future__ import annotations
@@ -26,13 +32,15 @@ import numpy as np
 import pyarrow as pa
 import pyarrow.compute as pc
 
-from neorisk_simkit.engine.errors import CapExceeded, LawViolation
+from neorisk_simkit.engine.errors import CapExceeded, EngineError, LawViolation
 from neorisk_simkit.io.consts import NULL
-from neorisk_simkit.spec.caps import CHECKER_KEY_BYTES
+from neorisk_simkit.spec.caps import checker_key_bytes, law_key_bytes
 
 _NONE = np.zeros(0, np.int64)
 _M1 = np.uint64(0xBF58476D1CE4E5B9)
 _M2 = np.uint64(0x94D049BB133111EB)
+_I64_MIN, _I64_MAX = int(np.iinfo(np.int64).min), int(np.iinfo(np.int64).max)
+_SAFE = 2.0 ** 62                  # a float bound below this proves an int64 sum cannot wrap
 
 
 # ---------------------------------------------------------------------------- paths
@@ -86,20 +94,40 @@ def _mix64(x: np.ndarray) -> np.ndarray:
     return x ^ (x >> np.uint64(31))
 
 
-def row_keys(t: pa.Table, cols: tuple[str, ...]) -> tuple[np.ndarray, np.ndarray]:
-    """(int64 key per row, indices of the rows whose key columns are all non-null). The key is
-    the column itself for one column, else `rng.mix` of the columns."""
+def key_columns(t: pa.Table, cols: tuple[str, ...]) -> tuple[np.ndarray, np.ndarray]:
+    """(int64 key columns, shape (rows, len(cols)); indices of the rows whose key columns are all
+    non-null)."""
     keep = np.ones(t.num_rows, bool)
-    h = np.zeros(t.num_rows, np.uint64)
-    for c in cols:
+    out = np.empty((t.num_rows, len(cols)), np.int64)
+    for j, c in enumerate(cols):
         v, valid = _column(t, c)
         if valid is not None:
             keep &= valid
-        v = np.asarray(v, np.int64)
-        if len(cols) == 1:
-            return v, np.flatnonzero(keep)
-        h = _mix64(h ^ v.view(np.uint64))
-    return h.view(np.int64), np.flatnonzero(keep)
+        out[:, j] = v
+    return out, np.flatnonzero(keep)
+
+
+def key_hash(cols: np.ndarray) -> np.ndarray:
+    """`rng.mix` of each row of a (rows, k) key array, as int64. It only indexes keys: two
+    different tuples may share a hash."""
+    h = np.zeros(len(cols), np.uint64)
+    for j in range(cols.shape[1]):
+        h = _mix64(h ^ np.ascontiguousarray(cols[:, j]).view(np.uint64))
+    return h.view(np.int64)
+
+
+def row_keys(t: pa.Table, col: str) -> tuple[np.ndarray, np.ndarray]:
+    """(int64 key per row, indices of the rows whose key column is non-null)."""
+    k, keyed = key_columns(t, (col,))
+    return k[:, 0], keyed
+
+
+def exact_cumsum(v: np.ndarray, base: int = 0) -> np.ndarray:
+    """`base + cumsum(v)` without wrapping: int64 when no partial sum can leave int64, else
+    exact Python integers (an object array)."""
+    if abs(base) + float(np.abs(v.astype(np.float64)).sum()) < _SAFE:
+        return np.cumsum(v) + np.int64(base)
+    return np.cumsum(np.concatenate([np.array([base], object), v.astype(object)]))[1:]
 
 
 def _cite(t: pa.Table, i: int) -> tuple[int, int, int]:
@@ -122,9 +150,14 @@ class _Law:
         self.censored = 0
         self.first: dict[str, Any] | None = None
         self.t_end = 0                                   # end of the step being fed
+        self.key_bytes = law_key_bytes(cdef.law)         # carried bytes per key
 
     def keys(self) -> int:
         return 0
+
+    def reserve(self, keys: int) -> None:
+        """Called before carried state grows to `keys` keys; `LawBook` raises `CapExceeded`
+        when that would pass `checker_state`."""
 
     def finish(self, end_us: int) -> None:
         """The run ended at `end_us`."""
@@ -185,11 +218,13 @@ class _TotalLe(_Law):
         self.total = 0
 
     def _running(self, t: pa.Table) -> tuple[np.ndarray, np.ndarray | None]:
+        """Exact running totals: a total past int64 is held as a Python integer, so it exceeds
+        any int64 limit instead of wrapping."""
         v, valid = _column(t, self.col)
         v = np.asarray(v, np.int64)
         if valid is not None:
             v = np.where(valid, v, 0)
-        return self.total + np.cumsum(v), valid
+        return exact_cumsum(v, self.total), valid
 
     def warm(self, rows):
         t = rows.get(self.table)
@@ -201,7 +236,7 @@ class _TotalLe(_Law):
         if t is None or not t.num_rows:
             return 0
         run, valid = self._running(t)
-        bad = run > self.limit
+        bad = np.asarray(run > self.limit, bool)
         if valid is not None:
             bad &= valid
         n_bad = int(bad.sum())
@@ -214,42 +249,70 @@ class _TotalLe(_Law):
 
 
 class _AtMostOnce(_Law):
-    """Keys seen across the run, carried as a sorted int64 array. A row with a null key column
-    has no key: it is neither judged nor remembered."""
+    """Keys seen across the run. One key column: its sorted values. Several: the complete key
+    tuples (`cols`), kept in the order of their `rng.mix` hash (`seen`), which only indexes them:
+    tuples with equal hashes are told apart by comparing every column. A row with a null key
+    column has no key: it is neither judged nor remembered. New keys are merged into the sorted
+    set at their search positions (the set is never re-sorted)."""
 
     def __init__(self, cdef: Any, table: str, key: tuple[str, ...]):
         super().__init__(cdef)
         self.table, self.key = table, tuple(key)
         self.tables = (table,)
-        self.seen = np.zeros(0, np.int64)
+        self.seen = np.zeros(0, np.int64)                # sorted: the value, or the tuple's hash
+        self.cols = np.zeros((0, len(self.key)), np.int64) if len(self.key) > 1 else None
 
     def keys(self) -> int:
         return len(self.seen)
 
+    def _repeats(self, t: pa.Table) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+        """(keyed rows, their index values, their key tuples, which of them repeat a key seen
+        before or earlier in this step: every occurrence after the first)."""
+        cols, keyed = key_columns(t, self.key)
+        cols = cols[keyed]
+        h = cols[:, 0] if self.cols is None else key_hash(cols)
+        lo = np.searchsorted(self.seen, h, side="left")
+        hi = np.searchsorted(self.seen, h, side="right")
+        if self.cols is None:
+            bad = hi > lo
+        else:
+            bad = np.zeros(len(h), bool)
+            one = np.flatnonzero(hi - lo == 1)
+            bad[one] = (self.cols[lo[one]] == cols[one]).all(axis=1)
+            for i in np.flatnonzero(hi - lo > 1):       # a hash shared by stored tuples
+                bad[i] = (self.cols[lo[i]:hi[i]] == cols[i]).all(axis=1).any()
+        order = np.lexsort((*cols.T[::-1], h))           # by hash, then every column; stable
+        hs, cs = h[order], cols[order]
+        again = (hs[1:] == hs[:-1]) & (cs[1:] == cs[:-1]).all(axis=1)
+        bad[order[1:][again]] = True
+        return keyed, h, cols, bad
+
+    def _remember(self, h: np.ndarray, cols: np.ndarray, new: np.ndarray) -> None:
+        """Insert the keys of rows `new` (distinct, none seen before) into the sorted set."""
+        new = new[np.argsort(h[new], kind="stable")]
+        self.reserve(len(self.seen) + len(new))
+        pos = np.searchsorted(self.seen, h[new], side="right")
+        self.seen = np.insert(self.seen, pos, h[new])
+        if self.cols is not None:
+            self.cols = np.insert(self.cols, pos, cols[new], axis=0)
+
     def warm(self, rows):
         t = rows.get(self.table)
         if t is not None and t.num_rows:
-            k, keyed = row_keys(t, self.key)
-            self.seen = np.union1d(self.seen, k[keyed])
+            _, h, cols, bad = self._repeats(t)
+            self._remember(h, cols, np.flatnonzero(~bad))
 
     def judge(self, rows, world, retired):
         t = rows.get(self.table)
         if t is None or not t.num_rows:
             return 0
-        k_all, keyed = row_keys(t, self.key)
-        k = k_all[keyed]
-        pos = np.searchsorted(self.seen, k)
-        bad = (pos < len(self.seen)) & (self.seen[np.minimum(pos, len(self.seen) - 1)] == k) \
-            if len(self.seen) else np.zeros(len(k), bool)
-        order = np.argsort(k, kind="stable")             # a repeat within the step: every
-        ks = k[order]                                    # occurrence after the first
-        bad[order[1:][ks[1:] == ks[:-1]]] = True
+        keyed, h, cols, bad = self._repeats(t)
         n_bad = int(bad.sum())
         if n_bad:
-            i = int(keyed[np.argmax(bad)])
-            first = int(_column(t, self.key[0])[0][i])
-            self._fail(self.table, _cite(t, i), f"{self.key[0]} {first} seen before", n_bad)
-        self.seen = np.union1d(self.seen, k)
+            j = int(np.argmax(bad))
+            self._fail(self.table, _cite(t, int(keyed[j])),
+                       f"{self.key[0]} {int(cols[j, 0])} seen before", n_bad)
+        self._remember(h, cols, np.flatnonzero(~bad))
         return len(keyed)
 
 
@@ -280,10 +343,12 @@ class _Balanced(_Law):
             ks = k[order]
             change[1:] |= ks[1:] != ks[:-1]
         starts = np.flatnonzero(change)
+        if float(np.abs(amt.astype(np.float64)).sum()) >= _SAFE:   # sums may leave int64:
+            deb, cre = deb.astype(object), cre.astype(object)        # add them exactly
         d = np.add.reduceat(deb[order], starts)
         c = np.add.reduceat(cre[order], starts)
         first_row = np.minimum.reduceat(order, starts)
-        bad = d != c
+        bad = np.asarray(d != c, bool)
         n_bad = int(bad.sum())
         if n_bad:
             g = int(np.argmin(np.where(bad, first_row, len(order))))
@@ -395,7 +460,7 @@ class _SumLe(_Law):
             t = rows.get(table)
             if t is None or not t.num_rows:
                 continue
-            k, keyed = row_keys(t, (self.by,))
+            k, keyed = row_keys(t, self.by)
             v, valid = _column(t, col)
             v = np.asarray(v, np.int64)
             ok = np.ones(t.num_rows, bool) if valid is None else valid
@@ -424,12 +489,19 @@ class _SumLe(_Law):
         uniq = ks[starts]
         pos = np.minimum(np.searchsorted(self.skeys, uniq), max(len(self.skeys) - 1, 0))
         hit = self.skeys[pos] == uniq if len(self.skeys) else np.zeros(len(uniq), bool)
+        self.reserve(len(self.skeys) + int((~hit).sum()))
         running = []
         for sums, side in ((self.lsum, 1), (self.rsum, 0)):
             a = np.where(s["side"] == side, s["amt"], 0)
-            c = np.cumsum(a)
             base = np.where(hit, sums[pos] if len(sums) else 0, 0)
-            running.append(c - (c - a)[starts][gid] + base[gid])
+            exact = float(np.abs(base).max(initial=0)) + float(np.abs(a.astype(np.float64)).sum())
+            if exact >= _SAFE:                           # a per-key sum may leave int64
+                a, base = a.astype(object), base.astype(object)
+            c = np.cumsum(a)                             # a wrap of this global sum cancels
+            r = c - (c - a)[starts][gid] + base[gid]     # out of the per-key differences
+            if exact >= _SAFE:
+                r = self._fit(r, ks, side)
+            running.append(r)
         run_l, run_r = running
         keys = np.concatenate([self.skeys, uniq[~hit]])
         new = []
@@ -440,6 +512,17 @@ class _SumLe(_Law):
         order = np.argsort(keys, kind="stable")
         self.skeys, self.lsum, self.rsum = keys[order], new[0][order], new[1][order]
         return s, run_l, run_r
+
+    def _fit(self, r: np.ndarray, ks: np.ndarray, side: int) -> np.ndarray:
+        """Exact per-key running sums back to int64; `EngineError` when one leaves int64 (the
+        sums are carried as int64, so the law cannot judge past that)."""
+        out = (r > _I64_MAX) | (r < _I64_MIN)
+        if out.any():
+            i = int(np.argmax(out))
+            col = ".".join(self.lhs if side == 1 else self.rhs)
+            raise EngineError(f"law {self.id}: the running total of {col} for {self.by} "
+                              f"{int(ks[i])} reaches {int(r[i])}, outside int64")
+        return r.astype(np.int64)
 
     def warm(self, rows):
         self._run(rows)
@@ -487,7 +570,7 @@ class _Resolved(_Law):
     def _entries(self, t: pa.Table | None, tag: int) -> dict[str, np.ndarray] | None:
         if t is None or not t.num_rows:
             return None
-        k, keyed = row_keys(t, (self.key,))
+        k, keyed = row_keys(t, self.key)
         e = {"key": k[keyed], "tag": np.full(len(keyed), tag, np.int64),
              "action": _ints(t, "action_id", keyed), **{c: _ints(t, c, keyed) for c in _CANON}}
         return e
@@ -506,6 +589,7 @@ class _Resolved(_Law):
         dl = (new["event_time"] + self.within_us if self.within_us is not None
               else np.full(n_new, _I64_MAX, np.int64))
         o = self.open
+        self.reserve(len(o["key"]) + n_new)
         op = {"key": np.concatenate([o["key"], new["key"][new_order]]),
               "t": np.concatenate([o["t"], new["event_time"][new_order]]),
               "deadline": np.concatenate([o["deadline"], dl[new_order]]),
@@ -601,8 +685,17 @@ class LawBook:
 
     def __init__(self, plan: Any, *, max_keys: int):
         self.max_keys = int(max_keys)
+        self.cap_bytes = self.max_keys * checker_key_bytes(plan)   # `checker_state`
         self._laws = [_build(plan, c) for c in plan.checks]
+        for law in self._laws:
+            law.reserve = lambda keys, law=law: self._reserve(law, keys)
         self.end_us: int | None = None
+
+    def _reserve(self, law: _Law, keys: int) -> None:
+        need = keys * law.key_bytes + sum(o.keys() * o.key_bytes for o in self._laws
+                                          if o is not law)
+        if need > self.cap_bytes:
+            raise CapExceeded("checker_state", self.cap_bytes, need)
 
     @property
     def tables(self) -> frozenset[str]:
@@ -613,6 +706,11 @@ class LawBook:
     def keys(self) -> int:
         """Keys carried across steps by every check."""
         return sum(law.keys() for law in self._laws)
+
+    @property
+    def state_bytes(self) -> int:
+        """Bytes of carried state, charged against `checker_state`."""
+        return sum(law.keys() * law.key_bytes for law in self._laws)
 
     def step(self, sealed: Any, world: Any, *, exported: bool = True) -> dict[str, int]:
         """Feed one sealed step; returns the values checked per check this step."""
@@ -630,10 +728,6 @@ class LawBook:
             for law in self._laws:
                 law.warm(sealed.warmup_rows)
                 out[law.id] = 0
-        keys = self.keys
-        if keys > self.max_keys:
-            raise CapExceeded("checker_state", CHECKER_KEY_BYTES * self.max_keys,
-                              CHECKER_KEY_BYTES * keys)
         return out
 
     def finish(self, end_us: int) -> None:

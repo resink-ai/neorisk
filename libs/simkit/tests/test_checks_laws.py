@@ -228,3 +228,15 @@ def test_an_owner_retired_in_its_step_is_judged_on_its_final_state():
     assert opened and r["checked"] == r["violations"] == len(opened)
     assert r["first"]["partition_id"] == opened[0] and r["first"]["seq"] == -1
     assert r["first"]["table"] == "state acct.bal" and r["first"]["detail"].startswith("bal = -")
+
+
+def test_balanced_sums_never_wrap():
+    """Codex C2: debits of 2**63 against credits of -2**63 differ, though they wrap equal."""
+    book = LawBook(_plan(("chk.bal", law.balanced("entry"), True)), max_keys=10)
+    rows = [{"t": 1, "lamport": 3, "pid": 9, "seq": i, "acct_id": 1, "account": "cash",
+             "side": side, "amount": a}
+            for i, (side, a) in enumerate((("debit", 2**63 - 1), ("debit", 1),
+                                           ("credit", -(2**63))))]
+    with pytest.raises(LawViolation, match=f"debits {2**63} != credits {-(2**63)}"):
+        book.step(_sealed(0, 10, postings={"entry": _table(rows, cats=("account", "side"))}),
+                  None)
