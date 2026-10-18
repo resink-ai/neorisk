@@ -64,11 +64,25 @@ skus = 100_000
 sku_groups = 512
 "journey.signup_delay.params" = [604_800_000_000.0, 0.0, 0.0]   # spread first sessions (S1 ruling)
 "pay.dispute_window_days" = 90
+# Calibrated in Task 21 at --scale 0.05 (benchmarks/README.md, `s2.toml`). 30M payments with
+# ~3 exported events each (bill_payment_started, authorized, captured) leave almost nothing of
+# the 10^8 events for shopping (D54), so a shopper has one session in the run (the Pareto
+# minimum gap, 5000 h, is longer than the 104-day run) with one view, and few sessions end in
+# a checkout; payments come from bills.
+"journey.session_gap_min_h" = 5000
+"journey.views_mean" = 1
+"journey.checkout_p" = 0.2
+"journey.hot_pick_p" = 0.05                # a single-line cart: hot share of checkouts ~ this
+"journey.bill_gap.params" = [4_320_000_000_000.0, 0.0, 0.0]   # mean 50 days: 30M payments
 # a payment stays live until its 90-day dispute window closes, so nearly every payment of the
-# 104-day run (90 d + 14 d warm-up) is live at its end: the target 30M exported payments mean
-# ~35M over the run (1.73 per user); 2.5 leaves ~45% margin for calibration (Task 21)
-payments_live_ratio = 2.5
-# the caps then total 36.0 GiB (live_partition_state 20.8 GiB), over the base 32GB budget;
+# 104-day run (90 d + 14 d warm-up) is live at its end: the calibrated shape creates 1.69
+# payments per user over the run (1M-user run); 1.8 is above that total, so above the live peak
+payments_live_ratio = 1.8
+# the keyed laws (one_capture, refunds_le_captured, ...) hold one key per payment: the
+# calibrated shape peaks between 3.1M and 3.5M keys at 1M users (60M x 0.05 = 3M overflows),
+# so 62-70M at 20M users; 80M (1.79 GiB) leaves ~14% margin (F-22)
+"budget.max_checker_keys" = 80_000_000
+# the caps then total ~32.5 GiB (live_partition_state ~16.8 GiB), over the base 32GB budget;
 # 40GB stays under the 64 GB reference machine (F-24)
 "budget.memory" = "40GB"
 
@@ -80,17 +94,34 @@ warmup = "3d"
 users = 2_000_000
 skus = 20_000
 sku_groups = 128
-referred_share = 0.5
 "hunt.share" = 0.01
-"journey.views_mean" = 1.5
-"journey.checkout_p" = 0.9
 "journey.signup_delay.params" = [259_200_000_000.0, 0.0, 0.0]
-# every payment of the 33-day run outlives it (90-day dispute window); the uncalibrated pool
-# shape creates 2.58 payments per user (20k-user run), so 4 covers calibration runs too
-payments_live_ratio = 4
+# Calibrated in Task 21 at 2M users (benchmarks/README.md, `s2_pool.toml`): ~10^7 exported
+# events. Every view adds a cart line; half the sessions with a cart check out. One session per
+# shopper in the run (the Pareto minimum gap, 2000 h, is longer than the 33-day run), so the
+# exported volume is set by session content, not by session count.
+"journey.session_gap_min_h" = 2000
+"journey.views_mean" = 1.5
+"journey.add_to_cart_p" = 1.0
+"journey.checkout_p" = 0.5
+# bill payments are owner-only work (a bill plus its payment's commands, no shard command):
+# with the pack's 20-day mean gap they alone would be ~7M of the 10^7 events, so the pool
+# workload pushes them past the run (mean gap 10 years)
+"journey.bill_gap.params" = [315_360_000_000_000.0, 0.0, 0.0]
+# referral claims from normal users are a minority next to the hunters' claims (~1 : 2.7)
+referred_share = 0.05
+# the pool drains 20.6 days into the 30 exported days (21.4k claims of $10 over the run, 6.6k of
+# them in the warm-up): hunters and normal users are both rejected after that (§07)
+pool_cap = 17_000_000
+# ~0.105 payments per user over the 33-day run (no bills), every one live at its end
+payments_live_ratio = 0.5
 # engine pools sized for 2M users (F-23; the base pools are sized for the 20M-user `full`
-# profile, which keeps them): one tenth of the base values
+# profile, which keeps them): one tenth of the base timer nodes; payload rows and messages
+# per step raised for the first-session burst (640k payload rows, >800k messages per step)
 "engine.timer_nodes" = 9_000_000
-"engine.payload_slots" = 400_000
-"engine.max_messages_per_step" = 800_000
+"engine.payload_slots" = 2_000_000
+"engine.max_messages_per_step" = 2_000_000
 "budget.max_admissions_per_step" = 200_000
+# the warm-up's first step admits 1.2M initial shoppers at once; a 6-hour first step keeps it
+# under `budget.max_step_rows` (adaptation grows later steps)
+"engine.step" = "6h"
