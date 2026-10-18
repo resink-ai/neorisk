@@ -31,6 +31,13 @@ PAY_CONTINUE = -2       # n_pay marker: the node is a continuation and n_tag is 
 P_FREE_HEAD = 8
 P_FREE_N = 9
 P_SK0, P_SK1, P_SK2, P_SK3, P_SK4 = 10, 11, 12, 13, 14     # the sender key fields
+P_CPID, P_CEID = 15, 16                                     # the cause fields (D80)
+
+# `ceid` of a command node (D80): the event id of its cause once seal resolved it, `NULL_CAUSE`
+# when it has none (a population or periodic START, or a chain without an exported event), or
+# `UNSET_CAUSE` while its cause is the commit (`cpid`, cause lamport) of the running step. Every
+# writer of a node sets `cpid` and `ceid` right after a successful push.
+UNSET_CAUSE, NULL_CAUSE = -2, -1
 
 SELF_SENDER = -1        # sender key part 0 of a command a partition queues for itself
 
@@ -38,7 +45,7 @@ SELF_SENDER = -1        # sender key part 0 of a command a partition queues for 
 NODE_FIELDS = (("time", "int64"), ("key", "int64"), ("seq", "int64"), ("tag", "int64"),
                ("next", "int32"), ("kind", "int16"), ("proc", "int16"), ("pay", "int32"),
                ("sk0", "int16"), ("sk1", "int64"), ("sk2", "int64"), ("sk3", "int64"),
-               ("sk4", "int32"))
+               ("sk4", "int32"), ("cpid", "int64"), ("ceid", "int64"))
 NODE_BYTES = sum(np.dtype(dt).itemsize for _, dt in NODE_FIELDS)
 
 _PRIO_MAX = 63
@@ -146,6 +153,8 @@ class NodePool(_FreeLists):
         self.sk2 = np.zeros(capacity, np.int64)
         self.sk3 = np.zeros(capacity, np.int64)
         self.sk4 = np.zeros(capacity, np.int32)
+        self.cpid = np.zeros(capacity, np.int64)     # partition id of the causing commit
+        self.ceid = np.full(capacity, NULL_CAUSE, np.int64)
         self._init_lists(self.next, capacity, workers)
 
     def as_tuple(self) -> tuple:
@@ -154,7 +163,8 @@ class NodePool(_FreeLists):
     def with_free_lists(self, head: np.ndarray, n: np.ndarray) -> tuple:
         """The pool tuple with `(head, n)` as the free lists (the reserve, for routing)."""
         return (self.time, self.key, self.seq, self.tag, self.next, self.kind, self.proc,
-                self.pay, head, n, self.sk0, self.sk1, self.sk2, self.sk3, self.sk4)
+                self.pay, head, n, self.sk0, self.sk1, self.sk2, self.sk3, self.sk4,
+                self.cpid, self.ceid)
 
 
 class PayloadPool(_FreeLists):

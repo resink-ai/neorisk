@@ -64,9 +64,11 @@ def test_caps_formulas(run):
     from neorisk_simkit.spec.caps import slabs_per_worker
     spw = slabs_per_worker(run.plan)
     assert spw == 5 + 0 + 2 + 1
-    assert caps["output_slabs"].hard_bytes == run.budget.threads * spw * run.engine.slab_bytes
+    clog_bytes = max(64, run.engine.slab_bytes // 40) * 40         # the commit log (D80)
+    assert caps["output_slabs"].hard_bytes == (run.budget.threads * spw * run.engine.slab_bytes
+                                               + run.budget.threads * clog_bytes)
     assert caps["merge_working_space"].hard_bytes == 2 * caps["step_output"].hard_bytes
-    assert caps["timer_heaps"].hard_bytes == run.engine.timer_nodes * NODE_BYTES == 100_000 * 74
+    assert caps["timer_heaps"].hard_bytes == run.engine.timer_nodes * NODE_BYTES == 100_000 * 90
     assert caps["checker_state"].hard_bytes == 0 and caps["scorer"].hard_bytes == 0
     assert all(c.estimate_bytes <= c.hard_bytes for c in caps.values())
     from neorisk_simkit.engine.admit import CreationQueue

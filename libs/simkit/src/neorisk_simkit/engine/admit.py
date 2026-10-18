@@ -13,8 +13,9 @@ Queue tuple `CQ` (`CreationQueue.as_tuple()`, indices `CQ_*`):
 with `C = budget.max_admissions_per_step` (routing refuses a creation beyond it, so the queue
 never overflows). `cause` is the creator's commit lamport, `ns` the namespace code of the created
 table, `handle` the created row's provisional handle, `action` the creating process. `src_pid`
-(the creator's `partition_id`) is diagnostic only: admission orders by the creator's sender key
-(D61), and nothing reads it.
+(the creator's `partition_id`) never orders anything (admission orders by the creator's sender
+key, D61); it is the `cpid` of the created owner's STARTs, whose cause is the creating commit
+(D80).
 
 Free-slot tuple `FS` (`FreeSlots.as_tuple()`, indices `FS_*`): `(buf int32[sum of sizes],
 head int64[T], n int64[T], off int64[T], cap int64[T], base int64[T])`, one FIFO ring per owner

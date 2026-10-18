@@ -28,11 +28,17 @@ Route tuple `R` (indices `RT_*`):
             since one `child_of` owner type can hold both population and created owners
   adm       int64[2]: created owners admitted this step, `budget.max_admissions_per_step`
             (D44; queued creations count against the limit as they are routed)
-  o2o       (cols int64[C, len(OUTBOX_COLS) + 6], pay int64[C, PAYLOAD_W], n int64[1]): the
-            carried owner-to-owner messages sent and not yet delivered (D73): their outbox
+  o2o       (cols int64[C, len(OUTBOX_COLS) + O2O_EXTRA], pay int64[C, PAYLOAD_W], n int64[1]):
+            the carried owner-to-owner messages sent and not yet delivered (D73): their outbox
             columns, then the D61 sender key k0..k5 computed when the row was routed (the
-            sender's slot may be reused before delivery); C = `engine.max_owner_messages_per_step`
+            sender's slot may be reused before delivery), then the message's cause event id
+            (`ceid`, D80: `UNSET_CAUSE` when routed, resolved by the seal of the sending step,
+            which also remaps `src_pid`); C = `engine.max_owner_messages_per_step`
   bnd_o2o   uint8[boundaries]: 1 for an owner-to-owner message boundary
+
+Every command node routing queues records its cause (D80): `cpid` = the sender's `src_pid` and
+`ceid` = `UNSET_CAUSE` (resolved at seal from this step's commit log), or for a carried owner
+message the `ceid` its sending step's seal resolved.
 
 Owner-to-owner messages (D73) are set aside by `route_outbox` into `o2o` and queued at the start
 of the step holding their delivery time by `deliver_owner_messages`, which judges the target's
@@ -49,9 +55,12 @@ from numba import njit
 
 from neorisk_simkit.engine.admit import CQ_N, cq_push
 from neorisk_simkit.engine.cmdq import (
+    P_CEID,
+    P_CPID,
     P_FREE_N,
     PAY_KIND,
     PAYLOAD_W,
+    UNSET_CAUSE,
     pay_alloc,
     pay_free,
     q_free,
@@ -81,6 +90,8 @@ _SRC_G, _SRC_SEQ, _DST, _TAG = _OB["src_g"], _OB["src_seq"], _OB["dst"], _OB["ta
 _RESP_KIND, _TARGET, _OB_SRC_PID = _OB["resp_kind"], _OB["target_action"], _OB["src_pid"]
 _PAYC = len(OUTBOX_COLS)
 _NCOLS = len(OUTBOX_COLS)             # o2o buffer: sender key part j is column _NCOLS + j
+O2O_CEID = _NCOLS + 6                  # o2o buffer: the message's cause event id (D80)
+O2O_EXTRA = 7                          # o2o buffer columns after the outbox columns
 assert _NCOLS == 12, "route_outbox copies the outbox columns into RT_O2O one by one"
 _LATE = COUNTERS.index("late_messages")
 _CMDS = COUNTERS.index("commands")
@@ -488,6 +499,7 @@ def route_outbox(R, CQ, ob, n):
             buf[0][j, _NCOLS + 3] = k3[i]
             buf[0][j, _NCOLS + 4] = k4[i]
             buf[0][j, _NCOLS + 5] = k5[i]
+            buf[0][j, O2O_CEID] = UNSET_CAUSE
             for c in range(PAYLOAD_W):
                 buf[1][j, c] = src[i, c]
             buf[2][0] = j + 1
@@ -505,9 +517,11 @@ def route_outbox(R, CQ, ob, n):
             bnd_resp[ob[_BND][i]] += 1
         # the receiver orders tied commands by the sender's key and seq, never by arrival, so
         # the round a command arrives in (which depends on step length) cannot reorder it (D61)
-        q_push_from(P, 0, qhead, g, ob[_TIME][i], ob[_PRIO][i], ob[_CAUSE][i], ob[_SRC_SEQ][i],
-                    ob[_RESP_KIND][i], ob[_TARGET][i], ob[_TAG][i], row, 2 * k0[i] + k1[i],
-                    k2[i], k3[i], k4[i], k5[i])
+        node = q_push_from(P, 0, qhead, g, ob[_TIME][i], ob[_PRIO][i], ob[_CAUSE][i],
+                           ob[_SRC_SEQ][i], ob[_RESP_KIND][i], ob[_TARGET][i], ob[_TAG][i], row,
+                           2 * k0[i] + k1[i], k2[i], k3[i], k4[i], k5[i])
+        P[P_CPID][node] = ob[_OB_SRC_PID][i]   # D80: the sending commit, resolved at seal
+        P[P_CEID][node] = UNSET_CAUSE
         mark_touched(R, g)
         if kind == OB_RESPONSE:
             pending[g] -= 1
@@ -573,10 +587,13 @@ def deliver_owner_messages(R, slots, times, retire_at, t0, t1, out_slots):
         for c in range(PAYLOAD_W):
             rows[row, c] = src[i, c]
         rows[row, PAY_KIND] = OB_MESSAGE
-        q_push_from(P, 0, qhead, g, t, cols[i, _PRIO], cols[i, _CAUSE], cols[i, _SRC_SEQ],
-                    cols[i, _RESP_KIND], cols[i, _TARGET], cols[i, _TAG], row,
-                    2 * cols[i, _NCOLS] + cols[i, _NCOLS + 1], cols[i, _NCOLS + 2],
-                    cols[i, _NCOLS + 3], cols[i, _NCOLS + 4], cols[i, _NCOLS + 5])
+        node = q_push_from(P, 0, qhead, g, t, cols[i, _PRIO], cols[i, _CAUSE],
+                           cols[i, _SRC_SEQ], cols[i, _RESP_KIND], cols[i, _TARGET],
+                           cols[i, _TAG], row, 2 * cols[i, _NCOLS] + cols[i, _NCOLS + 1],
+                           cols[i, _NCOLS + 2], cols[i, _NCOLS + 3], cols[i, _NCOLS + 4],
+                           cols[i, _NCOLS + 5])
+        P[P_CPID][node] = cols[i, _OB_SRC_PID]   # D80: sent in an earlier step, so its cause
+        P[P_CEID][node] = cols[i, O2O_CEID]      # was resolved by that step's seal
         mark_touched(R, g)
         out_slots[k] = g
         k += 1

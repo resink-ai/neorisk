@@ -10,7 +10,7 @@ runner flushes (`flush()`) or moves the outbox aside and re-invokes the command.
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import numpy as np
 
@@ -28,19 +28,29 @@ OB_REQUEST, OB_MESSAGE, OB_RESPONSE, OB_CREATE = 1, 2, 3, 4
 # command being dispatched (set by `dispatch`, read by `_continue_at`) and the worker's partial
 # sums of the accumulators (D46, by code; folded into the step's delta by
 # `World.take_accumulators`), then the worker's machine counters (D82, `machine.layout`, folded
-# by `World.take_machine_stats`).
+# by `World.take_machine_stats`), then the worker's commit log (D80): `clog int64[cap, 5]` rows
+# `(pid, lamport, cpid, cause lamport, ceid)` of every commit, `clog_n int64[1]` rows filled,
+# `cap = clog_rows(slab_bytes)`; a flush moves it into `StepChunk.commits` for seal.
 OUT_HEAD = ("cnt", "cap", "resv", "miss", "reqc", "hid", "pool", "pay", "w")
 (OUT_CNT, OUT_CAP, OUT_RESV, OUT_MISS, OUT_REQC, OUT_HID, OUT_POOL, OUT_PAY,
  OUT_W) = range(len(OUT_HEAD))
-OUT_TAIL = ("outbox", "lat", "shard_n", "seed", "cmd_kind", "acc", "mstat")
+OUT_TAIL = ("outbox", "lat", "shard_n", "seed", "cmd_kind", "acc", "mstat", "clog", "clog_n")
+CLOG_COLS = 5
+CLOG_ROW_BYTES = 8 * CLOG_COLS
+
+
+def clog_rows(slab_bytes: int) -> int:
+    """Rows of a worker's commit log (D80)."""
+    return max(64, int(slab_bytes) // CLOG_ROW_BYTES)
 
 HID_FIELDS = ("rseq", "cseq", "ordn", "gen", "self_id", "pid", "qhead")
 
 # Outbox columns (all int64) followed by `pay int64[cap, PAYLOAD_W]`. For requests and messages
 # `resp_kind`/`target_action` name the command kind and process the receiver runs; for
 # responses they are the requester's `on_response` command id and process (`cmd.pay[10]`).
-# `src_pid` is diagnostic only: nothing orders by it (it is a provisional handle in a created
-# sender's creation step); routing and admission order by the sender key of `src_g` (D61).
+# Nothing orders by `src_pid` (it is a provisional handle in a created sender's creation step);
+# routing and admission order by the sender key of `src_g` (D61). It is the `cpid` of the
+# command the row becomes (D80).
 OUTBOX_COLS = ("kind", "bnd", "time", "prio", "cause", "src_g", "src_pid", "src_seq", "dst",
                "tag", "resp_kind", "target_action")
 OUTBOX_PAY = len(OUTBOX_COLS)
@@ -110,6 +120,8 @@ def out_indices(plan: Plan) -> dict[str, int]:
 class StepChunk:
     records: dict[str, dict[str, np.ndarray]]      # event / change group -> column -> rows
     creates: dict[str, dict[str, np.ndarray]]      # namespace -> column -> rows
+    # (pid, lamport, cpid, cause lamport, ceid) of every commit flushed with it (D80)
+    commits: np.ndarray = field(default_factory=lambda: np.zeros((0, CLOG_COLS), np.int64))
 
 
 class SlabSet:
@@ -127,6 +139,8 @@ class SlabSet:
         self.cmd_kind = np.zeros(1, np.int64)
         self.acc = np.zeros(max(1, len(plan.accumulators)), np.int64)
         self.mstat = np.zeros(max(1, n_stats(plan.machines)), np.int64)
+        self.clog = np.zeros((clog_rows(engine.slab_bytes), CLOG_COLS), np.int64)
+        self.clog_n = np.zeros(1, np.int64)
         force = dict(engine.force_capacity)
 
         def capacity(resource: str, row_bytes: int) -> int:
@@ -161,10 +175,10 @@ class SlabSet:
         outbox = (*self.outbox.values(), self.outbox_pay)
         return (self.cnt, self.cap, self.resv, self.miss, self.req_count, hid, pool.as_tuple(),
                 payload.as_tuple(), self.worker, *bufs, outbox, self.lat, self.shard_n,
-                int(seed), self.cmd_kind, self.acc, self.mstat)
+                int(seed), self.cmd_kind, self.acc, self.mstat, self.clog, self.clog_n)
 
     def flush(self) -> StepChunk:
-        """Copy the filled record and create rows out and reset those buffers."""
+        """Copy the filled record and create rows and the commit log out and reset them."""
         records: dict[str, dict[str, np.ndarray]] = {}
         creates: dict[str, dict[str, np.ndarray]] = {}
         for spec in self.specs:
@@ -173,7 +187,9 @@ class SlabSet:
             rows = {name: a[:n].copy() for name, a in self.buffers[spec.resource].items()}
             (creates if spec.kind == "create" else records)[spec.name] = rows
             self.cnt[r] = 0
-        return StepChunk(records, creates)
+        commits = self.clog[:int(self.clog_n[0])].copy()
+        self.clog_n[0] = 0
+        return StepChunk(records, creates, commits)
 
     def outbox_view(self) -> dict[str, np.ndarray]:
         """Copies of the filled outbox rows (`OUTBOX_COLS` plus `pay`)."""

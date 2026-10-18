@@ -77,7 +77,9 @@ def canonicalize_ids(d: Path, created: frozenset[str],
                      owner_codes: frozenset[int] = frozenset(), *,
                      everything: bool = False) -> dict[str, list[dict]]:
     """Rename every created ID namespace by first appearance in global canonical order and
-    number events by their canonical position (D13); every other column is kept as is.
+    number events by their canonical position (D13); `cause_id` (D80, F-01) is mapped through
+    the same raw `event_id` -> position map (a cause outside the compared tables, e.g. exported
+    by an earlier run segment, becomes -1); every other column is kept as is.
 
     With `owner_codes` (the `ptype_code`s of created owner types), the `partition_id` of a
     created owner is renamed too, and "canonical order" is replaced by an order that does not
@@ -107,7 +109,7 @@ def canonicalize_ids(d: Path, created: frozenset[str],
             for t in schema["tables"] if t["kind"] in kinds}
     out = {name: e.to_dicts() for name, e in events.items()}
     if owner_codes:
-        ids = {"event_id", "partition_id"}
+        ids = {"event_id", "partition_id", "cause_id"}        # cause_id: raw event ids
 
         def key(name: str, row: dict) -> tuple:
             rest = tuple((v is None, v) for c, v in sorted(row.items())
@@ -126,6 +128,7 @@ def canonicalize_ids(d: Path, created: frozenset[str],
         flat = sorted(((order[(name, i)], name, r) for name, rows in out.items()
                        for i, r in enumerate(rows)), key=lambda x: x[0])
     rename: dict[str, dict[int, int]] = {}
+    position: dict[int, int] = {}                          # raw event_id -> position (F-01)
     for pos, (_, name, row) in enumerate(flat):
         for col, ns in refs[name].items():
             v = row[col]
@@ -134,7 +137,12 @@ def canonicalize_ids(d: Path, created: frozenset[str],
         if row["partition_id"] >> 56 in owner_codes:
             p = rename.setdefault("partition", {})
             row["partition_id"] = p.setdefault(row["partition_id"], len(p))
+        assert row["event_id"] not in position, "two events share a raw event_id"
+        position[row["event_id"]] = pos
         row["event_id"] = pos
+    for _, _, row in flat:
+        if row["cause_id"] is not None:
+            row["cause_id"] = position.get(row["cause_id"], -1)
     result = {name: sorted(rows, key=lambda r: r["event_id"]) for name, rows in out.items()}
     if everything:
         for t in schema["tables"]:

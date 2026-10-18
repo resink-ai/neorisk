@@ -3,7 +3,7 @@ holds in memory (read tables, owner/shard state, queues, slabs) plus the partiti
 
 `World.run_slots` drives the generated `run_partitions` (see `engine.codegen` for the world tuple
 `W` it receives) and handles the statuses it returns: `NEED_SWAP` flushes a full record/create
-slab into `World.chunks[worker]` or moves a full outbox aside into `World.pending_outbox[worker]`,
+slab (or a full commit log, D80) into `World.chunks[worker]` or moves a full outbox aside into `World.pending_outbox[worker]`,
 `NEED_NODES` refills the worker's command-node free list from the reserve.
 
 Between phases `World` routes outboxes (`route`, over `engine.route`; creation rows join the
@@ -35,7 +35,15 @@ from neorisk_simkit.engine.admit import (
     cq_min,
 )
 from neorisk_simkit.engine.calendar import Calendar, cal_collect, cal_push
-from neorisk_simkit.engine.cmdq import PAYLOAD_W, NodePool, PayloadPool, q_push
+from neorisk_simkit.engine.cmdq import (
+    NULL_CAUSE,
+    P_CEID,
+    P_CPID,
+    PAYLOAD_W,
+    NodePool,
+    PayloadPool,
+    q_push,
+)
 from neorisk_simkit.engine.codegen import (
     COUNTERS,
     DONE,
@@ -148,14 +156,18 @@ def _mix_tail(h, ords, out):
 
 @njit(cache=True, nogil=True)
 def _queue_starts(P, qhead, cseq, gs, times, procs, prio):
-    """Queue one START per (slot, process); P's free list is the pool's reserve list."""
+    """Queue one START per (slot, process); P's free list is the pool's reserve list. A
+    population or periodic shard START has no cause (D80)."""
     for i in range(gs.shape[0]):
         g = gs[i]
         for a in procs:
             sq = cseq[g]
             cseq[g] = sq + 1
-            if q_push(P, 0, qhead, g, times[i], prio, 0, sq, START, a, 0, -1) < 0:
+            node = q_push(P, 0, qhead, g, times[i], prio, 0, sq, START, a, 0, -1)
+            if node < 0:
                 return False
+            P[P_CPID][node] = 0
+            P[P_CEID][node] = NULL_CAUSE
     return True
 
 
@@ -243,11 +255,12 @@ class World:
     """Everything one run holds in memory, plus the partition executor (`run_slots`)."""
 
     def allocated_slab_bytes(self) -> int:
-        """Sum of `nbytes` of every output buffer of every worker's `SlabSet`."""
+        """Sum of `nbytes` of every output buffer (and commit log) of every worker's `SlabSet`."""
         total = 0
         for slab in self.slabs:
             total += sum(a.nbytes for cols in slab.buffers.values() for a in cols.values())
             total += sum(a.nbytes for a in slab.outbox.values()) + slab.outbox_pay.nbytes
+            total += slab.clog.nbytes                       # the commit log (D80)
         return total
 
     # ------------------------------------------------------------------ build
@@ -577,7 +590,7 @@ class World:
         # row when the plan has no such boundary)
         o2o = any(b.o2o for b in plan.boundaries)
         C = int(self.run.engine.max_owner_messages_per_step) if o2o else 1
-        self.o2o = (np.zeros((max(1, C), len(OUTBOX_COLS) + 6), np.int64),
+        self.o2o = (np.zeros((max(1, C), len(OUTBOX_COLS) + rt.O2O_EXTRA), np.int64),
                     np.zeros((max(1, C), PAYLOAD_W), np.int64), np.zeros(1, np.int64))
         self.o2o_step_lo = 0                 # first buffer row sent this step (seal remaps on)
         o2o_flag = np.zeros(max(1, len(plan.boundaries)), np.uint8)
@@ -989,6 +1002,8 @@ class World:
         parts = [*chunk.records.values(), *chunk.creates.values()]
         rows = sum(len(next(iter(p.values()))) for p in parts)
         if not rows:
+            if len(chunk.commits):                 # the commit log alone (D80): seal reads it
+                self.chunks[worker].append(chunk)
             return
         n_bytes = sum(a.nbytes for p in parts for a in p.values())
         self.chunks[worker].append(chunk)

@@ -18,6 +18,11 @@
 6. sort each table by the canonical key `(time, lamport, partition_id, seq)`;
 7. count the step's output rows and bytes (the cap, `CapExceeded("step_output", ...)`, is
    enforced earlier, on every slab flush, over all buffers including `p.ids` allocations);
+   Then causes (D80): the step's commit log (pid and cpid remapped too) gives every commit the
+   event id of its cause (`resolve_causes`): every record row takes its commit's as
+   `cause_id`, and every command queued at a touched slot and every owner-to-owner message
+   sent this step still waiting on a commit of this step (`UNSET_CAUSE`) takes its causing
+   commit's;
 8. warm-up steps keep their created entities but drop event, posting and history rows (D20);
    the event and posting tables named in `law_tables` are kept apart in `warmup_rows` first
    (F-01: law reducers start from the opening snapshot), numbered from a throwaway copy of
@@ -36,7 +41,7 @@ import pyarrow as pa
 from numba import njit
 
 from neorisk_simkit.engine.abi import START
-from neorisk_simkit.engine.cmdq import PAY_CONTINUE
+from neorisk_simkit.engine.cmdq import NULL_CAUSE, PAY_CONTINUE, UNSET_CAUSE
 from neorisk_simkit.engine.errors import EngineError
 from neorisk_simkit.engine.identity import (
     FLAG,
@@ -136,23 +141,39 @@ def _canonical(rows: dict[str, np.ndarray]) -> np.ndarray:
     return np.lexsort((rows["seq"], rows["pid"], rows["lamport"], rows["time"]))
 
 
+def event_ids(e: Any, rows: dict[str, np.ndarray], id_bases: dict[str, int],
+              seed: int) -> np.ndarray:
+    """Public IDs of the rows of event type `e`, in row order (`id_bases` is not advanced)."""
+    base = id_bases.get(f"event:{e.name}", 0)
+    return public_ids(seed, e.name, assign_dense(rows["pid"], rows["seq"], base))
+
+
 def event_table(e: Any, rows: dict[str, np.ndarray], id_bases: dict[str, int],
-                seed: int) -> pa.Table:
-    """The rows of event type `e` with public IDs, in canonical order; advances its id base."""
+                seed: int, cause_ids: np.ndarray | None = None,
+                ids: np.ndarray | None = None) -> pa.Table:
+    """The rows of event type `e` with public IDs, in canonical order; advances its id base.
+
+    `cause_ids` (row order; negative = null) fills `cause_id` (D80; all null when omitted);
+    `ids` are the rows' `event_ids` when the caller computed them already."""
     n = len(rows["time"])
     key = f"event:{e.name}"
-    base = id_bases.get(key, 0)
-    dense = assign_dense(rows["pid"], rows["seq"], base)
-    id_bases[key] = base + n
+    if ids is None:
+        ids = event_ids(e, rows, id_bases, seed)
+    id_bases[key] = id_bases.get(key, 0) + n
     order = _canonical(rows)
+    if cause_ids is None:
+        cause = pa.nulls(n, pa.int64())
+    else:
+        c = np.asarray(cause_ids, np.int64)[order]
+        cause = pa.array(c, pa.int64(), mask=c < 0)
     common = {
-        "event_id": pa.array(public_ids(seed, e.name, dense[order]), pa.int64()),
+        "event_id": pa.array(ids[order], pa.int64()),
         "event_type": pa.array(np.full(n, e.name, object), pa.string()),
         "event_time": _ts(rows["time"][order]),
         "lamport": pa.array(rows["lamport"][order], pa.int64()),
         "partition_id": pa.array(rows["pid"][order], pa.int64()),
         "seq": pa.array(rows["seq"][order], pa.int32()),
-        "cause_id": pa.nulls(n, pa.int64()),                     # D14
+        "cause_id": cause,                                       # D14, D80
         "action_id": pa.array(rows["action"][order], pa.int16()),
     }
     names = [c for c, _ in COMMON_COLUMNS]
@@ -389,6 +410,178 @@ def _free_retired(world: Any, owners: np.ndarray) -> np.ndarray:
     return gone
 
 
+# ---------------------------------------------------------------------------- causes (D80)
+_PENDING = -3                                    # `_resolve`: not resolved yet
+
+
+@njit(cache=True, nogil=True)
+def _slot(p, lam, mask):
+    """Home slot of the commit key `(p, lam)` in an open-addressing table of `mask + 1`."""
+    h = (np.uint64(p) * np.uint64(0x9E3779B97F4A7C15)) ^ (np.uint64(lam)
+                                                        * np.uint64(0xC2B2AE3D27D4EB4F))
+    h ^= h >> np.uint64(31)
+    return np.int64(h & np.uint64(mask))
+
+
+@njit(cache=True, nogil=True)
+def _index(kp, kl):
+    """Open-addressing hash table over the commit keys `(kp[i], kl[i])` (unique): row or -1."""
+    cap = 2
+    while cap < 2 * kp.shape[0]:
+        cap *= 2
+    tab = np.full(cap, -1, np.int64)
+    for i in range(kp.shape[0]):
+        h = _slot(kp[i], kl[i], cap - 1)
+        while tab[h] >= 0:
+            h = (h + 1) & (cap - 1)
+        tab[h] = i
+    return tab
+
+
+@njit(cache=True, nogil=True)
+def _find(tab, kp, kl, p, lam):
+    """Row of each commit `(p[i], lam[i])` in the table `_index(kp, kl)`; -1 if absent."""
+    mask = tab.shape[0] - 1
+    out = np.full(p.shape[0], -1, np.int64)
+    for i in range(p.shape[0]):
+        h = _slot(p[i], lam[i], mask)
+        while tab[h] >= 0:
+            r = tab[h]
+            if kp[r] == p[i] and kl[r] == lam[i]:
+                out[i] = r
+                break
+            h = (h + 1) & mask
+    return out
+
+
+@njit(cache=True, nogil=True)
+def _first_events(c, seq, ids, n):
+    """Per commit (n of them): the ID of its lowest-`seq` event row (rows `c`, `seq`, `ids`),
+    or -1 when it emitted none."""
+    first = np.full(n, -1, np.int64)
+    best = np.full(n, np.iinfo(np.int64).max, np.int64)
+    for i in range(c.shape[0]):
+        if seq[i] < best[c[i]]:
+            best[c[i]] = seq[i]
+            first[c[i]] = ids[i]
+    return first
+
+
+@njit(cache=True, nogil=True)
+def _resolve(first, src, ceid):
+    """Cause event id per commit. A commit's cause is the resolved `ceid` its command carried,
+    else (`UNSET_CAUSE`) the first event of its causing commit `src` of this step, else that
+    commit's own cause; `NULL_CAUSE` when nothing in the chain emitted an event. Chains are
+    followed with memoization (a causing commit has a smaller lamport, so there is no cycle)."""
+    n = first.shape[0]
+    cause = np.full(n, _PENDING, np.int64)
+    stack = np.empty(n, np.int64)
+    for r in range(n):
+        k = 0
+        x = r
+        while cause[x] == _PENDING:
+            if ceid[x] != UNSET_CAUSE:
+                cause[x] = ceid[x]
+            elif src[x] < 0:
+                cause[x] = NULL_CAUSE
+            elif cause[src[x]] == _PENDING:
+                stack[k] = x
+                k += 1
+                x = src[x]
+            else:
+                s = src[x]
+                cause[x] = first[s] if first[s] >= 0 else cause[s]
+        while k > 0:
+            k -= 1
+            x = stack[k]
+            s = src[x]
+            cause[x] = first[s] if first[s] >= 0 else cause[s]
+    return cause
+
+
+class _Causes:
+    """The step's commits (indexed by (pid, lamport)) and the cause event id of each (D80)."""
+
+    def __init__(self, commits: np.ndarray, remap: _Remap,
+                 events: list[tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]]):
+        cols = [np.ascontiguousarray(commits[:, j]) for j in range(5)]
+        remap.apply(cols[0], "partition_id of a commit", pid=True)
+        remap.apply(cols[2], "partition_id of a causing commit", pid=True)
+        self.kp, self.kl = cols[0], cols[1]
+        self.tab = _index(self.kp, self.kl)
+        ceid = cols[4]
+        n = len(ceid)
+        src = _find(self.tab, self.kp, self.kl, cols[2], cols[3])
+        if ((ceid == UNSET_CAUSE) & (src < 0)).any():
+            raise EngineError("cause_id: a commit's causing commit is not in its step's log")
+        if events:
+            pid, lam, seq, ids = (np.concatenate([e[j] for e in events]) for j in range(4))
+            first = _first_events(self.commit_of(pid, lam, "an event row"),
+                                  seq.astype(np.int64), ids, n)
+        else:
+            first = np.full(n, -1, np.int64)
+        self.cause = _resolve(first, src, ceid)
+        # what a command a commit queued inherits: its first event, else its own cause
+        self.passed = np.where(first >= 0, first, self.cause)
+
+    def commit_of(self, pid: np.ndarray, lam: np.ndarray, what: str) -> np.ndarray:
+        idx = _find(self.tab, self.kp, self.kl, np.ascontiguousarray(pid, np.int64),
+                    np.ascontiguousarray(lam, np.int64))
+        if (idx < 0).any():
+            raise EngineError(f"cause_id: {what} has no commit in its step's log")
+        return idx
+
+    def of(self, pid: np.ndarray, lam: np.ndarray, what: str) -> np.ndarray:
+        """The cause event id (or `NULL_CAUSE`) of the commits `(pid, lam)`: their rows'
+        `cause_id`."""
+        if not len(pid):
+            return np.zeros(0, np.int64)
+        return self.cause[self.commit_of(pid, lam, what)]
+
+    def queued_by(self, pid: np.ndarray, lam: np.ndarray, what: str) -> np.ndarray:
+        """The cause of a command queued by the commits `(pid, lam)`."""
+        if not len(pid):
+            return np.zeros(0, np.int64)
+        return self.passed[self.commit_of(pid, lam, what)]
+
+
+def resolve_causes(world: Any, commits: np.ndarray, remap: _Remap,
+                   events: list[tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]]
+                   ) -> _Causes:
+    """Resolve the causes of one step (D80) and write them into what outlives it.
+
+    `commits` are the step's commit log rows `(pid, lamport, cpid, cause lamport, ceid)`;
+    `events` the step's exported **event** rows as `(pid, lamport, seq, event_id)` per table
+    (postings and labels are never a cause, F-17; empty in warm-up). Every command queued at a
+    touched slot and every owner-to-owner message sent this step whose cause is still a commit
+    of this step (`UNSET_CAUSE`) gets that commit's cause; their `cpid` / `src_pid` is remapped
+    to the final partition id first. Returns the per-commit causes for the record rows."""
+    from neorisk_simkit.engine.route import O2O_CEID
+    from neorisk_simkit.engine.slabs import OUTBOX_COLS
+
+    causes = _Causes(commits, remap, events)
+    pool, hid = world.pool, world.hidden
+    nodes = _queued_nodes(hid.qhead, pool.next, np.asarray(world.touched, np.int64))
+    nodes = nodes[pool.ceid[nodes] == UNSET_CAUSE]
+    if len(nodes):
+        cpid = np.ascontiguousarray(pool.cpid[nodes])
+        remap.apply(cpid, "the causing partition of a queued command", pid=True)
+        pool.cpid[nodes] = cpid
+        pool.ceid[nodes] = causes.queued_by(cpid, pool.key[nodes] & ((1 << 56) - 1),
+                                     "a queued command's cause")
+    cols, _, n = world.o2o
+    lo, hi = int(world.o2o_step_lo), int(n[0])
+    if hi > lo:
+        sp = OUTBOX_COLS.index("src_pid")
+        src = np.ascontiguousarray(cols[lo:hi, sp])
+        remap.apply(src, "an owner message src_pid", pid=True)
+        cols[lo:hi, sp] = src
+        todo = np.flatnonzero(cols[lo:hi, O2O_CEID] == UNSET_CAUSE) + lo
+        cols[todo, O2O_CEID] = causes.queued_by(cols[todo, sp], cols[todo, OUTBOX_COLS.index("cause")],
+                                         "an owner message's cause")
+    return causes
+
+
 # ---------------------------------------------------------------------------- seal
 def seal_step(world: Any, step: int, t0: int, t1: int, exported: bool,
               id_bases: dict[str, int], *,
@@ -452,6 +645,20 @@ def seal_step(world: Any, step: int, t0: int, t1: int, exported: bool,
     if exported:                                 # D48: dense range check, before public IDs
         from neorisk_simkit.checks.structural import check_refs, ref_bounds
         n_refs = check_refs(plan, records, creates, ref_bounds(world, id_bases))
+    # causes (D80): event IDs of the exported event rows first (warm-up: none)
+    ids_of: dict[str, np.ndarray] = {}
+    cause_events = []
+    if exported:
+        for e in plan.events:
+            if e.group == "events" and len(records[e.name]["time"]):
+                rows = records[e.name]
+                ids_of[e.name] = event_ids(e, rows, id_bases, seed)
+                cause_events.append((rows["pid"], rows["lamport"], rows["seq"], ids_of[e.name]))
+    commits = np.concatenate([c.commits for c in chunks]) if chunks else np.zeros((0, 5),
+                                                                                 np.int64)
+    causes = resolve_causes(world, commits, remap, cause_events)
+    cause_of = {e.name: causes.of(records[e.name]["pid"], records[e.name]["lamport"],
+                                  f"a {e.name} row") for e in plan.events}
     owners = _remap_world(world, remap)
 
     # 4. free retired slots
@@ -467,14 +674,16 @@ def seal_step(world: Any, step: int, t0: int, t1: int, exported: bool,
 
     # 8. (F-01) a warm-up step keeps the rows the laws read, before `keep` drops them
     warmup_rows = {} if exported else {
-        e.name: event_table(e, records[e.name], dict(id_bases), seed)
+        e.name: event_table(e, records[e.name], dict(id_bases), seed, cause_of[e.name])
         for e in plan.events if e.name in law_tables}
 
     # 5, 6, 8. events, postings and history (warm-up steps drop their rows), entities always
     def keep(rows: dict[str, np.ndarray]) -> dict[str, np.ndarray]:
         return rows if exported else {k: v[:0] for k, v in rows.items()}
 
-    records_out = {e.name: event_table(e, keep(records[e.name]), id_bases, seed)
+    records_out = {e.name: event_table(e, keep(records[e.name]), id_bases, seed,
+                                       cause_of[e.name] if exported else None,
+                                       ids_of.get(e.name))
                    for e in plan.events}
     events = {e.name: records_out[e.name] for e in plan.events if e.group == "events"}
     postings = {e.name: records_out[e.name] for e in plan.events if e.group == "postings"}

@@ -33,7 +33,7 @@ import numba
 
 from neorisk_simkit.engine import slabs
 from neorisk_simkit.engine.admit import ADM_CAP, ADM_DEPTH, ADM_LIVE, ADM_NODES, ADM_OK
-from neorisk_simkit.engine.cmdq import PAYLOAD_W
+from neorisk_simkit.engine.cmdq import NULL_CAUSE, P_CEID, P_CPID, PAYLOAD_W, UNSET_CAUSE
 from neorisk_simkit.engine.errors import LoweringError
 from neorisk_simkit.engine.layout import (
     CMD_PAY,
@@ -52,6 +52,8 @@ _PER_ACTION = ("cfg", "reads", "refs")   # dispatch's ctx holds these per action
 
 # ---------------------------------------------------------------- partition runner contract
 # Statuses returned by the generated `run_partitions` (with the slot index to resume from).
+# Every commit appends `(pid, lamport, cpid, cause lamport, ceid)` of its command to the worker's
+# commit log (`out[OUT_CLOG]`, D80); a full log returns NEED_SWAP with `miss = -1` (a flush).
 DONE, NEED_SWAP, NEED_NODES = 0, 1, 2
 # The world tuple `W` passed to `run_partitions` (built by `engine.world.World`):
 #   hid       every hidden array, in `world.HIDDEN_DTYPES` order
@@ -112,8 +114,8 @@ from neorisk_simkit.engine.abi import (
     COMMIT, PRIO_CONTINUE, PRIO_EXPIRY, PRIO_MESSAGE, PRIO_TIMER, RETRY, START, reject,
 )
 from neorisk_simkit.engine.admit import (
-    CQ_ACTION, CQ_CAUSE, CQ_HANDLE, CQ_K, CQ_N, CQ_NS, CQ_PAYLOAD, CQ_SRC_G, CQ_TIME, FS_BASE,
-    FS_N, cq_due, cq_min, cq_order, cq_remove, fs_take1,
+    CQ_ACTION, CQ_CAUSE, CQ_HANDLE, CQ_K, CQ_N, CQ_NS, CQ_PAYLOAD, CQ_SRC_G, CQ_SRC_PID, CQ_TIME,
+    FS_BASE, FS_N, cq_due, cq_min, cq_order, cq_remove, fs_take1,
 )
 from neorisk_simkit.engine.clock import clock_ns as _clock_ns
 from neorisk_simkit.engine.cmdq import (
@@ -254,7 +256,9 @@ class _Gen:
         lines += [f"_DONE = {DONE}", f"_NEED_SWAP = {NEED_SWAP}", f"_NEED_NODES = {NEED_NODES}",
                   f"_MAX_RETRIES = {MAX_RETRIES}", f"_PERIODIC_QUEUED = {PERIODIC_QUEUED}",
                   f"_PERIODIC_SITE = {PERIODIC_SITE}", f"_JITTER_SITE = {JITTER_SITE}",
-                  f"_CAUSE_MASK = {(1 << 56) - 1}", f"_I64_MAX = {2 ** 63 - 1}"]
+                  f"_CAUSE_MASK = {(1 << 56) - 1}", f"_I64_MAX = {2 ** 63 - 1}",
+                  f"_P_CPID = {P_CPID}", f"_P_CEID = {P_CEID}",
+                  f"_UNSET_CAUSE = {UNSET_CAUSE}", f"_NULL_CAUSE = {NULL_CAUSE}"]
         lines += [f"_DR_CLOSED = {DR_CLOSED}", f"_DR_LARGE = {DR_LARGE}",
                   f"_DR_PYTHON = {DR_PYTHON}", f"_DR_LOG_FULL = {DR_LOG_FULL}",
                   f"_DR_NO_PROGRESS = {DR_NO_PROGRESS}", f"_PH_OWNERS = {PH_OWNERS}",
@@ -469,7 +473,11 @@ class _Gen:
                 "if node < 0:",
                 *self.by_proc(procs, "EngineError", lambda p: [
                     _q(f"{p}: {what} without a free command node (reserve timers first)")],
-                    "    ")]
+                    "    "),
+                # D80: caused by this commit, resolved to an event id at seal
+                "P_ = out[OUT_POOL]",
+                "P_[_P_CPID][node] = ctx[CTX_PID]",
+                "P_[_P_CEID][node] = _UNSET_CAUSE"]
 
     def timer(self) -> None:
         procs = list(self.plan.processes)
@@ -797,6 +805,8 @@ class _Gen:
             "cnt = out[OUT_CNT]",
             "obx = out[OUT_OUTBOX]",
             "miss = out[OUT_MISS]",
+            "clog = out[OUT_CLOG]",
+            "clog_n = out[OUT_CLOG_N]",
             "free_n = P[P_FREE_N]",
             "for i in range(start, slots.shape[0]):",
             "    g = np.int64(slots[i])",
@@ -819,6 +829,9 @@ class _Gen:
             "            break",
             "        if node_cap >= 0 and free_n[worker] > node_cap:",
             "            return _NEED_NODES, i",
+            "        if clog_n[0] >= clog.shape[0]:",          # D80: the commit log is full
+            "            miss[0] = -1",
+            "            return _NEED_SWAP, i",
             "        a = np.int64(P[6][node])",
             "        kind = np.int64(P[5][node])",
             "        if t < last_t[g]:",
@@ -826,6 +839,8 @@ class _Gen:
             "        tag = P[3][node]",
             "        prow = P[7][node]",
             "        cause = P[1][node] & _CAUSE_MASK",
+            "        cpid_ = P[_P_CPID][node]",
+            "        ceid_ = P[_P_CEID][node]",
             "        cursor = np.int64(0)",
             "        if prow == PAY_CONTINUE:",
             "            cursor = tag",
@@ -841,7 +856,10 @@ class _Gen:
             "                    tn = t",
             "                sq = cseq[g]",
             "                cseq[g] = sq + 1",
-            "                q_push(P, worker, qhead, g, tn, PRIO_MESSAGE, 0, sq, START, a, tag + 1, -1)",
+            ("                nn_ = q_push(P, worker, qhead, g, tn, PRIO_MESSAGE, 0, sq, START, a, "
+             "tag + 1, -1)"),
+            "                P[_P_CPID][nn_] = 0",                     # D80: no cause
+            "                P[_P_CEID][nn_] = _NULL_CAUSE",
             "                P[3][node] = tag | _PERIODIC_QUEUED",
             "            tag = tag & ~_PERIODIC_QUEUED",
             "        pay = nopay",
@@ -894,6 +912,13 @@ class _Gen:
             "        ran = True",
             "        if rc == COMMIT:",
             "            clock[g] = lamport",
+            "            c_ = clog_n[0]",                            # D80: log the commit
+            "            clog[c_, 0] = pid[g]",
+            "            clog[c_, 1] = lamport",
+            "            clog[c_, 2] = cpid_",
+            "            clog[c_, 3] = cause",
+            "            clog[c_, 4] = ceid_",
+            "            clog_n[0] = c_ + 1",
             "            if reqc[0] > 0:",
             "                pending[g] += reqc[0]",
             "                st_ = _I64_MAX",
@@ -1036,8 +1061,10 @@ class _Gen:
             for a in self._started(part, ns):
                 body += ["        sq_ = cseq[g]",
                          "        cseq[g] = sq_ + 1",
-                         (f"        q_push(P, 0, qhead, g, CQ[CQ_TIME][i], PRIO_MESSAGE, cause, "
-                          f"sq_, START, {a}, 0, -1)")]
+                         (f"        nn_ = q_push(P, 0, qhead, g, CQ[CQ_TIME][i], PRIO_MESSAGE, "
+                          f"cause, sq_, START, {a}, 0, -1)"),
+                         "        P[_P_CPID][nn_] = CQ[CQ_SRC_PID][i]",     # D80
+                         "        P[_P_CEID][nn_] = _UNSET_CAUSE"]
         body += ["    mark_touched(R, g)",
                  "    woken[wn[0]] = g",
                  "    wn[0] += 1",

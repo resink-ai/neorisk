@@ -110,6 +110,12 @@ def slabs_per_worker(plan: Plan) -> int:
     return len(plan.events) + len(plan.change_groups) + len(plan.namespaces) + 1
 
 
+def clog_bytes(slab_bytes: int) -> int:
+    """Bytes of one worker's commit log (D80): `engine.slabs.clog_rows` rows of 5 int64."""
+    from neorisk_simkit.engine.slabs import CLOG_ROW_BYTES, clog_rows  # engine imports spec
+    return clog_rows(slab_bytes) * CLOG_ROW_BYTES
+
+
 def record_row_bytes(plan: Plan) -> dict[str, int]:
     """Row bytes of every record table a kernel can reserve: events and change-group histories."""
     out = {e.name: row_bytes(e.cols) for e in plan.events}
@@ -228,10 +234,11 @@ def entity_buffer_bytes(plan: Plan, row_group_rows: int) -> tuple[int, int]:
 def _owner_message_bytes(plan, eng) -> int:
     """The carried owner-to-owner message buffer (D73): `max_owner_messages_per_step` rows of
     the outbox columns and a payload row (`OUTBOX_ROW_BYTES`) plus the six D61 sender-key
-    parts; 0 without such boundaries (the world then allocates one row)."""
+    parts and the cause event id (D80); 0 without such boundaries (the world then allocates
+    one row)."""
     if not any(b.o2o for b in plan.boundaries):
         return 0
-    return eng.max_owner_messages_per_step * (OUTBOX_ROW_BYTES + 6 * 8)
+    return eng.max_owner_messages_per_step * (OUTBOX_ROW_BYTES + 7 * 8)
 
 
 def compute_caps(run, threads: int | None = None) -> list[CapItem]:
@@ -251,7 +258,8 @@ def compute_caps(run, threads: int | None = None) -> list[CapItem]:
                 for r in pop.refs.values())
 
     items = {
-        "output_slabs": (workers * slabs_per_worker(plan) * eng.slab_bytes, ""),
+        "output_slabs": (workers * slabs_per_worker(plan) * eng.slab_bytes
+                         + workers * clog_bytes(eng.slab_bytes), ""),
         "step_output": (step, "estimate is 25% of the cap (adaptive target)"),
         "merge_working_space": (2 * step, ""),
         "live_partition_state": (_live_state(plan), ""),

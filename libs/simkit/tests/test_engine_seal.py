@@ -31,7 +31,7 @@ def test_steps_cover_the_window_with_a_boundary_at_start():
 
 def test_events_are_canonical_and_ids_public():
     _, sim = _sim()
-    seen = set()
+    seen, causes = set(), set()
     for s in sim.steps():
         for t in s.events.values():
             if t.num_rows == 0:
@@ -43,9 +43,14 @@ def test_events_are_canonical_and_ids_public():
             ids = t["event_id"].to_numpy()
             assert (ids > 0).all() and not (set(ids.tolist()) & seen)
             seen |= set(ids.tolist())
-            assert t["cause_id"].null_count == t.num_rows
+            # D80: a population (or periodic) START has no cause; it is a command's first
+            # commit, so its rows have lamport 1
+            first = t.filter(pc.equal(t["lamport"], 1))
+            assert first["cause_id"].null_count == first.num_rows
+            causes |= set(t["cause_id"].drop_null().to_pylist())
             assert t.column_names[:8] == ["event_id", "event_type", "event_time", "lamport",
                                           "partition_id", "seq", "cause_id", "action_id"]
+    assert causes and causes <= seen               # causes are event IDs of the same dataset
 
 
 def test_created_rows_get_contiguous_dense_ids_and_refs_resolve():

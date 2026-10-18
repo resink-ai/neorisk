@@ -82,6 +82,8 @@ The task 24c row is a plain `datagen run --profile full --seed 42` (not the harn
 compile, stage split or round counts) after entity tables were streamed per step: engine
 seconds 45.1, peak RSS 2.52 GiB (was 2.78), dataset hash unchanged.
 
+M3 Task 12: S1 reduced-profile hash `d4329bb59d319661469e6b097cefcb74962164ce81ac98a93714fe654f01915a` (cause_id populated, D80; every other column identical; was `4659ac00c0af3e400065aee6cf9d7d89d26a42a4c3a635a0e9d593fada09695d`).
+
 The "after" row reads `results/s1-warm.json` (warm run) and `results/s1-cold.json` (`--cold`; its
 own measured run took 44.47 s, peak RSS 2.74 GiB). Both runs: 28 steps, 1,388,003 rounds,
 19,247,347 proposals, 1,490,629 reserve requests (share 0.0774), 228k events/s end to end. The

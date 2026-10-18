@@ -75,4 +75,4 @@ def test_caps_count_the_carried_buffer():
     def cap(n):
         caps = validate(make_run("courier", max_owner_messages_per_step=n)).caps
         return next(c.hard_bytes for c in caps if c.name == "requests_and_inboxes")
-    assert cap(1_000) - cap(0) == 1_000 * (OUTBOX_ROW_BYTES + 6 * 8)
+    assert cap(1_000) - cap(0) == 1_000 * (OUTBOX_ROW_BYTES + 7 * 8)   # + ceid (D80)
