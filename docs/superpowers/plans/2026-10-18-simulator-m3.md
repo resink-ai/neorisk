@@ -10,13 +10,62 @@
 
 **Spec:** `docs/superpowers/specs/2026-10-15-agentic-event-simulator-architecture.html` (binding; §18 defines M3, §17 the module layout `machine/`). Read §04, §05, §06, §07, §08, §11, §12, §13 before any task. The S1 plan (`docs/superpowers/plans/2026-10-16-simulator-s1.md`, D1–D35, Engine reference) and the S2 plan (`docs/superpowers/plans/2026-10-17-simulator-s2.md`, D36–D61, Engine reference deltas, contracts in `.superpowers/sdd/2026-10-17-simulator-s2/contracts.md`) stay binding wherever this plan does not amend them.
 
+## Preflight amendments
+
+Applied from `.superpowers/sdd/2026-10-18-simulator-m3/preflight.md` (F-01..F-42) with the controller's rulings (`progress.md`): every proposed resolution accepted; F-22 and F-23 recorded as deviations in D74 and D75.
+
+| Finding | Applied in |
+|---|---|
+| F-01 `cause_id` canonicalized like `event_id` | D78, D80; Task 12 (conftest `canonicalize_ids`, S1/S2 invariance runs); Task 17 `canonical_rows`; Task 9 |
+| F-02 o2o presence judged at delivery | D73; Task 2 rewritten (carried buffer, delivery at step start, courier fixture and tests) |
+| F-03 hidden-bytes literal | Task 1 (Files, Step 2) |
+| F-04 `ref_bounds` int form kept | Task 3 (Interfaces, Step 4.9, `test_checks_refs.py`) |
+| F-05 milestone-stub test | Task 5 (rewrite), Task 10 (drop `expose`) |
+| F-06 caps formula test | Task 12 (Files, Step 4.8) |
+| F-07 no polars `>>` | Tasks 3, 11, 16, 17, 18 |
+| F-08 cohort refs keyed by population | D94; Task 10 (Interfaces, Step 4, test `test_cohort_machines_read_the_cohorts_refs`) |
+| F-09 root draw-site block | D65; Task 6 (`layout.root_site`, `_Gen.site(m, None)`) |
+| F-10 literals are parameters | D77; Task 6 (`_Gen.lit`, `value()`); tests in Tasks 10, 16 |
+| F-11 CX2 memory for new laws | Task 13 (`spec/caps.py`, tracemalloc test) |
+| F-12 public keys in `_SumLeState` | D81; Task 13 Step 4 |
+| F-13 warm-up in the ecommerce module test | Task 14 (`SMALL` warm-up 0) |
+| F-14 `top_share` test value | Task 18 |
+| F-15 explicit overlay list replaces | D77; Task 10 (Interfaces, Step 4.6, test); Task 22 note removed |
+| F-16 `checked` marker, `-m "not checked"` | Global Constraints (suite gate); Task 1 Step 0; D90; every task's run step |
+| F-17 causes only from events | D80; Task 12 (fixture label row, test) |
+| F-18 spawn counts from Dists | Task 7 (Interfaces, spawn body, fixture, test) |
+| F-19 `c` alias | Task 6 (`param()` returns full config paths) |
+| F-20 `cohort_size` | D84 |
+| F-21 machine depth default = budget | D72; Tasks 1, 6, 7 |
+| F-22 `suppress` vacuous | D74 (deviation); Task 16 test reworded |
+| F-23 member IDs in the base namespace | D75 (deviation) |
+| F-24 laws refuse label tables | D76; Task 4 |
+| F-25 canonical comparison across steps | Task 9 |
+| F-26 S2 identity hashes re-recorded | Task 12 Step 5 |
+| F-27 duplication | Task 3 (`create(..., outbox=False)`); Task 14 comment |
+| F-28 `[project]` not duplicated | Tasks 10, 11 (and courier/causes/refunds fixture text) |
+| F-29 Files lists, one revision edit | Tasks 5, 6, 10, 18 |
+| F-30 what `n_cases` counts | D85; Task 18 |
+| F-31 base rows only in `exogenous_identical` | D78; Task 17 |
+| F-32 root README, grep | Task 21 |
+| F-33 request payload needs | Task 8 Step 4.2 |
+| F-34 execution order 1–6, 12, 7–11, 13–23 | Global Constraints, D90, Task 5 claim corrected, Task 12 heading |
+| F-35 late grants released | D67, D82, D83; Tasks 5 (`release=`, `std.send`), 6 (`late_grants`), 8, 10, 11, 14, 16 |
+| F-36 `engine.max_owner_messages_per_step` | D73; Task 2; Engine reference |
+| F-37 address-change band | Task 14 |
+| F-38 no self-invites; band knob | D91; Tasks 14, 15, 20 |
+| F-39 `legacy_fixture.py` plugin | Task 21 |
+| F-40 PyYAML kept, locked in Task 18 | D84; Task 18 |
+| F-41 `full`/`abuse` validated | Task 14 |
+| F-42 machine code size measured | Task 10 Step 4.7 |
+
 ## Global Constraints
 
 Every task implicitly includes this section. Values are copied from the spec; do not change them.
 
 **Repo and process**
 - Python `>=3.12`; ruff `line-length = 100`. Lint step of every task, exactly: `uv run ruff check $(ls -d libs apps examples/ecommerce_s1 examples/ecommerce_s2 benchmarks 2>/dev/null)`; from Task 14 on, append `examples/ecommerce` to that list (its specs are rewritten there; before Task 14 they are a design sketch that does not import).
-- Tests run with `uv run --all-packages pytest ...`; the full suite `uv run --all-packages pytest` must keep passing after every task.
+- Tests run with `uv run --all-packages pytest ...`. **Suite gate (F-16, F-34):** Task 1 registers two pytest markers in the root `pyproject.toml` — `checked` (every test that builds or runs the checked engine) and `large` (every test that compiles an ecommerce_s2- or ecommerce-sized module) — and every "full suite" in this plan means `uv run --all-packages pytest -m "not checked"`. Tasks 1–5, 7–9 and 11 run their own tests plus `uv run --all-packages pytest libs/simkit -m "not checked and not large"`; the full `-m "not checked"` suite runs at the end of Task 6, of Task 12 (executed right after Task 6, see the execution order), of Task 10 and of every task from Task 13 on. The checked tests (`-m checked`) run once, at the milestone's final review.
 - Test file basenames are unique across the repo; no `__init__.py` in test dirs. Read a date-partitioned folder (`history/`, `labels/`, `postings/`) with `pl.read_parquet(sorted(folder.rglob("*.parquet")))`; an `entities/<t>` folder may be read directly. Fixture projects live in `libs/simkit/tests/fixtures/<name>/` (`datagen.toml` + `specs/pack.py` + `specs/kernels.py` [+ `specs/overlays/<name>.py`]).
 - Kernel modules (`specs/kernels.py`) import only `from neorisk_simkit import std` and `from neorisk_simkit.engine import ...`; overlay modules import only `from neorisk_simkit.spec import Overlay, dist, std` (and `dataclasses`).
 - Stage files by name: **never** `git add -A` or `git add .`. Commit messages end with exactly:
@@ -24,8 +73,8 @@ Every task implicitly includes this section. Values are copied from the spec; do
   Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
   Claude-Session: https://claude.ai/code/session_01BKddEJ7kY3XR8oXDK9HriN
   ```
-- **No checked-mode runs inside tasks** (user directive): no task runs `--checked`, `checked=True` worlds or `NUMBA_BOUNDSCHECK=1`. The checked engine runs once, at the milestone's final review (D90). Uncompiled comparisons (`NUMBA_DISABLE_JIT=1` subprocesses) are allowed where a task asks for them.
-- **Compile time** (D90): a cold Numba compile of an ecommerce_s2-sized module takes 45–90 min on this machine; a small fixture compiles in 1–5 min. Every edit under `engine/`, `std/` or `spec/dist.py` changes the runtime fingerprint and recompiles every module. Hence: keep fixtures small (few events, few processes), write a kernel completely before its first compile, batch engine edits inside a task, run long test files in the background, and never edit engine/std files in Tasks 14–23 (all engine work lands in Tasks 1–12).
+- **No checked-mode runs inside tasks** (user directive): no task runs `--checked`, `checked=True` worlds or `NUMBA_BOUNDSCHECK=1`. The checked engine runs once, at the milestone's final review (D90). Uncompiled comparisons (`NUMBA_DISABLE_JIT=1` subprocesses) are allowed where a task asks for them. The suite gate above keeps the existing checked-mode tests (`test_exit_abi_proof`, `test_engine_execute`, the checked cases of `test_engine_rounds`, `test_spec_accumulators`, `test_engine_codegen`) out of every per-task run (F-16).
+- **Compile time** (D90): a cold Numba compile of an ecommerce_s2-sized module takes 45–90 min on this machine; a small fixture compiles in 1–5 min. Every edit under `engine/`, `std/` or `spec/dist.py` changes the runtime fingerprint and recompiles every module. Hence: keep fixtures small (few events, few processes), write a kernel completely before its first compile, batch engine edits inside a task, run long test files in the background, and never edit engine/std files in Tasks 14–23 (all engine work lands in Tasks 1–12). Tasks that change the runtime fingerprint: 1, 2, 3, 4, 5, 6, 10, 12 (and 9 only if it fixes `std/checked.py`); the execution order below groups 6 and 12 so their rebuilds merge (F-34).
 - **S1 identity:** the S1 reduced-profile dataset hash `4659ac00c0af3e400065aee6cf9d7d89d26a42a4c3a635a0e9d593fada09695d` must stay unchanged by every task except Task 12, which changes S1 output on purpose (`cause_id` values) and records the new hash. Procedure (cold compile ~8 min, warm ~10 s):
   ```bash
   uv run --all-packages datagen run examples/ecommerce_s1 --profile full --seed 42 \
@@ -93,36 +142,36 @@ Where the spec is silent or ambiguous; each line is binding for this plan. Numbe
 - **D62** *Machine compilation.* All machines declared on one owner partition type compile into **one** generated process `mx_<partition>` (one action id), so parents, children and joins of one owner share one `Local` and need no intra-partition messaging. Its kernel source is authoring-dialect text built by `machine.compile`: the text of the kernels file that holds the machines' `@action` functions (if any) followed by the generated machine text; `KernelSpec.source` carries that combined text and `codegen.lowered_kernels` lowers it instead of reading the file. Machines live only on owner partitions (shards keep handwritten kernels). Plan order of processes: base `p.process` in declaration order, then base machine processes (partition order), then overlay machine processes; overlays declare no `p.process`, so base action ids never move.
 - **D63** *Instances.* A machine declares `max_instances=K` (default 1, at most 64); instance memory is `Local` arrays of width `max(K, 2)` named `<machine>__<field>`. Implicit fields: `st` (i16, 0 = free, else 1 + state index), `gen` (i64, bumped on every state entry), `ep` (i64, bumped on allocation), `rep` (i16), `t0` (i64, entry time), `dep` (i8, spawn depth), `par` (i8, parent instance or -1), `pm` (i8, parent machine index), `pep` (i64, parent epoch), `ord` (i8, ordinal among the parent's children), `kids` (i8), `jb` (i64, join bitset), `jn` (i8), `jl` (i8, D69), `actor` (ref), `pactor` (ref); declared `fields={name: "i64"|"ref"|...}` follow. An instance's actor is `ctx.self_id` for a machine on a base owner and its `actor` field (a member row) for a cohort machine.
 - **D64** *Commands and tags.* Command kinds of `mx_<p>`: `START` (0), `MX_FIRE` (1) for every machine timer, and 2.. for the responses of request ops (`on_response`). A tag is `m << 41 | i << 35 | (gen & 0xFFFFF) << 15 | op << 12 | x` (machine ≤ 16 per partition, instance < 64, generation modulo 2^20, op 3 bits, 12-bit index); ops `OP_BRANCH 1, OP_TIMER 2, OP_REPEAT 3, OP_CHAIN 4, OP_SPAWN 5, OP_NOW 6, OP_REQUEST 7`. A popped command whose instance is free or whose generation differs is stale and returns `reject(MX_STALE)` before any write (§04 "stale timers drop when popped"). A stale match after exactly 2^20 entries is accepted as negligible.
-- **D65** *Action ABI.* `@action(state=, max=Res(...), fields={...})` decorates `(ctx, s, m, cmd, out)` and returns an `ActionRef`. An action never calls `out.reserve` (the machine reserves `max` plus its own needs before calling, so an action can never RETRY); it may `return reject(code)` only before its first write; `m.id` is the actor, `m.parent_id` the parent's actor, `m.<field>` a declared instance field (the action's `fields` must be declared by every machine that calls it — validate). The generator copies each called action and its helper call graph per machine (renamed `mx_<m>_<fn>`), rewriting `m.*`, `ctx.cfg` → `ctx.cfg.<machine>` and `site=N` → `site=9000 + 128·copy + N` (actions use sites `0 ≤ N < 128`, at most 163 copies per partition; machine-op draws of state `k` of machine `m` use sites `1 + 16·(32·m + k) + j`, `j < 16`, so a machine has at most 32 states, a partition at most 16 machines, and one state entry at most 16 draw sites — validate). Sites are assigned in declaration order, so edit stability is best effort (§12).
+- **D65** *Action ABI.* `@action(state=, max=Res(...), fields={...})` decorates `(ctx, s, m, cmd, out)` and returns an `ActionRef`. An action never calls `out.reserve` (the machine reserves `max` plus its own needs before calling, so an action can never RETRY); it may `return reject(code)` only before its first write; `m.id` is the actor, `m.parent_id` the parent's actor, `m.<field>` a declared instance field (the action's `fields` must be declared by every machine that calls it — validate). The generator copies each called action and its helper call graph per machine (renamed `mx_<m>_<fn>`), rewriting `m.*`, `ctx.cfg` → `ctx.cfg.<machine>` and `site=N` → `site=9000 + 128·copy + N` (actions use sites `0 ≤ N < 128`, at most 163 copies per partition; machine-op draws of state `k` of machine `m` use sites `1 + 16·(32·m + k) + j`, `j < 16`, so a machine has at most 32 states, a partition at most 16 machines, and one state entry at most 16 draw sites — validate). Sites are assigned in declaration order, so edit stability is best effort (§12). Root-level draws (a member row's cohort `attrs` at START, `root_init` initializers) use a root block per machine: sites `8193 + 16·m + j` (`j < 16`), all below 9000; `_Gen.site(m, None)` returns them and validate counts them (F-09).
 - **D66** *Rejected parts.* A rejected action part never rejects the machine command: the machine commits its own bookkeeping. A part with `.otherwise(b)` runs `b` as the next part; without a fallback the chain ends and the instance enters the state's `on_reject` target if declared, else ends (frees). Rejected parts are counted per machine in `run_stats.json` `machines.<m>.rejects` (the out-tail array `mstat`, D82).
-- **D67** *Request timeout.* Blocking suspension (S1 ruling) means no timer of a suspended owner can fire, so a request op's `timeout` is judged on arrival: a response with `ctx.t − t_request > timeout` takes `on_timeout` (default `on_reject`), whatever it says; `== timeout` is in time. A request op must declare `timeout=` and `on_reject=` (validate).
+- **D67** *Request timeout.* Blocking suspension (S1 ruling) means no timer of a suspended owner can fire, so a request op's `timeout` is judged on arrival: a response with `ctx.t − t_request > timeout` takes `on_timeout` (default `on_reject`), whatever it says; `== timeout` is in time. A request op must declare `timeout=` and `on_reject=` (validate). A response is never silently consumed (F-35): every `std.request` declares `release=` (one action or chain); when a response named `ok` arrives late, the machine stores its payload (`store=`), runs `release` (which must give the grant back, e.g. a refund or void message to the shard) and then enters `on_timeout`; such responses are counted in `machines.<m>.late_grants`. Packs keep `timeout` well above the boundary's latency tail.
 - **D68** *Entry and priorities.* Entering a state happens inside the committing command (no extra command). Machine timers use `PRIO_TIMER`; chain parts after the first and immediate firings (`OP_NOW`: a join with zero children, `until` already true on entry) are queued at `ctx.t` with `PRIO_CONTINUE`, so generated code never recurses. A branch outcome with delay `None` is a 0-delay `PRIO_TIMER` timer.
 - **D69** *Join.* Children of a join are the instances this instance spawned (same owner, `kids` of them). `std.send_parent(msg)` updates the parent's `jb`/`jn` in the child's command (one process, D62) whatever state the parent is in, so a child that answers before the parent reaches its join state is not lost; a duplicate child ordinal is suppressed by `jb`. A join state completes when `jn == kids`: on entry (via `OP_NOW`, zero children included) or on the message that completes it. After the parent has left a join state (completion or timeout), or when the parent ended or its epoch changed, a message is late: dropped, and counted in `machines.<m>.late` when that join state declared `late="count"` (instance field `jl`: 0 none, 1 left an ignoring join, 2 left a counting join). Children send exactly the message their parent's join names (validate). A join completing at the same instant as its timeout: whichever command pops first wins (canonical queue order); the loser is stale.
 - **D70** *until.* Typed conditions `std.cond.ge|le|eq(a, b)` and `std.cond.repeats_ge(n)` over instance fields, owner state columns, the repeat count and constants; evaluated on entering the state and after each committed action of that instance in that state; true → `then` target via `OP_NOW`.
 - **D71** *Branch probabilities.* An outcome's probability is a float, `std.p_by(col, {value: p}, otherwise=p)` (by an owner state category) or `None`; at most one outcome is `None` and takes `1 − Σ others`; without a `None` outcome the probabilities must sum to 1 within 1e-9 (validate: "give the unpicked mass an explicit otherwise outcome").
-- **D72** *Spawn depth at runtime (resolves F-04, supersedes D42's static check).* `p.process(..., max_spawn_depth=)` and `p.machine(..., max_spawn_depth=)` default to `budget.max_spawn_depth`. Each slot has a hidden `depth` (population owners and shards 0; a created owner = creator + 1); a same-owner child instance has `dep` = parent + 1. A creation or spawn beyond the creating process's limit fails the run: `CapExceeded("max_spawn_depth", limit, depth, process=<creator>)` (admission) or `EngineError("<machine>: spawn depth ...")` (in-kernel). validate no longer refuses creation cycles (they are bounded at runtime) and refuses `max_spawn_depth < 1` per process.
-- **D73** *Owner-to-owner messages (resolves D57).* A `p.message` from an owner partition to an owner partition is allowed when (a) its latency's minimum is ≥ `engine.step_max` (so delivery `t + latency` always lands in a later step and does not depend on step length) and (b) the target partition has a population (targets are addressed by the target table's dense id, the population ordinal). Rows are set aside at routing, delivered at the end of the step's rounds (before `end_step`) into the target's queue under the sender's D61 key; a target that has not arrived, has retired or is a member row (id ≥ population n) is dropped and counted in `late_messages`.
-- **D74** *Execution owner (§08 "a parameterized execution_owner").* A base pack exposes an owner partition with `p.expose_owner("user")`. An overlay cohort creates a new owner partition type (one owner per campaign, keyed by `execution_owner`, default `<cohort>_id`) with `acts_for="user"`: its processes may emit every event of `user`, send every boundary whose `frm` is `user`, and create member rows of the `user` table with `out.add_member_user(...)` (a row in `entities/user`, no owner admission). Base users always execute as their own owners.
-- **D75** *Member identity.* Namespace codes: base creatable tables, base `p.ids`, then tables and ids added by overlays, so base codes never move. A member row of a population table gets dense index `n_population + k` (k by the §12 prefix sum), so base IDs never move; the D48 ref range for that table becomes `[0, pop.next) ∪ [n, id_bases[table])`.
-- **D76** *Labels.* `p.labels(name, owner=, cols=)` declares hidden label records (record group `"labels"`, like D45 postings): emitted with `out.emit_<name>`, written to `labels/<name>/date=YYYY-MM-DD/step-NNNNNN.parquet`, counted in manifest `label_counts`, typed `"label"` in `schema.json`, never in `counts`, `exported_events`, `_index/steps.parquet` or replay. `o.label(...)` declares `labels_<cohort>` with columns `target_id, campaign_id, role, outcome, final_label, label_available_at`; a target's label is its last row. *Deviation:* §13 shows `labels/part-*.parquet`; per-step files keep the writer streaming like every other table.
-- **D77** *Overlay parameters.* `apply(o, **params)` gets values from `[profiles.<p>.overlay.<name>]` then `--set <name>.<param>=v`; only `int|float|str|bool` defaults are settable (a `Dist` default is fixed in code). Overlays are enabled by `[profiles.<p>] overlays = [...]` or `--overlay NAME` (repeatable); the run name is `<profile>-s<seed>+<o1>+<o2>`. Overlay op parameters live in the machine process config, so `--set` never changes generated source (no recompile).
-- **D78** *Regression rule.* An overlay shares decision-relevant state iff one of its processes sends a boundary whose target is a base shard or base owner (`checks.interference.shared_partitions(plan)`). Base rows are the rows of base partitions; they are compared with `event_id` excluded (event dense ids advance by overlay rows of earlier steps) and created IDs canonicalized (D37). No sharing ⇒ base rows equal as multisets. Sharing ⇒ base entity rows equal, base rows with `event_time` before the overlay's first boundary row to a shared partition equal, every required law passes in both runs, and the interference report lists the changes.
+- **D72** *Spawn depth at runtime (resolves F-04, supersedes D42's static check).* `p.process(..., max_spawn_depth=)` and `p.machine(..., max_spawn_depth=)` default to `budget.max_spawn_depth`. Each slot has a hidden `depth` (population owners and shards 0; a created owner = creator + 1); a same-owner child instance has `dep` = parent + 1. A creation or spawn beyond the creating process's limit fails the run: `CapExceeded("max_spawn_depth", limit, depth, process=<creator>)` (admission) or `EngineError("<machine>: spawn depth ...")` (in-kernel). validate no longer refuses creation cycles (they are bounded at runtime) and refuses `max_spawn_depth < 1` per process. Machines use the same default: `max_spawn_depth` of a machine (instance depth `dep`) and of `mx_<p>` (created owners) is the declared value or `budget.max_spawn_depth`, resolved at plan build (`build_plan(..., default_spawn_depth=)` from `resolve_run`) and stored as the op parameter `x_<m>.maxdep` (F-21).
+- **D73** *Owner-to-owner messages (resolves D57; F-02, F-36).* A `p.message` from an owner partition to an owner partition is allowed when (a) its latency's minimum is ≥ `engine.step_max` (so delivery `t + latency` always lands in a later step) and (b) the target partition has a population (targets are addressed by the target table's dense id, the population ordinal). Routing moves such rows into a carried buffer (`World.o2o`, capacity `engine.max_owner_messages_per_step` rows sent per step, default 100,000, its own `CapExceeded("max_owner_messages_per_step", ...)`), ordered by `(delivery time, D61 sender key, src_seq)`. At the start of every step, before its rounds, every buffered row due in `[t0, t1)` is delivered: presence is judged **at the delivery time** — the target is late (dropped, counted in `late_messages`) if it has not arrived by `t_deliver` (`pop.times[d] > t_deliver`), if its slot is free, or if it retired idle at or before `t_deliver` (`retire_at <= t_deliver` with an empty queue), and also when `d ≥ n` (a member row). Because delivery and presence depend only on times, the result does not depend on step length.
+- **D74** *Execution owner (§08 "a parameterized execution_owner").* A base pack exposes an owner partition with `p.expose_owner("user")`. An overlay cohort creates a new owner partition type (one owner per campaign, keyed by `execution_owner`, default `<cohort>_id`) with `acts_for="user"`: its processes may emit every event of `user`, send every boundary whose `frm` is `user`, and create member rows of the `user` table with `out.add_member_user(...)` (a row in `entities/user`, no owner admission). Base users always execute as their own owners. Recorded deviations (F-22): `Pack.owner(execution_owner=)` stays unused — the spec's parameterized base `execution_owner` becomes `p.expose_owner` plus the cohort's key name; `suppress=` is validated and recorded but has no runtime effect, because members are never admitted as base owners; exposed actions run with the cohort's `s`, so they must not read the base owner's state (documented in the pack, enforced only by lowering errors); members cannot receive owner-to-owner messages (D73).
+- **D75** *Member identity.* Namespace codes: base creatable tables, base `p.ids`, then tables and ids added by overlays, so base codes never move. A member row of a population table gets dense index `n_population + k` (k by the §12 prefix sum), so base IDs never move; the D48 ref range for that table becomes `[0, pop.next) ∪ [n, id_bases[table])`. *Spec deviation (F-23):* §08 says member IDs come from "their own deterministic namespace"; here they are a deterministic, non-colliding range `[n, …)` of the base table's ID space, so that base events (`user_id`, `invited_by`) can reference members.
+- **D76** *Labels.* `p.labels(name, owner=, cols=)` declares hidden label records (record group `"labels"`, like D45 postings): emitted with `out.emit_<name>`, written to `labels/<name>/date=YYYY-MM-DD/step-NNNNNN.parquet`, counted in manifest `label_counts`, typed `"label"` in `schema.json`, never in `counts`, `exported_events`, `_index/steps.parquet` or replay. `o.label(...)` declares `labels_<cohort>` with columns `target_id, campaign_id, role, outcome, final_label, label_available_at`; a target's label is its last row. *Deviation:* §13 shows `labels/part-*.parquet`; per-step files keep the writer streaming like every other table. Laws may not name label tables (validate: "label table <name> cannot be checked by a law"), since `LawBook` reads events and postings only (F-24).
+- **D77** *Overlay parameters.* `apply(o, **params)` gets values from `[profiles.<p>.overlay.<name>]` then `--set <name>.<param>=v`; only `int|float|str|bool` defaults are settable (a `Dist` default is fixed in code). `resolve_run(..., overlays=None)` uses the profile's `overlays` list; an explicit list (including `[]`) replaces it; on the CLI `--overlay NAME` (repeatable) appends to the profile's list and `--no-overlays` clears it (F-15). The run name is `<profile>-s<seed>+<o1>+<o2>`. Every literal a machine uses — branch probabilities, delays, timeouts, counts, ints/floats in values, `std.near` bases and bounds, request payload ints — is an op parameter in the machine process config (`c.<name>`), so `--set` of a pack config field or an overlay parameter never changes generated source (no recompile) (F-10).
+- **D78** *Regression rule.* An overlay shares decision-relevant state iff one of its processes sends a boundary whose target is a base shard or base owner (`checks.interference.shared_partitions(plan)`). Base rows are the rows of base partitions; they are compared with `event_id` excluded (event dense ids advance by overlay rows of earlier steps) and created IDs canonicalized (D37). No sharing ⇒ base rows equal as multisets. Sharing ⇒ base entity rows equal, base rows with `event_time` before the overlay's first boundary row to a shared partition equal, every required law passes in both runs, and the interference report lists the changes. Comparisons also map `cause_id` through the same raw `event_id` → canonical position map as `event_id` (F-01), and only base rows of shared tables are compared: entity rows with `origin != "member"` and the first `n_base` rows of read tables that cohort recipes append to (F-31).
 - **D79** *Interference report.* For `stat.interference(base=E, cause=S)`: per base event type count with and without the overlay; the number of base owners whose `E` rows differ; and, for shard `S`, base requests answered differently (granted ↔ rejected) — read from the two datasets, written to `checks.json` and `report.html`.
-- **D80** *`cause_id` (resolves D14).* The `event_id` of the first record (lowest `seq`) of the nearest commit in the command's causal chain that emitted a record; null when the chain starts at a population/periodic `START` without such a commit or the causing record was not exported (warm-up). Nodes carry `cpid`/`ceid`; a per-worker commit log resolves causes at seal (Task 12).
-- **D81** *`sum_le` against state (resolves F-07).* `law.sum_le("refund_issued.amount", "order.amount", by="order_id")`: when the right side is `<owner table>.<column>`, `by` must name the owner table's key; the law keeps the last seen value per key (read from live and just-retired owners at each seal, warm-up included) and judges each exported left-side row's running sum against it; a key never seen on the right is judged against 0.
-- **D82** *Machine statistics.* `out.mstat(i, v)` adds to a per-worker `int64` array (out tail `mstat`); per machine the counters are `late, rejects, spawned, entries[state]`; `World.take_machine_stats()` folds them; `run_stats.json["machines"]` reports them (never the manifest, so packs without machines keep byte-identical manifests).
-- **D83** *Request op form.* `std.request(local, ok="granted", shard=0, store={resp_field: instance_field}, **payload)`; responses other than `ok` take `on_reject`.
-- **D84** *Expectations.* `expectations.yaml` is parsed with PyYAML (new runtime dependency of `neorisk-simkit`); each `metric:` is a string parsed by `ast` as one call `stat.<name>(kw=literal, ...)` (no expressions). Supported metrics: `funnel, share, quantiles, top_share, distribution, cohort_share, interference`. Targets: `between`, `lt`, `gt`, `around`+`tolerance`, `reported`, per-quantile maps.
-- **D85** *Sampling and confidence.* Cases are owners (`partition_id`). A case is sampled when `mix64(partition_id) / 2^64 < rate`; strata are the base partitions and each cohort partition; a stratum's rate is raised to reach `min_sample` cases (or all); estimates are inverse-probability weighted per stratum; campaigns are whole owners, so "sampled whole" holds. Proportions get a 95% Wilson interval on effective case counts; quantiles a binomial order-statistic interval; a metric with fewer than `min_sample` cases is `inconclusive`. Funnels with `within=` censor cases whose start is later than `end − within` and report the censoring rate. Held-out seeds are deferred (Later).
+- **D80** *`cause_id` (resolves D14; F-01, F-17).* The `event_id` of the first record (lowest `seq`) of the nearest commit in the command's causal chain that emitted an **event** (`group == "events"`); posting and label rows receive a `cause_id` but are never a cause. Null when the chain starts at a population/periodic `START` without such a commit or the causing event was not exported (warm-up). Nodes carry `cpid`/`ceid`; a per-worker commit log resolves causes at seal (Task 12). Raw event ids depend on step boundaries, so every comparison across runs (`conftest.canonicalize_ids`, `checks.interference.canonical_rows`) maps `cause_id` through the raw `event_id` → canonical position map it already builds for `event_id`; `cause_id` is never excluded from a comparison.
+- **D81** *`sum_le` against state (resolves F-07).* `law.sum_le("refund_issued.amount", "order.amount", by="order_id")`: when the right side is `<owner table>.<column>`, `by` must name the owner table's key; the law keeps the last seen value per key (read from live and just-retired owners at each seal, warm-up included) and judges each exported left-side row's running sum against it; a key never seen on the right is judged against 0. Owner state holds dense ids; `_SumLeState._refresh` converts them with `io.seal.public_ids(seed, <owner table>, self_id)` before comparing with the left table's public key column (F-12).
+- **D82** *Machine statistics.* `out.mstat(i, v)` adds to a per-worker `int64` array (out tail `mstat`); per machine the counters are `late, rejects, spawned, entries[state]`; `World.take_machine_stats()` folds them; `run_stats.json["machines"]` reports them (never the manifest, so packs without machines keep byte-identical manifests). Counters per machine: `late, rejects, spawned, late_grants` (D67), then one entry counter per state and final.
+- **D83** *Request op form.* `std.request(local, ok="granted", shard=0, store={resp_field: instance_field}, release=<action or chain>, **payload)` (`release` mandatory, F-35); `std.send(local, to=0, **payload)` is the one-way message part releases use; responses other than `ok` take `on_reject`.
+- **D84** *Expectations.* `expectations.yaml` is parsed with PyYAML, a new runtime dependency of `neorisk-simkit` added and locked (`uv lock`, with the package index reachable) in Task 18 — *spec deviation (F-40):* §17's dependency list names no YAML parser, but §02/§16 mandate `expectations.yaml`. Each `metric:` is a string parsed by `ast` as one call `stat.<name>(kw=literal, ...)` (no expressions). Supported metrics: `funnel, share, quantiles, top_share, distribution, cohort_size, interference` (§11's "cohort shares" are covered by `cohort_size` against a configured size; a `cohort_share` metric is not implemented, F-20). Targets: `between`, `lt`, `gt`, `around`+`tolerance`, `reported`, per-quantile maps.
+- **D85** *Sampling and confidence.* Cases are owners (`partition_id`). A case is sampled when `mix64(partition_id) / 2^64 < rate`; strata are the base partitions and each cohort partition; a stratum's rate is raised to reach `min_sample` cases (or all); estimates are inverse-probability weighted per stratum; campaigns are whole owners, so "sampled whole" holds. Proportions get a 95% Wilson interval on effective case counts; quantiles a binomial order-statistic interval; a metric with fewer than `min_sample` cases is `inconclusive`. Funnels with `within=` censor cases whose start is later than `end − within` and report the censoring rate. Held-out seeds are deferred (Later). Sampling is by owner; `n_cases` (what `min_sample` counts) is the number of the metric's units (funnel `unit` values, rows' owners for shares and quantiles) within sampled owners (F-30).
 - **D86** *`datagen check`.* `datagen check <project> --profile P [--overlay N] [--baseline DIR]` reads `out/<run>`, writes `reports/<run>/report.html` and `checks.json`, and exits 0 when every required check passes, **5** when a required check fails, is missing, inconclusive or unanchored (no `source:`), 2 on usage errors.
 - **D87** *Legacy adapter mapping.* `order_placed` → `event_type 0`; `referral_bonus_paid` with `role = "inviter"` → `event_type 1` with `user_id` = the invitee and `inviter_id` = the inviter; `event_id` = `"<event type>:<engine event_id>"`; amounts in dollars (`float64`, cents / 100); user, device and product attributes as integer codes as of the event time (`user_state` from the `address` change group); `label = 1` when the row's user (or, for invite rows, its inviter) is a labeled cohort target, label maturity ignored (M4); `golden.parquet` = batch rolling features of today's names plus `actor_role` and `score = label`; `meta.json` carries `feature_allowlist`, `source` (pack, revision, overlays, run) and the run's seed.
 - **D88** *Parity.* Parity means: the adapter output passes `neorisk_simkit.export` validation, bench `load_events`, `runner.run` and `compare` on it, and the properties today's fraud tests pin (determinism, no golden leakage, bad rate band, stable attributes, invites reference other users, planted bounty-hunter signature, no future leakage, aligned golden) hold — `apps/datagen/tests/test_legacy_fraud_parity.py` ports `test_datagen_fraud.py` to the adapter.
 - **D89** *Fraud scenario retired.* `apps/datagen/src/datagen/scenarios/`, `datagen/config.py` and `datagen generate` are deleted; `datagen generate` prints the replacement command and exits 2. The library's legacy modules (`attributes`, `entities`, `features`, `scorer`, `references`, `export`) stay (bench uses `features.rolling*`; the adapter uses `export`).
-- **D90** *Process.* Checked-mode runs only at the milestone's final review; engine edits only in Tasks 1–12; examples tasks change `examples/` and `checks/`/`io`/apps code outside the runtime fingerprint.
-- **D91** *E-commerce model.* `examples/ecommerce` is rewritten to the real API (the current files are a design sketch): owner `user` (population; invitees are population users with `referred` and `invited_by` among the first `inviter_share` of users), created owner `order` (one per placed order, ≤ 7 columns, D43) running the `fulfillment` machine, shards `inventory` (hold table, D49) and `referral_pool` (n = 1, budget reset every 30 days by a periodic process — "monthly" approximated), owner-to-owner `inviter_credit` (D73, one-day minimum latency, `engine.step_max = "1d"`). Carts hold up to 5 lines. `flash_sale` is deferred (D93).
+- **D90** *Process.* Checked-mode runs only at the milestone's final review; engine edits only in Tasks 1–12; examples tasks change `examples/` and `checks/`/`io`/apps code outside the runtime fingerprint. Per-task test runs use the suite gate of Global Constraints (`-m "not checked"`, F-16); execution order 1–6, 12, 7–11, 13–23 (F-34).
+- **D91** *E-commerce model.* `examples/ecommerce` is rewritten to the real API (the current files are a design sketch): owner `user` (population; invitees are population users with `referred` and `invited_by` among the first `inviter_share` of users), created owner `order` (one per placed order, ≤ 7 columns, D43) running the `fulfillment` machine, shards `inventory` (hold table, D49) and `referral_pool` (n = 1, budget reset every 30 days by a periodic process — "monthly" approximated), owner-to-owner `inviter_credit` (D73, one-day minimum latency, `engine.step_max = "1d"`). Carts hold up to 5 lines. `flash_sale` is deferred (D93). An invitee's inviter is drawn among the first `inviter_share` of users excluding itself (the shopper kernel maps a self-draw to the next ordinal, F-38).
 - **D92** *Gates in M3.* §18 sets no M3 gate. Task 23 re-measures the S1 gate (≤ 60 s warm, ≤ 16 GB) and `s2_pool` (both D55 rates) after the engine changes; `s2` full stays "not measured" on this machine. The open S2 items are carried, not resolved (see "Open items carried").
 - **D93** *Deferred overlay pieces.* `flash_sale` (needs `existing=True` cohorts of base owners and shard-state hooks `pick_skus`/`adjust_stock`), cohorts with `existing=True`, and machines on shards are Later; machines and overlays in M3 cover the bounty-hunter overlay and the fixtures.
-- **D94** *Cohort references.* A refs recipe given on a cohort (`o.cohort(..., refs={"device": std.devices(...)})`) appends its rows to the base read table after the base rows (ids offset by the base row count), so base device IDs never move; `std.pick_ref(refs, parent_share=p)` initializes an instance field from the owner's refs (with probability `p` the parent's value).
+- **D94** *Cohort references.* A refs recipe given on a cohort (`o.cohort(..., refs={"device": std.devices(...)})`) appends its rows to the base read table after the base rows (ids offset by the base row count), so base device IDs never move; `std.pick_ref(refs, parent_share=p)` initializes an instance field from the owner's refs (with probability `p` the parent's value). Process refs are keyed by population: `ProcessDef.refs` maps a local name to `"<population table>:<refs name>"` (a bare name means the process's own partition's population), so a cohort machine's `ctx.refs.device` reads the cohort's CSR, never the base users' (F-08).
 
 ## Review Focus
 
@@ -143,7 +192,7 @@ Everything in the S1 Engine reference and the S2 deltas stays except:
 - **Hidden arrays:** `("depth", "uint8", 1)` appended (D72).
 - **World tuple `W`:** `WORLD_FIELDS` += `"max_depth"` (int64[actions], resolved limit per action) (Task 1).
 - **Admission statuses:** `ADM_DEPTH = 4` (value = the CQ row) (Task 1).
-- **Route tuple `R`:** `RT_O2O` (28): `(cols int64[C, len(OUTBOX_COLS)], pay int64[C, PAYLOAD_W], n int64[1])` with `C = engine.max_messages_per_step`; `RT_BND_O2O` (29): `uint8[boundaries]` (Task 2).
+- **Route tuple `R`:** `RT_O2O` (28): the carried owner-message buffer `(cols int64[C, len(OUTBOX_COLS) + 6], pay int64[C, PAYLOAD_W], n int64[1])` (outbox columns, then the D61 sender key) with `C = engine.max_owner_messages_per_step` (default 100,000, F-36); `RT_BND_O2O` (29): `uint8[boundaries]` (Task 2).
 - **`out` tuple tail:** `OUT_TAIL = ("outbox", "lat", "shard_n", "seed", "cmd_kind", "acc", "mstat", "clog", "clog_n")`; `mstat` int64[max(1, machine counters)] (Task 6); `clog` int64[cap, 5] `(pid, lamport, cpid, clamport, ceid)` and `clog_n` int64[1] (Task 12).
 - **Command nodes:** `NODE_FIELDS` += `("cpid", "int64"), ("ceid", "int64")` (Task 12); `NODE_BYTES` follows.
 - **Generated helpers:** `_member_<table>(out, ctx, *cols) -> handle` (Task 3), `_mstat(out, ctx, i, v)` (Task 6). Lowering: `out.add_member_<table>(**cols)`, `out.mstat(i, v)`.
@@ -181,7 +230,7 @@ examples/ecommerce/{README.md,datagen.toml,specs/{brief.md,expectations.yaml,pac
 examples/README.md  examples/AGENTS.md  benchmarks/README.md (M3 section)
 ```
 
-Task dependency order: execute in numeric order. Hard dependencies: 1 → 2 → 3 → 4 (engine seams: hidden arrays, route tuple, layout, writer); 5 needs 4; 6 needs 5; 7 needs 6; 8 needs 7 and 1; 9 needs 8; 10 needs 3, 4, 8; 11 needs 10; 12 needs 11 (last engine edit); 13 needs 12; 14 needs 13; 15 needs 14 and 2; 16 needs 15 and 10; 17 needs 16; 18 needs 17; 19 needs 18; 20 needs 16; 21 needs 20; 22 needs 19 and 21; 23 needs 22.
+**Execution order (F-34): 1, 2, 3, 4, 5, 6, 12, 7, 8, 9, 10, 11, 13, 14, …, 23** — task numbers are unchanged; Task 12 (`cause_id`) needs no machine and runs right after Task 6 so its engine rebuild merges with Task 6's, and Task 9 re-verifies machine processes with `cause_id` populated. Hard dependencies: 1 → 2 → 3 → 4 (engine seams: hidden arrays, route tuple, layout, writer); 5 needs 4; 6 needs 5; 12 needs 6 (and 2 for the owner-message buffer); 7 needs 6 and 12; 8 needs 7 and 1; 9 needs 8; 10 needs 3, 4, 8; 11 needs 10; 13 needs 11 and 12; 14 needs 13; 15 needs 14 and 2; 16 needs 15 and 10; 17 needs 16; 18 needs 17; 19 needs 18; 20 needs 16; 21 needs 20; 22 needs 19 and 21; 23 needs 22. Task 10 is the last task that edits the runtime fingerprint.
 
 ---
 ### Task 1: Spawn depth at runtime, per process (F-04, D72)
@@ -191,12 +240,24 @@ S2's D42 refused every owner-creation cycle at validate and used one budget-wide
 **Files:**
 - Create: `libs/simkit/tests/fixtures/recur/{datagen.toml,specs/pack.py,specs/kernels.py}`
 - Modify: `libs/simkit/src/neorisk_simkit/spec/pack.py` (`process(..., max_spawn_depth=None)`), `spec/plan.py` (`ProcessDef.max_spawn_depth`), `spec/validate.py` (drop `_spawn_errors`, `_creation_cycle`, `_longest_spawn_chain`; per-process check), `engine/world.py` (`HIDDEN_DTYPES` += `depth`; `_reset_slots` zeroes it; `max_depth` array in `W`; `admit_created` handles `ADM_DEPTH`), `engine/admit.py` (`ADM_DEPTH = 4`), `engine/codegen.py` (`WORLD_FIELDS` += `"max_depth"`; `admit()` checks and writes depth)
-- Modify tests: `libs/simkit/tests/test_spec_validate.py` (replace `test_chain_depth_two_is_valid_and_bounded` and `test_creation_cycle_is_an_unbounded_spawn`)
+- Modify tests: `libs/simkit/tests/test_spec_validate.py` (replace `test_chain_depth_two_is_valid_and_bounded` and `test_creation_cycle_is_an_unbounded_spawn`; `test_hidden_bytes_follow_the_world_dtype_table` gets the new literal, F-03)
+- Modify (suite gate, F-16/F-34): root `pyproject.toml` (register the `checked` and `large` markers); mark `checked` on the checked-mode tests of `libs/simkit/tests/{test_exit_abi_proof,test_engine_execute,test_engine_rounds,test_spec_accumulators,test_engine_codegen}.py` (module-level `pytestmark` where every test is checked, a decorator on the individual tests otherwise); mark `large` on `libs/simkit/tests/test_exit_invariance_s2.py` and `apps/datagen/tests/{test_example_ecom_s2,test_example_ecom_s2_hold_table,test_example_ecom_s2_payments,test_example_ecom_s2_pool,test_example_ecom_s2_refunds,test_reference_kernels_s2,test_benchmark_s2,test_benchmark_s1}.py`
 - Test: `libs/simkit/tests/test_engine_spawn_depth.py`
 
 **Interfaces:**
 - Consumes: S2 admission (`admit_created(W, R, CQ, FS, limit_t, out_slots)`, `CQ_SRC_G`, `CQ_ACTION`), `CapExceeded(item, limit, attempted, process=)`.
-- Produces: `Pack.process(..., max_spawn_depth: int | None = None)`; `ProcessDef.max_spawn_depth: int | None = None` (last field, default None); hidden array `depth` (uint8); `W[_W_MAX_DEPTH]` int64[actions] = `pd.max_spawn_depth or run.budget.max_spawn_depth`; `World.max_depth` (same array); `admit.ADM_DEPTH = 4` with value = the CQ row; `World.admit_created` raises `CapExceeded("max_spawn_depth", limit, depth, process=<creating process>)`. Task 7 reuses `World.max_depth` semantics for machines (`ProcessDef.max_spawn_depth` of `mx_<p>`).
+- Produces: `Pack.process(..., max_spawn_depth: int | None = None)`; `ProcessDef.max_spawn_depth: int | None = None` (last field, default None); hidden array `depth` (uint8); `W[_W_MAX_DEPTH]` int64[actions] = `pd.max_spawn_depth or run.budget.max_spawn_depth`; `World.max_depth` (same array); `admit.ADM_DEPTH = 4` with value = the CQ row; `World.admit_created` raises `CapExceeded("max_spawn_depth", limit, depth, process=<creating process>)`. Machines use the same default (D72, F-21): `mx_<p>`'s `ProcessDef.max_spawn_depth` (created owners, through `World.max_depth`) and each machine's instance limit `x_<m>.maxdep` (Task 7) are the declared value or `budget.max_spawn_depth`.
+
+- [ ] **Step 0: The suite gate (F-16)** — in the root `pyproject.toml`:
+```toml
+[tool.pytest.ini_options]
+testpaths = ["libs", "apps"]
+markers = [
+    "checked: builds or runs the checked engine; run once at the milestone review (-m checked)",
+    "large: compiles an ecommerce_s2- or ecommerce-sized module (45-90 min cold)",
+]
+```
+Mark the tests listed in Files (`pytestmark = pytest.mark.checked` / `@pytest.mark.checked`, `pytestmark = pytest.mark.large`). Check: `uv run --all-packages pytest --collect-only -q -m checked` lists only checked-mode tests (every test that passes `checked=True`, `--checked` or sets `NUMBA_BOUNDSCHECK`), and `-m "not checked"` collects everything else. From here on every "suite gate" is the one in Global Constraints.
 
 - [ ] **Step 1: Write the fixture**
 
@@ -329,6 +390,7 @@ def test_creation_cycle_validates(fixture_project):
                                                  requests=1))
     assert validate(cyc).ok
 ```
+and in `test_hidden_bytes_follow_the_world_dtype_table` the literal becomes `9 * 8 + 4 * 5 + 2 + 1 + 4 * 3 + 4 * 2 + 8 * 4 + 1 + 1` (the new `depth` byte).
 
 - [ ] **Step 3: Run the tests to verify they fail**
 
@@ -368,7 +430,7 @@ Expected: FAIL — `PackError`/`TypeError` (`process() got an unexpected keyword
 - [ ] **Step 5: Run the tests**
 
 Run: `uv run --all-packages pytest libs/simkit/tests/test_engine_spawn_depth.py libs/simkit/tests/test_spec_validate.py libs/simkit/tests/test_engine_admit.py -q`
-Expected: PASS. Then the full suite `uv run --all-packages pytest -q` (in the background; every module recompiles once) — PASS. Then the S1 reduced-profile hash (Global Constraints) — unchanged.
+Expected: PASS. Then the suite gate (Global Constraints: `uv run --all-packages pytest libs/simkit -m "not checked and not large"`) — PASS. Then the S1 reduced-profile hash (Global Constraints) — unchanged.
 
 - [ ] **Step 6: Lint and commit**
 
@@ -378,7 +440,12 @@ git add libs/simkit/src/neorisk_simkit/spec/pack.py libs/simkit/src/neorisk_simk
   libs/simkit/src/neorisk_simkit/spec/validate.py libs/simkit/src/neorisk_simkit/engine/world.py \
   libs/simkit/src/neorisk_simkit/engine/admit.py libs/simkit/src/neorisk_simkit/engine/codegen.py \
   libs/simkit/tests/fixtures/recur libs/simkit/tests/test_engine_spawn_depth.py \
-  libs/simkit/tests/test_spec_validate.py
+  libs/simkit/tests/test_spec_validate.py pyproject.toml libs/simkit/tests/test_exit_abi_proof.py \
+  libs/simkit/tests/test_engine_execute.py libs/simkit/tests/test_engine_rounds.py \
+  libs/simkit/tests/test_spec_accumulators.py libs/simkit/tests/test_engine_codegen.py \
+  libs/simkit/tests/test_exit_invariance_s2.py apps/datagen/tests/test_example_ecom_s2*.py \
+  apps/datagen/tests/test_reference_kernels_s2.py apps/datagen/tests/test_benchmark_s2.py \
+  apps/datagen/tests/test_benchmark_s1.py
 git commit -m "feat(engine): spawn depth is a runtime counter bounded per process (F-04, D72)
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
@@ -389,22 +456,25 @@ Claude-Session: https://claude.ai/code/session_01BKddEJ7kY3XR8oXDK9HriN"
 
 ### Task 2: Owner-to-owner messages (D57 → D73)
 
+Presence of the target is judged **at the delivery time** (F-02), from a buffer carried across steps, so whether a message is delivered or late does not depend on where step boundaries fall.
+
 **Files:**
 - Create: `libs/simkit/tests/fixtures/courier/{datagen.toml,specs/pack.py,specs/kernels.py}`
-- Modify: `spec/plan.py` (`BoundaryDef.o2o`), `spec/validate.py` (owner→owner rules), `engine/route.py` (`RT_O2O`, `RT_BND_O2O`, set-aside in `route_outbox`, `deliver_owner_messages`), `engine/world.py` (`_build_route` adds the buffer; `pop_slot` per population table; `deliver_owner_messages()`; `_free_retired` clears `pop_slot` — that function lives in `io/seal.py`), `engine/rounds.py` (call delivery before `end_step`), `engine/codegen.py` (`_send_<b>` skips the shard-range check for owner targets), `io/seal.py` (`_free_retired`), `spec/caps.py` (`requests_and_inboxes` counts the buffer)
+- Modify: `spec/plan.py` (`BoundaryDef.o2o`), `spec/project.py` (`EngineSettings.max_owner_messages_per_step`, toml key `engine.max_owner_messages_per_step`, default `100_000`), `spec/validate.py` (owner→owner rules), `engine/route.py` (`RT_O2O`, `RT_BND_O2O`; set-aside in `route_outbox` with status `NEED_O2O`; `deliver_owner_messages`), `engine/world.py` (`_build_route` adds the carried buffer; `pop_slot` per population table; `deliver_owner_messages(t0, t1)`), `engine/rounds.py` (delivery at step start), `engine/codegen.py` (`_send_<b>` skips the shard-range check for owner targets), `io/seal.py` (`_free_retired` clears `pop_slot`; the buffer's payload and sender id are remapped with the world), `spec/caps.py` (`requests_and_inboxes` counts the buffer)
 - Test: `libs/simkit/tests/test_engine_owner_messages.py`
 
 **Interfaces:**
-- Consumes: S2 `route_outbox(R, CQ, ob, n)`, `sender_keys`, `q_push_from`, `pay_alloc`, `World.mark_touched`, counters row 0 `late_messages`.
-- Produces: `BoundaryDef.o2o: bool = False` (True for owner→owner messages); route indices `RT_O2O = 28` (tuple `(cols int64[C, len(OUTBOX_COLS)], pay int64[C, PAYLOAD_W], n int64[1])`), `RT_BND_O2O = 29` (uint8[boundaries]); `route.deliver_owner_messages(R, slots) -> (status, k)` with statuses `ROUTED/NEED_NODES/NEED_PAYLOAD` and `slots` a tuple (indexed by boundary code) of int64 arrays mapping target dense id → global slot (-1 = absent; an empty array for non-o2o boundaries); `World.pop_slot: dict[str, np.ndarray]` (population table → int64[n], -1 when the owner is not live); `World.deliver_owner_messages()`; validate errors `"boundary {b}: owner-to-owner messages need a minimum latency >= engine.step_max ({step_max})"` and `"boundary {b}: owner-to-owner messages need a target partition with a population"`. Task 15 (`inviter_credit`) consumes all of this.
+- Consumes: S2 `route_outbox(R, CQ, ob, n)`, `sender_keys`, `_route_order`, `q_push_from`, `pay_alloc`, `mark_touched`, counters row 0 `late_messages`, `World.admit_population`, `pop.times`, hidden `retire_at`/`qhead`/`pending`/`alive`.
+- Produces: `BoundaryDef.o2o: bool = False` (True for owner→owner messages); `EngineSettings.max_owner_messages_per_step: int = 100_000` — the capacity, in rows, of the carried buffer of owner messages sent and not yet delivered (`CapExceeded("max_owner_messages_per_step", cap, attempted)` when full); route indices `RT_O2O = 28` (tuple `(cols int64[C, len(OUTBOX_COLS) + 6], pay int64[C, PAYLOAD_W], n int64[1])`: the outbox columns, then the D61 sender key `k0..k5` computed when the row is routed — the sender's slot may be reused before delivery), `RT_BND_O2O = 29` (uint8[boundaries]); route status `NEED_O2O = 5`; `route.deliver_owner_messages(R, slots, times, retire_at, t0, t1, out_slots) -> (status, k)` (statuses `ROUTED`/`NEED_NODES`/`NEED_PAYLOAD`; `slots` and `times` are tuples indexed by boundary code: target dense id → global slot (-1 = not live) and → population arrival time; empty arrays for non-o2o boundaries; `k` = slots written to `out_slots`); `World.pop_slot: dict[str, np.ndarray]`; `World.deliver_owner_messages(t0, t1) -> np.ndarray` (the target slots, added to the step's first runnable set); validate errors `"boundary {b}: owner-to-owner messages need a minimum latency >= engine.step_max ({step_max_us} us)"` and `"boundary {b}: owner-to-owner messages need a target partition with a population"`. Task 12 adds `cpid`/`ceid` writes to the delivery; Task 15 (`inviter_credit`) consumes all of this.
 
 - [ ] **Step 1: Write the fixture**
 
-`libs/simkit/tests/fixtures/courier/datagen.toml`: copy `fixtures/spawn/datagen.toml`; set `name = "courier"`, `span = "3d"`, `[engine] step = "6h"`, `step_min = "1h"`, `step_max = "1d"`.
+`libs/simkit/tests/fixtures/courier/datagen.toml`: copy `fixtures/spawn/datagen.toml`; set `name = "courier"` in the existing `[project]` table, `span = "4d"`, and under `[engine]` `step = "6h"`, `step_min = "1h"`, `step_max = "1d"`. Keep `seed = 7`; Step 2's `test_an_owner_arriving_before_delivery_receives_it` asserts its precondition (acct 4 arrives before day 2.5); if it does not hold for seed 7, change the fixture's seed once and say so in the commit message.
 
 `libs/simkit/tests/fixtures/courier/specs/pack.py`:
 ```python
-"""Owner-to-owner messages (D73): delivered at t + latency, latency >= engine.step_max."""
+"""Owner-to-owner messages (D73): delivered at t + latency (>= engine.step_max); the target's
+presence is judged at the delivery time."""
 
 from dataclasses import dataclass
 
@@ -419,15 +489,19 @@ SCHEMA_VERSION = 1
 
 @dataclass(frozen=True)
 class Config:
-    accts: int = 4
-    targets: tuple = (1, 3, 9)        # acct 0 credits each: 3 retires idle, 9 does not exist
+    accts: int = 5                    # 0..3 exist at the start, 4 arrives during the run
+    targets: tuple = (1, 2, 3, 9)     # acct 0 credits each, `send_after_s` after its start:
+    #                                   1 live, 2 retires at +1 d (before delivery at +1.5 d),
+    #                                   3 retires at +0, 9 does not exist
+    send_after_s: int = 43_200
+    send4_s: int = -1                 # >= 0: acct 0 also credits acct 4, at this offset
     latency_s: int = 86_400
 
 
 def define(p: Pack, cfg: Config) -> None:
     acct = p.table("acct", key="acct_id", mutable=True, cols={"bal": i64()})
     p.owner("acct", table=acct, max_live=cfg.accts)
-    p.population(acct, n=cfg.accts, initial=1.0)
+    p.population(acct, n=cfg.accts, initial=0.8)
     credit = p.message("credit", frm="acct", to="acct", payload={"amount": i64()},
                        latency=dist.constant(s=cfg.latency_s))
     p.event("credited", owner="acct", cols={"acct_id": ref("acct"), "sender": ref("acct"),
@@ -443,21 +517,26 @@ from neorisk_simkit.engine import COMMIT, PRIO_TIMER, RETRY, START, Res, kernel,
 
 C_CREDIT, C_KEEP = 1, 2
 ACCT_COMMANDS = (START, C_CREDIT, C_KEEP)
-DAY = 86_400_000_000
+S = 1_000_000
+DAY = 86_400 * S
 
 
 @kernel(state="acct", commands=ACCT_COMMANDS,
-        max=Res(records={"credited": 1}, timers=1, requests=3))
+        max=Res(records={"credited": 1}, timers=1, requests=5))
 def acct_main(ctx, s, cmd, out):
     if cmd.kind == START:
         if ctx.self_id == 3:
-            return COMMIT                              # nothing queued: retires idle
-        if not out.reserve(timers=1, requests=3):
+            return COMMIT                              # nothing queued: retires idle at +0
+        if not out.reserve(timers=1, requests=5):
             return RETRY
         if ctx.self_id == 0:
-            for j in range(3):
-                out.send_credit(ctx.t, to=ctx.cfg.targets[j], amount=10 + j)
-        out.timer(ctx.t + 2 * DAY, C_KEEP, prio=PRIO_TIMER)       # stays live for delivery
+            for j in range(4):
+                out.send_credit(ctx.t + ctx.cfg.send_after_s * S, to=ctx.cfg.targets[j],
+                                amount=10 + j)
+            if ctx.cfg.send4_s >= 0:
+                out.send_credit(ctx.t + ctx.cfg.send4_s * S, to=4, amount=40)
+        keep = DAY if ctx.self_id == 2 else 3 * DAY    # acct 2 retires idle at +1 d
+        out.timer(ctx.t + keep, C_KEEP, prio=PRIO_TIMER)
         return COMMIT
     if cmd.kind == C_KEEP:
         return reject(0)
@@ -472,23 +551,29 @@ def acct_main(ctx, s, cmd, out):
 
 `libs/simkit/tests/test_engine_owner_messages.py`:
 ```python
-"""D73: owner-to-owner messages arrive at t + latency in a later step; absent targets are
-late (Review Focus 4)."""
+"""D73: owner-to-owner messages arrive at t + latency in a later step; the target's presence is
+judged at the delivery time, whatever the step length (Review Focus 4, F-02)."""
 
 import json
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
+import polars as pl
 from conftest import FIXTURES, event_dicts, make_run
 
 from neorisk_simkit.io.dataset import run_to_dataset
 from neorisk_simkit.spec.validate import validate
 
-DAY = 86_400_000_000
+START = datetime(2026, 3, 1, tzinfo=UTC)
+H = 3_600_000_000
 
 
 def _run(tmp_path, overrides=(), **eng):
     return run_to_dataset(FIXTURES / "courier", "sample", list(overrides),
                           out_dir=tmp_path / "run", threads=2, engine_overrides=eng or None)
+
+
+def _late(res) -> int:
+    return json.loads((res.out_dir / "manifest.json").read_text())["late_messages"]
 
 
 def test_owner_to_owner_messages_validate():
@@ -503,24 +588,31 @@ def test_latency_below_step_max_is_refused():
 
 def test_message_is_delivered_one_latency_later(tmp_path):
     rows = event_dicts(_run(tmp_path).out_dir)["credited"]
-    assert len(rows) == 1
-    (r,) = rows
-    assert r["amount"] == 10
-    assert r["event_time"] == datetime(2026, 3, 2, tzinfo=UTC)   # start + 1 day
+    assert [(r["amount"], r["event_time"]) for r in rows] == [
+        (10, START + timedelta(hours=12) + timedelta(days=1))]
 
 
 def test_messages_to_absent_owners_are_late(tmp_path):
-    res = _run(tmp_path)
-    m = json.loads((res.out_dir / "manifest.json").read_text())
-    assert m["late_messages"] == 2                 # acct 3 retired idle, acct 9 does not exist
+    assert _late(_run(tmp_path)) == 3        # 2 retired before delivery, 3 at +0, 9 absent
 
 
-def test_delivery_does_not_depend_on_step_length(tmp_path):
-    a = event_dicts(_run(tmp_path / "a").out_dir)["credited"]
-    b = event_dicts(_run(tmp_path / "b", step_us=12 * 3_600_000_000).out_dir)["credited"]
-    assert a == b
+def test_presence_is_judged_at_delivery_for_any_step_length(tmp_path):
+    a, b = _run(tmp_path / "a"), _run(tmp_path / "b", step_us=24 * H)
+    assert event_dicts(a.out_dir)["credited"] == event_dicts(b.out_dir)["credited"]
+    assert _late(a) == _late(b) == 3
+
+
+def test_an_owner_arriving_before_delivery_receives_it(tmp_path):
+    first = _run(tmp_path / "probe")
+    acct = pl.read_parquet(first.out_dir / "entities" / "acct").sort("created_at")
+    arrived = acct["created_at"][-1]                     # acct 4, the only arrival
+    assert arrived < START + timedelta(days=2.5), "fixture precondition (see Step 1)"
+    send = max(0, int((arrived - START).total_seconds()) - 12 * 3600)
+    runs = [_run(tmp_path / n, [f"send4_s={send}"], step_us=st)
+            for n, st in (("a", 6 * H), ("b", 24 * H))]
+    got = [[r["amount"] for r in event_dicts(r.out_dir)["credited"]] for r in runs]
+    assert got[0] == got[1] and 40 in got[0]
 ```
-(The courier fixture's `[defaults] start` is `2026-03-01T00:00:00Z`, copied from `spawn`; if `event_dicts` yields naive datetimes, compare with `datetime(2026, 3, 2)`.)
 
 - [ ] **Step 3: Run the tests to verify they fail**
 
@@ -529,7 +621,7 @@ Expected: FAIL — validate reports `boundary credit: owner-to-owner messages ar
 
 - [ ] **Step 4: Implement**
 
-1. `spec/plan.py`: `BoundaryDef.o2o: bool = False`, set in `build_plan` when `kind == "message"` and both `frm` and `to` partitions are owners.
+1. `spec/plan.py`: `BoundaryDef.o2o: bool = False`, set in `build_plan` when `kind == "message"` and both `frm` and `to` partitions are owners. `spec/project.py`: `"max_owner_messages_per_step": ("max_owner_messages_per_step", _int, 100_000)` in `_ENGINE` and the matching `EngineSettings` field (with a default, so existing constructions keep working).
 2. `spec/validate.py`: replace the "arrive in M3" branch:
    ```python
    elif b.o2o:
@@ -541,106 +633,134 @@ Expected: FAIL — validate reports `boundary credit: owner-to-owner messages ar
            errs.append(f"boundary {b.name}: owner-to-owner messages need a target partition "
                        "with a population")
    ```
-3. `engine/codegen.py` `outbound(bd, "send")`: when `bd.o2o`, no `OUT_SHARD_N` range check (the target is validated at delivery).
-4. `engine/route.py`: add `RT_O2O, RT_BND_O2O = 28, 29` (document them in the module docstring). In `route_outbox`, inside the delivery loop, before `g = bnd_base[...]`:
+3. `engine/codegen.py` `outbound(bd, "send")`: when `bd.o2o`, no `OUT_SHARD_N` range check (the target is judged at delivery).
+4. `engine/route.py`: `RT_O2O, RT_BND_O2O = 28, 29`, `NEED_O2O = 5` (module docstring updated). In `route_outbox`, count o2o rows in the all-or-nothing pre-check (`R[RT_O2O][2][0] + n_o2o > capacity` → `return NEED_O2O, R[RT_O2O][2][0] + n_o2o`), and in the delivery loop, before `g = bnd_base[...]`:
    ```python
    if kind == OB_MESSAGE and R[RT_BND_O2O][ob[_BND][i]] == 1:
        buf = R[RT_O2O]
        j = buf[2][0]
        for c in range(len(OUTBOX_COLS)):
            buf[0][j, c] = ob[c][i]
+       buf[0][j, _NCOLS] = k0[i]
+       buf[0][j, _NCOLS + 1] = k1[i]
+       buf[0][j, _NCOLS + 2] = k2[i]
+       buf[0][j, _NCOLS + 3] = k3[i]
+       buf[0][j, _NCOLS + 4] = k4[i]
+       buf[0][j, _NCOLS + 5] = k5[i]
        for c in range(PAYLOAD_W):
            buf[1][j, c] = src[i, c]
        buf[2][0] = j + 1
        continue
    ```
-   (`OB_MESSAGE` imported from `engine.slabs`; the message budget `msg` already counts the row, so the buffer of capacity `max_messages_per_step` cannot overflow within a step; `P`/`PA` reserve checks stay as they are — they over-count by the set-aside rows, which is harmless.) Add:
+   (`_NCOLS = len(OUTBOX_COLS)`; `OB_MESSAGE` imported from `engine.slabs`; the row is counted in the message budget as before.) Add:
    ```python
    @njit(cache=True, nogil=True)
-   def deliver_owner_messages(R, slots):
-       """Queue the step's owner-to-owner messages (D73) at their delivery time in sender-key
-       order; a target whose slot is -1 or not alive is late. All or nothing on the reserves."""
+   def deliver_owner_messages(R, slots, times, retire_at, t0, t1, out_slots):
+       """Queue every buffered owner message due in [t0, t1) (D73, F-02): in (delivery time,
+       sender key, src_seq) order, judging the target's presence at the delivery time. Rows due
+       later stay buffered. All or nothing on the reserves."""
        buf = R[RT_O2O]
        n = buf[2][0]
-       if n == 0:
-           return ROUTED, np.int64(0)
        cols, src = buf[0], buf[1]
+       due = np.zeros(n, np.bool_)
+       nd = 0
+       for i in range(n):
+           if cols[i, _TIME] < t1:
+               due[i] = True
+               nd += 1
+       if nd == 0:
+           return ROUTED, np.int64(0)
        P, PA = R[RT_POOL], R[RT_PAY]
-       if P[P_FREE_N][0] < n:
-           return NEED_NODES, n
-       if PA[3][0] < n:
-           return NEED_PAYLOAD, n
-       ob = (cols[:n, 0], cols[:n, 1], cols[:n, 2], cols[:n, 3], cols[:n, 4], cols[:n, 5],
-             cols[:n, 6], cols[:n, 7], cols[:n, 8], cols[:n, 9], cols[:n, 10], cols[:n, 11],
-             src[:n])
-       keys = sender_keys(R, ob[_SRC_G], n)
-       k0, k1, k2, k3, k4, k5 = keys
-       order = _route_order(ob, n, keys)
-       qhead, alive, counters = R[RT_QHEAD], R[RT_ALIVE], R[RT_COUNTERS]
-       rows = PA[0]
-       for j in range(n):
-           i = order[j]
-           table = slots[cols[i, _BND]]
+       if P[P_FREE_N][0] < nd:
+           return NEED_NODES, np.int64(nd)
+       if PA[3][0] < nd:
+           return NEED_PAYLOAD, np.int64(nd)
+       idx = np.flatnonzero(due)
+       order = idx[np.lexsort((cols[idx, _SRC_SEQ], cols[idx, _NCOLS + 5], cols[idx, _NCOLS + 4],
+                               cols[idx, _NCOLS + 3], cols[idx, _NCOLS + 2],
+                               cols[idx, _NCOLS + 1], cols[idx, _NCOLS], cols[idx, _CAUSE],
+                               cols[idx, _PRIO], cols[idx, _TIME]))]
+       qhead, alive, pending = R[RT_QHEAD], R[RT_ALIVE], R[RT_PENDING]
+       counters, rows = R[RT_COUNTERS], PA[0]
+       k = np.int64(0)
+       for i in order:
+           t = cols[i, _TIME]
+           table, arrive = slots[cols[i, _BND]], times[cols[i, _BND]]
            d = cols[i, _DST]
            g = table[d] if 0 <= d < table.shape[0] else np.int64(-1)
-           if g < 0 or alive[g] == 0:
+           gone = (g < 0 or alive[g] == 0 or arrive[d] > t
+                   or (retire_at[g] <= t and qhead[g] < 0 and pending[g] == 0))
+           if gone:
                counters[0, _LATE] += 1
                continue
            row = pay_alloc(PA, 0)
            for c in range(PAYLOAD_W):
                rows[row, c] = src[i, c]
            rows[row, PAY_KIND] = OB_MESSAGE
-           q_push_from(P, 0, qhead, g, cols[i, _TIME], cols[i, _PRIO], cols[i, _CAUSE],
-                       cols[i, _SRC_SEQ], cols[i, _RESP_KIND], cols[i, _TARGET], cols[i, _TAG],
-                       row, 2 * k0[i] + k1[i], k2[i], k3[i], k4[i], k5[i])
+           q_push_from(P, 0, qhead, g, t, cols[i, _PRIO], cols[i, _CAUSE], cols[i, _SRC_SEQ],
+                       cols[i, _RESP_KIND], cols[i, _TARGET], cols[i, _TAG], row,
+                       2 * cols[i, _NCOLS] + cols[i, _NCOLS + 1], cols[i, _NCOLS + 2],
+                       cols[i, _NCOLS + 3], cols[i, _NCOLS + 4], cols[i, _NCOLS + 5])
            mark_touched(R, g)
-       buf[2][0] = 0
-       return ROUTED, n
+           out_slots[k] = g
+           k += 1
+       keep = np.flatnonzero(~due)                      # compact the rows still in flight
+       for j in range(keep.shape[0]):
+           cols[j, :] = cols[keep[j], :]
+           src[j, :] = src[keep[j], :]
+       buf[2][0] = keep.shape[0]
+       return ROUTED, k
    ```
-   (Use the module's existing `_KIND/_BND/_TIME/...` column constants; build `ob` with `OUTBOX_COLS` order exactly as `route_outbox` reads it.)
-5. `engine/world.py`: in `_build_route` append to `self.R`:
+   (Use the module's existing column constants. The six stored key parts are `sender_keys`' `k0..k5`, combined into `q_push_from`'s five sender-key arguments exactly as `route_outbox` does. `retire_at` is not in `R`: add the parameter `retire_at` to `deliver_owner_messages` (`World` passes `self.hidden.retire_at`) instead of reading `R[RT_RETIRE_AT]`, and drop that name.)
+5. `engine/world.py`: in `_build_route`,
    ```python
-   C = int(self.run.engine.max_messages_per_step)
-   self.o2o = (np.zeros((max(1, C), len(OUTBOX_COLS)), np.int64),
+   C = int(self.run.engine.max_owner_messages_per_step)
+   self.o2o = (np.zeros((max(1, C), len(OUTBOX_COLS) + 6), np.int64),
                np.zeros((max(1, C), PAYLOAD_W), np.int64), np.zeros(1, np.int64))
    o2o_flag = np.zeros(max(1, len(plan.boundaries)), np.uint8)
    for b in plan.boundaries:
        o2o_flag[b.code] = 1 if b.o2o else 0
    ```
-   and add `self.o2o, o2o_flag` as the last two entries of the `self.R` tuple (after `self._adm`, matching `RT_O2O = 28`, `RT_BND_O2O = 29`). In `_build_populations` create `self.pop_slot = {pop.table: np.full(pop.n, -1, np.int64) for pop in plan.populations}`; `admit_population` sets `self.pop_slot[pop.table][ords] = g`; `deliver_owner_messages()`:
+   and add `self.o2o, o2o_flag` as the last two entries of the `self.R` tuple (after `self._adm`). `World.route` maps `NEED_O2O` to `CapExceeded("max_owner_messages_per_step", C, k)`. In `_build_populations` create `self.pop_slot = {pop.table: np.full(pop.n, -1, np.int64) for pop in plan.populations}`; `admit_population` sets `self.pop_slot[pop.table][ords] = g`;
    ```python
-   def deliver_owner_messages(self) -> None:
-       empty = np.full(0, -1, np.int64)
+   def deliver_owner_messages(self, t0: int, t1: int) -> np.ndarray:
+       empty = np.zeros(0, np.int64)
+       pops = {p.table: p for p in self.populations}
        slots = tuple(self.pop_slot[self.plan.partition(b.to).table] if b.o2o else empty
                      for b in self.plan.boundaries) or (empty,)
+       times = tuple(pops[self.plan.partition(b.to).table].times if b.o2o else empty
+                     for b in self.plan.boundaries) or (empty,)
+       out = np.zeros(max(1, int(self.o2o[2][0])), np.int64)
        while True:
-           st, k = rt.deliver_owner_messages(self.R, slots)
+           st, k = rt.deliver_owner_messages(self.R, slots, times, self.hidden.retire_at,
+                                             int(t0), int(t1), out)
            if st == rt.ROUTED:
-               return
+               return np.unique(out[:int(k)])
            if st == rt.NEED_NODES:
                self._take_reserve_nodes(int(k))
            else:
                self._take_reserve_payload(int(k))
    ```
-6. `io/seal.py` `_free_retired`: after computing `gone`, for each population owner part clear its slots: `world.pop_slot[part.table][hid.pid[mine] & ((1 << 56) - 1)] = -1` for `mine` with `hid.created[mine] == 0` (created owners are not addressable).
-7. `engine/rounds.py` `run_step`: call `world.deliver_owner_messages()` right before `world.end_step(t1)`.
-8. `spec/caps.py`: add `max_messages_per_step × (len(OUTBOX_COLS) + PAYLOAD_W) × 8` to `requests_and_inboxes` when any boundary has `o2o`.
+6. `engine/rounds.py` `run_step`: right after `admit_population(t0, t1)`, `delivered = world.deliver_owner_messages(t0, t1)`; add `delivered` to the step's first runnable set exactly as the admitted population slots are added.
+7. `io/seal.py`: `_free_retired` clears `world.pop_slot[part.table][hid.pid[mine] & ((1 << 56) - 1)] = -1` for freed population owners (`hid.created[mine] == 0`); `_remap_world` remaps the buffer's rows added this step (user payload columns 0..6 and column 9 with `remap.apply`, like queued command payloads), so a sender or payload handle created this step reaches its target final.
+8. `spec/caps.py`: add `max_owner_messages_per_step × (len(OUTBOX_COLS) + 6 + PAYLOAD_W) × 8` to `requests_and_inboxes` when any boundary has `o2o`.
 
 - [ ] **Step 5: Run the tests**
 
 Run: `uv run --all-packages pytest libs/simkit/tests/test_engine_owner_messages.py libs/simkit/tests/test_engine_pairing.py libs/simkit/tests/test_spec_validate.py -q`
-Expected: PASS. Full suite in the background — PASS; S1 reduced hash unchanged.
+Expected: PASS. Then the suite gate (Global Constraints); S1 reduced hash unchanged.
 
 - [ ] **Step 6: Lint and commit**
 
 ```bash
 uv run ruff check $(ls -d libs apps examples/ecommerce_s1 examples/ecommerce_s2 benchmarks 2>/dev/null)
-git add libs/simkit/src/neorisk_simkit/spec/plan.py libs/simkit/src/neorisk_simkit/spec/validate.py \
-  libs/simkit/src/neorisk_simkit/spec/caps.py libs/simkit/src/neorisk_simkit/engine/route.py \
-  libs/simkit/src/neorisk_simkit/engine/world.py libs/simkit/src/neorisk_simkit/engine/rounds.py \
-  libs/simkit/src/neorisk_simkit/engine/codegen.py libs/simkit/src/neorisk_simkit/io/seal.py \
-  libs/simkit/tests/fixtures/courier libs/simkit/tests/test_engine_owner_messages.py
-git commit -m "feat(engine): owner-to-owner messages delivered one latency later (D57, D73)
+git add libs/simkit/src/neorisk_simkit/spec/plan.py libs/simkit/src/neorisk_simkit/spec/project.py \
+  libs/simkit/src/neorisk_simkit/spec/validate.py libs/simkit/src/neorisk_simkit/spec/caps.py \
+  libs/simkit/src/neorisk_simkit/engine/route.py libs/simkit/src/neorisk_simkit/engine/world.py \
+  libs/simkit/src/neorisk_simkit/engine/rounds.py libs/simkit/src/neorisk_simkit/engine/codegen.py \
+  libs/simkit/src/neorisk_simkit/io/seal.py libs/simkit/tests/fixtures/courier \
+  libs/simkit/tests/test_engine_owner_messages.py
+git commit -m "feat(engine): owner-to-owner messages judged at delivery time (D57, D73)
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 Claude-Session: https://claude.ai/code/session_01BKddEJ7kY3XR8oXDK9HriN"
@@ -655,11 +775,11 @@ The engine half of the overlay contract's "parameterized execution_owner": a par
 **Files:**
 - Create: `libs/simkit/tests/fixtures/crew/{datagen.toml,specs/pack.py,specs/kernels.py}`
 - Modify: `spec/pack.py` (`expose_owner`, `owner(..., acts_for=)`), `spec/plan.py` (`PartitionDef.acts_for`, `Plan.exposed_owners`, `Plan.member_tables`, namespace order), `engine/layout.py` (executor events; `members`; population tables never `create_`-able), `engine/lower.py` (`out.add_member_<table>`), `engine/codegen.py` (`_member_<table>`; no `_create_<t>` for member tables; executor processes in emit/error lists), `spec/validate.py` (records and boundaries of the acted-for partition), `engine/run.py` (`id_bases[table]` starts at the population size for member tables), `io/seal.py` (member entities `origin = "member"`), `checks/structural.py` (`ref_bounds` union ranges)
-- Test: `libs/simkit/tests/test_engine_members.py`
+- Test: `libs/simkit/tests/test_engine_members.py`; modify `libs/simkit/tests/test_checks_refs.py` (one added test for the two-range bound, F-04)
 
 **Interfaces:**
 - Consumes: S2 create buffers (`creates:<ns>`), `assign_dense`, `entity_table`, `ref_bounds`, `check_ref_range`.
-- Produces: `Pack.expose_owner(name: str) -> None`; `Pack.owner(..., acts_for: str | None = None)`; `PartitionDef.acts_for: str | None = None` (last field); `Plan.exposed_owners: tuple[str, ...] = ()`; `Plan.member_tables: tuple[str, ...] = ()` (tables of partitions named by some `acts_for`, in declaration order); namespace order (D75): creatable tables, `p.ids`, member tables; `KernelLayout.members: dict[str, list[tuple[str, LType]]]` (table → columns; non-empty only for executor processes); lowering `out.add_member_<table>(**cols)` → `_member_<table>(out, ctx, *cols)` returning the provisional handle (reserve under `creates={"<table>": n}`); `ref_bounds(world, id_bases) -> dict[str, tuple[int, int, int]]` meaning `[0, a) ∪ [b, c)`; `check_ref_range(where, values, target, bound, cite=None)` takes that tuple. Tasks 10, 11, 16 rely on all of it.
+- Produces: `Pack.expose_owner(name: str) -> None`; `Pack.owner(..., acts_for: str | None = None)`; `PartitionDef.acts_for: str | None = None` (last field); `Plan.exposed_owners: tuple[str, ...] = ()`; `Plan.member_tables: tuple[str, ...] = ()` (tables of partitions named by some `acts_for`, in declaration order); namespace order (D75): creatable tables, `p.ids`, member tables; `KernelLayout.members: dict[str, list[tuple[str, LType]]]` (table → columns; non-empty only for executor processes); lowering `out.add_member_<table>(**cols)` → `_member_<table>(out, ctx, *cols)` returning the provisional handle (reserve under `creates={"<table>": n}`); `ref_bounds(world, id_bases) -> dict[str, int | tuple[int, int, int]]`: an int (single range `[0, bound)`, exactly as today) for every table without member rows, and `(a, b, c)` meaning `[0, a) ∪ [b, c)` only for member tables; `check_ref_range(where, values, target, bound, cite=None)` accepts either form (F-04: the pinned `test_checks_refs.py` calls with ints and reads `ref_bounds(w, {})["acct"] == 3` stay valid). Tasks 10, 11, 16 rely on all of it.
 
 - [ ] **Step 1: Write the fixture**
 
@@ -791,7 +911,7 @@ def test_executors_emit_user_events_for_member_rows(tmp_path):
     res = _run(tmp_path)
     users = pl.read_parquet(res.out_dir / "entities" / "user")
     joined = read_events(res.out_dir)["joined"]
-    crew_rows = joined.filter((pl.col("partition_id") >> 56) == 3)    # crew is ptype 3
+    crew_rows = joined.filter(pl.col("partition_id") // (1 << 56) == 3)   # crew is ptype 3
     sizes = pl.read_parquet(res.out_dir / "entities" / "crew")["size"].sum()
     assert crew_rows.height == sizes
     assert users.height == 3 + sizes
@@ -853,16 +973,16 @@ Expected: FAIL — `AttributeError: 'Pack' object has no attribute 'expose_owner
        return _call(f"_member_{m[11:]}", out, ctx,
                     *self._columns(node, lay.members[m[11:]], kw, what))
    ```
-5. `engine/codegen.py`: in `generate()`, for each namespace that is a table: if it is in `plan.member_tables`, emit `member(ns, code)` (the `create()` body without the `OB_CREATE` outbox block, function name `_member_<ns>`); otherwise `create(ns, code)` as today. `emit(e)`: `procs` = processes of `e.partition` plus processes of partitions whose `acts_for == e.partition` (error messages only). `_reserve_<proc>`: unchanged (reserving `creates:<member table>` also reserves outbox rows because the table is an owner table — harmless over-reservation, document it in the docstring).
+5. `engine/codegen.py`: in `generate()`, for each namespace that is a table: if it is in `plan.member_tables`, emit `create(ns, code, outbox=False)` under the name `_member_<ns>`; otherwise `create(ns, code)` as today — `create` gains the keyword `outbox: bool = True` that skips the `OB_CREATE` block and names the function `_member_<ns>` when false (no duplicated body, F-27). `emit(e)`: `procs` = processes of `e.partition` plus processes of partitions whose `acts_for == e.partition` (error messages only). `_reserve_<proc>`: unchanged (reserving `creates:<member table>` also reserves outbox rows because the table is an owner table — harmless over-reservation, document it in the docstring).
 6. `spec/validate.py`: a process may reserve records owned by its partition **or** by its partition's `acts_for`; requests/messages of a process must have `frm` equal to its partition or its `acts_for` (add that check while you are in the per-process loop: `for b in (*p.requests.values(), *p.messages.values())`).
 7. `engine/run.py` `Simulation.__init__`: `for t in plan.member_tables: self.id_bases[t] = next(pop.n for pop in plan.populations if pop.table == t)` (a member table without population starts at 0).
 8. `io/seal.py`: `ORIGIN_MEMBER = "member"`; entities of a member table use it; `seal_step` keeps computing `pids` for owner tables (member rows never become partitions; the values are unused).
-9. `checks/structural.py`: `ref_bounds` returns `(a, b, c)`: static/recipe tables `(n, n, n)`; population tables `(pop.next, pop.n, max(pop.n, id_bases.get(t, pop.n)))`; created namespaces `(id_bases[ns], id_bases[ns], id_bases[ns])`. `check_ref_range` accepts `bound=(a, b, c)` and refuses `v < 0 or (a <= v < b) or v >= c`; its message prints `[0, a) ∪ [b, c)` when `b > a`, else `[0, a)` (S2 tests pin the single-range text).
+9. `checks/structural.py` (F-04): `ref_bounds` keeps returning ints for every table that has no member rows (static/recipe tables, population tables without members, created namespaces — exactly today's values); a member table (in `plan.member_tables`) gets `(pop.next, pop.n, max(pop.n, id_bases.get(t, pop.n)))`. `check_ref_range` accepts an int (unchanged behaviour and message) or `(a, b, c)`, refusing `v < 0 or (a <= v < b) or v >= c` with the message `[0, a) ∪ [b, c)`. Add one test to `libs/simkit/tests/test_checks_refs.py`: `check_ref_range("t", np.array([1, 5]), "user", (2, 5, 7))` passes and `[3]` raises naming `[0, 2) ∪ [5, 7)`.
 
 - [ ] **Step 5: Run the tests**
 
 Run: `uv run --all-packages pytest libs/simkit/tests/test_engine_members.py libs/simkit/tests/test_checks_refs.py libs/simkit/tests/test_engine_lower.py -q`
-Expected: PASS. Full suite in the background — PASS; S1 reduced hash unchanged.
+Expected: PASS. Then the suite gate (Global Constraints) — PASS; S1 reduced hash unchanged.
 
 - [ ] **Step 6: Lint and commit**
 
@@ -873,7 +993,7 @@ git add libs/simkit/src/neorisk_simkit/spec/pack.py libs/simkit/src/neorisk_simk
   libs/simkit/src/neorisk_simkit/engine/lower.py libs/simkit/src/neorisk_simkit/engine/codegen.py \
   libs/simkit/src/neorisk_simkit/engine/run.py libs/simkit/src/neorisk_simkit/io/seal.py \
   libs/simkit/src/neorisk_simkit/checks/structural.py libs/simkit/tests/fixtures/crew \
-  libs/simkit/tests/test_engine_members.py
+  libs/simkit/tests/test_engine_members.py libs/simkit/tests/test_checks_refs.py
 git commit -m "feat(engine): execution owners act for an exposed table; member rows (D74, D75)
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
@@ -886,7 +1006,7 @@ Claude-Session: https://claude.ai/code/session_01BKddEJ7kY3XR8oXDK9HriN"
 
 **Files:**
 - Create: `libs/simkit/tests/fixtures/tagged/{datagen.toml,specs/pack.py,specs/kernels.py}`
-- Modify: `spec/pack.py` (`labels(...)`), `io/seal.py` (`SealedStep.labels`), `io/writer.py` (`labels/` directory), `io/manifest.py` + `io/dataset.py` (`label_counts`), `io/schema/schema_json.py` (`"label"` tables), `engine/run.py` (accounting)
+- Modify: `spec/pack.py` (`labels(...)`), `spec/validate.py` (laws refuse label tables, F-24), `io/seal.py` (`SealedStep.labels`), `io/writer.py` (`labels/` directory), `io/manifest.py` + `io/dataset.py` (`label_counts`), `io/schema/schema_json.py` (`"label"` tables), `engine/run.py` (accounting)
 - Test: `libs/simkit/tests/test_spec_labels.py`
 
 **Interfaces:**
@@ -964,6 +1084,21 @@ def test_labels_are_written_apart_and_counted(tmp_path):
     schema = json.loads((d / "schema" / "schema.json").read_text())
     entry = next(t for t in schema["tables"] if t["name"] == "tags")
     assert "label" in entry.values()
+
+
+def test_laws_cannot_name_label_tables():
+    import dataclasses
+
+    from conftest import make_run
+
+    from neorisk_simkit.spec import law
+    from neorisk_simkit.spec.plan import CheckDef
+    from neorisk_simkit.spec.validate import validate
+
+    run = make_run("tagged")
+    bad = dataclasses.replace(run, plan=dataclasses.replace(run.plan, checks=(
+        CheckDef("chk.tags", law.at_most_once("tags", key="target_id"), True),)))
+    assert "label table tags cannot be checked by a law" in " ".join(validate(bad).errors)
 ```
 (If `schema.json` keeps tables under another key than `tables`, follow how `test_spec_postings.py` reads posting entries and assert the same way.)
 
@@ -972,15 +1107,16 @@ def test_labels_are_written_apart_and_counted(tmp_path):
 Run: `uv run --all-packages pytest libs/simkit/tests/test_spec_labels.py -q`
 Expected: FAIL — `AttributeError: 'Pack' object has no attribute 'labels'`.
 
-- [ ] **Step 4: Implement** — follow every place `group == "postings"` is handled (`grep -rn postings libs/simkit/src`) and add the `"labels"` group beside it: `Pack.labels` = `self._record("labels", "labels", name, cols, owner, shard, doc)`; `seal_step` builds `labels = {e.name: records_out[e.name] for e in plan.events if e.group == "labels"}` into `SealedStep(labels=...)`; the writer writes them under `labels/` with the postings layout; `_simulate` counts `label_counts` and passes it to `write_manifest(..., label_counts=...)`; `schema_json` types them `"label"`; `step_index_row`, `counts`, `exported_events` and `run_stats` row totals exclude them like postings; laws may name label tables like posting tables (no change needed).
+- [ ] **Step 4: Implement** — follow every place `group == "postings"` is handled (`grep -rn postings libs/simkit/src`) and add the `"labels"` group beside it: `Pack.labels` = `self._record("labels", "labels", name, cols, owner, shard, doc)`; `seal_step` builds `labels = {e.name: records_out[e.name] for e in plan.events if e.group == "labels"}` into `SealedStep(labels=...)`; the writer writes them under `labels/` with the postings layout; `_simulate` counts `label_counts` and passes it to `write_manifest(..., label_counts=...)`; `schema_json` types them `"label"`; `step_index_row`, `counts`, `exported_events` and `run_stats` row totals exclude them like postings; laws may **not** name label tables (F-24: `LawBook` reads events and postings only): `spec/validate.py` `_law_reason` returns `f"label table {name} cannot be checked by a law"` for any law path or table naming a `group == "labels"` record.
 
-- [ ] **Step 5: Run the tests** — `uv run --all-packages pytest libs/simkit/tests/test_spec_labels.py libs/simkit/tests/test_spec_postings.py -q` → PASS; full suite in the background → PASS; S1 reduced hash unchanged.
+- [ ] **Step 5: Run the tests** — `uv run --all-packages pytest libs/simkit/tests/test_spec_labels.py libs/simkit/tests/test_spec_postings.py -q` → PASS; the suite gate (Global Constraints) → PASS; S1 reduced hash unchanged.
 
 - [ ] **Step 6: Lint and commit**
 
 ```bash
 uv run ruff check $(ls -d libs apps examples/ecommerce_s1 examples/ecommerce_s2 benchmarks 2>/dev/null)
-git add libs/simkit/src/neorisk_simkit/spec/pack.py libs/simkit/src/neorisk_simkit/io \
+git add libs/simkit/src/neorisk_simkit/spec/pack.py libs/simkit/src/neorisk_simkit/spec/validate.py \
+  libs/simkit/src/neorisk_simkit/io \
   libs/simkit/src/neorisk_simkit/engine/run.py libs/simkit/tests/fixtures/tagged \
   libs/simkit/tests/test_spec_labels.py
 git commit -m "feat(io): hidden label records in labels/ (D76)
@@ -999,13 +1135,13 @@ No code generation yet: this task makes `p.machine(...)` declare machines, `@act
 - Create: `libs/simkit/src/neorisk_simkit/machine/__init__.py`, `machine/helpers.py`, `machine/spec.py`
 - Create: `libs/simkit/tests/fixtures/mx_basic/{datagen.toml,specs/pack.py,specs/kernels.py}`
 - Modify: `engine/abi.py` (`ActionSpec`, `ActionRef`, `action`), `engine/__init__.py` (export `action`, `ActionRef`, `ActionSpec`), `spec/pack.py` (`machine(...)`; the "arrives in M3" stub goes), `spec/plan.py` (`Plan.machines`, call `build_machines`), `std/__init__.py` (re-export the vocabulary), `io/manifest.py` (engine revision hashes `machine/` too, D22)
-- Test: `libs/simkit/tests/test_machine_spec.py`
+- Test: `libs/simkit/tests/test_machine_spec.py`; modify `libs/simkit/tests/test_spec_pack.py` (`test_unsupported_vocabulary_names_milestone` now pins `p.expose` → "arrives in M3" (a stub until Task 10) and `p.feature` → "arrives in M4"; `p.machine` no longer raises, F-05)
 
 **Interfaces:**
 - Consumes: `Pack` registries, `Trigger`, `Res`, `Local` type grammar (`_LOCAL_RE`), `dist.Dist`, `spec.project.parse_duration`.
 - Produces (exact names; Tasks 6–11 build on them):
   - `engine.abi.ActionSpec(name, func, module_file, state, max: Res, fields: Mapping[str, str])`; `engine.abi.ActionRef(spec)` with `.then(x) -> Chain`, `.otherwise(x) -> Chain`; `engine.abi.action(state, max=Res(), fields=None)` (signature `(ctx, s, m, cmd, out)`, `fields` values scalar `Local` types).
-  - `machine.helpers`: values `actor()`, `parent()`, `col(name)`, `field(name)`, `new_id(ns)`, `now()`, `after(delay: Dist)`, `near(value: int, above: float)`, `pick_ref(refs: str, parent_share: float | None = None)`; conditions `cond.ge(a, b)`, `cond.le(a, b)`, `cond.eq(a, b)`, `cond.repeats_ge(n)` (dataclass `Cond(op, a, b)`); `p_by(col, probs: dict, otherwise=0.0) -> PBy`; actions returning `Chain`: `emit(event, **values)`, `spawn(machine, n=1, stagger=None, fields=None)`, `send_parent(msg)`, `label(role, outcome)`, `create_owner(table, **values)`, `set_field(name, value)`, `add_field(name, value=1)`; `request(local, *, ok="granted", shard=0, store=None, **payload) -> Request`; data classes `Part(act, fallback=None)`, `Chain(parts)` with `.then/.otherwise`, `as_chain(x)`, and the act types `Emit, Spawn, SendParent, LabelAct, CreateOwner, SetField`.
+  - `machine.helpers`: values `actor()`, `parent()`, `col(name)`, `field(name)`, `new_id(ns)`, `now()`, `after(delay: Dist)`, `near(value: int, above: float)`, `pick_ref(refs: str, parent_share: float | None = None)`; conditions `cond.ge(a, b)`, `cond.le(a, b)`, `cond.eq(a, b)`, `cond.repeats_ge(n)` (dataclass `Cond(op, a, b)`); `p_by(col, probs: dict, otherwise=0.0) -> PBy`; actions returning `Chain`: `emit(event, **values)`, `spawn(machine, n=1, stagger=None, fields=None)`, `send_parent(msg)`, `label(role, outcome)`, `create_owner(table, **values)`, `set_field(name, value)`, `add_field(name, value=1)`; `request(local, *, ok="granted", shard=0, store=None, release=None, **payload) -> Request` (`release` is mandatory at validation, D67/F-35), `send(local, *, to=0, **payload) -> Chain` (a one-way message part); data classes `Part(act, fallback=None)`, `Chain(parts)` with `.then/.otherwise`, `as_chain(x)`, and the act types `Emit, Spawn, SendParent, LabelAct, CreateOwner, SetField`.
   - `machine.spec`: `Outcome(target, p, delay, chain)`, `StateDef(...)`, `MachineDef(...)` (fields below), `Machine` builder (`.state(...)`, `.final(*names)`), `build_machines(pack) -> tuple[tuple[MachineDef, ...], list[str]]`.
   - `Pack.machine(name, *, owner, initial, start=None, config=None, max_instances=1, fields=None, reads=None, refs=None, max_spawn_depth=None) -> Machine`; `Plan.machines: tuple[MachineDef, ...] = ()`; `build_plan` raises `PackError` with every machine error joined by newlines.
 
@@ -1328,22 +1464,36 @@ class Request:
     shard: Any
     store: tuple[tuple[str, str], ...]     # response payload field -> instance field
     payload: tuple[tuple[str, Any], ...]
+    release: Any = None           # Chain run when an `ok` response arrives late (D67, F-35)
 
 
 def request(local: str, *, ok: str = "granted", shard=0, store: dict | None = None,
-            **payload) -> Request:
-    return Request(local, ok, shard, tuple((store or {}).items()), tuple(payload.items()))
+            release=None, **payload) -> Request:
+    return Request(local, ok, shard, tuple((store or {}).items()), tuple(payload.items()),
+                   as_chain(release) if release is not None else None)
+
+
+@dataclass(frozen=True)
+class Send:
+    local: str                    # a one-way message boundary sent by the machine's partition
+    to: Any
+    payload: tuple[tuple[str, Any], ...]
+
+
+def send(local: str, *, to=0, **payload) -> Chain:
+    """A one-way message to a shard (e.g. a refund or void that releases a late grant)."""
+    return _one(Send(local, to, tuple(payload.items())))
 
 
 __all__ = ["ActionSpec", "After", "Actor", "Chain", "Col", "Cond", "CreateOwner", "Emit",
            "Field", "LabelAct", "Near", "NewId", "Now", "PBy", "ParentActor", "Part", "PickRef",
            "Repeats", "Request", "SendParent", "SetField", "Spawn", "actor", "add_field",
            "after", "as_chain", "col", "cond", "create_owner", "emit", "field", "label",
-           "near", "new_id", "now", "p_by", "parent", "pick_ref", "request", "send_parent",
-           "set_field", "spawn"]
+           "near", "new_id", "now", "p_by", "parent", "pick_ref", "request", "send",
+           "send_parent", "Send", "set_field", "spawn"]
 ```
 
-`std/__init__.py` re-exports: `from neorisk_simkit.machine.helpers import (actor, add_field, after, col, cond, create_owner, emit, field, label, near, new_id, now, p_by, parent, pick_ref, request, send_parent, set_field, spawn)` (and lists them in `__all__`).
+`std/__init__.py` re-exports: `from neorisk_simkit.machine.helpers import (actor, add_field, after, col, cond, create_owner, emit, field, label, near, new_id, now, p_by, parent, pick_ref, request, send_parent, send, set_field, spawn)` (and lists them in `__all__`).
 
 - [ ] **Step 3: `machine/spec.py`**
 
@@ -1598,7 +1748,7 @@ def _machine_errors(m: MachineDef, names, pack) -> list[str]:
                 e += _act_errors(w, sw, act, m, names, pack)
     return e
 ```
-`_act_errors` checks: `ActionSpec` — `act.state` is the machine's partition or the partition it acts for (`pack.partitions[m.partition].get("acts_for")`), else `f"{w}: action {act.name} is for partition {act.state!r}, not {m.partition!r}"`; every `act.fields` entry is declared with the same type: `f"{w}: action {act.name} needs instance field {f!r} ({t})"`. `h.Emit` — the event exists (`f"{sw}: emits unknown event {ev!r}"`) and belongs to the partition or its `acts_for` (`f"{sw}: event {ev!r} belongs to partition {owner!r}"`). `h.Spawn` — like the state `spawn`. `h.SendParent` — some machine whose states spawn `m.name` (op or `std.spawn` act) has a join on that message: else `f"{w}: send_parent({msg!r}) but no machine that spawns {m.name!r} joins on {msg!r}"`. `h.SetField` — the field is declared. Field references in values (`h.Field`) must be declared: `f"{w}: unknown field {name!r}"`.
+`_act_errors` checks: `ActionSpec` — `act.state` is the machine's partition or the partition it acts for (`pack.partitions[m.partition].get("acts_for")`), else `f"{w}: action {act.name} is for partition {act.state!r}, not {m.partition!r}"`; every `act.fields` entry is declared with the same type: `f"{w}: action {act.name} needs instance field {f!r} ({t})"`. `h.Emit` — the event exists (`f"{sw}: emits unknown event {ev!r}"`) and belongs to the partition or its `acts_for` (`f"{sw}: event {ev!r} belongs to partition {owner!r}"`). `h.Spawn` — like the state `spawn`. `h.SendParent` — some machine whose states spawn `m.name` (op or `std.spawn` act) has a join on that message: else `f"{w}: send_parent({msg!r}) but no machine that spawns {m.name!r} joins on {msg!r}"`. `h.SetField` — the field is declared. `h.Send` — `local` is a message boundary whose `frm` is the partition or its `acts_for`: else `f"{sw}: send {local!r} is not a message sent by partition {p!r}"`. A request op whose `Request.release` is None: `f"{sw}: request {local!r} needs release= (a late granted response must be given back, D67)"`; the release chain's acts are checked like any other. Field references in values (`h.Field`) must be declared: `f"{w}: unknown field {name!r}"`.
 
 `spec/pack.py`:
 ```python
@@ -1800,10 +1950,20 @@ def test_action_signature_is_checked():
             return COMMIT
 ```
 
+In `libs/simkit/tests/test_spec_pack.py` replace `test_unsupported_vocabulary_names_milestone` with:
+```python
+def test_unsupported_vocabulary_names_milestone():
+    p = Pack("x", 1)
+    with pytest.raises(PackError, match="arrives in M3"):
+        p.expose(signup=None)                         # until Task 10
+    with pytest.raises(PackError, match="arrives in M4"):
+        p.feature("device_users_24h")
+```
+
 - [ ] **Step 6: Run the tests to verify they fail, implement, run them again**
 
 Run: `uv run --all-packages pytest libs/simkit/tests/test_machine_spec.py -q`
-Expected first: FAIL (`ModuleNotFoundError: neorisk_simkit.machine`). After Steps 1–4: PASS. Full suite in the background — PASS (no generated module changes: `KernelSpec.source` is unused until Task 6); S1 reduced hash unchanged.
+Expected first: FAIL (`ModuleNotFoundError: neorisk_simkit.machine`). After Steps 1–4: PASS. Then the suite gate (Global Constraints). Note (F-34): `engine/abi.py`, `engine/__init__.py` and `std/__init__.py` are in the runtime fingerprint, so this task **does** recompile every module the gate touches (outputs do not change); S1 reduced hash unchanged.
 
 - [ ] **Step 7: Lint and commit**
 
@@ -1813,7 +1973,7 @@ git add libs/simkit/src/neorisk_simkit/machine libs/simkit/src/neorisk_simkit/en
   libs/simkit/src/neorisk_simkit/engine/__init__.py libs/simkit/src/neorisk_simkit/spec/pack.py \
   libs/simkit/src/neorisk_simkit/spec/plan.py libs/simkit/src/neorisk_simkit/std/__init__.py \
   libs/simkit/src/neorisk_simkit/io/manifest.py libs/simkit/tests/fixtures/mx_basic \
-  libs/simkit/tests/test_machine_spec.py
+  libs/simkit/tests/test_machine_spec.py libs/simkit/tests/test_spec_pack.py
 git commit -m "feat(machine): declarations, closed vocabulary and validation (spec §04)
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
@@ -1826,18 +1986,18 @@ Claude-Session: https://claude.ai/code/session_01BKddEJ7kY3XR8oXDK9HriN"
 
 **Files:**
 - Create: `libs/simkit/src/neorisk_simkit/machine/layout.py`, `machine/copy.py`, `machine/compile.py`
-- Modify: `spec/plan.py` (`ProcessDef.machine_partition`, `Plan.machine_sources`; compile machines into `mx_<p>` processes), `engine/codegen.py` (`lowered_kernels` uses `KernelSpec.source`; `_mstat`), `engine/lower.py` (`out.mstat`), `engine/slabs.py` (`OUT_TAIL` += `"mstat"`), `engine/world.py` (`take_machine_stats`), `engine/run.py` (`stats["machines"]`), `io/dataset.py` (`run_stats.json["machines"]`), `io/manifest.py` (`_REVISION_DIRS` += `"machine"`), `apps/datagen/src/datagen/cli.py` + `run_cmds.py` (`validate --dump-machines DIR`)
+- Modify: `spec/plan.py` (`ProcessDef.machine_partition`, `Plan.machine_sources`; compile machines into `mx_<p>` processes), `engine/codegen.py` (`lowered_kernels` uses `KernelSpec.source`; `_mstat`), `engine/lower.py` (`out.mstat`), `engine/slabs.py` (`OUT_TAIL` += `"mstat"`), `engine/world.py` (`take_machine_stats`), `engine/run.py` (`stats["machines"]`), `io/dataset.py` (`run_stats.json["machines"]`), `apps/datagen/src/datagen/cli.py` + `run_cmds.py` (`validate --dump-machines DIR`)
 - Test: `libs/simkit/tests/test_machine_basic.py`
 
 **Interfaces:**
 - Consumes: Task 5 (`MachineDef`, `StateDef`, `Outcome`, `helpers.*`, `ActionSpec`), lowering (`lower_module`, views `ctx s loc cmd out`), `KernelSpec.source`.
 - Produces:
-  - `machine.layout`: `MX_STALE = 0`, `MX_FIRE = 1`, `FIRST_RESPONSE_KIND = 2`, `OP_BRANCH … OP_REQUEST = 1 … 7`, `GEN_MASK = (1 << 20) - 1`, `IMPLICIT` (D63 fields, plus `("mr", "i16")`: the max repeat count drawn at entry), `tag(m, i, g, op, x) -> int`, `width(md) -> int`, `local_fields(machines) -> dict[str, str]`, `stat_layout(machines) -> dict[str, int]` (machine → base index; counters `late, rejects, spawned, entries[code − 1]`) and `n_stats(machines) -> int`.
+  - `machine.layout`: `MX_STALE = 0`, `MX_FIRE = 1`, `FIRST_RESPONSE_KIND = 2`, `OP_BRANCH … OP_REQUEST = 1 … 7`, `GEN_MASK = (1 << 20) - 1`, `IMPLICIT` (D63 fields, plus `("mr", "i16")`: the max repeat count drawn at entry), `tag(m, i, g, op, x) -> int`, `width(md) -> int`, `local_fields(machines) -> dict[str, str]`, `ROOT_SITE_BASE = 8193`, `root_site(md, j) -> int` (F-09), `STAT_HEAD = ("late", "rejects", "spawned", "late_grants")`, `stat_layout(machines) -> dict[str, int]` (machine → base index; counters `STAT_HEAD`, then `entries[code − 1]`) and `n_stats(machines) -> int`.
   - `machine.copy.copy_action(spec: ActionSpec, md: MachineDef, copy: int) -> tuple[str, str]` (copy function name, source of the copy and its helper copies).
-  - `machine.compile.compile_machines(plan) -> list[MxProcess]`; `MxProcess(name, partition, kernel, config, start, requests, on_response, reads, refs, commands, max_spawn_depth, text)`; `Need` (reservation vector with `add`, `union`, `src()`, `res()`).
+  - `machine.compile.compile_machines(plan, default_spawn_depth: int = 3) -> list[MxProcess]` (`MxProcess` fields below; `messages` maps each `std.send` boundary to itself); `build_plan(module, cfg, specs_dir, *, default_spawn_depth: int = 3)` — `resolve_run` parses `[budget]` before building the plan and passes `budget.max_spawn_depth` (D72, F-21); `MxProcess(name, partition, kernel, config, start, requests, messages, on_response, reads, refs, commands, max_spawn_depth, text)`; `Need` (reservation vector with `add`, `union`, `src()`, `res()`).
   - `ProcessDef.machine_partition: str | None = None`; `Plan.machine_sources: Mapping[str, str]` (partition → generated text, also what `--dump-machines` writes).
   - Generated names (prefix `mx_`): root kernel `mx_<partition>(ctx, s, loc, cmd, out)`, `mx_start_<partition>`, `mx_fire_<m>`, `mx_enter_<m>_<code>`, `mx_end_<m>`, `mx_tr_<m>_<t>`, `mx_part_<m>_<t>_<q>`, `mx_alloc_<m>`, `mx_init_<m>`, `mx_tag`; config `ctx.cfg.c_<m>` (the machine's own config) and `ctx.cfg.x_<m>` (generated op parameters `s<code>_b<j>_p`, `s<code>_b<j>_d`, `s<code>_t<j>_d`, …).
-  - `out.mstat(i, v)` → generated `_mstat`; `World.take_machine_stats() -> dict[str, dict[str, Any]]`; `run_stats.json["machines"][<m>] = {"late": n, "rejects": n, "spawned": n, "entries": {state: n}}`.
+  - `out.mstat(i, v)` → generated `_mstat`; `World.take_machine_stats() -> dict[str, dict[str, Any]]`; `run_stats.json["machines"][<m>] = {"late": n, "rejects": n, "spawned": n, "late_grants": n, "entries": {state: n}}`.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -1976,6 +2136,15 @@ def state_site(md, state_index: int, j: int) -> int:
     return 1 + STATE_SITES * (MAX_STATES_PER_SITEBLOCK * md.index + state_index) + j
 
 
+ROOT_SITE_BASE = 8193                # root blocks: START-time draws (F-09)
+
+
+def root_site(md, j: int) -> int:
+    if j >= STATE_SITES:
+        raise PackError(f"machine {md.name}: START needs more than {STATE_SITES} draw sites")
+    return ROOT_SITE_BASE + STATE_SITES * md.index + j
+
+
 def action_site(copy: int, n: int) -> int:
     if copy >= MAX_COPIES:
         raise PackError(f"more than {MAX_COPIES} action copies in one machine process")
@@ -1984,16 +2153,19 @@ def action_site(copy: int, n: int) -> int:
     return ACTION_SITE_BASE + ACTION_SITE_SPAN * copy + n
 
 
+STAT_HEAD = ("late", "rejects", "spawned", "late_grants")   # then entries per state/final
+
+
 def stat_layout(machines) -> dict[str, int]:
     base, n = {}, 0
     for md in machines:
         base[md.name] = n
-        n += 3 + len(md.states) + len(md.finals)
+        n += len(STAT_HEAD) + len(md.states) + len(md.finals)
     return base
 
 
 def n_stats(machines) -> int:
-    return sum(3 + len(md.states) + len(md.finals) for md in machines)
+    return sum(len(STAT_HEAD) + len(md.states) + len(md.finals) for md in machines)
 ```
 
 - [ ] **Step 4: `machine/copy.py`**
@@ -2173,6 +2345,7 @@ class MxProcess:
     config: Any
     start: Any
     requests: Mapping[str, str]
+    messages: Mapping[str, str]
     on_response: Mapping[tuple[str, str], int]
     reads: Mapping[str, str]
     refs: Mapping[str, Any]
@@ -2187,8 +2360,9 @@ class _Pad:
 
 
 class _Gen:
-    def __init__(self, part: str, machines: list, plan):
+    def __init__(self, part: str, machines: list, plan, default_depth: int):
         self.part, self.ms, self.plan = part, machines, plan
+        self.default_depth = default_depth          # budget.max_spawn_depth (D72, F-21)
         self.by_name = {m.name: m for m in machines}
         self.funcs: list[str] = []
         self.need = Need()
@@ -2206,14 +2380,26 @@ class _Gen:
         self.funcs.append(f"def {name}({params}):\n" + "\n".join(f"    {ln}" for ln in body))
 
     def site(self, m, st) -> int:
-        k = (m.name, st.code)
+        """The next draw site of state `st`'s block, or of the machine's root block when `st`
+        is None (START-time draws: member attrs, root_init; D65, F-09)."""
+        k = (m.name, 0 if st is None else st.code)
         j = self.next_site.get(k, 0)
         self.next_site[k] = j + 1
+        if st is None:
+            return L.root_site(m, j)
         return L.state_site(m, st.code - 1, j)
 
     def param(self, m, name: str, value) -> str:
+        """Register an op parameter and return its full config path (D77, F-10). A full path
+        needs no alias, so every generated function can use it (F-19); this plan's sketches
+        write `c.<name>` for `ctx.cfg.x_<m>.<name>`."""
         self.params[m.name][name] = value
-        return f"c.{name}"
+        return f"ctx.cfg.x_{m.name}.{name}"
+
+    def lit(self, m, value) -> str:
+        """A literal int/float/bool as a parameter (D77: `--set` never changes the source)."""
+        v = int(value) if isinstance(value, bool) else value
+        return self.param(m, f"v{len(self.params[m.name])}", v)
 
     def reserve(self, need: Need) -> list[str]:
         self.need = self.need.union(need)
@@ -2258,8 +2444,8 @@ class _Gen:
         if isinstance(v, h.After):
             return self.delay(m, st, f"v{len(self.params[m.name])}", v.delay), Need()
         if isinstance(v, h.Near):
-            hi = int(v.value * v.above)
-            return (f"{v.value} + ctx.rng.uniform_int(site={self.site(m, st)}, lo=0, hi={hi})",
+            base, hi = self.lit(m, v.value), self.lit(m, int(v.value * v.above))
+            return (f"{base} + ctx.rng.uniform_int(site={self.site(m, st)}, lo=0, hi={hi})",
                     Need())
         if isinstance(v, Dist) and v.kind == CATEGORICAL:
             labels = list(v.labels)
@@ -2267,15 +2453,17 @@ class _Gen:
                 codes = tuple(ltype.values.index(x) for x in labels)
             else:
                 codes = tuple(int(x) for x in labels)
-            return (f"{codes!r}[ctx.rng.categorical(site={self.site(m, st)}, "
-                    f"p={tuple(v.weights)!r})]", Need())
+            p = self.param(m, f"v{len(self.params[m.name])}", tuple(float(w) for w in v.weights))
+            return (f"{codes!r}[ctx.rng.categorical(site={self.site(m, st)}, p={p})]", Need())
         if isinstance(v, Dist) and v.kind == UNIFORM_INT:
-            lo, hi = int(v.params[0]), int(v.params[1])
+            lo, hi = self.lit(m, int(v.params[0])), self.lit(m, int(v.params[1]))
             return f"ctx.rng.uniform_int(site={self.site(m, st)}, lo={lo}, hi={hi})", Need()
-        if isinstance(v, bool):
-            return ("1" if v else "0"), Need()
-        if isinstance(v, (int, float, str)):
-            return repr(v), Need()
+        if isinstance(v, str):
+            if ltype is None or ltype.kind != "cat" or v not in ltype.values:
+                raise PackError(f"machine {m.name}: {v!r} is not a category of this column")
+            return self.lit(m, ltype.values.index(v)), Need()      # the category's code
+        if isinstance(v, (bool, int, float)):
+            return self.lit(m, v), Need()
         raise PackError(f"machine {m.name}: unsupported value {v!r}")
 
     # ---------------------------------------------------------------- parts
@@ -2319,7 +2507,7 @@ class _Gen:
     def enter(self, m, st) -> None:
         p, k = m.name, st.code
         body = [f"loc.{p}__st[i] = {k}", f"loc.{p}__gen[i] += 1", f"loc.{p}__rep[i] = 0",
-                f"loc.{p}__t0[i] = ctx.t", f"out.mstat({self.stat[p] + 3 + k - 1}, 1)",
+                f"loc.{p}__t0[i] = ctx.t", f"out.mstat({self.stat[p] + 4 + k - 1}, 1)",
                 f"g = loc.{p}__gen[i]", f"c = ctx.cfg.x_{p}"]
         for j, (target, d) in enumerate(st.timers):
             t = self.tid(m, st, "timer", j, target, None)
@@ -2361,7 +2549,7 @@ class _Gen:
         p = m.name
         self.fn(f"mx_end_{p}", "ctx, s, loc, cmd, out, i, code", [
             "if code > 0:",
-            f"    out.mstat({self.stat[p] + 3} + code - 1, 1)",
+            f"    out.mstat({self.stat[p] + 4} + code - 1, 1)",
             f"loc.{p}__st[i] = 0",
             f"loc.{p}__gen[i] += 1"] + self.end_more(m))
 
@@ -2542,22 +2730,27 @@ class _Gen:
         start = next((m.start for m in self.ms if m.start is not None), None)
         depths = [m.max_spawn_depth for m in self.ms if m.max_spawn_depth is not None]
         return MxProcess(name, self.part, kernel, self.config(), start,
-                         MappingProxyType(self.requests()), MappingProxyType(dict(self.responses)),
+                         MappingProxyType(self.requests()), MappingProxyType(self.messages()),
+                         MappingProxyType(dict(self.responses)),
                          MappingProxyType(reads), MappingProxyType(refs), commands,
                          min(depths) if depths else None, text)
 
     def requests(self) -> dict[str, str]:
         return {}                                            # Task 8
 
+    def messages(self) -> dict[str, str]:
+        return {}                                            # Task 8 (std.send parts)
 
-def compile_machines(plan) -> list[MxProcess]:
+
+def compile_machines(plan, default_spawn_depth: int = 3) -> list[MxProcess]:
     """One `MxProcess` per owner partition that has machines, in partition order; the kernel
     source of each is its actions file followed by every machine text using that file."""
     out = []
     for part in plan.partitions:
         ms = [m for m in plan.machines if m.partition == part.name]
         if ms:
-            out.append(_Gen(part.name, sorted(ms, key=lambda m: m.index), plan).generate())
+            out.append(_Gen(part.name, sorted(ms, key=lambda m: m.index), plan,
+                            default_spawn_depth).generate())
     by_file: dict[str, list[MxProcess]] = {}
     for x in out:
         by_file.setdefault(x.kernel.module_file, []).append(x)
@@ -2578,11 +2771,11 @@ Notes for the implementer: (1) `Dist` op parameters are flattened by `flatten_co
 1. `spec/plan.py`: `ProcessDef.machine_partition: str | None = None`; `Plan.machine_sources: Mapping[str, str] = MappingProxyType({})`. At the end of `build_plan`, build `plan0` as today, then:
    ```python
    from neorisk_simkit.machine.compile import compile_machines
-   mx = compile_machines(plan0)
+   mx = compile_machines(plan0, default_spawn_depth)   # build_plan(..., default_spawn_depth=3)
    base = len(plan0.processes)
    extra = tuple(ProcessDef(
        name=x.name, partition=x.partition, action_id=base + j, kernel=x.kernel,
-       config=x.config, start=x.start, requests=x.requests, messages=_frozen({}),
+       config=x.config, start=x.start, requests=x.requests, messages=x.messages,
        on_request=_frozen({}), on_response=x.on_response, on_message=_frozen({}),
        reads=x.reads, refs=x.refs, commands=x.commands, every_us=None, jitter=None,
        max_spawn_depth=x.max_spawn_depth, machine_partition=x.partition)
@@ -2607,18 +2800,18 @@ Notes for the implementer: (1) `Dist` op parameters are flattened by `flatten_co
            md = next(x for x in self.plan.machines if x.name == m)
            names = [st.name for st in md.states] + list(md.finals)
            out[m] = {"late": int(tot[b]), "rejects": int(tot[b + 1]),
-                     "spawned": int(tot[b + 2]),
-                     "entries": {n: int(tot[b + 3 + j]) for j, n in enumerate(names)}}
+                     "spawned": int(tot[b + 2]), "late_grants": int(tot[b + 3]),
+                     "entries": {n: int(tot[b + 4 + j]) for j, n in enumerate(names)}}
        return out
    ```
    `engine/run.py`: `stats["machines"]` merges each step's `take_machine_stats()` (sum counters); `io/dataset.py` `_run_stats` copies `sim.stats["machines"]` into `run_stats.json["machines"]` (an empty dict for packs without machines).
-5. `io/manifest.py`: `_REVISION_DIRS` += `"machine"`.
+5. (`io/manifest.py`'s `_REVISION_DIRS` already gained `"machine"` in Task 5; nothing to do here, F-29.)
 6. `apps/datagen/src/datagen/cli.py`: `val.add_argument("--dump-machines", default=None, metavar="DIR", help="write each partition's generated machine module")`; `run_cmds.cmd_validate`: after `resolve_run`, when set, `Path(dir).mkdir(parents=True, exist_ok=True)` and write `<dir>/<partition>.py` = `plan.machine_sources[partition]`; print one line per file.
 
 - [ ] **Step 7: Run the tests**
 
 Run: `uv run --all-packages pytest libs/simkit/tests/test_machine_basic.py libs/simkit/tests/test_machine_spec.py -q`
-Expected: PASS. Then the full suite in the background — PASS; S1 reduced hash unchanged (the `out` tuple grows by one array; outputs do not change).
+Expected: PASS. Then the full suite gate (`uv run --all-packages pytest -m "not checked"`, in the background; Task 12 runs next and rebuilds again, so the full run may wait until after Task 12, F-34) — PASS; S1 reduced hash unchanged (the `out` tuple grows by one array; outputs do not change).
 
 - [ ] **Step 8: Lint and commit**
 
@@ -2628,7 +2821,7 @@ git add libs/simkit/src/neorisk_simkit/machine libs/simkit/src/neorisk_simkit/sp
   libs/simkit/src/neorisk_simkit/engine/codegen.py libs/simkit/src/neorisk_simkit/engine/lower.py \
   libs/simkit/src/neorisk_simkit/engine/slabs.py libs/simkit/src/neorisk_simkit/engine/world.py \
   libs/simkit/src/neorisk_simkit/engine/run.py libs/simkit/src/neorisk_simkit/io/dataset.py \
-  libs/simkit/src/neorisk_simkit/io/manifest.py apps/datagen/src/datagen/cli.py \
+  apps/datagen/src/datagen/cli.py \
   apps/datagen/src/datagen/run_cmds.py libs/simkit/tests/test_machine_basic.py
 git commit -m "feat(machine): generated machine process; branch, timer, final, then (D62-D68)
 
@@ -2647,7 +2840,7 @@ Claude-Session: https://claude.ai/code/session_01BKddEJ7kY3XR8oXDK9HriN"
 
 **Interfaces:**
 - Consumes: Task 6 `_Gen` (hooks, `site`, `param`, `reserve`, `tid`, `enter_call`, `part`), `layout.OP_REPEAT/OP_SPAWN/OP_NOW`, `EngineError` (importable in kernel modules from `neorisk_simkit.engine`).
-- Produces: generated `mx_rep_<m>_<t>` (one repetition), `mx_sp_<m>_<t>` (a delayed spawn op), spawn bodies inside parts, `OP_NOW` handling in `mx_fire_<m>` (x = target code); the instance depth limit `x_<m>.maxdep` (= `max_spawn_depth` or 3, §06 default); run-failure messages `"<machine>: no free <child> instance (max_instances)"` and `"<machine>: spawn depth exceeds max_spawn_depth"`; stats `spawned` and `late` (D82). Task 10 adds member rows to spawn bodies through `_Gen.member_actor(m)`.
+- Produces: generated `mx_rep_<m>_<t>` (one repetition), `mx_sp_<m>_<t>` (a delayed spawn op), spawn bodies inside parts, `OP_NOW` handling in `mx_fire_<m>` (x = target code); the instance depth limit `x_<m>.maxdep` (= the machine's `max_spawn_depth` or `budget.max_spawn_depth`, D72, F-21); spawn count sources (F-18): an int (parameter), `std.col`, `std.field`, or a `geometric(mean, max=)` / `uniform_int` / `categorical` Dist with parameters (`min(ctx.rng.geometric(site=…, mean=c.<p>), c.<max>)`, `ctx.rng.uniform_int(site=…, lo=c.<lo>, hi=c.<hi>)`, the categorical-label form of Task 6); run-failure messages `"<machine>: no free <child> instance (max_instances)"` and `"<machine>: spawn depth exceeds max_spawn_depth"`; stats `spawned` and `late` (D82). Task 10 adds member rows to spawn bodies through `_Gen.member_actor(m)`.
 
 - [ ] **Step 1: Write the fixture**
 
@@ -2703,7 +2896,7 @@ def define(p: Pack, cfg: Config) -> None:
     chick.state("growing", branch={"calling": (
         1.0, dist.constant(s=300),
         std.emit("called", nest_id=std.actor(), chick=1).then(std.send_parent("hungry")))},
-        spawn={"chick": (cfg.recurse_p, dist.constant(s=1), 1)})
+        spawn={"chick": (cfg.recurse_p, dist.constant(s=1), dist.uniform_int(1, 1))})
     chick.state("calling", branch={"done": (1.0, dist.constant(s=600),
                                             std.send_parent("hungry"))})
     chick.final("done")
@@ -2798,6 +2991,12 @@ def test_spawn_beyond_instances_fails_naming_the_machine(tmp_path):
         _run(tmp_path, ["brood_lo=2", "brood_hi=2", "chick_slots=1"])
 
 
+def test_spawn_counts_take_dists_as_parameters():
+    from conftest import make_run
+    src = make_run("mx_family").plan.machine_sources["nest"]
+    assert "ctx.rng.uniform_int(" in src                    # the chick's spawn count (F-18)
+
+
 def test_spawn_depth_is_bounded_per_machine(tmp_path):
     with pytest.raises(EngineError, match="chick: spawn depth exceeds max_spawn_depth"):
         _run(tmp_path, ["brood_lo=1", "brood_hi=1", "recurse_p=1.0"])
@@ -2842,7 +3041,7 @@ Generated code shapes (indices from `layout`; `c = ctx.cfg.x_<m>` is in scope in
 5. **`OP_NOW`** in `fire_more`: for every code `x` some `OP_NOW` targets, `if op == OP_NOW and x == <code>:` reserve that target's entry need, enter it, `return COMMIT`.
 6. **Spawn body** (shared by the state op and `std.spawn` parts), for parent machine `m`, child `cm`, count source `n_src`, optional `stagger`:
    ```python
-   n = <n_src>
+   n = <n_src>     # int -> param; Col/Field -> their source; Dist -> the F-18 forms above
    dep = loc.<m>__dep[i] + 1
    if n > 0 and dep > c.maxdep:
        raise EngineError("<m>: spawn depth exceeds max_spawn_depth")
@@ -2860,7 +3059,7 @@ Generated code shapes (indices from `layout`; `c = ctx.cfg.x_<m>` is in scope in
                      out.timer(ctx.t + k_ * ctx.rng.dist_us(site=<site>, d=c.<stagger param>), MX_FIRE,
                                prio=PRIO_TIMER, tag=mx_tag(<cm.index>, j, loc.<cm>__gen[j], OP_NOW, <initial code>))
    ```
-   (`st = -1` marks a reserved instance: `mx_alloc` skips it; `mx_fire`'s stale check only refuses `st == 0`; ordinals above 63 are refused because `kids` would overflow the bitset: `if loc.<m>__kids[i] >= 63: raise EngineError("<m>: more than 63 children")`.) Need: `n_max × (child initial entry need + 1 timer if stagger)` with `n_max` = the child's `max_instances`. `c.maxdep` is the parameter `maxdep = m.max_spawn_depth or 3` registered with `self.param(m, "maxdep", ...)`; `EngineError` is imported by the generated header (`from neorisk_simkit.engine import EngineError`). A `PickRef` field initializer (with `parent_share`; without it only the first line) generates
+   (`st = -1` marks a reserved instance: `mx_alloc` skips it; `mx_fire`'s stale check only refuses `st == 0`; ordinals above 63 are refused because `kids` would overflow the bitset: `if loc.<m>__kids[i] >= 63: raise EngineError("<m>: more than 63 children")`.) Need: `n_max × (child initial entry need + 1 timer if stagger)` with `n_max` = the child's `max_instances`. `c.maxdep` is the parameter `maxdep = m.max_spawn_depth or self.default_depth` (the budget's `max_spawn_depth`, D72, F-21) registered with `self.param(m, "maxdep", ...)`; `EngineError` is imported by the generated header (`from neorisk_simkit.engine import EngineError`). A `PickRef` field initializer (with `parent_share`; without it only the first line) generates
    ```python
    loc.<cm>__<f>[j] = ctx.refs.<refs>.pick(ctx.self_id, ctx.rng.uniform(site=<site>))
    if ctx.rng.bernoulli(site=<site>, p=<share param>):
@@ -2893,7 +3092,7 @@ Generated code shapes (indices from `layout`; `c = ctx.cfg.x_<m>` is in scope in
 - [ ] **Step 5: Run the tests**
 
 Run: `uv run --all-packages pytest libs/simkit/tests/test_machine_family.py libs/simkit/tests/test_machine_basic.py -q`
-Expected: PASS (the `chick_slots=1` test compiles a second module). Full suite in the background — PASS.
+Expected: PASS (the `chick_slots=1` test compiles a second module). Then the suite gate (Global Constraints) — PASS.
 
 - [ ] **Step 6: Lint and commit**
 
@@ -2913,12 +3112,12 @@ Claude-Session: https://claude.ai/code/session_01BKddEJ7kY3XR8oXDK9HriN"
 
 **Files:**
 - Create: `libs/simkit/tests/fixtures/mx_pay/{datagen.toml,specs/pack.py,specs/kernels.py}`
-- Modify: `machine/compile.py` (request entry, response dispatch `root_more`, `requests()`, `create_owner` part), `machine/spec.py` (request local must be a request boundary from the partition or its `acts_for`; `store` keys are response payload fields, values declared fields)
+- Modify: `machine/compile.py` (request entry with payload needs (F-33), response dispatch `root_more`, `requests()`, `messages()`, late-grant release (F-35), `create_owner` and `send` parts), `machine/spec.py` (request local must be a request boundary from the partition or its `acts_for`; `store` keys are response payload fields, values declared fields; `release=` mandatory)
 - Test: `libs/simkit/tests/test_machine_request.py`
 
 **Interfaces:**
 - Consumes: Tasks 6–7 generator; boundary responses (`BoundaryDef.responses`, `response_payload`); `out.request_<b>`; `ProcessDef.on_response`; Task 1 depth for created owners.
-- Produces: response command kinds `FIRST_RESPONSE_KIND + j` for each `(boundary, response)` pair used by request ops, in `(boundary code, response index)` order; `MxProcess.requests = {b: b}`; generated `mx_resp_<b>(ctx, s, loc, cmd, out, r)` and `mx_rq_<m>_<k>(ctx, s, loc, cmd, out, i, r)`; op parameter `s<k>_to` (timeout µs).
+- Produces: response command kinds `FIRST_RESPONSE_KIND + j` for each `(boundary, response)` pair used by request ops, in `(boundary code, response index)` order; `MxProcess.requests = {b: b}`; `MxProcess.messages = {b: b}` for `std.send` parts; the `late_grants` counter (D67, F-35); generated `mx_resp_<b>(ctx, s, loc, cmd, out, r)` and `mx_rq_<m>_<k>(ctx, s, loc, cmd, out, i, r)`; op parameter `s<k>_to` (timeout µs).
 
 - [ ] **Step 1: Write the fixture**
 
@@ -2962,21 +3161,26 @@ def define(p: Pack, cfg: Config) -> None:
     p.request("capture", frm="payment", to=bank, payload={"amount": i64()},
               response_payload={"amount": i64()}, responses=("granted", "rejected"),
               latency=dist.constant(ms=cfg.latency_ms))
+    p.message("void", frm="payment", to=bank, payload={"amount": i64()},
+              latency=dist.constant(ms=cfg.latency_ms))
     pid = {"payment_id": ref("payment")}
     p.event("captured", owner="payment", cols={**pid, "amount": i64()})
     for name in ("declined", "timed_out", "dispute_resolved", "closed"):
         p.event(name, owner="payment", cols=pid)
     p.event("decided", shard="bank", cols={"amount": i64(), "granted": boolean()})
+    p.event("voided", shard="bank", cols={"amount": i64()})
     p.event("receipt_issued", owner="receipt", cols={
         "receipt_id": ref("receipt"), "payment_id": ref("payment"), "amount": i64()})
     p.process("bank_desk", shard=bank, kernel=k.bank_desk, config=cfg,
-              on_request={"capture": k.C_CAPTURE})
+              on_request={"capture": k.C_CAPTURE}, on_message={"void": k.C_VOID},
+              commands=(k.C_CAPTURE, k.C_VOID))
     p.process("receipt_main", owner="receipt", kernel=k.receipt_main,
               start=p.on_created("receipt"))
     m = p.machine("pay", owner="payment", start=p.on_created("payment"),
                   initial="authorized", config=cfg, fields={"captured": "i64"})
     m.state("authorized", request={"capturing": std.request(
-        "capture", amount=std.col("amount"), store={"amount": "captured"})},
+        "capture", amount=std.col("amount"), store={"amount": "captured"},
+        release=std.send("void", amount=std.field("captured")))},
         on_reject="declining", timeout=cfg.timeout, on_timeout="timing_out")
     m.state("capturing", branch={"settled": (1.0, dist.constant(s=3600), std.emit(
         "captured", payment_id=std.actor(), amount=std.field("captured")).then(
@@ -2999,11 +3203,18 @@ def define(p: Pack, cfg: Config) -> None:
 ```python
 from neorisk_simkit.engine import COMMIT, RETRY, START, Res, kernel
 
-C_CAPTURE = 1
+C_CAPTURE, C_VOID = 1, 2
 
 
-@kernel(state="bank", commands=(C_CAPTURE,), max=Res(records={"decided": 1}, requests=1))
+@kernel(state="bank", commands=(C_CAPTURE, C_VOID),
+        max=Res(records={"decided": 1, "voided": 1}, requests=1))
 def bank_desk(ctx, s, cmd, out):
+    if cmd.kind == C_VOID:                               # a late grant given back (F-35)
+        if not out.reserve(records={"voided": 1}):
+            return RETRY
+        s.captured -= cmd.amount
+        out.emit_voided(ctx.t, amount=cmd.amount)
+        return COMMIT
     if not out.reserve(records={"decided": 1}, requests=1):
         return RETRY
     ok = cmd.amount <= ctx.cfg.limit
@@ -3068,9 +3279,14 @@ def test_granted_requests_store_the_response_and_create_receipts(tmp_path):
     assert m["pairing"]["capture"]["requests"] == m["pairing"]["capture"]["responses"] == 6
 
 
-def test_late_responses_take_the_timeout_branch(tmp_path):
-    _res, ev, _p = _run(tmp_path, ["latency_ms=1500"])
+def test_late_responses_take_the_timeout_branch_and_release_grants(tmp_path):
+    res, ev, pays = _run(tmp_path, ["latency_ms=1500"])
     assert ev["timed_out"].height == 6 and ev["captured"].height == 0
+    granted = pays.filter(pl.col("amount") <= 500)
+    assert ev["voided"].height == granted.height                  # never silently consumed
+    assert sorted(ev["voided"]["amount"].to_list()) == sorted(granted["amount"].to_list())
+    st = json.loads((res.out_dir / "run_stats.json").read_text())["machines"]["pay"]
+    assert st["late_grants"] == granted.height
 
 
 def test_timeout_boundary_is_inclusive(tmp_path):
@@ -3113,14 +3329,20 @@ Expected: FAIL — `PackError: machine pay: request ops arrive in a later task` 
 - [ ] **Step 4: Implement**
 
 1. `requests()` returns `{b: b}` for every boundary named by a request op; response kinds: iterate request boundaries in boundary-code order and their responses in declaration order, `self.responses[(b, r)] = FIRST_RESPONSE_KIND + j`.
-2. Request entry (`enter_more`): `out.request_<b>(ctx.t, shard=<shard src>, tag=mx_tag(<m.index>, i, g, OP_REQUEST, 0), <payload kw = value srcs>)` with need `requests=1`; register `self.param(m, f"s{k}_to", st.timeout_us)`.
+2. Request entry (`enter_more`): `out.request_<b>(ctx.t, shard=<shard src>, tag=mx_tag(<m.index>, i, g, OP_REQUEST, 0), <payload kw = value srcs>)` with need `requests=1` **plus the need of every payload value** (e.g. `std.new_id("claim")` adds `creates={"claim": 1}`, F-33); register `self.param(m, f"s{k}_to", st.timeout_us)`. `messages()` returns `{b: b}` for every boundary of a `std.send` part; a `send` part generates `out.send_<b>(ctx.t, to=<to src>, <payload kw>)`, `return COMMIT`, need `requests=1` plus its values' needs.
 3. `root_more`: for each `(b, r)`, `if cmd.kind == <kind>: return mx_resp_<b>(ctx, s, loc, cmd, out, <index of r in b.responses>)`. `mx_resp_<b>` decodes `m_`, `i`, `g` from `cmd.tag` like the root does, and for every machine with a request state on `b`: `if m_ == <idx>:` stale check (`st == 0` or generation mismatch → `return reject(MX_STALE)`), then `if loc.<m>__st[i] == <k>: return mx_rq_<m>_<k>(ctx, s, loc, cmd, out, i, r)`; finally `return reject(MX_STALE)`.
 4. `mx_rq_<m>_<k>`:
    ```python
    c = ctx.cfg.x_<m>
-   if not out.reserve(<union of the entry needs of target, on_reject, on_timeout>):
+   if not out.reserve(<union of the entry needs of target, on_reject, on_timeout> + <release chain need>):
        return RETRY
    if ctx.t - loc.<m>__t0[i] > c.s<k>_to:
+       if r == <index of ok>:                     # a late grant is given back (D67, F-35)
+           <store the payload as below>
+           out.mstat(<late_grants of m>, 1)
+           rc = <the release chain's parts, run in this command one after another>
+           if rc != COMMIT:
+               out.mstat(<rejects of m>, 1)
        <enter on_timeout or on_reject>
    elif r == <index of ok>:
        <for resp_field, inst_field in store: loc.<m>__<inst_field>[i] = cmd.<resp_field>>
@@ -3131,7 +3353,7 @@ Expected: FAIL — `PackError: machine pay: request ops arrive in a later task` 
    ```
 5. `create_owner` part: `out.create_<table>(<col>=<value src>, ...)`, `return COMMIT`; need `creates={table: 1}` (the creation message unit is added by `_reserve_`, D43).
 
-- [ ] **Step 5: Run the tests** — `uv run --all-packages pytest libs/simkit/tests/test_machine_request.py -q` → PASS; full suite in the background → PASS.
+- [ ] **Step 5: Run the tests** — `uv run --all-packages pytest libs/simkit/tests/test_machine_request.py -q` → PASS; the suite gate (Global Constraints) → PASS.
 
 - [ ] **Step 6: Lint and commit**
 
@@ -3191,12 +3413,23 @@ def test_forced_exhaustion_of_each_resource_is_invisible(tmp_path, name, overrid
         assert forced == base, res
 
 
+def _canon(tmp_path, name, overrides, **eng):
+    """D37 comparison (F-25): raw event_id and cause_id depend on step boundaries."""
+    from conftest import canonicalize_ids, created_namespaces, created_owner_codes
+    res = run_to_dataset(FIXTURES / name, "sample", overrides, out_dir=tmp_path / "run",
+                         threads=2, engine_overrides=eng or None)
+    created = created_namespaces(FIXTURES / name, overrides)
+    return canonicalize_ids(res.out_dir, created,
+                            created_owner_codes(FIXTURES / name, overrides, created))
+
+
 @pytest.mark.parametrize("name, overrides", CASES)
 def test_threads_slabs_and_steps_do_not_change_records(tmp_path, name, overrides):
     base = _events(tmp_path / "a", name, overrides, threads=1)
     assert _events(tmp_path / "b", name, overrides, threads=4) == base
     assert _events(tmp_path / "c", name, overrides, slab_bytes=16 * 1024) == base
-    assert _events(tmp_path / "d", name, overrides, step_us=2 * 3_600_000_000) == base
+    assert (_canon(tmp_path / "d", name, overrides, step_us=2 * 3_600_000_000)
+            == _canon(tmp_path / "e", name, overrides))
 
 
 @pytest.mark.parametrize("name, overrides", CASES[:2])
@@ -3234,8 +3467,8 @@ Claude-Session: https://claude.ai/code/session_01BKddEJ7kY3XR8oXDK9HriN"
 **Files:**
 - Create: `libs/simkit/src/neorisk_simkit/spec/overlay.py`
 - Create: `libs/simkit/tests/fixtures/ring/{datagen.toml,specs/pack.py,specs/kernels.py,specs/overlays/ring.py}`
-- Modify: `spec/pack.py` (`expose`, `expose_param`; `exposed`, `exposed_params` registries), `spec/plan.py` (`Plan.overlays`, `Plan.cohorts`, `Plan.exposed`; `build_plan(..., overlays=())`), `machine/spec.py` (`MachineDef.root_init`; cohort machines get `labels`/`label_delay` at build), `machine/compile.py` (root member rows, member rows of spawned children, `std.label` parts, spawn counts as parameters), `spec/dist.py` (`BURST`, `burst(start_day, span_days)`), `engine/world.py` (`arrival_times(..., origin)` handles `BURST`; recipes append rows after earlier recipes of the same table, D94), `std/sources.py` (`DevicesRecipe.generate(..., row_offset=0)`), `spec/project.py` (overlays in `[project]`, profiles, `--set <overlay>.<param>`; `RunSpec.overlays`; run name), `io/dataset.py` + `io/manifest.py` (`overlays` in the manifest; `run_to_dataset(..., overlays=())`), `apps/datagen/src/datagen/cli.py` + `run_cmds.py` + `schema_cmd.py` (`--overlay NAME`, repeatable)
-- Test: `libs/simkit/tests/test_overlay_api.py`
+- Modify: `spec/pack.py` (`expose`, `expose_param`; `exposed`, `exposed_params` registries), `spec/plan.py` (`Plan.overlays`, `Plan.cohorts`, `Plan.exposed`; `build_plan(..., overlays=())`), `machine/spec.py` (`MachineDef.root_init`; cohort machines get `labels`/`label_delay` at build), `machine/compile.py` (root member rows, member rows of spawned children, `std.label` parts, spawn counts as parameters), `spec/dist.py` (`BURST`, `burst(start_day, span_days)`), `engine/world.py` (`arrival_times(..., origin)` handles `BURST`; recipes append rows after earlier recipes of the same table, D94), `std/sources.py` (`DevicesRecipe.generate(..., row_offset=0)`), `spec/project.py` (overlays in `[project]`, profiles, `--set <overlay>.<param>`; `RunSpec.overlays`; run name), `io/dataset.py` + `io/manifest.py` (`overlays` in the manifest; `run_to_dataset(..., overlays=())`), `apps/datagen/src/datagen/cli.py` + `run_cmds.py` + `schema_cmd.py` (`--overlay NAME`, repeatable; `--no-overlays`, F-15), `spec/caps.py` (recipe rows of a table summed, owner-message and cohort sizes), `spec/__init__.py` (export `Overlay`), `engine/world.py` + `spec/plan.py` (process refs keyed by population, F-08) (F-29: complete Files list)
+- Test: `libs/simkit/tests/test_overlay_api.py`; modify `libs/simkit/tests/test_spec_pack.py` (drop the `p.expose` stub assertion — `expose` works now, F-05)
 
 **Interfaces:**
 - Consumes: Tasks 3 (acts_for, members), 4 (labels), 5–8 (machines).
@@ -3245,18 +3478,15 @@ Claude-Session: https://claude.ai/code/session_01BKddEJ7kY3XR8oXDK9HriN"
   - `Cohort(name, table, partition, base_partition, size, suppress, attrs, refs, labels)` with `.spawned(machine) -> Spawned`; `CohortDef` (same fields, frozen) in `Plan.cohorts`.
   - `spec.dist.burst(start_day: float, span_days: float) -> Dist` (kind `BURST`): arrivals uniform in `[start + start_day·1d, + span_days·1d)`; arrivals at or after the run end never happen.
   - `resolve_run(project, profile, overrides=(), seed=None, overlays=None)`; `RunSpec.overlays: tuple[tuple[str, Mapping[str, Any]], ...] = ()`; run name `<profile>-s<seed>+<o1>+...`; `run_to_dataset(..., overlays=())`; manifest key `overlays: {name: params}`; CLI `--overlay NAME` on `validate`, `run`, `schema` (and `check`, Task 19).
+  - Overlay selection (F-15): `resolve_run(..., overlays=None)` takes the profile's `overlays`; an explicit list (including `[]`) replaces it; CLI `--overlay` appends to the profile's list, `--no-overlays` clears it (both on `validate`, `run`, `schema`, `check`).
+  - Process refs keyed by population (D94, F-08): `ProcessDef.refs` values are `"<population table>:<refs name>"`; `build_plan` rewrites a bare name to `"<the process partition's table>:<name>"`; `World._refs_csr(key)` looks up that population's recipe; base packs keep writing bare names.
   - Generated: `out.add_member_<table>(...)` at a cohort machine's START (root member) and in spawns of member machines; `std.label(role, outcome)` → `out.emit_labels_<cohort>(ctx.t, target_id=<actor>, campaign_id=ctx.self_id, role=…, outcome=…, final_label=1, label_available_at=ctx.t + <draw of available_after>)`.
   - **D95** (schema): an overlay never changes event tables (names, columns, `schema_version`); `schema.json` gains the cohort's entity table and its label table, marked `"overlay": "<name>"`; `datagen schema` (SQL) emits only base tables unless `--overlay` is given.
 
 - [ ] **Step 1: Write the fixture**
 
-`fixtures/ring/datagen.toml`: copy `fixtures/spawn/datagen.toml`; `name = "ring"`, `span = "1d"`, `step = "6h"`, `step_max = "1d"`, and add
+`fixtures/ring/datagen.toml`: copy `fixtures/spawn/datagen.toml`; inside its existing `[project]` table set `name = "ring"` and add `overlays = "specs/overlays"` (F-28: do not append a second `[project]`); set `span = "1d"`, `step = "6h"`, `step_max = "1d"`; under `[paths]` add `reports = "reports"`; and append
 ```toml
-[project]
-name = "ring"
-pack = "specs/pack.py"
-overlays = "specs/overlays"
-
 [profiles.gang]
 overlays = ["ring"]
 
@@ -3306,20 +3536,26 @@ def define(p: Pack, cfg: Config) -> None:
     claim = p.request("claim", frm="user", to=pot, payload={"who": ref("user"), "amount": i64()},
                       response_payload={"amount": i64()}, responses=("granted", "rejected"),
                       latency=dist.constant(ms=500))
+    p.message("refund", frm="user", to=pot, payload={"who": ref("user"), "amount": i64()},
+              latency=dist.constant(ms=500))                  # gives a late grant back (F-35)
     u = {"user_id": ref("user")}
     p.event("signed_up", owner="user", cols={**u, "device_id": ref("device"),
                                              "invited_by": opt(ref("user"))})
     p.event("bonus_paid", owner="user", cols={**u, "amount": i64()})
     p.event("granted", shard="pot", cols={"who": ref("user"), "amount": i64()})
     p.event("refused", shard="pot", cols={"who": ref("user"), "amount": i64()})
+    p.event("refunded", shard="pot", cols={"who": ref("user"), "amount": i64()})
     p.process("user_main", owner="user", kernel=k.user_main, config=cfg,
               start=p.on_created("user"), requests={"claim": claim},
               on_response={("claim", "granted"): k.R_OK, ("claim", "rejected"): k.R_NO},
               refs={"device": "device"}, commands=k.USER_COMMANDS)
-    p.process("pot_desk", shard="pot", kernel=k.pot_desk, on_request={"claim": k.C_CLAIM})
+    p.process("pot_desk", shard="pot", kernel=k.pot_desk, on_request={"claim": k.C_CLAIM},
+              on_message={"refund": k.C_REFUND}, commands=(k.C_CLAIM, k.C_REFUND))
     p.expose(signup=k.signup, signup_invited=k.signup_invited, pay_bonus=k.pay_bonus,
              claim=std.request("claim", who=std.actor(), amount=cfg.bonus,
-                               store={"amount": "paid"}))
+                               store={"amount": "paid"},
+                               release=std.send("refund", who=std.actor(),
+                                                amount=std.field("paid"))))
     p.expose_param("bonus", cfg.bonus)
 ```
 
@@ -3328,7 +3564,7 @@ def define(p: Pack, cfg: Config) -> None:
 from neorisk_simkit import std
 from neorisk_simkit.engine import COMMIT, RETRY, START, Res, action, kernel, reject
 
-R_OK, R_NO, C_CLAIM = 1, 2, 1
+R_OK, R_NO, C_CLAIM, C_REFUND = 1, 2, 1, 2
 USER_COMMANDS = (START, R_OK, R_NO)
 
 
@@ -3350,9 +3586,16 @@ def user_main(ctx, s, cmd, out):
     return reject(0)
 
 
-@kernel(state="pot", commands=(C_CLAIM,),
-        max=Res(records={"granted": 1, "refused": 1}, requests=1))
+@kernel(state="pot", commands=(C_CLAIM, C_REFUND),
+        max=Res(records={"granted": 1, "refused": 1, "refunded": 1}, requests=1))
 def pot_desk(ctx, s, cmd, out):
+    if cmd.kind == C_REFUND:
+        if not out.reserve(records={"refunded": 1}):
+            return RETRY
+        s.remaining = std.checked_add(s.remaining, cmd.amount)
+        s.granted = std.checked_sub(s.granted, cmd.amount)
+        out.emit_refunded(ctx.t, who=cmd.who, amount=cmd.amount)
+        return COMMIT
     if not out.reserve(records={"granted": 1, "refused": 1}, requests=1):
         return RETRY
     g = std.capped_pool.take(s.remaining, cmd.amount)
@@ -3473,6 +3716,31 @@ def test_run_name_and_profile_parameters():
                                        "share_device": 0.5, "wait": "2h"}),)
     assert next(c for c in run.plan.cohorts if c.name == "gang").size == 3
     assert next(c for c in _run("gang", ["ring.size=1"]).plan.cohorts).size == 1
+
+
+def test_an_explicit_overlay_list_replaces_the_profile_list():
+    assert _run("gang").plan.overlays == ("ring",)                 # None -> the profile's list
+    assert _run("gang", overlays=[]).plan.overlays == ()           # [] replaces it (F-15)
+    assert _run("gang", overlays=["ring"]).plan.overlays == ("ring",)
+
+
+def test_overlay_params_never_change_the_source():
+    a = _run(overlays=["ring"]).plan.machine_sources
+    b = _run(overlays=["ring"], overrides=["ring.minions=3", "ring.share_device=0.2",
+                                           "bonus=500"]).plan.machine_sources
+    assert a == b                                                  # D77, F-10
+
+
+def test_cohort_machines_read_the_cohorts_refs(tmp_path):
+    res_b, _ = _data(tmp_path / "b", overlays=())
+    res_o, ev = _data(tmp_path / "o")
+    n_base = pl.read_parquet(res_b.out_dir / "entities" / "device").height
+    devices = pl.read_parquet(res_o.out_dir / "entities" / "device")
+    appended = set(devices["id"].to_list()[n_base:])
+    members = pl.read_parquet(res_o.out_dir / "entities" / "user").filter(
+        pl.col("origin") == "member").select(pl.col("id").alias("user_id"))
+    used = ev["signed_up"].join(members, on="user_id")["device_id"]
+    assert used.len() > 0 and set(used.to_list()) <= appended       # F-08
 
 
 def test_members_emit_base_events_and_labels(tmp_path):
@@ -3711,13 +3979,13 @@ Expected: FAIL — `ImportError: cannot import name 'Overlay' from 'neorisk_simk
    - `n=` of `std.spawn` and of spawn ops: an int becomes the parameter `c.s<k>_n<j>` (so overlay params never change the source).
    - `std.label(role, outcome)` part: as in the Interfaces block; the delay draw uses parameter `label_delay`; need `records={labels: 1}`.
 5. `engine/world.py` `_build_recipes` / `_build_tables` (D94): walk populations in plan order; for each refs recipe pass `row_offset` = rows already built for its table by earlier recipes; `_build_tables` concatenates every recipe's `table_rows(t)` in that order. `std/sources.py` `DevicesRecipe.generate(..., row_offset=0)` adds `row_offset` to its CSR indices. `spec/caps.py` sums `max_table_rows` over recipes of a table.
-6. `spec/project.py`: `[project] overlays` (default `"specs/overlays"`); `resolve_run(..., overlays=None)`: enabled = profile `overlays` + `overlays` (order kept, duplicates dropped); profile keys `overlays`/`overlay` are popped before the `_RUN_KEYS` check; an override whose head is an enabled overlay sets that overlay's parameter (`_coerce` against the `apply` default; a `Dist` default → `ProjectError(f"overlay {o}: parameter {k!r} is a Dist and fixed in code")`; unknown → `ProjectError(f"overlay {o}: unknown parameter {k!r}")`); the overlay module is imported as `<pack package>.overlays.<name>` (an implicit namespace subpackage of the synthetic specs package) and must define `apply`; `build_plan(module, cfg, specs_dir, overlays=((name, apply, params), ...))` calls each `apply(Overlay(p, name), **params)` after `define`, then sets `Plan.overlays`, `Plan.cohorts` (`CohortDef`s) and `Plan.exposed`; `RunSpec.overlays` keeps `(name, params)`; the run name appends `+<name>` per overlay.
-7. `io/manifest.py`: `overlays` key (`{name: params}`, `{}` when none). `io/schema/schema_json.py`: entity and label tables of cohorts carry `"overlay": "<name>"` (D95). `apps/datagen`: `--overlay` (append) on `validate`, `run`, `schema`; `run_cmds.cmd_run` passes `overlays=args.overlay`.
+6. `spec/project.py`: `[project] overlays` (default `"specs/overlays"`); `resolve_run(..., overlays=None)`: enabled = the profile's `overlays` when `overlays is None`, else exactly `overlays` (an explicit list, `[]` included, replaces the profile's, F-15); the CLI computes the list (profile list + `--overlay`, or `[]` with `--no-overlays`) and passes it; profile keys `overlays`/`overlay` are popped before the `_RUN_KEYS` check; an override whose head is an enabled overlay sets that overlay's parameter (`_coerce` against the `apply` default; a `Dist` default → `ProjectError(f"overlay {o}: parameter {k!r} is a Dist and fixed in code")`; unknown → `ProjectError(f"overlay {o}: unknown parameter {k!r}")`); the overlay module is imported as `<pack package>.overlays.<name>` (an implicit namespace subpackage of the synthetic specs package) and must define `apply`; `build_plan(module, cfg, specs_dir, overlays=((name, apply, params), ...))` calls each `apply(Overlay(p, name), **params)` after `define`, then sets `Plan.overlays`, `Plan.cohorts` (`CohortDef`s) and `Plan.exposed`; `RunSpec.overlays` keeps `(name, params)`; the run name appends `+<name>` per overlay.
+7. `io/manifest.py`: `overlays` key (`{name: params}`, `{}` when none). `io/schema/schema_json.py`: entity and label tables of cohorts carry `"overlay": "<name>"` (D95). `apps/datagen`: `--overlay` (append) and `--no-overlays` on `validate`, `run`, `schema`; `run_cmds` resolves the list as in item 6 and passes `overlays=`. `spec/plan.py`/`engine/world.py`: the population-keyed refs of D94 (F-08). Also measure the size of the generated `mx_gang` text and of its lowered module after this task's tests (F-42): if the lowered `mx_gang` functions exceed ~3,000 lines or the cold compile of the ring+overlay module exceeds 10 min, emit `mx_tr_*` and `mx_enter_*` with codegen's non-inlined `_JIT` (add the prefixes `mx_tr_`, `mx_enter_` to `_NOT_INLINED_PREFIXES`) and record the measurement in the commit message.
 
 - [ ] **Step 5: Run the tests**
 
 Run: `uv run --all-packages pytest libs/simkit/tests/test_overlay_api.py -q`
-Expected: PASS (two modules compile: base and base+ring). Full suite in the background — PASS; S1 reduced hash unchanged.
+Expected: PASS (two modules compile: base and base+ring). Then the suite gate (Global Constraints) — PASS; S1 reduced hash unchanged.
 
 - [ ] **Step 6: Lint and commit**
 
@@ -3727,7 +3995,10 @@ git add libs/simkit/src/neorisk_simkit/spec libs/simkit/src/neorisk_simkit/machi
   libs/simkit/src/neorisk_simkit/engine/world.py libs/simkit/src/neorisk_simkit/std/sources.py \
   libs/simkit/src/neorisk_simkit/io apps/datagen/src/datagen/cli.py \
   apps/datagen/src/datagen/run_cmds.py apps/datagen/src/datagen/schema_cmd.py \
-  libs/simkit/tests/fixtures/ring libs/simkit/tests/test_overlay_api.py
+  libs/simkit/tests/fixtures/ring libs/simkit/tests/test_overlay_api.py \
+  libs/simkit/tests/test_spec_pack.py
+# and libs/simkit/src/neorisk_simkit/engine/codegen.py if the F-42 measurement required the
+# non-inlined machine functions
 git commit -m "feat(spec): overlays: exposed base, cohorts with an execution owner, labels (§08)
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
@@ -3750,7 +4021,7 @@ A fixture that replays the bounty-hunter trace of §07 with constant latencies a
 
 - [ ] **Step 1: Write the fixture**
 
-`campaign_trace/datagen.toml`: copy `fixtures/spawn/datagen.toml`; `name = "campaign_trace"`, `start = "2026-03-01T00:00:00Z"`, `span = "14d"`, `warmup = "0s"`, `[engine] step = "1d"`, `step_max = "1d"`, `[project] overlays = "specs/overlays"`, and `[profiles.trace] overlays = ["trace_ring"]` (plus `[profiles.sample]`).
+`campaign_trace/datagen.toml`: copy `fixtures/spawn/datagen.toml`; inside its existing `[project]` table set `name = "campaign_trace"` and add `overlays = "specs/overlays"` (F-28); set `start = "2026-03-01T00:00:00Z"`, `span = "14d"`, `warmup = "0s"`, `[engine] step = "1d"`, `step_max = "1d"`; append `[profiles.trace]` with `overlays = ["trace_ring"]` (keep `[profiles.sample]`).
 
 `campaign_trace/specs/pack.py`:
 ```python
@@ -3787,19 +4058,25 @@ def define(p: Pack, cfg: Config) -> None:
     claim = p.request("claim", frm="user", to=pool, payload={"who": ref("user"), "amount": i64()},
                       response_payload={"amount": i64()}, responses=("granted", "rejected"),
                       latency=dist.constant(ms=500))
+    p.message("refund", frm="user", to=pool, payload={"who": ref("user"), "amount": i64()},
+              latency=dist.constant(ms=500))                  # gives a late grant back (F-35)
     u = {"user_id": ref("user")}
     p.event("order_placed", owner="user", cols={**u, "amount": i64()})
     p.event("bonus_paid", owner="user", cols={**u, "amount": i64()})
     p.event("bonus_granted", shard="pool", cols={"who": ref("user"), "amount": i64()})
     p.event("bonus_rejected", shard="pool", cols={"who": ref("user"), "amount": i64()})
+    p.event("bonus_refunded", shard="pool", cols={"who": ref("user"), "amount": i64()})
     p.process("user_main", owner="user", kernel=k.user_main, config=cfg,
               start=p.on_created("user"), requests={"claim": claim},
               on_response={("claim", "granted"): k.R_OK, ("claim", "rejected"): k.R_NO},
               commands=k.USER_COMMANDS)
-    p.process("pool_desk", shard="pool", kernel=k.pool_desk, on_request={"claim": k.C_CLAIM})
+    p.process("pool_desk", shard="pool", kernel=k.pool_desk, on_request={"claim": k.C_CLAIM},
+              on_message={"refund": k.C_REFUND}, commands=(k.C_CLAIM, k.C_REFUND))
     p.expose(first_order=k.first_order, pay_bonus=k.pay_bonus,
              claim=std.request("claim", who=std.actor(), amount=cfg.bonus,
-                               store={"amount": "paid"}))
+                               store={"amount": "paid"},
+                               release=std.send("refund", who=std.actor(),
+                                                amount=std.field("paid"))))
 ```
 
 `campaign_trace/specs/kernels.py`:
@@ -3808,7 +4085,7 @@ from neorisk_simkit import std
 from neorisk_simkit.engine import (COMMIT, PRIO_TIMER, RETRY, START, Res, action, kernel,
                                    reject)
 
-R_OK, R_NO, C_CLAIM, C_GO = 1, 2, 1, 3
+R_OK, R_NO, C_CLAIM, C_GO, C_REFUND = 1, 2, 1, 3, 2
 USER_COMMANDS = (START, R_OK, R_NO, C_GO)
 S = 1_000_000
 
@@ -3835,9 +4112,17 @@ def user_main(ctx, s, cmd, out):
     return reject(0)
 
 
-@kernel(state="pool", commands=(C_CLAIM,),
-        max=Res(records={"bonus_granted": 1, "bonus_rejected": 1}, requests=1))
+@kernel(state="pool", commands=(C_CLAIM, C_REFUND),
+        max=Res(records={"bonus_granted": 1, "bonus_rejected": 1, "bonus_refunded": 1},
+                requests=1))
 def pool_desk(ctx, s, cmd, out):
+    if cmd.kind == C_REFUND:                    # never happens in the trace (timeout 1m)
+        if not out.reserve(records={"bonus_refunded": 1}):
+            return RETRY
+        s.remaining = std.checked_add(s.remaining, cmd.amount)
+        s.granted = std.checked_sub(s.granted, cmd.amount)
+        out.emit_bonus_refunded(ctx.t, who=cmd.who, amount=cmd.amount)
+        return COMMIT
     if not out.reserve(records={"bonus_granted": 1, "bonus_rejected": 1}, requests=1):
         return RETRY
     g = std.capped_pool.take(s.remaining, cmd.amount)
@@ -3923,7 +4208,7 @@ def test_campaign_trace(tmp_path):
     ev = read_events(res.out_dir)
     users = pl.read_parquet(res.out_dir / "entities" / "user")
     base = users.filter(pl.col("origin") != "member")["id"].to_list()
-    zombies = (ev["order_placed"].filter((pl.col("partition_id") >> 56) == CAMPAIGN_PTYPE)
+    zombies = (ev["order_placed"].filter(pl.col("partition_id") // (1 << 56) == CAMPAIGN_PTYPE)
                .sort("event_time")["user_id"].to_list())
     assert len(zombies) == 3
     z0, z1, z2 = zombies
@@ -3936,7 +4221,7 @@ def test_campaign_trace(tmp_path):
     assert first["lamport"].is_sorted()
 
     # the campaign is suspended between its claim and the response 0.5 s later
-    camp = pl.concat([t.filter((pl.col("partition_id") >> 56) == CAMPAIGN_PTYPE)
+    camp = pl.concat([t.filter(pl.col("partition_id") // (1 << 56) == CAMPAIGN_PTYPE)
                       .select("event_time") for t in ev.values() if t.height])
     assert camp.filter((pl.col("event_time") > T)
                        & (pl.col("event_time") < T + timedelta(milliseconds=500))).height == 0
@@ -3974,14 +4259,15 @@ Claude-Session: https://claude.ai/code/session_01BKddEJ7kY3XR8oXDK9HriN"
 
 ---
 
-### Task 12: `cause_id` (D14 → D80) — the last engine edit of M3
+### Task 12: `cause_id` (D14 → D80) — executed right after Task 6 (F-34)
 
 `cause_id` has been null since S1. This task fills it: a command node remembers the commit that queued it, every worker logs its commits, and seal resolves causes to event IDs, carrying resolved IDs on nodes that outlive their step. **This task changes S1 output on purpose** (`cause_id` values; nothing else) and records the new S1 reduced-profile hash.
 
 **Files:**
 - Create: `libs/simkit/tests/fixtures/causes/{datagen.toml,specs/pack.py,specs/kernels.py}`
 - Modify: `engine/cmdq.py` (`NODE_FIELDS` += `cpid`, `ceid`; `P_CPID, P_CEID = 15, 16`; `NodePool` arrays; `NODE_BYTES` follows), `engine/codegen.py` (`_push` and admission write `cpid`/`ceid`; `run_partitions` logs each commit and returns `NEED_SWAP` when the log is full), `engine/route.py` (deliveries write `cpid = src_pid`, `ceid = UNSET`), `engine/world.py` (`_queue_starts` / periodic starts write `ceid = NULL_CAUSE`; flush moves the log into `StepChunk.commits`), `engine/slabs.py` (`OUT_TAIL` += `"clog"`, `"clog_n"`; `StepChunk.commits`), `io/seal.py` (resolution; `event_table(..., cause_ids=)`), `spec/caps.py` (commit log bytes in `output_slabs`; node bytes from `NODE_BYTES`)
-- Modify tests: `libs/simkit/tests/test_engine_seal.py` (the `cause_id` null assertion becomes "null for population starts")
+- Modify tests: `libs/simkit/tests/test_engine_seal.py` (the `cause_id` null assertion becomes "null for population starts"); `libs/simkit/tests/conftest.py` (`canonicalize_ids` maps `cause_id` through its raw `event_id` → canonical position map, F-01); `libs/simkit/tests/test_spec_validate.py` (`test_caps_formulas`: `NODE_BYTES` 90 and the `clog` term of `output_slabs`, F-06)
+- Modify: `engine/route.py` `deliver_owner_messages` and the carried buffer of Task 2 (rows keep `src_pid`; seal remaps it with `pid=True`)
 - Test: `libs/simkit/tests/test_engine_cause.py`
 
 **Interfaces:**
@@ -3990,12 +4276,12 @@ Claude-Session: https://claude.ai/code/session_01BKddEJ7kY3XR8oXDK9HriN"
 
 - [ ] **Step 1: Write the fixture**
 
-`causes/datagen.toml`: copy `fixtures/spawn/datagen.toml`; `name = "causes"`, `span = "6h"`, `warmup = "0s"`, `[engine] step = "1h"`, `step_min = "15m"`, `step_max = "1d"`.
+`causes/datagen.toml`: copy `fixtures/spawn/datagen.toml`; set `name = "causes"` in its `[project]` table, `span = "6h"`, `warmup = "0s"`, `[engine] step = "1h"`, `step_min = "15m"`, `step_max = "1d"`.
 
 `causes/specs/pack.py`:
 ```python
 """cause_id (D80): request -> shard record -> response, and a timer chain through a commit
-that emits nothing, across step boundaries."""
+that emits only a hidden label row (never a cause, F-17), across step boundaries."""
 
 from neorisk_simkit.spec import Pack, dist
 from neorisk_simkit.spec.types import i32, ref
@@ -4017,6 +4303,7 @@ def define(p: Pack, cfg) -> None:
     for name in ("opened", "ticked", "answered"):
         p.event(name, owner="acct", cols=a)
     p.event("asked", shard="desk", cols={"who": ref("acct")})
+    p.labels("marks", owner="acct", cols={"acct_id": ref("acct")})
     p.process("acct_main", owner="acct", kernel=k.acct_main, start=p.on_created("acct"),
               requests={"ask": ask}, on_response={("ask", "ok"): k.R_OK},
               commands=k.ACCT_COMMANDS)
@@ -4033,7 +4320,8 @@ H = 3_600_000_000
 
 
 @kernel(state="acct", commands=ACCT_COMMANDS,
-        max=Res(records={"opened": 1, "ticked": 1, "answered": 1}, timers=1, requests=1))
+        max=Res(records={"opened": 1, "ticked": 1, "answered": 1, "marks": 1}, timers=1,
+                requests=1))
 def acct_main(ctx, s, cmd, out):
     if cmd.kind == START:
         if not out.reserve(records={"opened": 1}, timers=1, requests=1):
@@ -4042,9 +4330,10 @@ def acct_main(ctx, s, cmd, out):
         out.timer(ctx.t + 2 * H, C_TICK, prio=PRIO_TIMER)
         out.request_ask(ctx.t, shard=0, who=ctx.self_id)
         return COMMIT
-    if cmd.kind == C_TICK:                         # emits nothing: causes pass through it
-        if not out.reserve(timers=1):
+    if cmd.kind == C_TICK:                 # emits only a label row: causes pass through it
+        if not out.reserve(records={"marks": 1}, timers=1):
             return RETRY
+        out.emit_marks(ctx.t, acct_id=ctx.self_id)
         out.timer(ctx.t + H, C_EMIT, prio=PRIO_TIMER)
         return COMMIT
     if not out.reserve(records={"ticked": 1, "answered": 1}):
@@ -4106,6 +4395,16 @@ def test_causes_follow_requests_responses_and_silent_commits(tmp_path):
     assert (j["ticked_cause"] == j["opened_id"]).all()          # through C_TICK, 2 steps later
 
 
+def test_label_rows_get_a_cause_but_are_never_one(tmp_path):
+    res = run_to_dataset(FIXTURES / "causes", "sample", [], out_dir=tmp_path / "r", threads=2)
+    marks = pl.read_parquet(sorted((res.out_dir / "labels" / "marks").rglob("*.parquet")))
+    ev = read_events(res.out_dir)
+    opened = set(ev["opened"]["event_id"])
+    assert set(marks["cause_id"]) <= opened                     # F-17: a label has a cause
+    causes = set(pl.concat([t.select("cause_id") for t in ev.values()])["cause_id"].drop_nulls())
+    assert not causes & set(marks["event_id"])                  # ... and is never a cause
+
+
 def test_causal_links_do_not_depend_on_step_length(tmp_path):
     for i, step in enumerate((3_600_000_000, 6 * 3_600_000_000)):
         j = _links(_ev(tmp_path / str(i), step_us=step))
@@ -4165,13 +4464,16 @@ Expected: FAIL — every `cause_id` is null.
                cause[r] = first[lo] if first[lo] >= 0 else cause[lo]
        return cause
    ```
-   with the log sorted by `(pid, lamport)` (`np.lexsort((l, p))`), `first[c]` = the `event_id` of the commit's lowest-`seq` exported record (built from every exported event table's `(partition_id, lamport, seq, event_id)` after `event_table` assigned IDs; warm-up steps give none), and `order` = commit rows sorted by lamport (a cause commit always has a smaller lamport than its effect, so it is resolved first). Then: each event table's `cause_id` = `cause` of its row's commit `(pid, lamport)`; every queued node of a touched slot with `ceid == UNSET_CAUSE` gets the cause resolved the same way from its `(cpid, cause lamport)`. `event_table(e, rows, id_bases, seed, cause_ids=None)` writes `pa.array(cause_ids, mask=cause_ids < 0)` (else the S1 nulls). Postings and labels get `cause_id` the same way.
+   with the log sorted by `(pid, lamport)` (`np.lexsort((l, p))`), `first[c]` = the `event_id` of the commit's lowest-`seq` exported **event** record (built from every exported table with `group == "events"` — never postings or labels, F-17 — from `(partition_id, lamport, seq, event_id)` after `event_table` assigned IDs; warm-up steps give none), and `order` = commit rows sorted by lamport (a cause commit always has a smaller lamport than its effect, so it is resolved first). Then: each event table's `cause_id` = `cause` of its row's commit `(pid, lamport)`; every queued node of a touched slot with `ceid == UNSET_CAUSE` gets the cause resolved the same way from its `(cpid, cause lamport)`. `event_table(e, rows, id_bases, seed, cause_ids=None)` writes `pa.array(cause_ids, mask=cause_ids < 0)` (else the S1 nulls). Postings and labels get `cause_id` the same way.
 5. `spec/caps.py`: per worker `output_slabs` += `clog` bytes; `timer_heaps` uses `NODE_BYTES` (now 90).
 6. `test_engine_seal.py`: the assertion `t["cause_id"].null_count == t.num_rows` becomes: non-null `cause_id` values are event IDs of the same dataset, and population-start rows are null.
 
-- [ ] **Step 5: Run the tests and record the new S1 hash**
+   7. `libs/simkit/tests/conftest.py` `canonicalize_ids` (F-01): while it renumbers `event_id` by canonical position, it records `raw event_id → position` for every table it reads (postings too with `everything=True`) and rewrites each non-null `cause_id` through that map (a cause outside the compared tables, e.g. one exported in an earlier run segment, is kept as `-1`); never drop `cause_id` from a comparison.
+   8. `test_spec_validate.py::test_caps_formulas` (F-06): `timer_nodes * NODE_BYTES == 100_000 * 90`; `output_slabs == threads * spw * slab_bytes + threads * clog_bytes` with `clog_bytes = max(64, slab_bytes // 40) * 40`.
 
-Run: `uv run --all-packages pytest libs/simkit/tests/test_engine_cause.py libs/simkit/tests/test_engine_seal.py -q` → PASS. Full suite in the background → PASS. Run the S1 reduced-profile hash procedure (Global Constraints): the hash changes (expected: `cause_id` values only). Verify that claim before recording it: compare the BASE and HEAD datasets with `cause_id` dropped from every events file —
+- [ ] **Step 5: Run the tests and record the new S1 and S2 hashes**
+
+Run: `uv run --all-packages pytest libs/simkit/tests/test_engine_cause.py libs/simkit/tests/test_engine_seal.py libs/simkit/tests/test_spec_validate.py libs/simkit/tests/test_exit_invariance.py -q` → PASS, then (large, in the background) `uv run --all-packages pytest libs/simkit/tests/test_exit_invariance_s2.py -q` → PASS (F-01: both step-length tests now compare canonicalized `cause_id`s). The suite gate (Global Constraints) → PASS. Run the S1 reduced-profile hash procedure (Global Constraints): the hash changes (expected: `cause_id` values only). Verify that claim before recording it: compare the BASE and HEAD datasets with `cause_id` dropped from every events file —
 ```python
 import polars as pl, pathlib
 a, b = pathlib.Path("/tmp/s1r_base"), pathlib.Path("/tmp/s1r")
@@ -4179,7 +4481,7 @@ for f in sorted((a / "events").rglob("*.parquet")):
     g = b / f.relative_to(a)
     assert pl.read_parquet(f).drop("cause_id").equals(pl.read_parquet(g).drop("cause_id")), f
 ```
-(produce `/tmp/s1r_base` with the same command from a checkout of the previous commit) — then record the new hash in `benchmarks/README.md` (S1 section, one line: "M3 Task 12: S1 reduced-profile hash `<new>` (cause_id populated, D80; every other column identical)") and in the commit message. Also time the S1 reduced profile warm (median of 3 after one warm-up run) before and after; report both in the commit message (Task 23 re-measures the gate).
+(produce `/tmp/s1r_base` with the same command from a checkout of the previous commit) — then record the new hash in `benchmarks/README.md` (S1 section, one line: "M3 Task 12: S1 reduced-profile hash `<new>` (cause_id populated, D80; every other column identical)") and in the commit message. Do the same for the two ecommerce_s2 identity datasets (F-26; old hashes SMALL2 `e0edf7f56be8b39618de595ae363960c5b3b6932a696c530f83491bb5bacda52`, BUSY `54a4ca31494d37b447eb7dbd72fe353b7b6858fa645c24c35bd0254fdbef5b60`): `datagen run examples/ecommerce_s2 --profile sample --threads 4` with the overrides of `SMALL2` in `libs/simkit/tests/test_exit_invariance_s2.py` (plus `--set engine.step=6h`) and of `BUSY` in `apps/datagen/tests/test_example_ecom_s2_refunds.py`, hashed with the same pipeline, checked with the same `cause_id`-only comparison, recorded beside the S1 line. Also time the S1 reduced profile warm (median of 3 after one warm-up run) before and after; report both in the commit message (Task 23 re-measures the gate).
 
 - [ ] **Step 6: Lint and commit**
 
@@ -4187,7 +4489,8 @@ for f in sorted((a / "events").rglob("*.parquet")):
 uv run ruff check $(ls -d libs apps examples/ecommerce_s1 examples/ecommerce_s2 benchmarks 2>/dev/null)
 git add libs/simkit/src/neorisk_simkit/engine libs/simkit/src/neorisk_simkit/io/seal.py \
   libs/simkit/src/neorisk_simkit/spec/caps.py libs/simkit/tests/fixtures/causes \
-  libs/simkit/tests/test_engine_cause.py libs/simkit/tests/test_engine_seal.py benchmarks/README.md
+  libs/simkit/tests/test_engine_cause.py libs/simkit/tests/test_engine_seal.py \
+  libs/simkit/tests/conftest.py libs/simkit/tests/test_spec_validate.py benchmarks/README.md
 git commit -m "feat(engine): populate cause_id through a per-worker commit log (D14, D80)
 
 S1 reduced-profile hash: <old> -> <new> (cause_id only).
@@ -4204,7 +4507,7 @@ From this commit on, every later task compares against the new S1 hash.
 
 **Files:**
 - Create: `libs/simkit/tests/fixtures/refunds/{datagen.toml,specs/pack.py,specs/kernels.py}`
-- Modify: `libs/simkit/src/neorisk_simkit/spec/law.py` (`total_le(..., per=None)`, `lifecycle(key, edges)`), `checks/laws.py` (`_SumLeState`, periodic `_TotalLe`, `_Lifecycle`; `LawBook` builds them), `spec/validate.py` (`_law_reason` accepts the new forms)
+- Modify: `libs/simkit/src/neorisk_simkit/spec/law.py` (`total_le(..., per=None)`, `lifecycle(key, edges)`), `checks/laws.py` (`_SumLeState`, periodic `_TotalLe`, `_Lifecycle`; `LawBook` builds them), `spec/validate.py` (`_law_reason` accepts the new forms), `spec/caps.py` (`law_key_bytes` / `law_peak_bytes` for the new keyed reducers — contract CX2, F-11)
 - Test: `libs/simkit/tests/test_checks_laws_m3.py`
 
 **Interfaces:**
@@ -4213,7 +4516,7 @@ From this commit on, every later task compares against the new S1 hash.
 
 - [ ] **Step 1: Write the fixture**
 
-`refunds/datagen.toml`: copy `fixtures/spawn/datagen.toml`; `name = "refunds"`, `span = "4h"`, `step = "1h"`.
+`refunds/datagen.toml`: copy `fixtures/spawn/datagen.toml`; set `name = "refunds"` in its `[project]` table, `span = "4h"`, `step = "1h"`.
 
 `refunds/specs/pack.py`:
 ```python
@@ -4318,10 +4621,10 @@ def _table(rows, cols=("acct_id", "amount")):
     return pa.table(out)
 
 
-def _book(cid, lw):
+def _book(cid, lw, max_keys=100):
     run = make_run("ledger")
     plan = dataclasses.replace(run.plan, checks=(CheckDef(cid, lw, True),))
-    return LawBook(plan, max_keys=100)
+    return LawBook(plan, max_keys=max_keys)
 
 
 def _sealed(events=None, postings=None):
@@ -4350,7 +4653,32 @@ def test_lifecycle_follows_its_edges():
     with pytest.raises(LawViolation, match="entry cannot start"):
         book2.step(_sealed(postings={"entry": _table([{"t": 3, "acct_id": 2, "amount": 0}])}),
                    None)
+
+
+def test_lifecycle_update_stays_within_its_reserved_peak():
+    """CX2 (F-11): the bytes a lifecycle update holds at once stay within law_peak_bytes."""
+    import tracemalloc
+
+    from neorisk_simkit.spec.caps import law_peak_bytes
+
+    lw = law.lifecycle("acct_id", edges={"opened": ("entry",)})
+    tracemalloc.start()
+    try:
+        book = _book("chk.l", lw, max_keys=10**8)
+        n0 = 200_000
+        book.step(_sealed({"opened": _table([{"t": 1, "acct_id": i, "amount": 0}
+                                             for i in range(n0)])}), None)
+        before = book.state_bytes
+        tracemalloc.reset_peak()
+        base = tracemalloc.get_traced_memory()[0]
+        book.step(_sealed({"opened": _table([{"t": 2, "acct_id": n0 + i, "amount": 0}
+                                             for i in range(10)])}), None)
+        peak = before + tracemalloc.get_traced_memory()[1] - base
+    finally:
+        tracemalloc.stop()
+    assert peak <= law_peak_bytes(lw, n0 + 10) + 16_384
 ```
+(`_SumLeState`'s bound is checked the same way in a second test that feeds the `refunds` plan's law with a stub `world` exposing 200,000 live order slots; write it alongside.)
 (The `ledger` fixture's posting table is `entry` and its event `opened`, both keyed by `acct_id` with an `amount` column — confirm in `fixtures/ledger/specs/pack.py`; if a column differs, adapt `_table`'s `cols`, never the law.)
 
 - [ ] **Step 3: Run the tests to verify they fail**
@@ -4362,20 +4690,21 @@ Expected: FAIL — validate refuses `sum_le` with a state right side; `total_le(
 
 1. `spec/law.py`: `total_le(lhs, limit, per=None)` stores `("per", per)`; `lifecycle(key, edges)` → `LawSpec("lifecycle", (("key", key), ("edges", tuple((a, tuple(b)) for a, b in edges.items()))))`.
 2. `checks/laws.py`:
-   - `_SumLeState(_Law)`: `tables = (lhs table,)`; keeps sorted `rkeys`/`rlast` (the right side's last value per key) and the left running sums like `_SumLe`. `_refresh(world, retired)`: for the owner partition of the right table, the slots alive now plus `retired` → `self_id` (dense after the seal's remap) and the column value; update `rlast` (insert new keys, overwrite old). `warm(rows)` feeds left sums; `step` order: refresh first (warm-up steps too — `LawBook.step` passes `world` for warm-up steps; extend it if it does not), then judge exported left rows: running Σ lhs per key > `rlast[key]` (0 when unknown) is a violation with the message `f"{by} {key}: {lhs} total {sum} exceeds {table}.{col} {value}"`.
+   - `_SumLeState(_Law)`: `tables = (lhs table,)`; keeps sorted `rkeys`/`rlast` (the right side's last value per key) and the left running sums like `_SumLe`. `_refresh(world, retired)`: for the owner partition of the right table, the slots alive now plus `retired` → `self_id` (dense after the seal's remap), **converted to public IDs with `io.seal.public_ids(world.seed, <owner table>, self_id)`** because the left table's key column holds public IDs (D81, F-12), and the column value; update `rlast` (insert new keys, overwrite old). `warm(rows)` feeds left sums; `step` order: refresh first (warm-up steps too — `LawBook.step` passes `world` for warm-up steps; extend it if it does not), then judge exported left rows: running Σ lhs per key > `rlast[key]` (0 when unknown) is a violation with the message `f"{by} {key}: {lhs} total {sum} exceeds {table}.{col} {value}"`.
    - `_TotalLe` with `per`: the running total restarts when `event_time // per` changes (rows are in canonical order, so windows only advance); the message names the window: `f"{lhs} total {x} exceeds {limit} in window {w}"`.
    - `_Lifecycle(_Law)`: per key the last listed type code (sorted key arrays, like `_AtMostOnce`); every exported row of a listed table is judged: the first row of a key must not be any edge's target (`f"{key_col} {k}: {t} cannot start a lifecycle"`), a later row's type must be in `edges[previous]` (`f"{key_col} {k}: {t} after {prev}"`); warm-up rows only update the state.
-   - `LawBook` maps `sum_le` with a state right side (resolved by `resolve_path`) to `_SumLeState`, `lifecycle` to `_Lifecycle`. `checker_state` reservation: `_SumLeState` keys × 24 B, `_Lifecycle` keys × 16 B.
+   - `LawBook` maps `sum_le` with a state right side (resolved by `resolve_path`) to `_SumLeState`, `lifecycle` to `_Lifecycle`. Memory contract (CX2, F-11): `spec/caps.py` `law_key_bytes` returns 32 for a state-side `sum_le` (key, left sum, right last value, right key) — distinguish it from the event-side form by the right path — 16 for `lifecycle` (key, last type code padded), 0 for `total_le` with or without `per` (no keyed state); `law_peak_bytes` gives each the bound of the arrays its update keeps alive at once (`np.insert` old + new: `2 × key bytes + 1` per key), and the reducers charge exactly those sizes.
 3. `spec/validate.py` `_law_reason`: `sum_le` accepts `<owner table>.<column>` on the right when `by` is that table's key; `lifecycle` needs every edge table to be an event or posting table with the key column.
 
-- [ ] **Step 5: Run the tests** — `uv run --all-packages pytest libs/simkit/tests/test_checks_laws_m3.py libs/simkit/tests/test_checks_laws.py libs/simkit/tests/test_checks_laws_keyed.py -q` → PASS; full suite in the background → PASS; S1 hash = the Task 12 hash.
+- [ ] **Step 5: Run the tests** — `uv run --all-packages pytest libs/simkit/tests/test_checks_laws_m3.py libs/simkit/tests/test_checks_laws.py libs/simkit/tests/test_checks_laws_keyed.py -q` → PASS; the suite gate (Global Constraints) → PASS; S1 hash = the Task 12 hash.
 
 - [ ] **Step 6: Lint and commit**
 
 ```bash
 uv run ruff check $(ls -d libs apps examples/ecommerce_s1 examples/ecommerce_s2 benchmarks 2>/dev/null)
 git add libs/simkit/src/neorisk_simkit/spec/law.py libs/simkit/src/neorisk_simkit/checks/laws.py \
-  libs/simkit/src/neorisk_simkit/spec/validate.py libs/simkit/tests/fixtures/refunds \
+  libs/simkit/src/neorisk_simkit/spec/validate.py libs/simkit/src/neorisk_simkit/spec/caps.py \
+  libs/simkit/tests/fixtures/refunds \
   libs/simkit/tests/test_checks_laws_m3.py
 git commit -m "feat(checks): sum_le against owner state, periodic total_le, lifecycle (F-07, D81)
 
@@ -4397,7 +4726,7 @@ The current `examples/ecommerce/specs/{pack,kernels}.py` are a design sketch wri
 
 **Interfaces:**
 - Consumes: S2 patterns (`examples/ecommerce_s2/specs/kernels.py`: hold table, join over reserve responses, restock), Tasks 2, 3, 5–8, 10, 13.
-- Produces (Tasks 15–22 rely on these names): partitions `user` (population, exposed owner), `order` (created owner), `inventory` (shard), `referral_pool` (shard, n = 1); events listed in `pack.py` below; change group `address`; processes `shopper`, `inventory_desk`, `restock`, `pool_desk`, machine `fulfillment` (process `mx_order`); exposed actions `signup`, `signup_invited`, `quick_order`, `pay_referral`, request `claim_bonus`, parameter `referral.min_order`; laws `chk.stock_never_negative`, `chk.reserved_never_negative`, `chk.holds_resolved`, `chk.refund_le_paid`, `chk.order_lifecycle`, `chk.referral_once_per_invitee`, `chk.referral_budget`, `chk.credit_never_negative`, `chk.hold_never_negative`, `chk.pool_never_negative`; profiles `sample`, `legacy`, `full`, `abuse` (the last two with overlays from Task 16 — `legacy` and `abuse` validate only after Task 16).
+- Produces (Tasks 15–22 rely on these names): message `claim_refund` and event `bonus_refunded` (the release of late grants, D67/F-35; `claim` responses echo `claim_id`); partitions `user` (population, exposed owner), `order` (created owner), `inventory` (shard), `referral_pool` (shard, n = 1); events listed in `pack.py` below; change group `address`; processes `shopper`, `inventory_desk`, `restock`, `pool_desk`, machine `fulfillment` (process `mx_order`); exposed actions `signup`, `signup_invited`, `quick_order`, `pay_referral`, request `claim_bonus`, parameter `referral.min_order`; laws `chk.stock_never_negative`, `chk.reserved_never_negative`, `chk.holds_resolved`, `chk.refund_le_paid`, `chk.order_lifecycle`, `chk.referral_once_per_invitee`, `chk.referral_budget`, `chk.credit_never_negative`, `chk.hold_never_negative`, `chk.pool_never_negative`; profiles `sample`, `legacy`, `full`, `abuse` (the last two with overlays from Task 16 — `legacy` and `abuse` validate only after Task 16).
 
 - [ ] **Step 1: Write `examples/ecommerce/specs/pack.py`**
 
@@ -4571,8 +4900,13 @@ def define(p: Pack, cfg: Config) -> None:
     usd = amount(asset="USD")
     claim = p.request("claim", frm="user", to=pool,
                       payload={"claim_id": ref("claim"), "amount": usd},
-                      response_payload={"amount": usd}, responses=("granted", "rejected"),
+                      response_payload={"claim_id": ref("claim"), "amount": usd},
+                      responses=("granted", "rejected"),
                       latency=dist.shifted_lognormal(min_ms=300, median_ms=450))
+    # gives back a grant that arrived after a machine's request timeout (D67, F-35)
+    p.message("claim_refund", frm="user", to=pool,
+              payload={"claim_id": ref("claim"), "amount": usd},
+              latency=dist.shifted_lognormal(min_ms=300, median_ms=450))
     inviter_credit = p.message("inviter_credit", frm="user", to="user",
                                payload={"invitee": ref("user"), "amount": usd},
                                latency=dist.shifted_lognormal(min_ms=86_400_000,
@@ -4633,6 +4967,8 @@ def define(p: Pack, cfg: Config) -> None:
         "claim_id": ref("claim"), "amount": usd, "remaining_after": i64()})
     p.event("bonus_rejected", shard="referral_pool", cols={"claim_id": ref("claim"),
                                                            "amount": usd})
+    p.event("bonus_refunded", shard="referral_pool", doc="A late grant given back; the period's"
+            " budget is not reopened", cols={"claim_id": ref("claim"), "amount": usd})
     # ---------------------------------------------------------------- processes
     p.process("shopper", owner="user", kernel=k.shopper, config=cfg,
               start=p.on_created("user"),
@@ -4652,7 +4988,8 @@ def define(p: Pack, cfg: Config) -> None:
               jitter=dist.normal(mean_h=0, sd_h=18), reads={"sku": sku})
     p.process("pool_desk", shard=pool, kernel=k.pool_desk,
               config=PoolCfg(budget=r.monthly_budget, period_us=period_us),
-              on_request={"claim": k.C_CLAIM})
+              on_request={"claim": k.C_CLAIM}, on_message={"claim_refund": k.C_REFUND},
+              commands=(k.C_CLAIM, k.C_REFUND))
     # ---------------------------------------------------------------- fulfillment (a machine)
     fc = cfg.fulfil
     f = p.machine("fulfillment", owner="order", start=p.on_created("order"), initial="placed",
@@ -4696,8 +5033,11 @@ def define(p: Pack, cfg: Config) -> None:
     # ---------------------------------------------------------------- extension points (§08)
     p.expose(signup=k.signup, signup_invited=k.signup_invited, quick_order=k.quick_order,
              pay_referral=k.pay_referral,
-             claim_bonus=std.request("claim", claim_id=std.new_id("claim"),
-                                     amount=2 * r.bonus_each, store={"amount": "paid"}))
+             claim_bonus=std.request(
+                 "claim", claim_id=std.new_id("claim"), amount=2 * r.bonus_each,
+                 store={"amount": "paid", "claim_id": "claim"},
+                 release=std.send("claim_refund", claim_id=std.field("claim"),
+                                  amount=std.field("paid"))))
     p.expose_param("referral.min_order", r.min_order)
 ```
 
@@ -4725,7 +5065,7 @@ SHOPPER_COMMANDS = (START, C_SESSION, C_VIEW, C_CHECKOUT, R_GRANTED, R_REJECTED,
                     R_BONUS, R_NO_BONUS, C_MOVE, M_CREDIT)
 C_RESERVE, C_COMMIT, C_RELEASE, C_HOLD_EXPIRE = 1, 2, 3, 4
 DESK_COMMANDS = (C_RESERVE, C_COMMIT, C_RELEASE, C_HOLD_EXPIRE)
-C_CLAIM = 1
+C_CLAIM, C_REFUND = 1, 2
 REJ_NO_CART, REJ_STALE, REJ_NOTHING_TO_REFUND = 1, 2, 3
 WHY_STOCK, WHY_BUSY = 0, 1
 
@@ -4773,6 +5113,9 @@ def _signup(ctx, s, out, cfg):
     inviter = std.NULL
     if s.referred:
         s.acquisition = "invite"
+        if s.invited_by == ctx.self_id:                    # never one's own inviter (F-38)
+            n_inv = max(1, int(cfg.users * cfg.initial_share * cfg.referral.inviter_share))
+            s.invited_by = (s.invited_by + 1) % n_inv
         inviter = s.invited_by
     out.emit_user_signed_up(ctx.t, user_id=ctx.self_id,
                             device_id=ctx.refs.device.get(ctx.self_id, 0),
@@ -5025,15 +5368,24 @@ def inventory_desk(ctx, s, loc, cmd, out):
         return _expire(ctx, s, loc, cmd, out)
     return _settle_hold(ctx, s, loc, cmd, out)
 ```
-Then copy `_reserve`, `_settle_hold`, `_expire` and `restock` **verbatim** from `examples/ecommerce_s2/specs/kernels.py` (lines `def _reserve` … end of `restock`), and add:
+Then copy `_reserve`, `_settle_hold`, `_expire` and `restock` **verbatim** (F-27: intended duplication — `examples/ecommerce_s2` is a frozen slice, D36; put the comment `# copied from examples/ecommerce_s2/specs/kernels.py (frozen S2 slice)` above them) from `examples/ecommerce_s2/specs/kernels.py` (lines `def _reserve` … end of `restock`), and add:
 
 ```python
 # ================================================================== referral pool
-@kernel(state="referral_pool", commands=(C_CLAIM,),
-        max=Res(records={"bonus_granted": 1, "bonus_rejected": 1}, requests=1))
+@kernel(state="referral_pool", commands=(C_CLAIM, C_REFUND),
+        max=Res(records={"bonus_granted": 1, "bonus_rejected": 1, "bonus_refunded": 1},
+                requests=1))
 def pool_desk(ctx, s, cmd, out):
     """Claims are whole or rejected; the budget resets lazily on the first claim of a new
-    period window (`ctx.t // period`, epoch-aligned like law.total_le(per=), D91)."""
+    period window (`ctx.t // period`, epoch-aligned like law.total_le(per=), D91). A refund
+    of a late grant (D67) books the money back without reopening the period's budget, so
+    `chk.referral_budget` on granted amounts stays exact."""
+    if cmd.kind == C_REFUND:
+        if not out.reserve(records={"bonus_refunded": 1}):
+            return RETRY
+        s.granted = std.checked_sub(s.granted, cmd.amount)
+        out.emit_bonus_refunded(ctx.t, claim_id=cmd.claim_id, amount=cmd.amount)
+        return COMMIT
     if not out.reserve(records={"bonus_granted": 1, "bonus_rejected": 1}, requests=1):
         return RETRY
     w = ctx.t // ctx.cfg.period_us
@@ -5046,10 +5398,10 @@ def pool_desk(ctx, s, cmd, out):
         s.granted = std.checked_add(s.granted, g)
         out.emit_bonus_granted(ctx.t, claim_id=cmd.claim_id, amount=g,
                                remaining_after=s.remaining)
-        out.respond(cmd, "granted", amount=g)
+        out.respond(cmd, "granted", claim_id=cmd.claim_id, amount=g)
     else:
         out.emit_bonus_rejected(ctx.t, claim_id=cmd.claim_id, amount=cmd.amount)
-        out.respond(cmd, "rejected", amount=0)
+        out.respond(cmd, "rejected", claim_id=cmd.claim_id, amount=0)
     return COMMIT
 
 
@@ -5263,7 +5615,9 @@ EX = Path(__file__).resolve().parents[3] / "examples" / "ecommerce"
 POOLS = ["engine.timer_nodes=600_000", "engine.payload_slots=100_000",
          "engine.max_messages_per_step=300_000", "budget.max_admissions_per_step=50_000",
          "budget.max_checker_keys=1_000_000"]
-SMALL = ["users=3000", "skus=1200", "sku_groups=8", "run.span=14d", "run.warmup=1d", *POOLS]
+SMALL = ["users=3000", "skus=1200", "sku_groups=8", "run.span=14d", "run.warmup=0s", *POOLS]
+# warm-up 0 (F-13): entities keep warm-up orders while their events are dropped (D20), and
+# machine entries count every step; warm-up runs are covered by Task 23 and the S1/S2 suites
 
 
 @pytest.fixture(scope="module")
@@ -5278,6 +5632,10 @@ def ev(run):
 
 
 def test_base_profiles_validate():
+    # F-41: before writing this test run `datagen validate examples/ecommerce --profile full`;
+    # if the caps exceed the profile's budget, raise `[profiles.full.set] "budget.memory"` (never
+    # shrink the workload) and note in datagen.toml when the total exceeds this machine's
+    # ~30 GiB ("full: not measured on the 36 GiB machine")
     for profile in ("sample", "full"):
         rep = validate(resolve_run(load_project(EX), profile, []))
         assert rep.ok, (profile, rep.errors)
@@ -5324,8 +5682,8 @@ def test_required_laws_were_checked(run):
 def test_addresses_change_slowly(run):
     hist = pl.read_parquet(sorted((run.out_dir / "history" / "address").rglob("*.parquet")))
     assert hist.height > 0
-    per = hist.group_by("entity_id").len()
-    assert per["len"].max() <= 3                        # ~ every 45 days over 15 days
+    users = pl.read_parquet(run.out_dir / "entities" / "user").height
+    assert 0.15 <= hist.height / users <= 0.5           # ~14/45 = 0.31 moves per user (F-37)
 ```
 
 - [ ] **Step 5: Run the tests**
@@ -5419,8 +5777,9 @@ def test_inviters_are_credited_a_day_later_by_message(data):
     j = cr.join(inv, on="invitee_id")
     assert j.height == cr.height > 0
     assert (j["event_time"] - j["t0"] >= timedelta(days=1)).all()
-    inviter_of = users.select(pl.col("id").alias("invitee_id"),
-                              pl.col("invited_by").alias("expected"))
+    inviter_of = ev["user_signed_up"].select(pl.col("user_id").alias("invitee_id"),
+                                             pl.col("invited_by").alias("expected"))
+    assert (inviter_of.drop_nulls()["invitee_id"] != inviter_of.drop_nulls()["expected"]).all()
     k = j.join(inviter_of, on="invitee_id")
     assert (k["user_id"] == k["expected"]).all()
 
@@ -5628,7 +5987,7 @@ def apply(o: Overlay, size: int = 300, zombies_mean: float = 12.0, share_device:
     # ---------------------------------------------------------------- zombie
     z = o.machine("zombie", members=camp.spawned("zombie"), initial="invited",
                   max_instances=32, reads={"sku": "sku"},
-                  fields={"device": "ref", "amount": "i64", "paid": "i64"},
+                  fields={"device": "ref", "amount": "i64", "paid": "i64", "claim": "ref"},
                   member={"acquisition": "invite", "referred": 1, "invited_by": std.parent()})
     z.state("invited", branch={
         "ordered": (zombie_order_p, dist.lognormal(median_s=600),
@@ -5700,14 +6059,27 @@ def test_overlay_profiles_validate_and_keep_the_schema():
         assert ev == [(e.name, e.cols) for e in base.events if e.group == "events"]
 
 
+def test_overlay_parameters_never_change_the_source():
+    a = resolve_run(load_project(EX), "sample", [], overlays=["bounty_hunters"]).plan
+    b = resolve_run(load_project(EX), "sample", ["referral.min_order=1000",
+                                                 "bounty_hunters.size=5",
+                                                 "bounty_hunters.order_above_min=0.1"],
+                    overlays=["bounty_hunters"]).plan
+    assert a.machine_sources == b.machine_sources        # D77, F-10: std.near bases are params
+
+
 def test_members_are_hunters_and_their_zombies(ev, members):
     su = ev["user_signed_up"].join(members.select(pl.col("id").alias("user_id")), on="user_id")
     hunters = su.filter(pl.col("invited_by").is_null())
     zombies = su.filter(pl.col("invited_by").is_not_null())
     assert hunters.height == 8 and zombies.height >= 8 * 3
     assert set(zombies["invited_by"]) <= set(hunters["user_id"])
-    assert ev["session_started"].join(members.select(pl.col("id").alias("user_id")),
-                                      on="user_id").height == 0          # suppress=["shopper"]
+    # members are never admitted as base owners, so no base process runs for them (suppress=
+    # has no runtime effect, D74/F-22): every row naming a member comes from a campaign owner
+    rows = pl.concat([t.select("user_id", "partition_id") for t in ev.values()
+                      if "user_id" in t.columns])
+    mrows = rows.join(members.select(pl.col("id").alias("user_id")), on="user_id")
+    assert mrows.height > 0 and (mrows["partition_id"] // (1 << 56) != 1).all()
 
 
 def test_zombies_hug_the_minimum_and_share_devices(ev, members):
@@ -5769,7 +6141,7 @@ Claude-Session: https://claude.ai/code/session_01BKddEJ7kY3XR8oXDK9HriN"
   - `shared_partitions(plan) -> tuple[str, ...]`: base partitions that a cohort process sends a boundary to (request or message targets), plan order.
   - `base_ptypes(plan) -> frozenset[int]`: ptype codes of non-cohort partitions.
   - `compare(base_dir: Path, overlay_dir: Path, plan) -> dict` with keys `shared` (list), `identical_base_rows` (bool, or None when shared), `exogenous_identical` (bool), `first_contact` (ISO time of the first cohort row of a boundary to a shared partition, or None), `events` (`{name: {"base": n, "with": n}}` over base partitions), `changed_owners` (`{name: n}`: base owners — the `user_id` column when present, else `partition_id` — whose rows of that type differ as multisets), `laws_ok` (`{"base": bool, "with": bool}` from both manifests).
-  - `canonical_rows(t: pl.DataFrame, created: set[str]) -> pl.DataFrame`: drop `event_id`; rename the values of every column referencing a created namespace by first appearance in canonical order (D37); sort by all columns.
+  - `canonical_rows(tables: dict[str, pl.DataFrame], created: set[str]) -> dict[str, pl.DataFrame]`: replace `event_id` by its canonical position over all the given tables and map `cause_id` through the same raw `event_id` → position map (null when the cause is not among them; F-01); rename the values of every column referencing a created namespace by first appearance in canonical order (D37); sort each table by all columns.
 
 - [ ] **Step 1: Write the quiet overlay** (`fixtures/ring/specs/overlays/quiet.py`)
 
@@ -5883,7 +6255,7 @@ def test_base_claims_are_crowded_out(report):
     assert report["changed_owners"]["referral_bonus_paid"] > 0
 ```
 
-- [ ] **Step 3: Run the tests to verify they fail** (`ModuleNotFoundError: neorisk_simkit.checks.interference`), then **implement** `checks/interference.py` as specified in Interfaces: base rows = rows whose `partition_id >> 56` is a base ptype; `exogenous_identical` = every population entity table of a base partition (and every static table's base rows) is equal in both runs, and the base rows strictly before `first_contact` are equal under `canonical_rows` (all base rows when `first_contact` is None); `identical_base_rows` = equality of all base rows under `canonical_rows` when nothing is shared; created namespaces are `plan.namespaces` that are tables or ids; `laws_ok` from `manifest.json["laws"]` (no violations of required laws). Read events with `read_events`, entities with `pl.read_parquet`.
+- [ ] **Step 3: Run the tests to verify they fail** (`ModuleNotFoundError: neorisk_simkit.checks.interference`), then **implement** `checks/interference.py` as specified in Interfaces: base rows = rows whose ptype (`pl.col("partition_id") // (1 << 56)`; polars has no `>>` on expressions, F-07) is a base ptype; `exogenous_identical` = the base rows of every population entity table of a base partition (`origin != "member"`, F-31) and of every read table (its first `n_base` rows, where `n_base` is the base run's row count — cohort recipes append after them, D94) are equal in both runs, and the base rows strictly before `first_contact` are equal under `canonical_rows` (all base rows when `first_contact` is None); `identical_base_rows` = equality of all base rows under `canonical_rows` when nothing is shared; created namespaces are `plan.namespaces` that are tables or ids; `laws_ok` from `manifest.json["laws"]` (no violations of required laws). Read events with `read_events`, entities with `pl.read_parquet`.
 
 - [ ] **Step 4: Run** — both test files → PASS (the ecommerce file reuses the cached base and base+overlay modules). If `test_base_claims_are_crowded_out` does not show crowding with these parameters, raise `bounty_hunters.size` or lower `referral.monthly_budget` in the test (never the assertion) and say so in the commit message.
 
@@ -5906,7 +6278,7 @@ Claude-Session: https://claude.ai/code/session_01BKddEJ7kY3XR8oXDK9HriN"
 
 **Files:**
 - Create: `libs/simkit/src/neorisk_simkit/spec/expectations.py`, `libs/simkit/src/neorisk_simkit/checks/stats.py`
-- Modify: `libs/simkit/pyproject.toml` (`pyyaml>=6` in dependencies; then `uv lock`), `uv.lock`
+- Modify: `libs/simkit/pyproject.toml` (`pyyaml>=6` in dependencies; then `uv lock` with the package index reachable — offline sandboxes cannot lock; D84 records the §17 deviation, F-40), `uv.lock`, `libs/simkit/src/neorisk_simkit/io/manifest.py` (`end_us`, F-29)
 - Test: `libs/simkit/tests/test_checks_stats.py`
 
 **Interfaces:**
@@ -5915,6 +6287,7 @@ Claude-Session: https://claude.ai/code/session_01BKddEJ7kY3XR8oXDK9HriN"
   - `spec.expectations.load(path: Path, *, overlays: dict[str, dict], cfg) -> Expectations` where `Expectations(defaults: dict, laws: tuple[LawRef, ...], items: tuple[Expectation, ...])`, `LawRef(id, required)`, `Expectation(id, metric: str, kwargs: dict, args: tuple, target: dict, source: str | None, required: bool, overlay: str | None)`. Metric strings parse with `ast.parse(text, mode="eval")` into exactly one `stat.<name>(...)` call with literal arguments (`ast.literal_eval` per argument); anything else → `ExpectationError(f"{id}: metric must be one stat.<name>(...) call with literal arguments")`. `${<overlay>.<param>}` and `${<config path>}` inside targets are substituted. Overlay sections apply only to enabled overlays.
   - `checks.stats.evaluate(exp: Expectations, run_dir: Path, plan, *, baseline: Path | None) -> list[dict]` — one result per law and expectation: `{"id", "kind": "law"|"expectation", "metric", "value", "ci": [lo, hi] | None, "n_cases", "censored_share", "target", "status": "pass"|"fail"|"inconclusive"|"missing"|"unanchored", "required", "source"}`.
   - Metrics (exact definitions; cases are owners = `partition_id`, sampled per D85):
+    - (`n_cases`, what `min_sample` counts, is the number of the metric's units within sampled owners — D85, F-30.)
     - `funnel(start, step, unit, within=None, where=None)`: cases = distinct `unit` values of `start` rows (filtered by `where` equality on start columns); converted when a `step` row with the same `unit` has `event_time ≥` the first start time and, with `within`, `≤ start + within`; with `within`, cases starting after `end − within` are censored (excluded; `censored_share` reported). Wilson 95% CI.
     - `share(event, of, where=None)`: rows of `event` (filtered) ÷ rows of the `of` events; cluster-robust CI over owners (delta method on per-owner sums).
     - `quantiles(event_or_column, per=None, where=None, cohort=None, role=None)`: with `per`, the row count per `per` value; else the column's values; `cohort=` keeps rows whose partition is that cohort; `role=` keeps rows whose `user_id` is a label target with that role (last label row); binomial order-statistic CI.
@@ -5991,7 +6364,7 @@ expectations:
     source: "x"
     required: true
   - id: t
-    metric: stat.top_share("product_viewed", by="sku_id", top=0.34)
+    metric: stat.top_share("product_viewed", by="sku_id", top=0.33)
     target: {gt: 0.7}
     source: "x"
   - id: u
@@ -6045,9 +6418,9 @@ expectations:
 
 - [ ] **Step 2: Run them to verify they fail** — `ModuleNotFoundError: neorisk_simkit.checks.stats`.
 
-- [ ] **Step 3: Implement** both modules per the Interfaces block (polars for the metrics; `mix64` from `checks.laws._mix64` for the owner hash; per-stratum rates `max(sample_rate, min(1, min_sample / owners))`; weights `1 / rate`; strata keyed by `partition_id >> 56`). Add `pyyaml>=6` to `libs/simkit/pyproject.toml` and run `uv lock`.
+- [ ] **Step 3: Implement** both modules per the Interfaces block (polars for the metrics; `mix64` from `checks.laws._mix64` for the owner hash; per-stratum rates `max(sample_rate, min(1, min_sample / owners))`; weights `1 / rate`; strata keyed by `partition_id // (1 << 56)`). Add `pyyaml>=6` to `libs/simkit/pyproject.toml` and run `uv lock`.
 
-- [ ] **Step 4: Run** — `uv run --all-packages pytest libs/simkit/tests/test_checks_stats.py -q` → PASS; full suite in the background → PASS.
+- [ ] **Step 4: Run** — `uv run --all-packages pytest libs/simkit/tests/test_checks_stats.py -q` → PASS; the suite gate (Global Constraints) → PASS.
 
 - [ ] **Step 5: Lint and commit**
 
@@ -6167,7 +6540,7 @@ Claude-Session: https://claude.ai/code/session_01BKddEJ7kY3XR8oXDK9HriN"
 
 **Files:**
 - Create: `libs/simkit/src/neorisk_simkit/io/legacy.py`, `apps/datagen/src/datagen/export_cmd.py`
-- Modify: `apps/datagen/src/datagen/cli.py` (`export` subcommand)
+- Modify: `apps/datagen/src/datagen/cli.py` (`export` subcommand), `examples/ecommerce/datagen.toml` (only `[profiles.legacy.overlay.bounty_hunters] size`, the bad-rate knob, F-38)
 - Test: `apps/datagen/tests/test_legacy_fraud_parity.py`
 
 **Interfaces:**
@@ -6273,12 +6646,15 @@ def test_bench_consumes_the_export(dirs):
 
 - [ ] **Step 2: Run to verify it fails** (`ModuleNotFoundError: neorisk_simkit.io.legacy`), **implement** `io/legacy.py` per the Interfaces block (polars; the rolling features use exactly the legacy names and windows of `datagen/scenarios/fraud.py:_golden`, computed with `neorisk_simkit.features.rolling` / `rolling_asof` over the adapter's events; `invitee_is_zombie` = the invite row's user is a label target with role `zombie`; `export(ds, out)` validates and writes), then `export_cmd.py` and the CLI. **Run** → PASS (the `legacy` profile reuses the base+overlay module; the run takes about a minute).
 
+If `test_bad_rate_in_band` fails (the band is 0.003–0.08 before Task 22's calibration), tune only `[profiles.legacy.overlay.bounty_hunters] size` in `examples/ecommerce/datagen.toml` (an overlay parameter: no recompile) until it passes, and record the value in the commit message (F-38); never widen the band.
+
 - [ ] **Step 3: Lint and commit**
 
 ```bash
 uv run ruff check $(ls -d libs apps examples/ecommerce_s1 examples/ecommerce_s2 examples/ecommerce benchmarks 2>/dev/null)
 git add libs/simkit/src/neorisk_simkit/io/legacy.py apps/datagen/src/datagen/export_cmd.py \
-  apps/datagen/src/datagen/cli.py apps/datagen/tests/test_legacy_fraud_parity.py
+  apps/datagen/src/datagen/cli.py apps/datagen/tests/test_legacy_fraud_parity.py \
+  examples/ecommerce/datagen.toml
 git commit -m "feat(io): datagen export --legacy-fraud; parity suite on ecommerce + bounty_hunters (D87, D88)
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
@@ -6291,14 +6667,14 @@ Claude-Session: https://claude.ai/code/session_01BKddEJ7kY3XR8oXDK9HriN"
 
 **Files:**
 - Delete: `apps/datagen/src/datagen/scenarios/__init__.py`, `apps/datagen/src/datagen/scenarios/fraud.py`, `apps/datagen/src/datagen/config.py`, `apps/datagen/tests/test_datagen_fraud.py`
-- Modify: `apps/datagen/src/datagen/cli.py` (`generate` prints the replacement and returns 2), `apps/datagen/tests/test_datagen_cli.py` (generate tests → replacement-message test + an `export` usage test), `apps/datagen/README.md` (the project commands; `generate` removed), `apps/datagen/pyproject.toml` (description; drop `xgboost` if nothing in `datagen` imports it any more), `apps/bench/tests/conftest.py` (new: a session fixture building one legacy export), `apps/bench/tests/{test_bench_allowlist,test_bench_runner,test_bench_compare,test_bench_features}.py` (use the fixture), `apps/bench/src/bench/datagen_section.py` (describe the pack + overlay from `meta["source"]`, both languages), `apps/bench/README.md`
+- Modify: `apps/datagen/src/datagen/cli.py` (`generate` prints the replacement and returns 2), `apps/datagen/tests/test_datagen_cli.py` (generate tests → replacement-message test + an `export` usage test), `apps/datagen/README.md` (the project commands; `generate` removed), `apps/datagen/pyproject.toml` (description; drop `xgboost` if nothing in `datagen` imports it any more), `apps/bench/tests/legacy_fixture.py` (new: a session fixture building one legacy export, registered from the existing bench test modules with `pytest_plugins = ["legacy_fixture"]` — no second `conftest.py` beside `libs/simkit/tests/conftest.py`, F-39), root `README.md` (the "Synthetic event data + benchmark" block: `datagen generate` → `datagen run examples/ecommerce --profile legacy` + `datagen export ... --legacy-fraud --out data/fraud`, F-32), `apps/bench/tests/{test_bench_allowlist,test_bench_runner,test_bench_compare,test_bench_features}.py` (use the fixture), `apps/bench/src/bench/datagen_section.py` (describe the pack + overlay from `meta["source"]`, both languages), `apps/bench/README.md`
 - Test: the bench and datagen suites
 
 **Interfaces:**
 - Consumes: Task 20 (`legacy_fraud`, `datagen export`).
-- Produces: `apps/bench/tests/conftest.py` fixture `legacy_dir(tmp_path_factory)` (session scope) returning a folder with `events.parquet`, `golden.parquet`, `meta.json` built from `examples/ecommerce --profile legacy --set users=2000 --set run.span=30d`.
+- Produces: `apps/bench/tests/legacy_fixture.py` fixture `legacy_dir(tmp_path_factory)` (session scope) returning a folder with `events.parquet`, `golden.parquet`, `meta.json` built from `examples/ecommerce --profile legacy --set users=2000 --set run.span=30d`.
 
-- [ ] **Step 1: Bench fixture and tests** — `apps/bench/tests/conftest.py`:
+- [ ] **Step 1: Bench fixture and tests** — `apps/bench/tests/legacy_fixture.py` (each bench test module that uses it starts with `pytest_plugins = ["legacy_fixture"]`; `apps/bench/README.md` notes that the bench suite now compiles the ecommerce + bounty_hunters module, 45–90 min cold, F-39):
 ```python
 from pathlib import Path
 
@@ -6323,7 +6699,7 @@ Rewrite every `datagen_main(["generate", ...])` / `generate(FraudConfig(...))` u
 
 - [ ] **Step 2: Retire** — delete the files listed; `cli.py` keeps a `generate` subparser that accepts any arguments (`argparse.REMAINDER`) and prints `"datagen generate was replaced (M3): datagen run examples/ecommerce --profile legacy && datagen export <run dir> --legacy-fraud --out <dir>"` to stderr, returning 2. `test_datagen_cli.py`: `test_generate_points_to_the_replacement` (exit 2, message names both commands) and `test_export_needs_legacy_fraud` (exit 2). `datagen_section.py`: the intro, steps and behaviors describe the e-commerce pack (sessions, carts, inventory, orders, referrals) and the bounty-hunter overlay (rings, zombies at the minimum order, shared devices, pool draining), labels from the overlay's ground truth, and read counts/config from `meta["source"]` and `meta`; keep the `zh`/`en` structure and the existing tests' section ids. README lines that mention `datagen generate` are updated.
 
-- [ ] **Step 3: Run** — `uv run --all-packages pytest apps/bench apps/datagen -q` → PASS; full suite in the background → PASS; `grep -rn "scenarios\|FraudConfig\|datagen generate" apps libs examples --include=*.py --include=*.md` finds only the replacement message and its test.
+- [ ] **Step 3: Run** — `uv run --all-packages pytest apps/bench apps/datagen -q` → PASS; the suite gate (Global Constraints) → PASS; `git grep -nE "datagen\.scenarios|FraudConfig|datagen generate" -- apps libs examples README.md` finds only the replacement message and its test (F-32: the bench `"scenarios"` key in `curves.py` is unrelated and not matched).
 
 - [ ] **Step 4: Lint and commit**
 
@@ -6332,7 +6708,7 @@ uv run ruff check $(ls -d libs apps examples/ecommerce_s1 examples/ecommerce_s2 
 git rm apps/datagen/src/datagen/scenarios/__init__.py apps/datagen/src/datagen/scenarios/fraud.py \
   apps/datagen/src/datagen/config.py apps/datagen/tests/test_datagen_fraud.py
 git add apps/datagen/src/datagen/cli.py apps/datagen/tests/test_datagen_cli.py \
-  apps/datagen/README.md apps/datagen/pyproject.toml apps/bench/tests/conftest.py \
+  apps/datagen/README.md apps/datagen/pyproject.toml apps/bench/tests/legacy_fixture.py README.md \
   apps/bench/tests/test_bench_allowlist.py apps/bench/tests/test_bench_runner.py \
   apps/bench/tests/test_bench_compare.py apps/bench/tests/test_bench_features.py \
   apps/bench/src/bench/datagen_section.py apps/bench/README.md uv.lock
@@ -6387,7 +6763,7 @@ def test_profile_passes_its_required_checks(tmp_path, profile, overlays):
     failing = [r for r in checks["results"] if r["required"] and r["status"] != "pass"]
     assert rc == 0, failing
 ```
-(For `legacy`, the "base" run must disable the profile's overlays: pass `overlays=[]` explicitly and give `run_to_dataset`/`resolve_run` an `overlays=` that **replaces** the profile list when given as `[]` — implement that switch in `resolve_run` if Task 10 made it additive; `datagen run --no-overlays` exposes it on the CLI.)
+(For `legacy`, the "base" run passes `overlays=[]`, which replaces the profile's list — Task 10, F-15; on the CLI that is `datagen run --no-overlays`.)
 
 - [ ] **Step 2: Calibrate** — run the test; read `checks.json`; adjust config defaults one at a time (`checkout_p` and `views_mean` for session→checkout, `add_to_cart_p` for cart sizes, initial stock/`by_weight` in `std.stock(...)` via the pack constants for out-of-stock failures, `auth_fail_p`, `return_*_p`, fulfillment delays, zipf `s` for SKU concentration, session gap Pareto for orders per shopper). Never edit `expectations.yaml` targets: if a brief rate cannot be reached by the model, stop and report it (spec §16 "fix the spec, not the expectations, unless the brief was wrong"). Record the final values and the measured metric values in `examples/ecommerce/README.md` ("Calibration" section, one table: metric, target, measured, profile).
 
@@ -6402,7 +6778,6 @@ git commit -m "feat(examples): calibrate ecommerce sample and legacy profiles to
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 Claude-Session: https://claude.ai/code/session_01BKddEJ7kY3XR8oXDK9HriN"
 ```
-(Also stage `libs/simkit/src/neorisk_simkit/spec/project.py`, `apps/datagen/src/datagen/cli.py` and `run_cmds.py` if the overlay-replacement switch was added here.)
 
 ---
 
