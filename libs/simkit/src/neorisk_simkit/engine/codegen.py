@@ -126,8 +126,9 @@ from neorisk_simkit.engine.rng import (
     uniform_int,
 )
 from neorisk_simkit.engine.route import (
-    RT_ADM, RT_POOL, RT_WOKEN, RT_WOKEN_N, command_count, horizon, mark_all, mark_touched,
-    note_suspended, route_outbox, sender_keys, shards_below, take_runnable,
+    RT_ADM, RT_POOL, RT_WOKEN, RT_WOKEN_N, command_count, drop_queue, horizon, mark_all,
+    mark_touched, note_suspended, only_owner_messages, route_outbox, sender_keys, shards_below,
+    take_runnable,
 )
 from neorisk_simkit.spec.dist import EXP, PARETO
 '''
@@ -542,7 +543,7 @@ class _Gen:
             body = ["if t < ctx[CTX_T]:",
                     *self.by_proc(procs, "EngineError", lambda p: [
                         _q(f"{p}: send {bd.name} scheduled before current time")], "    ")]
-        if to.kind == "shard":
+        if to.kind == "shard":          # an owner target is judged at delivery (D73)
             body += [f"n_ = out[OUT_SHARD_N][{bd.code}]",
                      f"if {dest} < 0 or {dest} >= n_:",
                      *self.by_proc(procs, "EngineError", lambda p: [
@@ -792,6 +793,12 @@ class _Gen:
             "        node = qhead[g]",
             "        if node < 0:",
             "            break",
+            # D73: an owner left with nothing but owner-to-owner messages is idle; it retires
+            # (below) and the messages are late, however early they were queued
+            ("        if ran and retire[ptype[g]] != 0 and pending[g] == 0 "
+             "and only_owner_messages(P, PA[0], qhead, g):"),
+            "            counters[_C_LATE_MESSAGES] += drop_queue(P, PA, worker, qhead, g)",
+            "            break",
             "        t = P[0][node]",
             "        if t >= limit_t:",
             "            break",
@@ -923,8 +930,9 @@ class _Gen:
         All or nothing: before touching anything it checks the admission limit (`_ADM_CAP`),
         the creating process's spawn depth (`_ADM_DEPTH`, D72: the created owner's depth is its
         creator's + 1), free local slots per owner type (`_ADM_LIVE`; these three return the CQ
-        row that does not fit) and the reserve's command nodes for every START (`_ADM_NODES`, value = nodes
-        needed), so a retry after any non-OK status sees `CQ` exactly as before (F-10)."""
+        row that does not fit) and the reserve's command nodes for every START (`_ADM_NODES`,
+        value = nodes needed), so a retry after any non-OK status sees `CQ` exactly as before
+        (F-10)."""
         hid = ["pid", "alive", "clock", "rseq", "cseq", "pending", "susp_delta", "occ", "ordn",
                "retire_at", "susp_t", "last_t", "inst", "self_id", "ckey", "created", "qhead",
                "depth"]

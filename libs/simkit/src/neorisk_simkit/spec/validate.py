@@ -138,8 +138,14 @@ def validate(run, threads: int | None = None) -> ValidationReport:
         if b.kind == "request":
             if part_kind.get(b.frm) != "owner" or part_kind.get(b.to) != "shard":
                 errs.append(f"boundary {b.name}: requests go from an owner to a shard")
-        elif part_kind.get(b.frm) == "owner" and part_kind.get(b.to) == "owner":
-            errs.append(f"boundary {b.name}: owner-to-owner messages arrive in M3")
+        elif b.o2o:
+            if b.min_latency_us < eng.step_max_us:
+                errs.append(f"boundary {b.name}: owner-to-owner messages need a minimum latency "
+                            f">= engine.step_max ({eng.step_max_us} us)")
+            target = plan.partition(b.to)
+            if not any(pop.table == target.table for pop in plan.populations):
+                errs.append(f"boundary {b.name}: owner-to-owner messages need a target partition "
+                            "with a population")
         elif part_kind.get(b.frm) != "owner":
             errs.append(f"boundary {b.name}: messages go from an owner to a shard")
 

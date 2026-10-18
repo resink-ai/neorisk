@@ -9,8 +9,10 @@
 3. remap provisional handles (D11, D38) in records, created rows, the state, local `ref` fields
    and `self_id`/`pid` of touched owners, the `ref` state and local `ref` fields of touched
    shards, and the tag, user payload and sender (column 9) of every command queued at a touched
-   slot; a provisional value that matches no row of this step fails the run;
-4. free the slots of owners that retired idle this step (`alive = 0`, `gen += 1`, slot reusable);
+   slot and of every owner-to-owner message sent this step (D73); a provisional value that
+   matches no row of this step fails the run;
+4. free the slots of owners that retired idle this step (`alive = 0`, `gen += 1`, slot reusable;
+   a population owner leaves `World.pop_slot`);
 5. number events and postings per table (`id_bases["event:<name>"]` + rank by `(pid, seq)`)
    and map every ID to its public value (`feistel63` keyed by the table name);
 6. sort each table by the canonical key `(time, lamport, partition_id, seq)`;
@@ -295,7 +297,30 @@ def _remap_world(world: Any, remap: _Remap) -> np.ndarray:
             remap.apply(sender, "a queued command sender")
             world.payload.rows[rows, _PAY_SENDER] = sender
     hid.ordn[touched] = 0                     # create ordinals are per step (D11)
+    _remap_owner_messages(world, remap)
     return owners
+
+
+def _remap_owner_messages(world: Any, remap: _Remap) -> None:
+    """Remap the carried owner-to-owner messages sent this step (D73) like queued commands:
+    their tag, user payload and sender, so a handle created this step reaches its target as
+    its final value."""
+    from neorisk_simkit.engine.slabs import OUTBOX_COLS
+
+    cols, pay, n = world.o2o
+    lo, hi = int(world.o2o_step_lo), int(n[0])
+    if hi <= lo:
+        return
+    tag = np.ascontiguousarray(cols[lo:hi, OUTBOX_COLS.index("tag")])
+    remap.apply(tag, "an owner message tag")
+    cols[lo:hi, OUTBOX_COLS.index("tag")] = tag
+    block = np.ascontiguousarray(pay[lo:hi, :_USER_PAYLOAD])
+    remap.apply(block.reshape(-1), "an owner message payload")
+    pay[lo:hi, :_USER_PAYLOAD] = block
+    sender = np.ascontiguousarray(pay[lo:hi, _PAY_SENDER])
+    remap.apply(sender, "an owner message sender")
+    pay[lo:hi, _PAY_SENDER] = sender
+    world.o2o_step_lo = hi
 
 
 def _remap_shards(world: Any, remap: _Remap, shards: np.ndarray) -> None:
@@ -355,6 +380,10 @@ def _free_retired(world: Any, owners: np.ndarray) -> np.ndarray:
         mine = gone[(gone >= base) & (gone < base + part.max_live)]
         if len(mine):                       # to the back of the type's ring, sorted (D44)
             world.FS.give(world.owner_type[part.name], hid.lslot[mine])
+            slot_of = world.pop_slot.get(part.table)
+            pop = mine[hid.created[mine] == 0]
+            if slot_of is not None and len(pop):   # population owners leave pop_slot (D73)
+                slot_of[hid.pid[pop] & ((1 << 56) - 1)] = -1
     return gone
 
 

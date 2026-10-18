@@ -1,0 +1,40 @@
+[project]
+name = "courier"
+pack = "specs/pack.py"
+
+[paths]
+out = "out"
+
+[defaults]
+seed = 7
+start = "2026-03-01T00:00:00Z"
+mode = "time"
+span = "4d"
+warmup = "0s"
+
+[budget]
+threads = 2
+memory = "2GB"
+max_step_rows = 200_000
+max_step_bytes = "64MB"
+max_spawn_depth = 3
+max_admissions_per_step = 10_000
+
+[writer]
+compression = "zstd"
+compression_level = 3
+row_group_rows = 131_072
+
+[engine]
+step = "6h"
+step_min = "1h"
+step_max = "1d"
+adapt = false
+slab_bytes = "256KB"
+timer_nodes = 100_000
+payload_slots = 10_000
+max_messages_per_step = 100_000
+parallel_min_partitions = 1
+
+[profiles.sample]
+set = {}

@@ -28,6 +28,18 @@ Route tuple `R` (indices `RT_*`):
             since one `child_of` owner type can hold both population and created owners
   adm       int64[2]: created owners admitted this step, `budget.max_admissions_per_step`
             (D44; queued creations count against the limit as they are routed)
+  o2o       (cols int64[C, len(OUTBOX_COLS) + 6], pay int64[C, PAYLOAD_W], n int64[1]): the
+            carried owner-to-owner messages sent and not yet delivered (D73): their outbox
+            columns, then the D61 sender key k0..k5 computed when the row was routed (the
+            sender's slot may be reused before delivery); C = `engine.max_owner_messages_per_step`
+  bnd_o2o   uint8[boundaries]: 1 for an owner-to-owner message boundary
+
+Owner-to-owner messages (D73) are set aside by `route_outbox` into `o2o` and queued at the start
+of the step holding their delivery time by `deliver_owner_messages`, which judges the target's
+presence at that time. An owner whose queue holds nothing but such messages is idle: it retires
+and the messages are late (`only_owner_messages`, `drop_queue`; called by the generated
+`run_partitions`), so whether a message was queued before the target went idle never depends
+on where step boundaries fall.
 """
 
 from __future__ import annotations
@@ -36,17 +48,31 @@ import numpy as np
 from numba import njit
 
 from neorisk_simkit.engine.admit import CQ_N, cq_push
-from neorisk_simkit.engine.cmdq import P_FREE_N, PAY_KIND, PAYLOAD_W, pay_alloc, q_push_from
+from neorisk_simkit.engine.cmdq import (
+    P_FREE_N,
+    PAY_KIND,
+    PAYLOAD_W,
+    pay_alloc,
+    pay_free,
+    q_free,
+    q_push_from,
+)
 from neorisk_simkit.engine.codegen import COUNTERS
-from neorisk_simkit.engine.slabs import OB_CREATE, OB_REQUEST, OB_RESPONSE, OUTBOX_COLS
+from neorisk_simkit.engine.slabs import (
+    OB_CREATE,
+    OB_MESSAGE,
+    OB_REQUEST,
+    OB_RESPONSE,
+    OUTBOX_COLS,
+)
 
 (RT_QHEAD, RT_CSEQ, RT_GEN, RT_ALIVE, RT_PENDING, RT_SUSP_T, RT_SUSP_DELTA, RT_POOL, RT_PAY,
  RT_BND_BASE, RT_COUNTERS, RT_MSG, RT_WOKEN, RT_WOKEN_N, RT_TMASK, RT_TLIST, RT_TN, RT_SUSP,
  RT_SUSP_N, RT_SMASK, RT_BND_REQ, RT_SPOS, RT_BND_RESP, RT_SHARD_REQ, RT_SHARD_LO, RT_HID,
- RT_CREATED, RT_ADM) = range(28)
+ RT_CREATED, RT_ADM, RT_O2O, RT_BND_O2O) = range(30)
 
 # route_outbox statuses
-ROUTED, NEED_MESSAGES, NEED_NODES, NEED_PAYLOAD, NEED_CREATES = 0, 1, 2, 3, 4
+ROUTED, NEED_MESSAGES, NEED_NODES, NEED_PAYLOAD, NEED_CREATES, NEED_O2O = 0, 1, 2, 3, 4, 5
 
 _OB = {c: i for i, c in enumerate(OUTBOX_COLS)}
 _KIND, _BND, _TIME, _PRIO, _CAUSE = (_OB["kind"], _OB["bnd"], _OB["time"], _OB["prio"],
@@ -54,6 +80,8 @@ _KIND, _BND, _TIME, _PRIO, _CAUSE = (_OB["kind"], _OB["bnd"], _OB["time"], _OB["
 _SRC_G, _SRC_SEQ, _DST, _TAG = _OB["src_g"], _OB["src_seq"], _OB["dst"], _OB["tag"]
 _RESP_KIND, _TARGET, _OB_SRC_PID = _OB["resp_kind"], _OB["target_action"], _OB["src_pid"]
 _PAYC = len(OUTBOX_COLS)
+_NCOLS = len(OUTBOX_COLS)             # o2o buffer: sender key part j is column _NCOLS + j
+assert _NCOLS == 12, "route_outbox copies the outbox columns into RT_O2O one by one"
 _LATE = COUNTERS.index("late_messages")
 _CMDS = COUNTERS.index("commands")
 _I64_MAX = np.iinfo(np.int64).max
@@ -367,8 +395,12 @@ def route_outbox(R, CQ, ob, n):
     (`RT_BND_RESP`, `RT_BND_REQ`) and per shard slot (`RT_SHARD_REQ`). `OB_CREATE` rows join
     the pending-creation queue `CQ` with their `k` (D44, F-10).
 
+    Owner-to-owner message rows (`RT_BND_O2O`) join the carried buffer `RT_O2O` with their
+    sender key instead of a queue (D73); they count in the message budget.
+
     Nothing is delivered or queued unless every row fits: the step's message budget
-    (`NEED_MESSAGES`, value = messages needed), the admission limit (`NEED_CREATES`, value =
+    (`NEED_MESSAGES`, value = messages needed), the carried buffer (`NEED_O2O`, value = rows it
+    would hold), the admission limit (`NEED_CREATES`, value =
     the outbox row of the first creation in routing order beyond `R[RT_ADM]`'s limit, counting
     the creations admitted and queued already), and both reserves (`NEED_NODES`,
     `NEED_PAYLOAD`, value = rows needed).
@@ -384,6 +416,15 @@ def route_outbox(R, CQ, ob, n):
     msg = R[RT_MSG]
     if msg[0] + k > msg[1]:
         return NEED_MESSAGES, msg[0] + k
+    o2o_flag = R[RT_BND_O2O]
+    n_o2o = np.int64(0)
+    for i in range(n):
+        if kinds[i] == OB_MESSAGE and o2o_flag[ob[_BND][i]] == 1:
+            n_o2o += 1
+    if n_o2o > 0:
+        held = R[RT_O2O][2][0]
+        if held + n_o2o > R[RT_O2O][0].shape[0]:
+            return NEED_O2O, held + n_o2o
     keys = sender_keys(R, ob[_SRC_G][:n], n)
     k0, k1, k2, k3, k4, k5 = keys
     order = _route_order(ob, n, keys)
@@ -425,6 +466,32 @@ def route_outbox(R, CQ, ob, n):
             if alive[g] == 0 or np.int64(gen[g]) != src[i, PAY_KIND]:
                 counters[0, _LATE] += 1
                 continue
+        elif kind == OB_MESSAGE and o2o_flag[ob[_BND][i]] == 1:
+            buf = R[RT_O2O]                # delivered at its time by deliver_owner_messages
+            j = buf[2][0]
+            # ob is a heterogeneous tuple: its columns are indexed by literals
+            buf[0][j, 0] = ob[0][i]
+            buf[0][j, 1] = ob[1][i]
+            buf[0][j, 2] = ob[2][i]
+            buf[0][j, 3] = ob[3][i]
+            buf[0][j, 4] = ob[4][i]
+            buf[0][j, 5] = ob[5][i]
+            buf[0][j, 6] = ob[6][i]
+            buf[0][j, 7] = ob[7][i]
+            buf[0][j, 8] = ob[8][i]
+            buf[0][j, 9] = ob[9][i]
+            buf[0][j, 10] = ob[10][i]
+            buf[0][j, 11] = ob[11][i]
+            buf[0][j, _NCOLS] = k0[i]
+            buf[0][j, _NCOLS + 1] = k1[i]
+            buf[0][j, _NCOLS + 2] = k2[i]
+            buf[0][j, _NCOLS + 3] = k3[i]
+            buf[0][j, _NCOLS + 4] = k4[i]
+            buf[0][j, _NCOLS + 5] = k5[i]
+            for c in range(PAYLOAD_W):
+                buf[1][j, c] = src[i, c]
+            buf[2][0] = j + 1
+            continue
         else:
             g = bnd_base[ob[_BND][i]] + ob[_DST][i]
             if kind == OB_REQUEST:
@@ -451,3 +518,109 @@ def route_outbox(R, CQ, ob, n):
                 wn[0] += 1
     return ROUTED, k
 
+
+
+@njit(cache=True, nogil=True)
+def deliver_owner_messages(R, slots, times, retire_at, t0, t1, out_slots):
+    """Queue every buffered owner message due before t1 (D73, F-02); (status, slots written).
+
+    Rows go in (delivery time, prio, cause, sender key, src_seq) order, like `route_outbox`.
+    The target's presence is judged at the delivery time t: it is late (dropped, counted in
+    `late_messages`) when its dense id has no live slot (`slots[bnd][d] < 0`: retired and
+    freed, never arrived, or `d` past the population, e.g. a member row), when it arrives after
+    t (`times[bnd][d] > t`) or when it retired idle at or before t. Rows due later stay
+    buffered. All or nothing on the reserves (`NEED_NODES`, `NEED_PAYLOAD`, value = rows due).
+    `slots` and `times` are indexed by boundary code (empty arrays for other boundaries)."""
+    buf = R[RT_O2O]
+    n = buf[2][0]
+    cols, src = buf[0], buf[1]
+    nd = np.int64(0)
+    for i in range(n):
+        if cols[i, _TIME] < t1:
+            nd += 1
+    if nd == 0:
+        return ROUTED, np.int64(0)
+    P, PA = R[RT_POOL], R[RT_PAY]
+    if P[P_FREE_N][0] < nd:
+        return NEED_NODES, nd
+    if PA[3][0] < nd:
+        return NEED_PAYLOAD, nd
+    idx = np.empty(nd, np.int64)
+    j = 0
+    for i in range(n):
+        if cols[i, _TIME] < t1:
+            idx[j] = i
+            j += 1
+    order = np.argsort(cols[idx, _SRC_SEQ], kind="mergesort")
+    for c in (_NCOLS + 5, _NCOLS + 4, _NCOLS + 3, _NCOLS + 2, _NCOLS + 1, _NCOLS, _CAUSE,
+              _PRIO, _TIME):
+        order = _then_by(order, cols[idx, c])
+    qhead, alive, pending = R[RT_QHEAD], R[RT_ALIVE], R[RT_PENDING]
+    counters, rows = R[RT_COUNTERS], PA[0]
+    k = np.int64(0)
+    for o in order:
+        i = idx[o]
+        t = cols[i, _TIME]
+        b = cols[i, _BND]
+        table, arrive = slots[b], times[b]
+        d = cols[i, _DST]
+        g = table[d] if 0 <= d < table.shape[0] else np.int64(-1)
+        if (g < 0 or alive[g] == 0 or arrive[d] > t
+                or (retire_at[g] <= t and qhead[g] < 0 and pending[g] == 0)):
+            counters[0, _LATE] += 1
+            continue
+        row = pay_alloc(PA, 0)
+        for c in range(PAYLOAD_W):
+            rows[row, c] = src[i, c]
+        rows[row, PAY_KIND] = OB_MESSAGE
+        q_push_from(P, 0, qhead, g, t, cols[i, _PRIO], cols[i, _CAUSE], cols[i, _SRC_SEQ],
+                    cols[i, _RESP_KIND], cols[i, _TARGET], cols[i, _TAG], row,
+                    2 * cols[i, _NCOLS] + cols[i, _NCOLS + 1], cols[i, _NCOLS + 2],
+                    cols[i, _NCOLS + 3], cols[i, _NCOLS + 4], cols[i, _NCOLS + 5])
+        mark_touched(R, g)
+        out_slots[k] = g
+        k += 1
+    m = 0                                     # compact the rows still in flight, in order
+    for i in range(n):
+        if cols[i, _TIME] >= t1:
+            if m != i:
+                cols[m, :] = cols[i, :]
+                src[m, :] = src[i, :]
+            m += 1
+    buf[2][0] = m
+    return ROUTED, k
+
+
+@njit(cache=True, nogil=True)
+def only_owner_messages(P, pay_rows, qhead, g):
+    """Whether slot g's queue is non-empty and holds nothing but delivered owner-to-owner
+    messages (owners receive `OB_MESSAGE` commands only from `deliver_owner_messages`). Such an
+    owner is idle (D73): the messages do not keep it alive. O(1) unless the head is one."""
+    ppay, nxt = P[7], P[4]
+    node = qhead[g]
+    if node < 0:
+        return False
+    while node >= 0:
+        if ppay[node] < 0 or pay_rows[ppay[node], PAY_KIND] != OB_MESSAGE:
+            return False
+        node = nxt[node]
+    return True
+
+
+@njit(cache=True, nogil=True)
+def drop_queue(P, PA, w, qhead, g):
+    """Free every node of slot g's queue and its payload row into worker w's free lists;
+    returns the number of nodes dropped."""
+    nxt, ppay = P[4], P[7]
+    node = qhead[g]
+    k = np.int64(0)
+    while node >= 0:
+        nx = nxt[node]
+        row = ppay[node]
+        q_free(P, w, node)
+        if row >= 0:
+            pay_free(PA, w, row)
+        k += 1
+        node = nx
+    qhead[g] = -1
+    return k

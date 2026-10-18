@@ -75,6 +75,7 @@ class BoundaryDef:
     responses: tuple[str, ...]
     latency: Dist
     min_latency_us: int
+    o2o: bool = False                 # an owner-to-owner message (D73)
 
 
 @dataclass(frozen=True)
@@ -238,12 +239,15 @@ def build_plan(pack_module, cfg, specs_dir: Path) -> Plan:
                      retire_when_idle=d["retire_when_idle"])
         for i, d in enumerate(p.partitions.values()))
 
+    kind_of = {pd.name: pd.kind for pd in partitions}
     boundaries = tuple(
         BoundaryDef(name=d["name"], code=i, kind=d["kind"], frm=d["frm"], to=d["to"],
                     payload=resolve(f"boundary {d['name']}", d["payload"]),
                     response_payload=resolve(f"boundary {d['name']}", d["response_payload"]),
                     responses=d["responses"], latency=d["latency"],
-                    min_latency_us=_dist.min_us(d["latency"]))
+                    min_latency_us=_dist.min_us(d["latency"]),
+                    o2o=(d["kind"] == "message" and kind_of.get(d["frm"]) == "owner"
+                         and kind_of.get(d["to"]) == "owner"))
         for i, d in enumerate(p.boundaries.values()))
 
     def every_us(proc: str, every) -> int | None:

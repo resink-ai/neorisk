@@ -1,7 +1,8 @@
 """Rounds within a frontier step (spec section 06, decisions D4, D5, D7).
 
-`run_step(world, t0, t1)` admits population arrivals, collects owners due in `[t0, t1)` from
-the calendar, and repeats rounds until the step closes:
+`run_step(world, t0, t1)` admits population arrivals, queues the owner-to-owner messages due in
+`[t0, t1)` (D73), collects owners due in `[t0, t1)` from the calendar, and repeats rounds until
+the step closes:
 
 1. owner phase: every runnable owner runs its commands below `t1` until it issues a request
    (thread pool when the round is large, inline otherwise);
@@ -160,7 +161,9 @@ def run_step(world: Any, t0: int, t1: int) -> RoundStats:
     t0, t1 = int(t0), int(t1)
     world.begin_step(t0, t1)
     admitted = world.admit_population(t0, t1)
-    runnable = np.union1d(world.collect(t0, t1), admitted).astype(np.int64)
+    delivered = world.deliver_owner_messages(t0, t1)      # D73: before the step's rounds
+    runnable = np.union1d(np.union1d(world.collect(t0, t1), admitted),
+                          delivered).astype(np.int64)
     small = world.run.engine.parallel_min_partitions
     stats = RoundStats()
     world.round_state[RS_SHARD_NS] = 0            # the compiled loop adds its shard phases here

@@ -444,6 +444,9 @@ class World:
     def _build_populations(self) -> None:
         plan = self.plan
         self.populations: list[_Population] = []
+        # global slot per population ordinal (-1 = not live), for owner-to-owner messages (D73)
+        self.pop_slot: dict[str, np.ndarray] = {
+            pop.table: np.full(pop.n, -1, np.int64) for pop in plan.populations}
         owner_of = {p.table: p for p in plan.partitions if p.kind == "owner"}
         for pop in plan.populations:
             part = owner_of[pop.table]
@@ -570,6 +573,16 @@ class World:
         self._tmask = np.zeros(G, np.uint8)
         self._tlist = np.zeros(G, np.int64)
         self._tn = np.zeros(1, np.int64)
+        # D73: owner-to-owner messages sent and not yet delivered, carried across steps (one
+        # row when the plan has no such boundary)
+        o2o = any(b.o2o for b in plan.boundaries)
+        C = int(self.run.engine.max_owner_messages_per_step) if o2o else 1
+        self.o2o = (np.zeros((max(1, C), len(OUTBOX_COLS) + 6), np.int64),
+                    np.zeros((max(1, C), PAYLOAD_W), np.int64), np.zeros(1, np.int64))
+        self.o2o_step_lo = 0                 # first buffer row sent this step (seal remaps on)
+        o2o_flag = np.zeros(max(1, len(plan.boundaries)), np.uint8)
+        for b in plan.boundaries:
+            o2o_flag[b.code] = 1 if b.o2o else 0
         pay = self.payload
         self.R = (hid.qhead, hid.cseq, hid.gen, hid.alive, hid.pending, hid.susp_t,
                   hid.susp_delta, self._reserve_pool(),
@@ -584,7 +597,9 @@ class World:
                   np.array([self.shard_lo], np.int64),               # RT_SHARD_LO
                   (hid.ptype, hid.pid, hid.ckey),                    # RT_HID
                   hid.created,                                       # RT_CREATED
-                  self._adm)                                         # RT_ADM
+                  self._adm,                                         # RT_ADM
+                  self.o2o,                                          # RT_O2O
+                  o2o_flag)                                          # RT_BND_O2O
         self.run_buf = np.zeros(G, np.int64)              # runnable slots (compiled rounds)
         self.shard_buf = np.zeros(max(1, G - self.shard_lo), np.int64)
         self.round_log = np.zeros((256, 2), np.int64)
@@ -640,9 +655,38 @@ class World:
                                pop.procs, PRIO_MESSAGE)
             assert ok, "reserve nodes were checked above"
             pop.next = hi
+            self.pop_slot[pop.table][ords] = g
             rt.mark_all(self.R, g, len(g))
             admitted.append(g)
         return np.concatenate(admitted) if admitted else np.zeros(0, np.int64)
+
+    def deliver_owner_messages(self, t0: int, t1: int) -> np.ndarray:
+        """Queue every carried owner-to-owner message due in `[t0, t1)` (D73); returns the
+        target slots (sorted, unique). Call after `admit_population(t0, t1)`: a target that
+        arrives in the step must already hold its slot."""
+        if int(self.o2o[2][0]) == 0:
+            self.o2o_step_lo = 0
+            return np.zeros(0, np.int64)
+        empty = np.zeros(0, np.int64)
+        pops = {p.table: p for p in self.populations}
+        targets = [self.plan.partition(b.to).table if b.o2o else None
+                   for b in self.plan.boundaries]
+        slots = tuple(self.pop_slot[t] if t else empty for t in targets) or (empty,)
+        times = tuple(pops[t].times if t else empty for t in targets) or (empty,)
+        out = np.zeros(max(1, int(self.o2o[2][0])), np.int64)
+        while True:
+            st, k = rt.deliver_owner_messages(self.R, slots, times, self.hidden.retire_at,
+                                              int(t0), int(t1), out)
+            if st == rt.ROUTED:
+                break
+            if st == rt.NEED_NODES:
+                self._take_reserve_nodes(int(k))
+            elif st == rt.NEED_PAYLOAD:
+                self._take_reserve_payload(int(k))
+            else:
+                raise EngineError(f"deliver_owner_messages returned unknown status {st}")
+        self.o2o_step_lo = int(self.o2o[2][0])
+        return np.unique(out[:int(k)])
 
     def _reset_slots(self, part: Any, g: np.ndarray, pid: Any, self_id: Any, inst: Any) -> None:
         """Fresh hidden fields and local rows for newly admitted owner slots `g`."""
@@ -895,6 +939,9 @@ class World:
                 break
             if status == rt.NEED_MESSAGES:
                 raise CapExceeded("requests_and_inboxes", int(self.msg[1]), int(k))
+            if status == rt.NEED_O2O:
+                raise CapExceeded("max_owner_messages_per_step", int(self.o2o[0].shape[0]),
+                                  int(k))
             if status == rt.NEED_CREATES:
                 limit = int(self._adm[1])
                 proc = self.plan.processes[int(tup[-1][int(k), 10])].name

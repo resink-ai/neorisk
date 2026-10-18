@@ -225,6 +225,15 @@ def entity_buffer_bytes(plan: Plan, row_group_rows: int) -> tuple[int, int]:
     return pending, 2 * biggest
 
 
+def _owner_message_bytes(plan, eng) -> int:
+    """The carried owner-to-owner message buffer (D73): `max_owner_messages_per_step` rows of
+    the outbox columns and a payload row (`OUTBOX_ROW_BYTES`) plus the six D61 sender-key
+    parts; 0 without such boundaries (the world then allocates one row)."""
+    if not any(b.o2o for b in plan.boundaries):
+        return 0
+    return eng.max_owner_messages_per_step * (OUTBOX_ROW_BYTES + 6 * 8)
+
+
 def compute_caps(run, threads: int | None = None) -> list[CapItem]:
     """Every item's hard cap and estimate for `threads` workers (default `budget.threads`)."""
     plan, eng, bud = run.plan, run.engine, run.budget
@@ -249,7 +258,8 @@ def compute_caps(run, threads: int | None = None) -> list[CapItem]:
         "timer_heaps": (eng.timer_nodes * NODE_BYTES, ""),
         "requests_and_inboxes": (eng.max_messages_per_step * OUTBOX_ROW_BYTES
                                  + eng.payload_slots * 8 * PAYLOAD_W
-                                 + bud.max_admissions_per_step * _cq_row_bytes(), ""),
+                                 + bud.max_admissions_per_step * _cq_row_bytes()
+                                 + _owner_message_bytes(plan, eng), ""),
         "fanout_bursts": (sum(p.kernel.substep * max_row for p in plan.processes
                               if p.kernel.substep), ""),
         "read_inputs": (read, ""),

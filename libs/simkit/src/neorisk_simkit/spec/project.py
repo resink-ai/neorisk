@@ -98,6 +98,7 @@ class EngineSettings:
     payload_slots: int
     max_messages_per_step: int
     parallel_min_partitions: int
+    max_owner_messages_per_step: int = 100_000      # D73: the carried owner-message buffer
     force_capacity: Mapping[str, int] = field(default_factory=lambda: MappingProxyType({}))
 
 
@@ -183,6 +184,7 @@ _ENGINE: dict[str, tuple[str, Conv, Any]] = {
     "payload_slots": ("payload_slots", _int, 100_000),
     "max_messages_per_step": ("max_messages_per_step", _int, 1_000_000),
     "parallel_min_partitions": ("parallel_min_partitions", _int, 64),
+    "max_owner_messages_per_step": ("max_owner_messages_per_step", _int, 100_000),
 }
 _TABLES = {"budget": _BUDGET, "writer": _WRITER, "engine": _ENGINE}
 _RUN_KEYS = ("seed", "start", "mode", "span", "warmup")
