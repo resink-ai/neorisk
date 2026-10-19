@@ -134,3 +134,32 @@ def test_step_length_adapts_on_the_rows_the_cap_counts(monkeypatch):
     for s in steps:
         if s.exported:                       # one `visit` id per ping is counted, not exported
             assert s.stats["counted_rows"] == s.stats["rows"] + s.stats["events"]["ping"]
+
+
+class _NoRemap:
+    def apply(self, arr, what, pid=False):
+        pass
+
+
+def test_a_reused_commit_key_is_an_error_not_a_wrong_cause():
+    # Task 12 review M5: (pid, lamport) keys index the step's commits; a duplicate would
+    # silently resolve a cause to an unrelated commit
+    from neorisk_simkit.engine.cmdq import NULL_CAUSE
+    from neorisk_simkit.engine.errors import EngineError
+    from neorisk_simkit.io.seal import _Causes
+
+    ok = np.array([[1, 5, -1, 0, NULL_CAUSE], [1, 6, -1, 0, NULL_CAUSE]], np.int64)
+    assert _Causes(ok, _NoRemap(), []).cause.tolist() == [NULL_CAUSE, NULL_CAUSE]
+    dup = np.array([[1, 5, -1, 0, NULL_CAUSE], [1, 5, -1, 0, NULL_CAUSE]], np.int64)
+    with pytest.raises(EngineError, match=r"two commits share \(partition 1, lamport 5\)"):
+        _Causes(dup, _NoRemap(), [])
+
+
+def test_a_cycle_of_causing_commits_raises():
+    # Task 12 review M6: the chase's stack is bounded (a cycle cannot happen, lamports grow)
+    from neorisk_simkit.engine.cmdq import UNSET_CAUSE
+    from neorisk_simkit.io.seal import _Causes
+
+    cyc = np.array([[1, 5, 2, 7, UNSET_CAUSE], [2, 7, 1, 5, UNSET_CAUSE]], np.int64)
+    with pytest.raises(ValueError, match="a cycle of causing commits"):
+        _Causes(cyc, _NoRemap(), [])

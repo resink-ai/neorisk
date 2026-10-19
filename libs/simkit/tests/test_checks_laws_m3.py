@@ -234,9 +234,11 @@ def test_sum_le_state_cap_at_its_boundary():
     assert np.array_equal(lw.skeys, keys)
 
 
-def test_sum_le_state_update_stays_within_its_reserved_peak():
+@pytest.mark.parametrize("nullable", [False, True])
+def test_sum_le_state_update_stays_within_its_reserved_peak(nullable):
     """CX2 (F-11): a seal with 200,000 live orders (public IDs, sort, merge) and a step of
-    refunds stays within `law_peak_bytes`, which the reservation charges before allocating."""
+    refunds stays within `law_peak_bytes`, which the reservation charges before allocating;
+    also through the nullable-column filter of the refresh (Task 13 review M-2)."""
     import tracemalloc
 
     from neorisk_simkit.spec.caps import law_peak_bytes
@@ -249,6 +251,7 @@ def test_sum_le_state_update_stays_within_its_reserved_peak():
     tracemalloc.start()
     try:
         book = LawBook(plan, max_keys=10**8)
+        book._laws[0].nullable = nullable            # no value is the null fill: all kept
         book.step(_rsealed([{"t": 1, "order_id": int(p), "amount": 1} for p in _pub([0, 1])]),
                   w0)
         before = book.state_bytes
@@ -366,6 +369,7 @@ def test_lifecycle_cap_at_its_boundary():
 
     lw = law.lifecycle("acct_id", edges={"opened": ("entry",)})
     assert law_key_bytes(lw) == 16 and law_peak_bytes(lw, 3) == 99
+
     book = _book("chk.l", lw, max_keys=3)
     book.step(_sealed({"opened": _table([{"t": 1, "acct_id": a, "amount": 0}
                                          for a in (1, 2, 3)])}), None)
@@ -373,6 +377,16 @@ def test_lifecycle_cap_at_its_boundary():
     with pytest.raises(CapExceeded, match=r"limit 99, attempted 132"):
         book.step(_sealed({"opened": _table([{"t": 2, "acct_id": 4, "amount": 0}])}), None)
     assert book._laws[0].skeys.tolist() == [1, 2, 3]
+
+
+def test_sum_le_peak_needs_the_plan():
+    # Task 13 review M-1: without the plan the event form (33 B/key) would be charged for the
+    # state form (58 B/key)
+    from neorisk_simkit.spec.caps import law_peak_bytes
+
+    with pytest.raises(ValueError, match="needs the plan"):
+        law_peak_bytes(REFUND, 10)
+    assert law_peak_bytes(REFUND, 10, _refunds_plan()) == 580
 
 
 # ---------------------------------------------------------------- validate

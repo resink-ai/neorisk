@@ -150,6 +150,8 @@ def p_by(col: str, probs: dict, otherwise: float = 0.0) -> PBy:
     for k, v in probs.items():
         if not isinstance(k, str) or not 0.0 <= float(v) <= 1.0:
             raise PackError(f"std.p_by: {k!r}: probabilities are floats in [0, 1] by category")
+    if not 0.0 <= float(otherwise) <= 1.0:
+        raise PackError(f"std.p_by: otherwise={otherwise!r} must be a float in [0, 1]")
     return PBy(col, tuple((k, float(v)) for k, v in probs.items()), float(otherwise))
 
 

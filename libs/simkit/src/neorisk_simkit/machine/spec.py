@@ -242,6 +242,8 @@ def _machine_errors(m: MachineDef, names, pack) -> list[str]:
                          "mass an explicit otherwise outcome (p=None)")
             if total > 1.0 + 1e-9:
                 e.append(f"{sw}: branch probabilities sum to {total:.6g} > 1")
+            elif pby:
+                e += _pby_sum_errors(sw, total, [o.p for o in pby], bool(nones), m, pack)
         if (st.until is not None or st.max_repeats is not None) and st.then is None:
             e.append(f"{sw}: until/max_repeats need then=")
         if st.until is not None and st.repeat is None:
@@ -386,6 +388,34 @@ def _spawn_errors(sw: str, child: str, m: MachineDef, names) -> list[str]:
         return [(f"{sw}: spawns unknown machine {child!r} (machines spawn on their own "
                  "partition)")]
     return []
+
+
+def _pby_sum_errors(sw: str, fixed: float, pbys: list[h.PBy], has_none: bool, m: MachineDef,
+                    pack) -> list[str]:
+    """Per owner category, the fixed outcomes plus the `std.p_by` outcomes' probabilities must
+    not exceed 1, and must be 1 without a p=None outcome (D71; Task 5 review minor 5). Several
+    `p_by` outcomes on different columns are judged by their largest probabilities."""
+    table = pack.partitions[m.partition]["table"]
+    cols = pack.tables[table]["cols"]
+    if any(cols.get(b.col) is None or cols[b.col].kind != "cat" for b in pbys):
+        return []                                         # reported by _pby_errors
+
+    def p_of(b: h.PBy, cat: str) -> float:
+        return dict(b.probs).get(cat, b.otherwise)
+
+    if len({b.col for b in pbys}) == 1:
+        sums = {c: fixed + math.fsum(p_of(b, c) for b in pbys)
+                for c in cols[pbys[0].col].values}
+    else:
+        sums = {"(largest)": fixed + math.fsum(max(p_of(b, c) for c in cols[b.col].values)
+                                               for b in pbys)}
+    out = [f"{sw}: branch probabilities sum to {v:.6g} > 1 for {c!r}"
+           for c, v in sums.items() if v > 1.0 + 1e-9]
+    if not has_none:
+        out += [f"{sw}: branch probabilities sum to {v:.6g} for {c!r}; give the unpicked "
+                "mass an explicit otherwise outcome (p=None)"
+                for c, v in sums.items() if abs(v - 1.0) > 1e-9]
+    return out
 
 
 def _pby_errors(sw: str, pby: h.PBy, m: MachineDef, pack) -> list[str]:

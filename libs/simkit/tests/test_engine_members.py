@@ -51,6 +51,50 @@ def test_base_ids_do_not_move_with_members(tmp_path):
     assert a.sort("id").equals(base.sort("id"))
 
 
+def _base_rows(d, name, cols, who):
+    """Rows of `name` about base users (`who`: the user column), without crew rows."""
+    rows = read_events(d)[name].filter(pl.col("partition_id") // (1 << 56) != 3)
+    users = pl.read_parquet(d / "entities" / "user").filter(pl.col("origin") != "member")
+    return rows.filter(pl.col(who).is_in(users["id"].implode())).select(cols).sort(cols)
+
+
+def test_base_rows_match_a_plan_without_executors(tmp_path):
+    # D75's claim, against a plan with no crew partition at all (review m1): base user
+    # entities and base rows are the same; only dense event ids (per type, over all rows) move
+    a = _run(tmp_path / "a", ["executors=false"]).out_dir
+    b = _run(tmp_path / "b").out_dir
+    assert "crew" not in {p.name for p in make_run("crew", ["executors=false"]).plan.partitions}
+    ua = pl.read_parquet(a / "entities" / "user")
+    ub = pl.read_parquet(b / "entities" / "user").filter(pl.col("origin") != "member")
+    assert ua.height == 3 and ua.sort("id").equals(ub.sort("id"))
+    for name, cols, who in (("joined", ["event_time", "partition_id", "user_id", "tier"],
+                             "user_id"), ("asked", ["event_time", "who"], "who")):
+        assert _base_rows(a, name, cols, who).height == 3
+        assert _base_rows(a, name, cols, who).equals(_base_rows(b, name, cols, who)), name
+
+
+def test_members_after_a_population_gap(tmp_path):
+    # review m2: with arrivals, `pop.next < n` while members exist, so the ref range of `user`
+    # has a real gap [pop.next, n); member refs land after it and pass the seal's ref check
+    d = _run(tmp_path, ["users=8", "initial=0.5"]).out_dir
+    users = pl.read_parquet(d / "entities" / "user")
+    members = users.filter(pl.col("origin") == "member")
+    base = users.filter(pl.col("origin") != "member")
+    assert members.height > 0 and base.height < 8                # some never arrived
+    joined = read_events(d)["joined"]
+    assert set(members["id"]) <= set(joined["user_id"])
+
+
+def test_a_member_table_cannot_be_creatable():
+    # review m3: the child_of branch of the member-table rule
+    plan = make_run("crew").plan
+    tables = tuple(dataclasses.replace(t, creatable=True) if t.name == "user" else t
+                   for t in plan.tables)
+    errs = validate(_with_plan(tables=tables)).errors
+    assert any("member table user: an owner acting for its partition needs a population of "
+               "'user' and no created rows (child_of)" in e for e in errs)
+
+
 def test_acts_for_needs_an_exposed_owner():
     from neorisk_simkit.spec.pack import Pack
     from neorisk_simkit.spec.types import i32

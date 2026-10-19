@@ -374,8 +374,9 @@ def test_an_update_stays_within_its_reserved_peak(lw, both):
     from neorisk_simkit.spec.caps import law_peak_bytes
 
     peak, n = _measured_peak(lw, 200_000, both)
-    assert peak <= law_peak_bytes(lw, n) + 16_384, (peak, law_peak_bytes(lw, n))
-    assert peak >= 0.9 * law_peak_bytes(lw, n) - 64 * 65_536    # the bound is not loose
+    bound = law_peak_bytes(lw, n, _plan(("x", lw, False)))
+    assert peak <= bound + 16_384, (peak, bound)
+    assert peak >= 0.9 * bound - 64 * 65_536                     # the bound is not loose
 
 
 def test_a_reservation_near_the_cap_raises_before_allocating():

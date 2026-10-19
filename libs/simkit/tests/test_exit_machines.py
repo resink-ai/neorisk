@@ -87,9 +87,16 @@ def test_threads_slabs_and_steps_do_not_change_records(tmp_path, name, overrides
             == _canon(tmp_path / "e", name, overrides))
 
 
+def _files(d):
+    """Every file of a run folder but `run_stats.json` (timings), as bytes."""
+    return {f.relative_to(d).as_posix(): f.read_bytes() for f in sorted(d.rglob("*"))
+            if f.is_file() and f.name != "run_stats.json"}
+
+
 @pytest.mark.parametrize("name, overrides", CASES[:2])
 def test_uncompiled_run_equals_compiled(tmp_path, name, overrides):
-    compiled = _events(tmp_path / "jit", name, overrides)
+    jit = _run(tmp_path / "jit", name, overrides)
+    compiled = event_dicts(jit)
     out = tmp_path / "nojit"
     env = {**os.environ, "NUMBA_DISABLE_JIT": "1"}
     sets = [a for o in overrides for a in ("--set", o)]
@@ -98,3 +105,7 @@ def test_uncompiled_run_equals_compiled(tmp_path, name, overrides):
                        env=env, capture_output=True, text=True, check=False, timeout=3600)
     assert r.returncode == 0, r.stderr
     assert event_dicts(out) == compiled
+    # byte for byte: events, entities, labels, _index and the manifest (Task 9 review M1)
+    a, b = _files(jit), _files(out)
+    assert any(k.startswith("entities/") for k in a) and a.keys() == b.keys()
+    assert [k for k in a if a[k] != b[k]] == []

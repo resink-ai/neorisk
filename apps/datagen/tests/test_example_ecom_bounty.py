@@ -80,13 +80,13 @@ def test_members_are_hunters_and_their_zombies(ev, members):
     # members are never admitted as base owners, so no base process runs for them (suppress=
     # has no runtime effect, D74/F-22): every row naming a member comes from a campaign owner
     # (or from an order it created)
+    plan = resolve_run(load_project(EX), "sample", SMALL, overlays=["bounty_hunters"]).plan
+    code = {p.name: p.ptype_code for p in plan.partitions}
     rows = pl.concat([t.select("user_id", "partition_id") for t in ev.values()
                       if "user_id" in t.columns])
     mrows = rows.join(members.select(pl.col("id").alias("user_id")), on="user_id")
-    assert mrows.height > 0 and (mrows["partition_id"] // (1 << 56) != 1).all()
+    assert mrows.height > 0 and (mrows["partition_id"] // (1 << 56) != code["user"]).all()
     # the acting-for user travels as the row's user_id, the campaign executes it (D74, Task 8)
-    plan = resolve_run(load_project(EX), "sample", SMALL, overlays=["bounty_hunters"]).plan
-    code = {p.name: p.ptype_code for p in plan.partitions}
     own = pl.concat([ev[n].select("user_id", "partition_id")
                      for n in ("user_signed_up", "order_placed", "referral_bonus_paid")])
     own = own.join(members.select(pl.col("id").alias("user_id")), on="user_id")

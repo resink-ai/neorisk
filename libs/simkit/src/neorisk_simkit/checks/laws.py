@@ -817,7 +817,9 @@ class _SumLeState(_Law):
         if self.nullable:
             fill = NULL if vals.dtype == np.int64 else np.iinfo(vals.dtype).min
             ok = vals != fill
-            vals, ids = vals[ok], ids[ok]
+            vals = vals[ok]                              # one copy at a time (review M-2)
+            ids = ids[ok]
+            del ok
         from neorisk_simkit.io.seal import public_ids  # io imports checks
 
         ids = public_ids(world.seed, self.table, ids)
@@ -1048,8 +1050,8 @@ class LawBook:
         self.end_us: int | None = None
 
     def _reserve(self, law: _Law, keys: int) -> None:
-        need = law_peak_bytes(law.lw, keys, self.plan) + sum(o.keys() * o.key_bytes for o in self._laws
-                                                  if o is not law)
+        others = sum(o.keys() * o.key_bytes for o in self._laws if o is not law)
+        need = law_peak_bytes(law.lw, keys, self.plan) + others
         if need > self.cap_bytes:
             raise CapExceeded("checker_state", self.cap_bytes, need)
 

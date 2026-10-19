@@ -16,12 +16,15 @@ SCHEMA_VERSION = 1
 class Config:
     users: int = 3
     crews: int = 2
+    initial: float = 1.0          # < 1: the rest arrive later (a gap in the ref range, D75)
+    executors: bool = True        # False: the base pack alone (no crew partition, D75 test)
 
 
 def define(p: Pack, cfg: Config) -> None:
     user = p.table("user", key="user_id", mutable=True, cols={"tier": cat("a", "b")})
     p.owner("user", table=user, max_live=cfg.users)
-    p.population(user, n=cfg.users, initial=1.0,
+    p.population(user, n=cfg.users, initial=cfg.initial,
+                 arrivals=dist.burst(start_day=0.01, span_days=1.0),
                  attrs={"tier": dist.categorical({"a": 0.5, "b": 0.5})})
     p.expose_owner("user")
     desk = p.shard("desk", key="desk", n=1, items=None, state={"asks": "i64"})
@@ -33,6 +36,8 @@ def define(p: Pack, cfg: Config) -> None:
               requests={"ask": ask}, on_response={("ask", "ok"): k.R_OK},
               commands=k.USER_COMMANDS)
     p.process("desk_main", shard=desk, kernel=k.desk_main, on_request={"ask": k.C_ASK})
+    if not cfg.executors:
+        return
     crew = p.table("crew", key="crew_id", mutable=True, cols={"size": i32()})
     p.owner("crew", table=crew, max_live=max(1, cfg.crews), acts_for="user")
     p.population(crew, n=cfg.crews, initial=1.0, attrs={"size": dist.uniform_int(2, 3)})

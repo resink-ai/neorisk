@@ -41,7 +41,7 @@ import pyarrow as pa
 from numba import njit
 
 from neorisk_simkit.engine.abi import START
-from neorisk_simkit.engine.cmdq import NULL_CAUSE, PAY_CONTINUE, UNSET_CAUSE
+from neorisk_simkit.engine.cmdq import PAY_CONTINUE, UNSET_CAUSE
 from neorisk_simkit.engine.errors import EngineError
 from neorisk_simkit.engine.identity import (
     FLAG,
@@ -278,9 +278,10 @@ def _merge(chunks: list[Any], spec: BufferSpec) -> dict[str, np.ndarray]:
     return {name: np.concatenate([p[name] for p in parts]) for name, _ in spec.fields}
 
 
-def _remap_world(world: Any, remap: _Remap) -> np.ndarray:
+def _remap_world(world: Any, remap: _Remap, nodes: np.ndarray | None = None) -> np.ndarray:
     """Remap handles held by touched slots (owners and shards); returns the touched owner
-    slots."""
+    slots. `nodes`: the commands queued at the touched slots when the caller already walked
+    them (`resolve_causes`; Task 12 review M7)."""
     plan, hid = world.plan, world.hidden
     touched = np.asarray(world.touched, np.int64)
     owners = touched[touched < world.shard_lo]
@@ -306,7 +307,8 @@ def _remap_world(world: Any, remap: _Remap) -> np.ndarray:
         remap.apply_copy(hid.pid, gs, f"pid of {part.name}", pid=True)
     _remap_shards(world, remap, touched[touched >= world.shard_lo])
     pool = world.pool
-    nodes = _queued_nodes(hid.qhead, pool.next, touched)
+    if nodes is None:
+        nodes = _queued_nodes(hid.qhead, pool.next, touched)
     if len(nodes):
         tagged = nodes[(pool.pay[nodes] != PAY_CONTINUE) & (pool.kind[nodes] != START)]
         remap.apply_copy(pool.tag, tagged, "a queued command tag")
@@ -425,7 +427,10 @@ def _slot(p, lam, mask):
 
 @njit(cache=True, nogil=True)
 def _index(kp, kl):
-    """Open-addressing hash table over the commit keys `(kp[i], kl[i])` (unique): row or -1."""
+    """Open-addressing hash table over the commit keys `(kp[i], kl[i])`: `(table, dup)` with
+    `dup` the first row whose key an earlier row already holds, or -1 (keys must be unique: a
+    reused `(pid, lamport)` would silently resolve an orphan cause to another commit, Task 12
+    review M5)."""
     cap = 2
     while cap < 2 * kp.shape[0]:
         cap *= 2
@@ -433,9 +438,12 @@ def _index(kp, kl):
     for i in range(kp.shape[0]):
         h = _slot(kp[i], kl[i], cap - 1)
         while tab[h] >= 0:
+            r = tab[h]
+            if kp[r] == kp[i] and kl[r] == kl[i]:
+                return tab, i
             h = (h + 1) & (cap - 1)
         tab[h] = i
-    return tab
+    return tab, -1
 
 
 @njit(cache=True, nogil=True)
@@ -482,9 +490,9 @@ def _resolve(first, src, ceid):
         while cause[x] == _PENDING:
             if ceid[x] != UNSET_CAUSE:
                 cause[x] = ceid[x]
-            elif src[x] < 0:
-                cause[x] = NULL_CAUSE
-            elif cause[src[x]] == _PENDING:
+            elif cause[src[x]] == _PENDING:          # src >= 0: `_Causes` checked it
+                if k >= n:                           # a cycle (impossible: lamports grow)
+                    raise ValueError("cause_id: a cycle of causing commits")
                 stack[k] = x
                 k += 1
                 x = src[x]
@@ -508,10 +516,14 @@ class _Causes:
         remap.apply(cols[0], "partition_id of a commit", pid=True)
         remap.apply(cols[2], "partition_id of a causing commit", pid=True)
         self.kp, self.kl = cols[0], cols[1]
-        self.tab = _index(self.kp, self.kl)
-        ceid = cols[4]
-        n = len(ceid)
-        src = _find(self.tab, self.kp, self.kl, cols[2], cols[3])
+        with np.errstate(over="ignore"):         # uncompiled: uint64 hashing wraps (M-4)
+            self.tab, dup = _index(self.kp, self.kl)
+            ceid = cols[4]
+            n = len(ceid)
+            src = _find(self.tab, self.kp, self.kl, cols[2], cols[3])
+        if dup >= 0:
+            raise EngineError(f"cause_id: two commits share (partition {int(self.kp[dup])}, "
+                              f"lamport {int(self.kl[dup])}) in one step")
         if ((ceid == UNSET_CAUSE) & (src < 0)).any():
             raise EngineError("cause_id: a commit's causing commit is not in its step's log")
         if events:
@@ -525,8 +537,9 @@ class _Causes:
         self.passed = np.where(first >= 0, first, self.cause)
 
     def commit_of(self, pid: np.ndarray, lam: np.ndarray, what: str) -> np.ndarray:
-        idx = _find(self.tab, self.kp, self.kl, np.ascontiguousarray(pid, np.int64),
-                    np.ascontiguousarray(lam, np.int64))
+        with np.errstate(over="ignore"):
+            idx = _find(self.tab, self.kp, self.kl, np.ascontiguousarray(pid, np.int64),
+                        np.ascontiguousarray(lam, np.int64))
         if (idx < 0).any():
             raise EngineError(f"cause_id: {what} has no commit in its step's log")
         return idx
@@ -561,8 +574,8 @@ def resolve_causes(world: Any, commits: np.ndarray, remap: _Remap,
 
     causes = _Causes(commits, remap, events)
     pool, hid = world.pool, world.hidden
-    nodes = _queued_nodes(hid.qhead, pool.next, np.asarray(world.touched, np.int64))
-    nodes = nodes[pool.ceid[nodes] == UNSET_CAUSE]
+    causes.nodes = _queued_nodes(hid.qhead, pool.next, np.asarray(world.touched, np.int64))
+    nodes = causes.nodes[pool.ceid[causes.nodes] == UNSET_CAUSE]
     if len(nodes):
         cpid = np.ascontiguousarray(pool.cpid[nodes])
         remap.apply(cpid, "the causing partition of a queued command", pid=True)
@@ -659,7 +672,7 @@ def seal_step(world: Any, step: int, t0: int, t1: int, exported: bool,
     causes = resolve_causes(world, commits, remap, cause_events)
     cause_of = {e.name: causes.of(records[e.name]["pid"], records[e.name]["lamport"],
                                   f"a {e.name} row") for e in plan.events}
-    owners = _remap_world(world, remap)
+    owners = _remap_world(world, remap, causes.nodes)
 
     # 4. free retired slots
     freed = _free_retired(world, owners)

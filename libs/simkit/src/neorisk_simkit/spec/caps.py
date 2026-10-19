@@ -54,7 +54,7 @@ RESOLVED_CHUNK = 1 << 16            # `resolved` matches its open keys in chunks
 SUM_LE_STATE_PEAK = 58              # bytes per key, see `law_peak_bytes`
 
 
-def law_peak_bytes(lw, keys: int, plan: Plan | None = None) -> int:
+def law_peak_bytes(lw, keys: int, plan: Plan | None = None) -> int:  # plan: needed by sum_le
     """Peak bytes a keyed law holds while it updates its state to `keys` keys: the old and the
     new arrays live together, plus the update's own workspace (`checks.laws`; spec section 10
     `checker_state`). Upper bounds from the arrays the update keeps alive at once (measured
@@ -82,9 +82,10 @@ def law_peak_bytes(lw, keys: int, plan: Plan | None = None) -> int:
     if lw.kind in ("at_most_once", "lifecycle"):
         return (2 * law_key_bytes(lw) + 1) * keys
     if lw.kind == "sum_le":
-        if plan is not None and sum_le_on_state(lw, plan):
-            return SUM_LE_STATE_PEAK * keys
-        return 33 * keys
+        if plan is None:                      # the two forms differ by 25 B/key (review M-1)
+            raise ValueError("law_peak_bytes: a sum_le law needs the plan to tell its event "
+                             "and owner-state forms apart (D81)")
+        return (SUM_LE_STATE_PEAK if sum_le_on_state(lw, plan) else 33) * keys
     if lw.kind == "resolved":
         return 66 * keys + 64 * min(keys, RESOLVED_CHUNK)
     return 0

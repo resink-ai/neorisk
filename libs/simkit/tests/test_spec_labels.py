@@ -22,6 +22,12 @@ def test_labels_are_written_apart_and_counted(tmp_path):
     schema = json.loads((d / "schema" / "schema.json").read_text())
     entry = next(t for t in schema["tables"] if t["name"] == "tags")
     assert "label" in entry.values()
+    # labels are not replayable rows: not in the step index, nor in the run's row totals
+    steps = pl.read_parquet(sorted((d / "_index").rglob("*.parquet")))
+    assert "rows__tags" not in steps.columns and "rows__seen" in steps.columns
+    assert steps["rows"].sum() == 3
+    st = json.loads((d / "run_stats.json").read_text())
+    assert st["rows"] == st["exported_events"] == 3
 
 
 def test_laws_cannot_name_label_tables():

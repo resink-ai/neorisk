@@ -76,3 +76,11 @@ def test_caps_count_the_carried_buffer():
         caps = validate(make_run("courier", max_owner_messages_per_step=n)).caps
         return next(c.hard_bytes for c in caps if c.name == "requests_and_inboxes")
     assert cap(1_000) - cap(0) == 1_000 * (OUTBOX_ROW_BYTES + 7 * 8)   # + ceid (D80)
+
+
+def test_the_carried_buffer_needs_a_row():
+    # Task 2 review m6: <= 0 rows would size caps at 0 while the world allocates one
+    from neorisk_simkit.spec.project import ProjectError
+
+    with pytest.raises(ProjectError, match="max_owner_messages_per_step' must be >= 1"):
+        make_run("courier", ["engine.max_owner_messages_per_step=0"])

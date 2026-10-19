@@ -201,6 +201,11 @@ class Pack:
 
     def message(self, name: str, *, frm: str, to: str, payload: dict[str, LType],
                 latency: Dist) -> str:
+        """A one-way message boundary. Owner to owner (D73): latency minimum >= `engine.step_max`,
+        delivered at a later step boundary; a target that has not arrived, retired, or is a
+        member row counts it in `late_messages`. A message due at or after the run's end is
+        neither delivered nor counted: it stays in the carried buffer when the run stops
+        (Task 2 review m5), the same for every step length."""
         return self._boundary("message", name, frm, to, payload, latency)
 
     # ------------------------------------------------------------------ records

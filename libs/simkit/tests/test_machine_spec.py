@@ -10,8 +10,8 @@ from neorisk_simkit.spec import Pack, PackError, dist, std
 from neorisk_simkit.spec.types import i32, ref
 
 
-def _pack() -> Pack:
-    p = Pack("t", 1)
+def _pack(p: Pack | None = None) -> Pack:
+    p = Pack("t", 1) if p is None else p
     t = p.table("acct", key="acct_id", mutable=True, cols={"n": i32()})
     p.owner("acct", table=t, max_live=2)
     p.population(t, n=2, initial=1.0)
@@ -150,11 +150,56 @@ def _pack2() -> Pack:
     (lambda m: m.state("a", branch={"b": (1.0, None, None)}, timer={"b": "1h"},
                        join={"b": "x"}).final("b"),
      "machine m: state 'a': branch, repeat, join and request exclude each other"),
+    # per category, fixed + p_by outcomes stay within 1 (Task 5 review minor 5)
+    (lambda m: m.state("a", branch={"b": (std.p_by("tier", {"hi": 0.7}, otherwise=0.1), None,
+                                          None), "c": (0.5, None, None),
+                                    "d": (None, None, None)}).final("b", "c", "d"),
+     "machine m: state 'a': branch probabilities sum to 1.2 > 1 for 'hi'"),
+    (lambda m: m.state("a", branch={"b": (std.p_by("tier", {"hi": 0.7}, otherwise=0.5), None,
+                                          None), "c": (0.5, None, None)}).final("b", "c"),
+     ("machine m: state 'a': branch probabilities sum to 1.2 for 'hi'; give the unpicked mass "
+      "an explicit otherwise outcome (p=None)")),
 ])
 def test_part_and_value_errors(build, message):
     p = _pack2()
     build(p.machine("m", owner="acct", initial="a", fields={"amount": "i64"}))
     assert message in _errors(p), _errors(p)
+
+
+def test_p_by_outcomes_that_fit_every_category_are_valid():
+    p = _pack2()
+    p.machine("m", owner="acct", initial="a").state("a", branch={
+        "b": (std.p_by("tier", {"hi": 0.5}, otherwise=0.25), None, None),
+        "c": (0.5, None, None), "d": (None, None, None)}).final("b", "c", "d")
+    q = _pack2()
+    q.machine("m", owner="acct", initial="a").state("a", branch={
+        "b": (std.p_by("tier", {"hi": 0.5, "lo": 0.25}), None, None),
+        "c": (std.p_by("tier", {"hi": 0.5, "lo": 0.75}), None, None)}).final("b", "c")
+    assert _errors(p) == [] and _errors(q) == []
+
+
+def test_p_by_otherwise_is_a_probability():
+    with pytest.raises(PackError, match=r"otherwise=1.5 must be a float in \[0, 1\]"):
+        std.p_by("tier", {"hi": 0.5}, otherwise=1.5)
+
+
+def test_pack_refuses_a_bad_start_and_a_process_named_like_a_machine():
+    # Task 5 review minor 3: the two pack-level checks
+    p = _pack()
+    with pytest.raises(PackError, match="start= must come from p.on_created"):
+        p.machine("m", owner="acct", initial="a", start="acct")
+    p.machine("m", owner="acct", initial="a")
+    with pytest.raises(PackError, match="duplicate process 'm'"):
+        p.process("m", owner="acct", kernel=_kernel())
+
+
+def _kernel():
+    from neorisk_simkit.engine import COMMIT, START, Res, kernel
+
+    @kernel(state="acct", commands=(START,), max=Res())
+    def k(ctx, s, cmd, out):
+        return COMMIT
+    return k
 
 
 def test_send_parent_needs_a_joining_spawner():
@@ -209,15 +254,12 @@ def test_implicit_field_names_come_from_the_instance_layout():
 
 
 def test_build_plan_joins_every_machine_error():
-    p = _pack()
-    p.machine("m", owner="acct", initial="nowhere").state("a").final("b")
-
     class Mod:
         PACK, SCHEMA_VERSION = "t", 1
 
         @staticmethod
-        def define(q, cfg):
-            q.__dict__.update(p.__dict__)
+        def define(q, cfg):                  # builds into build_plan's own Pack (review m4)
+            _pack(q).machine("m", owner="acct", initial="nowhere").state("a").final("b")
 
     from pathlib import Path
 

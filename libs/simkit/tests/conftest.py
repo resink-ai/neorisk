@@ -140,9 +140,14 @@ def canonicalize_ids(d: Path, created: frozenset[str],
         assert row["event_id"] not in position, "two events share a raw event_id"
         position[row["event_id"]] = pos
         row["event_id"] = pos
+    raw_causes = mapped = 0
     for _, _, row in flat:
         if row["cause_id"] is not None:
+            raw_causes += 1
             row["cause_id"] = position.get(row["cause_id"], -1)
+            mapped += row["cause_id"] >= 0
+    # a position map that missed every cause would compare -1 with -1 (Task 12 review M4)
+    assert mapped or not raw_causes, "no cause_id maps to a compared event"
     result = {name: sorted(rows, key=lambda r: r["event_id"]) for name, rows in out.items()}
     if everything:
         for t in schema["tables"]:

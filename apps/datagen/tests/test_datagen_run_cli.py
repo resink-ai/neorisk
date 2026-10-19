@@ -85,3 +85,11 @@ def test_run_summary_counts_postings(tmp_path, capsys):
     assert main(["run", str(FIXTURES / "ledger"), "--threads", "1", "--out", str(out)]) == 0
     n = json.loads((out / "manifest.json").read_text())["posting_counts"]["entry"]
     assert n > 0 and f"  posting entry: {n} rows" in capsys.readouterr().out
+
+
+def test_run_summary_counts_labels(tmp_path, capsys):
+    """Task 4 review: the summary lists label tables (D76) next to events."""
+    out = tmp_path / "tagged"
+    assert main(["run", str(FIXTURES / "tagged"), "--threads", "1", "--out", str(out)]) == 0
+    printed = capsys.readouterr().out
+    assert "  label tags: 3 rows" in printed and "  event seen: 3 rows" in printed

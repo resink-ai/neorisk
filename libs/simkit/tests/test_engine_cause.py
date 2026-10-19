@@ -1,11 +1,17 @@
 """D80: cause_id = event_id of the first record of the nearest record-emitting commit in a
 command's causal chain."""
 
-import polars as pl
-from conftest import FIXTURES
+from collections import Counter
 
+import polars as pl
+from conftest import FIXTURES, event_dicts
+
+from neorisk_simkit.engine.codegen import NEED_SWAP
+from neorisk_simkit.engine.slabs import buffer_specs
+from neorisk_simkit.engine.world import World
 from neorisk_simkit.io.dataset import run_to_dataset
 from neorisk_simkit.io.read import read_events
+from neorisk_simkit.spec.project import load_project, resolve_run
 
 
 def _ev(tmp_path, overrides=(), **eng):
@@ -40,6 +46,7 @@ def test_causes_follow_requests_responses_and_silent_commits(tmp_path):
 def test_label_rows_get_a_cause_but_are_never_one(tmp_path):
     res = run_to_dataset(FIXTURES / "causes", "sample", [], out_dir=tmp_path / "r", threads=2)
     marks = pl.read_parquet(sorted((res.out_dir / "labels" / "marks").rglob("*.parquet")))
+    assert marks.height == 2                                    # not vacuous (review M3)
     ev = read_events(res.out_dir)
     opened = set(ev["opened"]["event_id"])
     assert set(marks["cause_id"]) <= opened                     # F-17: a label has a cause
@@ -58,3 +65,31 @@ def test_a_cause_in_warm_up_is_null(tmp_path):
     ev = _ev(tmp_path, ["run.warmup=1h"])                       # opened/asked/answered in warm-up
     assert ev["opened"].height == 0
     assert ev["ticked"]["cause_id"].null_count() == ev["ticked"].height == 2
+
+
+def test_a_full_commit_log_is_flushed_and_changes_nothing(tmp_path, monkeypatch):
+    # Task 12 review M1: with every record, create and outbox buffer forced large and a 1 KB
+    # slab, the 64-row commit log is what fills, so every swap is a commit-log flush
+    # (codegen: `clog_n >= clog rows` -> NEED_SWAP; World._flush keeps a commit-only chunk)
+    sets = ["users=2000"]
+    plan = resolve_run(load_project(FIXTURES / "mini"), "sample", sets).plan
+    big = {s.resource: 1_000_000 for s in buffer_specs(plan)} | {"requests": 1_000_000}
+    swaps = Counter()
+    real = World.handle_status
+
+    def spy(self, worker, status):
+        swaps[status] += 1
+        return real(self, worker, status)
+
+    monkeypatch.setattr(World, "handle_status", spy)
+    a = event_dicts(run_to_dataset(FIXTURES / "mini", "sample", sets, out_dir=tmp_path / "a",
+                                   threads=3).out_dir)
+    n_plain = swaps[NEED_SWAP]
+    swaps.clear()
+    b = event_dicts(run_to_dataset(FIXTURES / "mini", "sample", sets, out_dir=tmp_path / "b",
+                                   threads=3, engine_overrides={"slab_bytes": 1024,
+                                                                "force_capacity": big}).out_dir)
+    assert swaps[NEED_SWAP] > 100 * max(n_plain, 1)             # the log filled, again and again
+    causes = [r["cause_id"] for rows in b.values() for r in rows]
+    assert sum(c is not None for c in causes) > 10_000          # causes resolved through them
+    assert b == a

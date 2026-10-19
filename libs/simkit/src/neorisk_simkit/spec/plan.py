@@ -8,7 +8,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from types import MappingProxyType
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from neorisk_simkit.engine.abi import KernelSpec
 from neorisk_simkit.spec import dist as _dist
@@ -17,6 +17,9 @@ from neorisk_simkit.spec.law import LawSpec
 from neorisk_simkit.spec.pack import Pack, PackError, Trigger
 from neorisk_simkit.spec.sources import Source
 from neorisk_simkit.spec.types import COMMON_COLUMNS, LType
+
+if TYPE_CHECKING:                                  # no runtime cycle: machine imports spec
+    from neorisk_simkit.machine.spec import MachineDef
 
 
 @dataclass(frozen=True)
@@ -159,7 +162,7 @@ class Plan:
     accumulators: tuple[AccumulatorDef, ...] = ()
     exposed_owners: tuple[str, ...] = ()          # p.expose_owner, in declaration order (D74)
     member_tables: tuple[str, ...] = ()           # tables of acted-for partitions (D74, D75)
-    machines: tuple[Any, ...] = ()                # machine.spec.MachineDef (spec §04)
+    machines: tuple[MachineDef, ...] = ()         # spec §04
     machine_sources: Mapping[str, str] = MappingProxyType({})   # partition -> generated text
     overlays: tuple[str, ...] = ()                # enabled overlays, in application order
     cohorts: tuple[Any, ...] = ()                 # spec.overlay.CohortDef (spec §08)
