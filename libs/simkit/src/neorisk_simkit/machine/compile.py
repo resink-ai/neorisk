@@ -154,9 +154,12 @@ class _Gen:
         return self.param(m, f"v{len(self.params[m.name])}", v)
 
     def reserve(self, need: Need) -> list[str]:
+        """Record a handler's need. Every command passes through exactly one handler, so the
+        union of the handlers' needs is the command's maximum, reserved once at the top of
+        `mx_<p>` (`root`): the command is all-or-nothing, and the generic `_reserve_<process>`
+        is inlined once instead of once per handler (Task 16: compile size)."""
         self.need = self.need.union(need)
-        src = need.src()
-        return [f"if not out.reserve({src}):", "    return RETRY"] if src else []
+        return []
 
     def actor(self, m) -> str:
         return "ctx.self_id" if m.member_table is None else f"loc.{m.name}__actor[i]"
@@ -879,7 +882,8 @@ class _Gen:
 
     def root(self) -> None:
         p = self.part
-        body = []
+        src = self.need.src()
+        body = [f"if not out.reserve({src}):", "    return RETRY"] if src else []
         if any(m.start is not None for m in self.ms):
             body += ["if cmd.kind == START:", f"    return mx_start_{p}(ctx, s, loc, cmd, out)"]
         body += ["if cmd.kind == MX_FIRE:",
