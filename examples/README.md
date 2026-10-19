@@ -9,7 +9,7 @@ spec an agent writes and a human reviews, plus three folders that `datagen` fill
 
 | Project | What it simulates | Partitions | Overlays |
 |---|---|---|---|
-| [`ecommerce/`](ecommerce/) | Shoppers, carts, multi-SKU checkout, fulfillment, returns, referrals | owner `user` · shards `inventory`, `referral_pool` | `bounty_hunters`, `flash_sale` |
+| [`ecommerce/`](ecommerce/) | M3 pack; legacy fraud dataset via `datagen export --legacy-fraud`. Shoppers, carts, multi-SKU checkout, fulfillment (a machine), returns, referrals | owners `user`, `order` · shards `inventory`, `referral_pool` | `bounty_hunters` (flash sale deferred) |
 | [`ecommerce_s1/`](ecommerce_s1/) | S1 slice; superseded by `ecommerce/` at M3. Sessions, one-line carts, single-SKU checkout | owner `user` · shard `inventory` | — |
 | [`ecommerce_s2/`](ecommerce_s2/) | S2 slice; superseded by `ecommerce/` and `payments/` at M3/M4. Multi-SKU carts with reservations, payments with refunds and disputes, a capped bonus pool, bounty-hunter campaigns | owners `user`, `payment`, `campaign` · shards `inventory`, `pool` | — |
 | [`payments/`](payments/) | Card payments (acquirer view): risk, 3-D Secure, auth, capture, refund, dispute, ledger | owners `cardholder`, `payment` · shard `merchant_risk` | `card_testing`, `friendly_fraud` |

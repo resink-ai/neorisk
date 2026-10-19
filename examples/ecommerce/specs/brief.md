@@ -60,8 +60,8 @@ doesn't contain.
   invitees from a handful of shared devices, make each invitee place one order just above the
   $30 minimum, collect both bonuses, then go dormant. Some rings arrive when the budget is
   already low and drain it, so ordinary referrals get rejected; we want to see that effect.
-- **Flash sale.** A one-day promotion on one category that multiplies traffic about 8× and
-  concentrates checkouts on a few hot SKUs in one inventory group.
+
+A flash-sale overlay (one day of about 8× traffic on a few hot SKUs) is deferred (D93).
 
 ## Out of scope
 

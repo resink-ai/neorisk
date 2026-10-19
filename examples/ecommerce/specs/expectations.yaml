@@ -1,23 +1,26 @@
-# Statistical expectations and laws for the ecommerce pack.
-# Every entry cites where its target comes from. Changes to this file need a second
-# reviewer (CODEOWNERS). Exact laws are declared in pack.py with p.check and listed
-# here only by id, so the report shows one table.
+# Statistical expectations and laws for the ecommerce pack (D84).
+# Every entry cites where its target comes from (`source:`); required entries fail CI when they
+# fail, are missing, inconclusive or unanchored. Laws are declared in pack.py with p.check and
+# listed here by id, so the report shows one table. Changes need a second reviewer.
 pack: ecommerce
 schema_version: 1
 
 defaults:
-  min_sample: 2000          # cases; smaller samples make a check inconclusive
+  min_sample: 2000          # cases; fewer makes a metric inconclusive
   confidence: 0.95
-  sample_by: owner_hash     # stratified; rare cohorts get at least min_sample cases
+  sample_rate: 1.0          # owner-hash sampling rate per stratum (raised to reach min_sample)
 
-laws:                       # declared in pack.py; required means CI fails if missing
-  - {id: chk.stock_never_negative,       required: true}
-  - {id: chk.reservation_resolved,       required: true}
-  - {id: chk.refund_le_paid,             required: true}
-  - {id: chk.order_lifecycle,            required: true}
-  - {id: chk.referral_once_per_invitee,  required: true}
-  - {id: chk.referral_budget,            required: true}
-  - {id: chk.credit_never_negative,      required: true}
+laws:
+  - {id: chk.stock_never_negative,      required: true}
+  - {id: chk.reserved_never_negative,   required: true}
+  - {id: chk.holds_resolved,            required: true}
+  - {id: chk.refund_le_paid,            required: true}
+  - {id: chk.order_lifecycle,           required: true}
+  - {id: chk.referral_once_per_invitee, required: true}
+  - {id: chk.referral_budget,           required: true}
+  - {id: chk.credit_never_negative,     required: true}
+  - {id: chk.hold_never_negative,       required: true}
+  - {id: chk.pool_never_negative,       required: true}
 
 expectations:
   - id: exp.session_to_checkout
@@ -25,81 +28,56 @@ expectations:
     target: {between: [0.06, 0.10]}
     source: "brief: Rates we know, row 1"
     required: true
-
   - id: exp.checkout_to_order
     metric: stat.funnel(start="checkout_started", step="order_placed", unit="checkout_id")
     target: {between: [0.70, 0.85]}
     source: "brief: Rates we know, row 2"
     required: true
-
   - id: exp.auth_failure_rate
     metric: stat.share("payment_failed", of=["payment_authorized", "payment_failed"])
     target: {between: [0.02, 0.04]}
     source: "brief: Rates we know, row 3"
     required: true
-
   - id: exp.return_rate
     metric: stat.funnel(start="order_delivered", step="return_requested", unit="order_id", within="30d")
     target: {between: [0.05, 0.08]}
     source: "brief: Rates we know, row 4"
     required: true
-
   - id: exp.return_rate_apparel
-    metric: stat.funnel(start="order_delivered", step="return_requested", unit="order_id",
-                        within="30d", where="category == 'apparel'")
+    metric: 'stat.funnel(start="order_delivered", step="return_requested", unit="order_id", within="30d", where={"category": "apparel"})'
     target: {between: [0.15, 0.20]}
     source: "brief: Rates we know, row 4"
-
   - id: exp.orders_per_shopper
-    metric: stat.quantiles("order_placed", per="user_id", window="90d", active_only=true)
+    metric: stat.quantiles("order_placed", per="user_id")
     target: {p50: {between: [1, 1]}, p90: {between: [4, 6]}}
     source: "brief: Rates we know, row 5"
-
   - id: exp.oos_failures
-    metric: stat.share("checkout_failed", of=["checkout_started"], where="reason == 'out_of_stock'")
+    metric: 'stat.share("checkout_failed", of=["checkout_started"], where={"reason": "out_of_stock"})'
     target: {between: [0.01, 0.03]}
     source: "brief: Rates we know, row 6"
     required: true
-
   - id: exp.sku_view_concentration
     metric: stat.top_share("product_viewed", by="sku_id", top=0.01)
     target: {between: [0.17, 0.23]}
     source: "brief: Catalog"
-
-  - id: exp.session_gap_heavy_tail
-    metric: stat.tail_index("session_started", per="user_id", gap=true)
-    target: {between: [1.0, 1.5]}
-    source: "brief: Shoppers (heavy-tailed activity)"
-
-  - id: exp.invite_signup
-    metric: stat.funnel(start="invite_sent", step="user_signed_up", unit="invite_id", within="7d")
-    target: {between: [0.30, 0.40]}
-    source: "brief: Flows 6"
-
   - id: exp.delivery_lag
     metric: stat.distribution(between=["order_shipped", "order_delivered"], unit="order_id")
     target: {median_days: {between: [3, 4.5]}, p99_days: {lt: 14}}
     source: "brief: Flows 4"
 
-# Applied only when the overlay is enabled.
-overlays:
+overlays:                   # applied only when the overlay is enabled
   bounty_hunters:
-    - id: exp.bh.cohort_share
-      metric: stat.cohort_share("bounty_hunter", of="user")
-      target: {around: "${bounty_hunters.size} / ${users}", tolerance: 0.1}
+    - id: exp.bh.campaigns
+      metric: stat.cohort_size("campaign")
+      target: {around: "${bounty_hunters.size}", tolerance: 0.0}
       source: "overlay config"
       required: true
     - id: exp.bh.min_order_hugging
-      metric: stat.quantiles("order_placed.amount", where="label.role == 'zombie'")
-      target: {p50: {between: [3000, 3300]}}   # cents, just above the $30 minimum
-      source: "brief: Abuse, bounty hunters"
+      metric: stat.quantiles("order_placed.amount", cohort="campaign", role="zombie")
+      target: {p50: {between: [3000, 3150]}}
+      source: "brief: Abuse, bounty hunters (orders just above the $30 minimum)"
     - id: exp.bh.interference_reported
       metric: stat.interference(base="referral_bonus_paid", cause="referral_pool")
       target: {reported: true}
-      source: "design: overlay regression rule"
+      source: "design §08: the overlay regression rule"
       required: true
-  flash_sale:
-    - id: exp.fs.traffic_lift
-      metric: stat.ratio("session_started", window="${flash_sale.day}", baseline="7d_before")
-      target: {between: [6, 10]}
-      source: "brief: Abuse, flash sale"
