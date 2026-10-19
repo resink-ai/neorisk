@@ -267,6 +267,7 @@ def _machine_errors(m: MachineDef, names, pack) -> list[str]:
             if req.release is None:
                 e.append(f"{sw}: request {req.local!r} needs release= (a late granted "
                          "response must be given back, D67)")
+            e += _request_errors(sw, req, m, pack)
             e += _field_errors(w, m, (req.shard, req.payload))
         for child, _p, _delay, n in st.spawn:
             e += _spawn_errors(sw, child, m, names)
@@ -283,6 +284,33 @@ def _allowed(m: MachineDef, pack) -> tuple[str, ...]:
     """The partitions a machine acts as: its own and the one it acts for (D74)."""
     acts_for = pack.partitions[m.partition].get("acts_for")
     return (m.partition,) if acts_for is None else (m.partition, acts_for)
+
+
+def _request_errors(sw: str, req: h.Request, m: MachineDef, pack) -> list[str]:
+    """A request op names a request boundary sent by the machine's partition (or the one it
+    acts for); `ok` is one of its responses; `store` maps response payload fields to declared
+    instance fields; the payload gives exactly the boundary's payload fields."""
+    b = pack.boundaries.get(req.local)
+    if b is None or b["kind"] != "request" or b["frm"] not in _allowed(m, pack):
+        return [(f"{sw}: request {req.local!r} is not a request sent by partition "
+                 f"{m.partition!r}")]
+    e = []
+    if req.ok not in b["responses"]:
+        e.append(f"{sw}: request {req.local!r}: ok={req.ok!r} is not one of its responses "
+                 f"{list(b['responses'])}")
+    for rf, f in req.store:
+        if rf not in b["response_payload"]:
+            e.append(f"{sw}: request {req.local!r}: store key {rf!r} is not a response field")
+        if f not in m.fields:
+            e.append(f"{sw}: request {req.local!r}: store value {f!r} is not a declared field")
+    e += _payload_errors(f"{sw}: request {req.local!r}", [k for k, _ in req.payload],
+                         b["payload"])
+    return e
+
+
+def _payload_errors(what: str, given, declared) -> list[str]:
+    e = [f"{what}: unknown payload field {k!r}" for k in given if k not in declared]
+    return e + [f"{what}: missing payload field {k!r}" for k in declared if k not in given]
 
 
 def _field_refs(x):
@@ -401,7 +429,14 @@ def _act_errors(w: str, sw: str, act, m: MachineDef, names, pack) -> list[str]:
         if b is None or b["kind"] != "message" or b["frm"] not in allowed:
             e.append(f"{sw}: send {act.local!r} is not a message sent by partition "
                      f"{m.partition!r}")
+        else:
+            e += _payload_errors(f"{sw}: send {act.local!r}", [k for k, _ in act.payload],
+                                 b["payload"])
         e += _field_errors(w, m, (act.to, act.payload))
     elif isinstance(act, h.CreateOwner):
+        owners = {d["table"] for d in pack.partitions.values() if d["kind"] == "owner"}
+        if act.table not in owners or act.table in pack.populations:
+            e.append(f"{sw}: create_owner({act.table!r}) needs the table of an owner partition "
+                     "without a population")
         e += _field_errors(w, m, act.values)
     return e
