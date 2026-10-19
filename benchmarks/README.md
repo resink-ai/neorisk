@@ -83,6 +83,7 @@ compile, stage split or round counts) after entity tables were streamed per step
 seconds 45.1, peak RSS 2.52 GiB (was 2.78), dataset hash unchanged.
 
 M3 Task 12: S1 reduced-profile hash `d4329bb59d319661469e6b097cefcb74962164ce81ac98a93714fe654f01915a` (cause_id populated, D80; every other column identical; was `4659ac00c0af3e400065aee6cf9d7d89d26a42a4c3a635a0e9d593fada09695d`).
+ecommerce_s2 identity datasets after the same change (F-26; cause_id only, every other column identical): SMALL2 `42201d5f12698ea1feb2c1073a3152cfc8f81007f0e138a4546edfecbc39477c` (was `e0edf7f56be8b39618de595ae363960c5b3b6932a696c530f83491bb5bacda52`), BUSY `6b6856bf7d3ae5475a91d907def4f90c5ed162d19bd1e2e482477f8b68f79efa` (was `54a4ca31494d37b447eb7dbd72fe353b7b6858fa645c24c35bd0254fdbef5b60`).
 
 The "after" row reads `results/s1-warm.json` (warm run) and `results/s1-cold.json` (`--cold`; its
 own measured run took 44.47 s, peak RSS 2.74 GiB). Both runs: 28 steps, 1,388,003 rounds,
