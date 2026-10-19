@@ -105,6 +105,7 @@ def write_manifest(run_dir: Path, run: Any, files: list[FileEntry], counts: dict
         "overrides": list(run.overrides),
         "overlays": {name: jsonable(params) for name, params in getattr(run, "overlays", ())},
         "config": merged_config(run),
+        "end_us": int(run.start_us + run.span_us),       # the run's end (censoring, D85)
         "writer": writer,
         "counts": dict(sorted(counts.items())),
         "history_counts": dict(sorted((history_counts or {}).items())),
