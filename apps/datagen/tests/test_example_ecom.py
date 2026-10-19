@@ -47,11 +47,16 @@ def test_base_profiles_validate():
 def test_refund_law_reads_the_one_order_partition():
     # state-side sum_le reads the first owner partition of its right-hand table (Task 13 M-3):
     # `order` has exactly one in every profile, and overlays cannot add one (a cohort owns a new
-    # table named after it and acts only for an exposed owner, which `order` is not)
-    for profile in ("sample", "full"):
-        plan = resolve_run(load_project(EX), profile, []).plan
+    # table named after it and acts only for an exposed owner, which `order` is not);
+    # `legacy` and `abuse` run the bounty_hunters overlay (Task 16)
+    for profile in ("sample", "full", "legacy", "abuse"):
+        run = resolve_run(load_project(EX), profile, [])
+        assert validate(run).ok, (profile, validate(run).errors)
+        plan = run.plan
         orders = [p.name for p in plan.partitions if p.kind == "owner" and p.table == "order"]
         assert orders == ["order"] and tuple(plan.exposed_owners) == ("user",), profile
+        cohorts = [p.name for p in plan.partitions if p.acts_for is not None]
+        assert cohorts == (["campaign"] if profile in ("legacy", "abuse") else []), profile
 
 
 def test_hold_window_follows_the_hold_ttl():
