@@ -98,8 +98,17 @@ def test_required_laws_were_checked(run):
         assert laws[cid]["checked"] > 0 and laws[cid]["violations"] == 0, cid
 
 
-def test_every_law_holds(run):
-    assert all(v["violations"] == 0 for v in run.manifest["laws"].values())
+LAWS = ("chk.stock_never_negative", "chk.reserved_never_negative", "chk.holds_resolved",
+        "chk.refund_le_paid", "chk.order_lifecycle", "chk.referral_once_per_invitee",
+        "chk.referral_budget", "chk.credit_never_negative", "chk.hold_never_negative",
+        "chk.pool_never_negative")
+
+
+def test_every_law_is_checked_and_holds(run):
+    laws = run.manifest["laws"]
+    assert sorted(laws) == sorted(LAWS)
+    for cid in LAWS:
+        assert laws[cid]["checked"] > 0 and laws[cid]["violations"] == 0, (cid, laws[cid])
 
 
 def test_inviter_credits_land_a_day_later_with_their_cause(run, ev):
@@ -112,10 +121,13 @@ def test_inviter_credits_land_a_day_later_with_their_cause(run, ev):
         "invitee_id", pl.col("event_time").alias("t_paid"), pl.col("event_id").alias("cause"))
     invited = ev["user_signed_up"].select(pl.col("user_id").alias("invitee_id"), "invited_by")
     j = credit.join(payout, on="invitee_id").join(invited, on="invitee_id")
-    assert j.height == credit.height
-    assert (j["user_id"] == j["invited_by"]).all() and (j["user_id"] != j["invitee_id"]).all()
-    assert ((j["event_time"] - j["t_paid"]) >= timedelta(days=1)).all()
-    assert (j["cause_id"] == j["cause"]).all()          # caused by the invitee's payout
+    assert j.height == credit.height > 0
+    # a null comparison is null and `.all()` skips nulls by default: count nulls explicitly
+    assert j.select(pl.col("cause_id", "invited_by", "t_paid").null_count()).row(0) == (0, 0, 0)
+    assert (j["user_id"] == j["invited_by"]).all(ignore_nulls=False)
+    assert (j["user_id"] != j["invitee_id"]).all(ignore_nulls=False)
+    assert ((j["event_time"] - j["t_paid"]) >= timedelta(days=1)).all(ignore_nulls=False)
+    assert (j["cause_id"] == j["cause"]).all(ignore_nulls=False)    # the invitee's payout
 
 
 def test_addresses_change_slowly(run):
