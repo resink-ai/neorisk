@@ -146,7 +146,7 @@ def run_compare(
             "ann_shap_rows": ann_shap_rows,
             "generated_at": datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC"),
             "dataset_meta": {
-                **{k: meta.get(k) for k in ("scenario", "seed", "n_events", "bad_rate")},
+                **{k: meta.get(k) for k in ("scenario", "seed", "n_events", "bad_rate", "source")},
                 "config": meta.get("config"),
                 "observed": _observed(events),
             },

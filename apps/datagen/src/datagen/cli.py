@@ -1,10 +1,12 @@
 import argparse
 import os
+import sys
 from collections.abc import Sequence
 
-from datagen.config import FraudConfig
-from datagen.scenarios import SCENARIOS
-from neorisk_simkit import export
+GENERATE_REPLACED = (
+    "datagen generate was replaced (M3): datagen run examples/ecommerce --profile legacy && "
+    "datagen export <run dir> --legacy-fraud --out <dir>"
+)
 
 
 def _overlay_args(p: argparse.ArgumentParser) -> None:
@@ -24,13 +26,9 @@ def _project_args(p: argparse.ArgumentParser) -> None:
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="datagen")
     sub = parser.add_subparsers(dest="cmd", required=True)
-    gen = sub.add_parser("generate", help="generate a synthetic dataset")
-    gen.add_argument("--scenario", required=True, choices=sorted(SCENARIOS))
-    gen.add_argument("--n-events", type=int, default=FraudConfig.n_events)
-    gen.add_argument("--seed", type=int, default=0)
-    gen.add_argument("--span-days", type=int, default=FraudConfig.span_days)
-    gen.add_argument("--bad-rate", type=float, default=FraudConfig.target_bad_rate)
-    gen.add_argument("--out", required=True)
+    gen = sub.add_parser("generate", add_help=False,
+                         help="replaced in M3 (prints the replacement commands)")
+    gen.add_argument("rest", nargs=argparse.REMAINDER)
     val = sub.add_parser("validate", help="validate a project folder and print memory caps")
     _project_args(val)
     val.add_argument("--dump-machines", default=None, metavar="DIR",
@@ -94,7 +92,10 @@ def main(argv: Sequence[str] | None = None) -> int:
                        help="default min(gate.threads, cores)")
     bench.add_argument("--out", default=None, help="JSON report path")
     bench.add_argument("--no-gate", action="store_true", help="exit 0 even if the gate fails")
-    args = parser.parse_args(argv)
+    argv = list(sys.argv[1:] if argv is None else argv)
+    # REMAINDER alone does not take a leading option (`generate --scenario fraud ...`)
+    args = (argparse.Namespace(cmd="generate") if argv[:1] == ["generate"]
+            else parser.parse_args(argv))
 
     if args.cmd == "benchmark":
         from datagen import benchmark
@@ -129,18 +130,8 @@ def main(argv: Sequence[str] | None = None) -> int:
 
         return run_cmds.cmd_validate(args) if args.cmd == "validate" else run_cmds.cmd_run(args)
 
-    cfg = FraudConfig(
-        n_events=args.n_events,
-        seed=args.seed,
-        span_days=args.span_days,
-        target_bad_rate=args.bad_rate,
-    )
-    ds = SCENARIOS[args.scenario](cfg)
-    export(ds, args.out)
-    print(
-        f"wrote {ds.events.height} events to {args.out} (bad rate {ds.events['label'].mean():.4f})"
-    )
-    return 0
+    print(GENERATE_REPLACED, file=sys.stderr)       # args.cmd == "generate" (D89)
+    return 2
 
 
 if __name__ == "__main__":

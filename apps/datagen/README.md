@@ -1,43 +1,47 @@
 # datagen
 
-Synthetic tabular event data generator (fraud scenario first).
+Command line of the agentic event simulator (`neorisk_simkit`): validate and run a project
+folder (a pack, its profiles and overlays), check a run, replay or export it.
 
 ```bash
-uv run datagen generate --scenario fraud --n-events 100000 --seed 42 --out data/fraud
+uv run datagen validate PROJECT [--profile P] [--set K=V]... [--overlay N]... [--no-overlays]
+uv run datagen run PROJECT [--profile P] [--set K=V]... [--seed N] [--out DIR] [--force]
+uv run datagen check PROJECT [--profile P] [--run-dir DIR] [--baseline DIR] [--out DIR]
+uv run datagen export RUN_DIR --legacy-fraud --out DIR
+uv run datagen schema TARGET [--format sql|json] [--dialect postgres|duckdb]
+uv run datagen replay DATASET [--sink URI]...
+uv run datagen benchmark WORKLOAD [--cold] [--out REPORT.json]
 ```
 
-## Flags
+The `generate` subcommand (the hand-coded fraud scenario) was retired in M3 (D89): it prints
+the replacement commands below and exits 2.
 
-| Flag | Default | Meaning |
-|---|---|---|
-| `--scenario` | required | scenario name (`fraud`) |
-| `--n-events` | `FraudConfig.n_events` | number of events |
-| `--seed` | 0 | RNG seed; same seed gives identical output |
-| `--span-days` | `FraudConfig.span_days` | time span of the data |
-| `--bad-rate` | `FraudConfig.target_bad_rate` | calibrated target label rate |
-| `--out` | required | output directory |
+## Fraud benchmark data: `export --legacy-fraud`
 
-## Outputs
+```bash
+uv run datagen run examples/ecommerce --profile legacy --out data/legacy-run
+uv run datagen export data/legacy-run --legacy-fraud --out data/fraud
+```
 
-- `events.parquet` - raw event and entity columns plus `label` (benchmark input; no golden features)
-- `golden.parquet` - `event_id` + hidden golden features + `score`
-  (`u_amt_{count,sum,mean,max,min}_{7,14,30}d`, `dev_users_n_unique_7d`, `addr_chg_sum_30d`,
-  `amt_ratio_30d`, `inv_bonus_{count,sum,mean,max}_{7,14,30}d`, `inv_zombie_mean_30d`,
-  `invr_bonus_{count,sum,mean,max}_{7,14,30}d`, `invr_zombie_mean_30d`, `invitee_is_zombie`,
-  `score`).
+The `legacy` profile runs the e-commerce pack with the `bounty_hunters` overlay. `export
+--legacy-fraud` writes the run in the shape `bench` reads (D87):
+
+- `events.parquet` - `order_placed` rows (`event_type` 0) and the inviter's
+  `referral_bonus_paid` rows (`event_type` 1, `user_id` = the invitee, `inviter_id` = the
+  inviter), user/device/product attributes as integer codes as of the event time, and `label`
+  (the row's user, or the inviter on invite rows, is a labeled ring member).
+- `golden.parquet` - `event_id` + hidden golden features over strictly earlier rows
+  (`u_amt_{count,sum,mean,max,min}_{7,14,30}d`, `dev_users_n_unique_7d`, `amt_ratio_30d`,
+  `inv_bonus_{count,sum,mean,max}_{7,14,30}d`, `invr_bonus_{count,sum,mean,max}_{7,14,30}d`)
+  and the overlay's ground truth (`invitee_is_zombie`, `actor_role`, `score` = `label`).
   - `inv_*` (invitee side): the inviter's invite activity at the invite row that brought the
-    event's user in, carried as-of to the user's later events, i.e. frozen at invite time.
-  - `invr_*` (inviter side): the event's user's own invites in [t-w, t), evaluated at every
-    event of that user, so bounty hunters' own transactions carry them.
-  - zombie ratios use the latent zombie flag, which is not exported in `events.parquet`.
-- `meta.json` - seed, scenario, config, achieved bad rate
+    event's user in, carried as-of to the user's later events.
+  - `invr_*` (inviter side): the event's user's own invites in [t-w, t), at every event of that
+    user, so bounty hunters' own orders carry them.
+- `meta.json` - scenario (`ecommerce+bounty_hunters`), seed, `source` (pack, revision, overlay
+  parameters, run name), `feature_allowlist`, `golden_columns`, achieved bad rate.
 
-## Adding a scenario
-
-1. Create `src/datagen/scenarios/<name>.py` exposing `generate(cfg) -> Dataset`
-   (use `neorisk_simkit` primitives; keep entities as integer `idx` and let `export` attach UUIDs).
-2. Register it in `datagen.scenarios.SCENARIOS`: `{"fraud": fraud.generate, "<name>": <name>.generate}`.
-3. Add tests with a unique file basename.
+Exit 2 without `--legacy-fraud`, without `--out`, or when `RUN_DIR` has no `manifest.json`.
 
 ## Project folders: `validate` and `run`
 

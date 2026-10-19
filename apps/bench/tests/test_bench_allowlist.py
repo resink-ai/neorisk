@@ -6,7 +6,8 @@ import pytest
 from bench.allowlist import ENGINE_COLUMNS, resolve_allowlist
 from bench.features import build_features
 from bench.runner import load_events, raw_features
-from datagen.cli import main as datagen_main
+
+pytest_plugins = ["legacy_fixture"]
 
 
 def _events():
@@ -36,10 +37,9 @@ def test_meta_allowlist_restricts_and_is_validated():
                           ev.with_columns(pl.lit(0).alias("g1")))
 
 
-def test_legacy_dataset_carries_an_allowlist_equal_to_todays_raw_set(tmp_path):
-    out = tmp_path / "fraud"
-    assert datagen_main(["generate", "--scenario", "fraud", "--n-events", "3000",
-                         "--seed", "3", "--out", str(out)]) == 0
+@pytest.mark.large
+def test_legacy_dataset_carries_an_allowlist_equal_to_todays_raw_set(legacy_dir):
+    out = legacy_dir
     meta = json.loads((out / "meta.json").read_text())
     events, loaded = load_events(out)
     assert meta["feature_allowlist"] == loaded["_allowlist"]

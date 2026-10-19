@@ -77,7 +77,6 @@ dependencies = [
     { name = "neorisk-simkit" },
     { name = "numpy" },
     { name = "polars" },
-    { name = "xgboost" },
 ]
 
 [package.metadata]
@@ -85,7 +84,6 @@ requires-dist = [
     { name = "neorisk-simkit", editable = "libs/simkit" },
     { name = "numpy", specifier = ">=1.26" },
     { name = "polars", specifier = ">=1.0" },
-    { name = "xgboost", specifier = ">=2.0" },
 ]
 
 [[package]]

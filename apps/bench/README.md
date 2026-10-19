@@ -6,6 +6,24 @@ Model benchmark runner for synthetic event datasets. Two commands:
   self-contained HTML report (plus optional JSON).
 - `bench run`: the original two-model raw-column baseline (and the `--oracle` ceiling).
 
+## Data
+
+The benchmark data is a run of `examples/ecommerce` with the `bounty_hunters` overlay, exported
+in the fraud dataset's shape (D87):
+
+```
+uv run datagen run examples/ecommerce --profile legacy --out data/legacy-run
+uv run datagen export data/legacy-run --legacy-fraud --out data/fraud
+```
+
+## Tests
+
+The tests that need data share one session fixture, `legacy_dir` (`tests/legacy_fixture.py`,
+registered with `pytest_plugins = ["legacy_fixture"]`): a `legacy` run with `users=2000` and
+`run.span=30d`, exported with `--legacy-fraud`. Building it compiles the ecommerce +
+bounty_hunters engine module, **45-90 min cold** (seconds once cached), so those tests are
+marked `large`; `pytest apps/bench -m "not large"` runs the rest.
+
 ## `bench compare`
 
 ```
@@ -110,12 +128,14 @@ each model still reports NaN metric rows for `valid` and `test`.
 `meta.json["feature_allowlist"]`, when present, is an upper bound on the raw model inputs: it
 must name existing event columns and none may be `label`, a golden column, an `*_id` column or
 an engine column (`lamport, partition_id, seq, cause_id, action_id`); otherwise loading fails.
-Without it the default is every numeric column except those. Legacy `datagen generate` writes
-the allowlist equal to its former raw set, so its bench results are unchanged.
+Without it the default is every numeric column except those. `datagen export --legacy-fraud`
+writes the allowlist equal to the default raw set (the numeric event columns other than `label`
+and `*_id`).
 
 ## About `--oracle`
 
 `--oracle` trains XGBoost on the raw numeric columns plus all golden columns **except `score`**
 (the probability the labels were sampled from; it stays in `golden.parquet` but is not a
 feature). The resulting model is a golden-feature ceiling, not a realistic upper bound for
-engineered features.
+engineered features. In the legacy export `score` equals `label`, and `actor_role` and
+`invitee_is_zombie` are the overlay's ground truth, so the oracle is close to a label leak.

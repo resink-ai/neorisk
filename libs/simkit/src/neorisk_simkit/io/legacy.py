@@ -22,7 +22,7 @@ Mapping
 - `label` = 1 when the row's user (or, for invite rows, its inviter) is a cohort target whose
   last `labels/labels_*` row has `final_label`; label maturity is ignored (M4).
 
-Golden features mirror `datagen.scenarios.fraud._golden` (names and windows), computed from the
+Golden features mirror the retired fraud scenario's (D89; names and windows), computed from the
 adapter's events with `features.rolling` / `rolling_asof` over strictly earlier rows, plus
 `invitee_is_zombie`, `actor_role` (0 none, else 1 + the role's index in its labels table) and
 `score` = label.
