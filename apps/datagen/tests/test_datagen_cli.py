@@ -22,9 +22,12 @@ def test_generate_points_to_the_replacement(argv, tmp_path, monkeypatch, capsys)
 
 
 def test_export_needs_legacy_fraud(tmp_path, capsys):
+    # cheap usage checks, outside the `large` parity file (Task 20 review M5)
     out = tmp_path / "o"
     assert main(["export", str(tmp_path), "--out", str(out)]) == 2
-    assert "only --legacy-fraud exists in M3" in capsys.readouterr().err
+    assert ("datagen export: only --legacy-fraud exists in M3 (single-file export is M4)"
+            in capsys.readouterr().err)
     assert main(["export", str(tmp_path), "--legacy-fraud"]) == 2      # --out is required
     assert "--out DIR is required" in capsys.readouterr().err
+    assert main(["export", str(tmp_path / "nope"), "--legacy-fraud", "--out", str(out)]) == 2
     assert not out.exists()

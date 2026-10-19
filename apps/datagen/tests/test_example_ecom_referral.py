@@ -57,7 +57,9 @@ def test_inviters_are_credited_a_day_later_by_message(data):
     # invites come from the signup event: `entities/user.invited_by` is filled for everyone
     inviter_of = ev["user_signed_up"].select(pl.col("user_id").alias("invitee_id"),
                                              pl.col("invited_by").alias("expected"))
-    assert (inviter_of.drop_nulls()["invitee_id"] != inviter_of.drop_nulls()["expected"]).all()
+    invited = inviter_of.drop_nulls()
+    assert invited.height > 0                                  # not vacuous (Task 15 M-2)
+    assert (invited["invitee_id"] != invited["expected"]).all()
     k = j.join(inviter_of, on="invitee_id")
     assert k.height == j.height and k["expected"].null_count() == 0
     assert (k["user_id"] == k["expected"]).all(ignore_nulls=False)
@@ -114,6 +116,8 @@ def _credits_with_causes(res, ev) -> pl.DataFrame:
     assert j.select(pl.col(f"cause_{c}" for c in PAYOUT).null_count()).sum_horizontal()[0] == 0
     assert (j["cause_invitee_id"] == j["invitee_id"]).all(ignore_nulls=False)
     assert (j["cause_role"] == "invitee").all(ignore_nulls=False)
+    # the content key names one credit, so the sorted comparison below is exact (Task 15 M-1)
+    assert credit.height == credit.select(PAYOUT).n_unique()
     return j.select(*[c for c in PAYOUT], *[f"cause_{c}" for c in PAYOUT]).sort(pl.all())
 
 

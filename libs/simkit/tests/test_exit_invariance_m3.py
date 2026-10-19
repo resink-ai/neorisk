@@ -14,8 +14,15 @@ Which IDs are canonicalized (D37):
   appearance in canonical order. Seal numbers them per step by (creating campaign's
   `partition_id`, ordinal) (D75, §12 prefix sum), so in general they depend on step boundaries:
   two campaigns creating members in one 1d step but in different 12h steps can swap order. In
-  this workload they come out identical anyway (measured, Task 23), but the test does not rely
-  on it.
+  this workload they come out identical anyway (measured, Task 23), and the test does rely on
+  that in one place: `conftest.canonicalize_ids` orders rows that share `(event_time, lamport,
+  table)` by their other columns, raw member `user_id`s included, before `_rename_members`
+  runs. A member-ID swap on such a tie would move positions and fail the comparison loudly
+  (never a false pass; final review M5).
+
+`test_late_grants_are_invariant` repeats the comparison with `bounty_hunters.claim_timeout=1ms`
+(digest-neutral, D77): every zombie grant arrives after the timeout, so the late-grant release
+path (D67, F-35: `late_grants`, `bonus_refunded`) is compared too (Task 23 review M1).
 """
 
 import json
@@ -100,3 +107,26 @@ def test_logical_records_are_invariant(tmp_path, ref, name, threads, extra):
     assert events == ref[0]
     assert labels.equals(ref[1])
     assert machines == ref[2] and late == ref[3]
+
+
+LATE = ("bounty_hunters.claim_timeout=1ms",)
+
+
+@pytest.fixture(scope="module")
+def late_ref(tmp_path_factory):
+    return _run(tmp_path_factory.mktemp("m3late"), "ref", extra=LATE)
+
+
+@pytest.mark.parametrize("name, threads, extra", [
+    ("threads1", 1, ()),
+    ("step12h", 4, ("engine.step=12h", "engine.step_min=1h")),
+])
+def test_late_grants_are_invariant(tmp_path, late_ref, name, threads, extra):
+    events, labels, machines, late, stats = _run(tmp_path, name, threads, (*LATE, *extra))
+    assert stats["threads"] == threads
+    assert machines["zombie"]["late_grants"] > 0                 # the late path really ran
+    assert machines["zombie"]["entries"].get("paid", 0) == 0
+    assert len(events["bonus_refunded"]) == machines["zombie"]["late_grants"]
+    assert events == late_ref[0]
+    assert labels.equals(late_ref[1])
+    assert machines == late_ref[2] and late == late_ref[3]

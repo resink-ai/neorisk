@@ -14,8 +14,9 @@ Mapping
   value's index in its declared category list (`schema/schema.json`).
 - User attributes: `user_age_bucket` = `age_band`; `user_segment` = acquisition channel (the
   user's `user_signed_up.acquisition` when that signup was exported, else the entity value);
-  `user_state` = `region` as of the event time (the last `history/address` change at or before
-  it, else the creation value of `entities/user`). Device: `device_os` = `os`,
+  `user_state` = `region` as of the event (the user's last `history/address` change that
+  precedes the row in canonical order, else the creation value of `entities/user`; a move at
+  the row's very instant applies only when it comes first in that order, Task 20 review M6). Device: `device_os` = `os`,
   `device_model` = `kind`. Product (orders only): `product_category`, `product_price`.
 - An invite row's device is the invitee's signup device, else its latest session or order
   device at or before the invite, else its first one after (when that activity was warm-up).
@@ -24,8 +25,8 @@ Mapping
 
 Golden features mirror the retired fraud scenario's (D89; names and windows), computed from the
 adapter's events with `features.rolling` / `rolling_asof` over strictly earlier rows, plus
-`invitee_is_zombie`, `actor_role` (0 none, else 1 + the role's index in its labels table) and
-`score` = label.
+`invitee_is_zombie`, `actor_role` (0 none, else 1 + the role's position in the roles of every
+labels table, tables in schema order, so two tables never share a code) and `score` = label.
 """
 
 from __future__ import annotations
@@ -143,11 +144,10 @@ def _attributes(run_dir: Path, sc: _Schema, rows: pl.DataFrame,
            .join(skus, on="product_id", how="left", maintain_order="left"))
     hist = _parts(run_dir / "history" / "address")
     if hist is not None and hist.height:
-        moves = _naive(hist.rename({"valid_from": "event_time"})).sort(
-            ["event_time", "lamport", "partition_id", "seq"]).select(
-            pl.col("entity_id").alias("user_id"), "event_time",
+        moves = _naive(hist.rename({"valid_from": "event_time"})).select(
+            pl.col("entity_id").alias("user_id"), *KEY,
             sc.code("address", "region").alias("_state"))
-        out = _asof(out, moves, "backward")
+        out = _state_as_of(out, moves)
     else:
         out = out.with_columns(pl.lit(None, pl.Int64).alias("_state"))
     return out.with_columns(
@@ -156,17 +156,34 @@ def _attributes(run_dir: Path, sc: _Schema, rows: pl.DataFrame,
     ).drop("_seg_su", "_seg_entity", "_state", "_state0")
 
 
+def _state_as_of(rows: pl.DataFrame, moves: pl.DataFrame) -> pl.DataFrame:
+    """`rows` with `_state`: the `_state` of the row user's last move (`moves`: user_id, KEY,
+    _state) that precedes the row in canonical order `(event_time, lamport, partition_id,
+    seq)`, null when none does. Rows keep their order."""
+    r = rows.select(pl.int_range(pl.len(), dtype=pl.Int64).alias("_r"), "user_id", *KEY)
+    both = pl.concat([r.with_columns(pl.lit(None, pl.Int64).alias("_state")),
+                      moves.select("user_id", *KEY, pl.col("_state").cast(pl.Int64))
+                      .with_columns(pl.lit(None, pl.Int64).alias("_r"))], how="diagonal")
+    st = (both.sort(["user_id", *KEY], maintain_order=True)
+          .with_columns(pl.col("_state").forward_fill().over("user_id"))
+          .filter(pl.col("_r").is_not_null()).select("_r", "_state"))
+    return (rows.with_columns(pl.int_range(pl.len(), dtype=pl.Int64).alias("_r"))
+            .join(st, on="_r", how="left", maintain_order="left").drop("_r"))
+
+
 def _targets(run_dir: Path, sc: _Schema) -> pl.DataFrame:
-    """One row per cohort target: its last label row's `final_label` and role code
-    (1 + the role's index in its labels table)."""
+    """One row per cohort target: its last label row's `final_label` and role code (1 + the
+    role's position among the roles of every labels table, in schema order; review M3)."""
     frames = []
+    offset = 0
     for name in sc.label_tables():
+        base, offset = offset, offset + len(sc.values(name, "role"))
         df = _parts(run_dir / "labels" / name)
         if df is None or df.height == 0:
             continue
         frames.append(df.sort(list(KEY), maintain_order=True).select(
             "target_id", *KEY, pl.col("final_label").fill_null(False).alias("final_label"),
-            (sc.code(name, "role") + 1).alias("actor_role"),
+            (sc.code(name, "role") + 1 + base).alias("actor_role"),
             (pl.col("role").cast(pl.String) == "zombie").alias("zombie")))
     if not frames:
         return pl.DataFrame(schema={"target_id": pl.Int64, "final_label": pl.Boolean,

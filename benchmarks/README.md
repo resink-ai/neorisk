@@ -460,9 +460,12 @@ was not re-run (the same share would put it near 51 s: an estimate, not a measur
 §18 sets no M3 gate (D92). This section re-measures the S1 gate and `s2_pool` after the M3
 engine changes (Tasks 1–12: spawn depth, owner messages, members, labels, machines, `cause_id`).
 All rows: arm64, 14 cores / 36 GiB (not the reference machine), 14 threads (`min(16, cores)`,
-D30), seed 42, HEAD 129d9dd, 2026-10-19 UTC. Each module was warm before its run (digest
-checked in the JIT cache, then the harness's own compile run). Reports: `results/s1-warm-m3.json`
-and `results/s2_pool-warm-m3.json` (git-ignored).
+D30), seed 42, code at 129d9dd (the Task 22 commit; Task 23 changed no code, so the
+measured engine is the one Task 23 committed), 2026-10-19 UTC. Each module was warm before its
+run (digest checked in the JIT cache, then the harness's own compile run). Reports:
+`results/s1-warm-m3.json` and `results/s2_pool-warm-m3.json` on the measuring machine;
+`results/` is git-ignored, so the table below is the record in the repository (its numbers are
+copied from those reports).
 
 | Code | Exported events | Warm s | events/s (end to end) | shard-phase events/s (shard events / shard-phase s) | Peak RSS GiB | build / generate / seal / check / write s | Rounds (total / compiled) | Module | Verdict |
 |---|---|---|---|---|---|---|---|---|---|

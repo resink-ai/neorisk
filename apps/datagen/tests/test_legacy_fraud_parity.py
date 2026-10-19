@@ -14,6 +14,7 @@ from bench.runner import load_events, run
 from neorisk_simkit.io.dataset import run_to_dataset
 from neorisk_simkit.io.legacy import legacy_fraud
 from neorisk_simkit.io.read import read_events
+from neorisk_simkit.io.schema.schema_json import load_schema
 
 pytestmark = pytest.mark.large
 
@@ -90,6 +91,31 @@ def test_columns_and_meta(dirs, ds):
     for c in ("user_age_bucket", "user_segment", "user_state", "device_id", "device_os",
               "device_model"):
         assert ds.events[c].null_count() == 0, c
+    # dtypes (Task 20 review M4): dollars are float64, codes int64
+    for c in ("amount", "referral_bonus", "product_price"):
+        assert ds.events[c].dtype == pl.Float64, c
+    for c in ("user_age_bucket", "user_segment", "user_state", "device_os", "device_model",
+              "product_category", "currency", "event_type", "label"):
+        assert ds.events[c].dtype == pl.Int64, c
+
+
+def test_codes_index_the_declared_category_lists(dirs, ds):
+    # a code is the value's index in schema.json's list (Task 20 review M4)
+    tables = {t["name"]: t for t in load_schema(dirs[0])["tables"]}
+
+    def values(table, col):
+        return next(c["values"] for c in tables[table]["columns"] if c["name"] == col)
+
+    for code, table, col, key in (("device_model", "device", "kind", "device_id"),
+                                  ("device_os", "device", "os", "device_id"),
+                                  ("user_age_bucket", "user", "age_band", "user_id")):
+        ent = pl.read_parquet(dirs[0] / "entities" / table).select(
+            pl.col("id").alias(key), pl.col(col).cast(pl.String))
+        j = ds.events.select(key, code).join(ent, on=key, how="left")
+        assert j.height == ds.events.height and j[col].null_count() == 0, code
+        names = values(table, col)
+        decoded = pl.Series([names[i] for i in j[code].to_list()], dtype=pl.String)
+        assert (decoded == j[col]).all(), code
 
 
 def test_bad_rate_in_band(ds):
@@ -159,13 +185,3 @@ def test_bench_consumes_the_export(dirs):
     rows = run(dirs[1])
     aucs = [r["auc"] for r in rows if r["model"] == "xgb_raw" and r["split"] == "test"]
     assert aucs and np.isfinite(aucs[0]) and aucs[0] > 0.5
-
-
-def test_export_needs_legacy_fraud(tmp_path, capsys):
-    from datagen.cli import main
-    assert main(["export", str(tmp_path), "--out", str(tmp_path / "o")]) == 2
-    assert ("datagen export: only --legacy-fraud exists in M3 (single-file export is M4)"
-            in capsys.readouterr().err)
-    assert main(["export", str(tmp_path / "nope"), "--legacy-fraud",
-                 "--out", str(tmp_path / "o")]) == 2
-    assert not (tmp_path / "o").exists()
