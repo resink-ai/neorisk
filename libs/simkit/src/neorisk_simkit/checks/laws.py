@@ -8,8 +8,9 @@ sealed step is fed to `LawBook.step`:
   at its first offending row; a non-required one counts `violations` and keeps the first
   citation. Failures cite `(partition_id, seq)` and the action ID.
 - a warm-up step (`exported=False`) reads `sealed.warmup_rows` and only updates carried state
-  (`total_le` running totals, `at_most_once` key sets, `sum_le` per-key sums, open `resolved`
-  keys): §11 reducers start from the opening snapshot. Nothing is counted, judged or cited;
+  (`total_le` running totals, `at_most_once` key sets, `sum_le` per-key sums and the owner
+  values a state-side `sum_le` reads at each seal, open `resolved` keys, `lifecycle` last
+  tables): §11 reducers start from the opening snapshot. Nothing is counted, judged or cited;
   state laws and `balanced` skip it.
 
 Within a step, checks run in declaration order and the first required check with a violation
@@ -171,6 +172,9 @@ class _Law:
     def finish(self, end_us: int) -> None:
         """The run ended at `end_us`."""
 
+    def refresh(self, world: Any, retired: np.ndarray) -> None:
+        """Read the world at a seal (warm-up steps included), before `warm` or `judge`."""
+
     def warm(self, rows: dict[str, pa.Table]) -> None:
         """Feed a warm-up step's rows into carried state (nothing judged)."""
 
@@ -218,42 +222,71 @@ class _NeverNegativeRows(_Law):
 class _TotalLe(_Law):
     """Running total over the run (warm-up rows included). Every judged row that leaves the
     total above the limit is one violation (a non-required law keeps counting each such row,
-    zero or negative amounts included, until the total drops back to the limit)."""
+    zero or negative amounts included, until the total drops back to the limit).
 
-    def __init__(self, cdef: Any, table: str, col: str, limit: int):
+    With `per` (µs), one total per window `event_time // per` (epoch aligned): the total
+    restarts at 0 when a row's window differs from the previous row's. Rows arrive in
+    canonical order, so windows only advance; the carried total belongs to `window`."""
+
+    def __init__(self, cdef: Any, table: str, col: str, limit: int, per: str | None = None):
+        from neorisk_simkit.spec.project import parse_duration
+
         super().__init__(cdef)
         self.table, self.col, self.limit = table, col, int(limit)
+        self.per = None if per is None else int(parse_duration(per))
         self.tables = (table,)
         self.total = 0
+        self.window: int | None = None
 
-    def _running(self, t: pa.Table) -> tuple[np.ndarray, np.ndarray | None]:
-        """Exact running totals: a total past int64 is held as a Python integer, so it exceeds
-        any int64 limit instead of wrapping."""
+    def _running(self, t: pa.Table) -> tuple[np.ndarray, np.ndarray | None, np.ndarray | None]:
+        """Exact running totals (and each row's window, with `per`): a total past int64 is
+        held as a Python integer, so it exceeds any int64 limit instead of wrapping."""
         v, valid = _column(t, self.col)
         v = np.asarray(v, np.int64)
         if valid is not None:
             v = np.where(valid, v, 0)
-        return exact_cumsum(v, self.total), valid
+        if self.per is None:
+            return exact_cumsum(v, self.total), valid, None
+        w = np.asarray(_column(t, "event_time")[0], np.int64) // np.int64(self.per)
+        change = np.ones(len(w), bool)
+        change[1:] = w[1:] != w[:-1]
+        gid = np.cumsum(change) - 1
+        starts = np.flatnonzero(change)
+        carry = self.total if int(w[0]) == self.window else 0
+        if abs(int(carry)) + float(np.abs(v.astype(np.float64)).sum()) >= _SAFE:
+            v = v.astype(object)                         # a window total may leave int64
+        c = np.cumsum(v)
+        base = (c - v)[starts]                           # the sum before each window's first row
+        base[0] -= carry
+        return c - base[gid], valid, w
+
+    def _carry(self, run: np.ndarray, w: np.ndarray | None) -> None:
+        self.total = int(run[-1])
+        if w is not None:
+            self.window = int(w[-1])
 
     def warm(self, rows):
         t = rows.get(self.table)
         if t is not None and t.num_rows:
-            self.total = int(self._running(t)[0][-1])
+            run, _, w = self._running(t)
+            self._carry(run, w)
 
     def judge(self, rows, world, retired):
         t = rows.get(self.table)
         if t is None or not t.num_rows:
             return 0
-        run, valid = self._running(t)
+        run, valid, w = self._running(t)
         bad = np.asarray(run > self.limit, bool)
         if valid is not None:
             bad &= valid
         n_bad = int(bad.sum())
         if n_bad:
             i = int(np.argmax(bad))
-            self._fail(self.table, _cite(t, i), f"total {int(run[i])} exceeds {self.limit}",
-                       n_bad)
-        self.total = int(run[-1])
+            detail = f"total {int(run[i])} exceeds {self.limit}"
+            if w is not None:
+                detail = f"{self.table}.{self.col} {detail} in window {int(w[i])}"
+            self._fail(self.table, _cite(t, i), detail, n_bad)
+        self._carry(run, w)
         return t.num_rows if valid is None else int(valid.sum())
 
 
@@ -688,6 +721,283 @@ class _Resolved(_Law):
         return {**super().report(), "unmatched": self.unmatched}
 
 
+def _merge_pos(skeys: np.ndarray, keys: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """(search position of each of `keys` in the sorted `skeys`, whether it is there). Keys are
+    whole int64 values: equal only when equal."""
+    pos = np.searchsorted(skeys, keys)
+    if not len(skeys):
+        return pos, np.zeros(len(keys), bool)
+    return pos, np.take(skeys, pos, mode="clip") == keys
+
+
+class _Merge:
+    """Where new sorted keys go among `n_old` sorted ones, given their search positions `at`
+    (non-decreasing): `into(old, new)` builds each merged array with one `n_old + len(at)`
+    output, an index per new key and a 1-byte mask per key shared by every array merged (no
+    re-sort, unlike `np.insert`, whose index workspace grows with every call)."""
+
+    def __init__(self, n_old: int, at: np.ndarray):
+        self.dest = np.arange(len(at), dtype=np.int64)
+        self.dest += at
+        self.old = np.ones(n_old + len(at), bool)
+        self.old[self.dest] = False
+
+    def into(self, old: np.ndarray, new: Any) -> np.ndarray:
+        out = np.empty(len(self.old), old.dtype)
+        out[self.dest] = new
+        out[self.old] = old
+        return out
+
+
+def _groups(ks: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """(group of each entry, first entry, last entry of each group) of sorted keys `ks`."""
+    change = np.ones(len(ks), bool)
+    change[1:] = ks[1:] != ks[:-1]
+    gid = np.cumsum(change) - 1
+    starts = np.flatnonzero(change)
+    return gid, starts, np.append(starts[1:], len(ks)) - 1
+
+
+class _SumLeState(_Law):
+    """`sum_le` whose right side is an owner table column (D81, F-07): per `by` key (the owner
+    table's key, as public IDs), the running Σ lhs of every exported lhs row stays ≤ the
+    owner's value of the column last seen at a seal (0 for a key never seen). At every seal,
+    warm-up included and before the step's rows are judged, the live owners and the owners
+    that retired at it are read (`refresh`): their dense `self_id` becomes the public ID the lhs
+    key column holds (`io.seal.public_ids`, F-12) and their value replaces the one kept. One
+    sorted key array carries both sides (`skeys`, `lsum`, `rlast`); new keys are merged in at
+    their search positions (never re-sorted). Left sums are exact: a sum that leaves int64
+    stops the run with an `EngineError`. A null lhs key is skipped; a null amount adds 0 and
+    is not judged; a null state value is not read."""
+
+    def __init__(self, cdef: Any, plan: Any, lhs: tuple[str, str], part: str, col: str,
+                 by: str):
+        super().__init__(cdef)
+        self.lhs, self.by = lhs, by
+        self.part = plan.partition(part)
+        self.table, self.col = self.part.table, col
+        cols = plan.table(self.table).cols
+        self.j = next(i for i, c in enumerate(cols) if c.name == col)
+        self.nullable = cols[self.j].ltype.nullable
+        self.key_bytes = law_key_bytes(cdef.law, plan)
+        self.tables = (lhs[0],)
+        self.skeys = np.zeros(0, np.int64)
+        self.lsum = np.zeros(0, np.int64)
+        self.rlast = np.zeros(0, np.int64)
+
+    def keys(self) -> int:
+        return len(self.skeys)
+
+    def _insert(self, at: np.ndarray, keys: np.ndarray, lsum: Any, rlast: Any) -> None:
+        """Merge new keys (sorted, absent; reserved by the caller) in at their search positions
+        `at`: each array's old copy is freed as the next is built."""
+        m = _Merge(len(self.skeys), at)
+        self.skeys = m.into(self.skeys, keys)
+        self.lsum = m.into(self.lsum, lsum)
+        self.rlast = m.into(self.rlast, rlast)
+
+    def refresh(self, world, retired):
+        if world is None:
+            return
+        hid, part = world.hidden, self.part
+        base = world.slot_base[part.name]
+        alive = hid.alive[base:base + part.max_live]
+        gone = retired[(retired >= base) & (retired < base + part.max_live)]
+        n = int(np.count_nonzero(alive)) + len(gone)
+        if not n:
+            return
+        self.reserve(max(len(self.skeys), n))            # each owner read is a key afterwards
+        gs = np.flatnonzero(alive)
+        gs += base
+        if len(gone):
+            gs = np.concatenate([gs, gone])
+        vals = world.state[part.name][self.j][hid.lslot[gs]]
+        ids = hid.self_id[gs]
+        del gs
+        if self.nullable:
+            fill = NULL if vals.dtype == np.int64 else np.iinfo(vals.dtype).min
+            ok = vals != fill
+            vals, ids = vals[ok], ids[ok]
+        from neorisk_simkit.io.seal import public_ids  # io imports checks
+
+        ids = public_ids(world.seed, self.table, ids)
+        order = np.argsort(ids, kind="stable")
+        ids = ids[order]
+        vals = vals[order]
+        del order
+        if len(ids) > 1 and bool((ids[1:] == ids[:-1]).any()):
+            raise EngineError(f"law {self.id}: two {self.table} owners share one ID at a seal")
+        vals = vals.astype(np.int64, copy=False)
+        pos = np.searchsorted(self.skeys, ids)
+        hit = np.zeros(len(ids), bool)
+        for lo in range(0, len(ids) if len(self.skeys) else 0, RESOLVED_CHUNK):
+            sl = slice(lo, lo + RESOLVED_CHUNK)          # bounded workspace
+            hit[sl] = np.take(self.skeys, pos[sl], mode="clip") == ids[sl]
+        n_new = len(ids) - int(np.count_nonzero(hit))
+        self.reserve(len(self.skeys) + n_new)            # before the state changes
+        for lo in range(0, len(ids) if n_new < len(ids) else 0, RESOLVED_CHUNK):
+            sl = slice(lo, lo + RESOLVED_CHUNK)
+            h = hit[sl]
+            self.rlast[pos[sl][h]] = vals[sl][h]
+        if not n_new:
+            return
+        if n_new < len(ids):                             # the new keys, one array at a time
+            np.logical_not(hit, out=hit)
+            ids = ids[hit]
+            pos = pos[hit]
+            vals = vals[hit]
+        del hit
+        m = _Merge(len(self.skeys), pos)                 # merged in place of `_insert`, so
+        del pos                                          # each input is freed once merged
+        self.skeys = m.into(self.skeys, ids)
+        del ids
+        self.lsum = m.into(self.lsum, 0)
+        self.rlast = m.into(self.rlast, vals)
+
+    def _fit(self, r: np.ndarray, ks: np.ndarray) -> np.ndarray:
+        """Exact per-key running sums back to int64; `EngineError` when one leaves int64."""
+        out = (r > _I64_MAX) | (r < _I64_MIN)
+        if out.any():
+            i = int(np.argmax(out))
+            raise EngineError(f"law {self.id}: the running total of {'.'.join(self.lhs)} for "
+                              f"{self.by} {int(ks[i])} reaches {int(r[i])}, outside int64")
+        return r.astype(np.int64)
+
+    def _advance(self, rows: dict[str, pa.Table], exported: bool) -> int:
+        """Add this step's lhs rows to the per-key sums; judge them when `exported`."""
+        t = rows.get(self.lhs[0])
+        if t is None or not t.num_rows:
+            return 0
+        k, keyed = row_keys(t, self.by)
+        if not len(keyed):
+            return 0
+        v, valid = _column(t, self.lhs[1])
+        ok = np.ones(t.num_rows, bool) if valid is None else valid
+        order = keyed[np.argsort(k[keyed], kind="stable")]   # by key; canonical within one
+        ks = k[order]
+        a = np.where(ok, np.asarray(v, np.int64), 0)[order]
+        judged = ok[order]
+        gid, starts, ends = _groups(ks)
+        uniq = ks[starts]
+        pos, hit = _merge_pos(self.skeys, uniq)
+        posc = np.minimum(pos, max(len(self.skeys) - 1, 0))
+        base = np.where(hit, self.lsum[posc], 0) if len(self.skeys) else np.zeros(len(uniq),
+                                                                                    np.int64)
+        right = np.where(hit, self.rlast[posc], 0) if len(self.skeys) else base.copy()
+        exact = (float(np.abs(base.astype(np.float64)).max(initial=0))   # no abs(INT64_MIN)
+                 + float(np.abs(a.astype(np.float64)).sum()))
+        if exact >= _SAFE:                               # a per-key sum may leave int64
+            a, base = a.astype(object), base.astype(object)
+        c = np.cumsum(a)                                 # a wrap of this global sum cancels
+        r = c - (c - a)[starts][gid] + base[gid]         # out of the per-key differences
+        if exact >= _SAFE:
+            r = self._fit(r, ks)
+        fresh = ~hit
+        self.reserve(len(self.skeys) + int(fresh.sum()))   # before the state changes
+        lend = r[ends]
+        self.lsum[pos[hit]] = lend[hit]
+        if fresh.any():
+            self._insert(pos[fresh], uniq[fresh], lend[fresh], 0)
+        if not exported:
+            return 0
+        rr = right[gid]
+        bad = np.flatnonzero(judged & (r > rr))
+        if len(bad):
+            j = int(bad[np.argmin(order[bad])])          # the first offending row (canonical)
+            self._fail(self.lhs[0], _cite(t, int(order[j])),
+                       f"{self.by} {int(ks[j])}: {'.'.join(self.lhs)} total {int(r[j])} "
+                       f"exceeds {self.table}.{self.col} {int(rr[j])}", len(bad))
+        return int(judged.sum())
+
+    def warm(self, rows):
+        self._advance(rows, exported=False)
+
+    def judge(self, rows, world, retired):
+        return self._advance(rows, exported=True)
+
+
+class _Lifecycle(_Law):
+    """Per `key`, the rows of the listed tables (every edge source and target) in canonical
+    order: a key's first row must be a table no edge targets, every later row a table in the
+    edge list of the key's previous row. Carried: sorted keys and each key's last table code;
+    new keys are merged in at their search positions. Warm-up rows only set the state. A row
+    with a null key is skipped. Each offending row is one violation; the state follows every
+    row, offending or not."""
+
+    _COLS = ("key", "code", "row", *_CANON)
+
+    def __init__(self, cdef: Any, key: str, edges: tuple[tuple[str, tuple[str, ...]], ...]):
+        super().__init__(cdef)
+        self.key = key
+        edges = dict(edges)
+        targets = {b for bs in edges.values() for b in bs}
+        self.names = tuple(sorted(set(edges) | targets))
+        code = {n: i for i, n in enumerate(self.names)}
+        self.allowed = np.zeros((len(self.names), len(self.names)), bool)
+        for a, bs in edges.items():
+            for b in bs:
+                self.allowed[code[a], code[b]] = True
+        self.opens = np.array([n not in targets for n in self.names], bool)
+        self.tables = self.names
+        self.skeys = np.zeros(0, np.int64)
+        self.last = np.zeros(0, np.int64)
+
+    def keys(self) -> int:
+        return len(self.skeys)
+
+    def _advance(self, rows: dict[str, pa.Table], exported: bool) -> int:
+        parts = []
+        for c, name in enumerate(self.names):
+            t = rows.get(name)
+            if t is None or not t.num_rows:
+                continue
+            k, keyed = row_keys(t, self.key)
+            parts.append({"key": k[keyed], "code": np.full(len(keyed), c, np.int64),
+                          "row": keyed, **{x: _ints(t, x, keyed) for x in _CANON}})
+        s = _concat(parts, self._COLS)
+        n = len(s["key"])
+        if not n:
+            return 0
+        order = np.lexsort((s["code"], *(s[c] for c in _CANON[::-1]), s["key"]))
+        s = {k: v[order] for k, v in s.items()}
+        ks, code = s["key"], s["code"]
+        _, starts, ends = _groups(ks)
+        uniq = ks[starts]
+        pos, hit = _merge_pos(self.skeys, uniq)
+        fresh = ~hit
+        self.reserve(len(self.skeys) + int(fresh.sum()))   # before the state changes
+        prev = np.empty(n, np.int64)
+        prev[1:] = code[:-1]
+        if len(self.skeys):
+            posc = np.minimum(pos, len(self.skeys) - 1)
+            prev[starts] = np.where(hit, self.last[posc], -1)
+        else:
+            prev[starts] = -1
+        ok = np.where(prev < 0, self.opens[code], self.allowed[np.maximum(prev, 0), code])
+        lend = code[ends]
+        self.last[pos[hit]] = lend[hit]
+        if fresh.any():
+            m = _Merge(len(self.skeys), pos[fresh])
+            self.skeys = m.into(self.skeys, uniq[fresh])
+            self.last = m.into(self.last, lend[fresh])
+        if not exported:
+            return 0
+        bad = np.flatnonzero(~ok)
+        if len(bad):
+            i = _first_canonical(s, bad, "code")
+            name, k = self.names[int(code[i])], int(ks[i])
+            detail = (f"{self.key} {k}: {name} cannot start a lifecycle" if prev[i] < 0
+                      else f"{self.key} {k}: {name} after {self.names[int(prev[i])]}")
+            self._fail(name, _cite(rows[name], int(s["row"][i])), detail, len(bad))
+        return n
+
+    def warm(self, rows):
+        self._advance(rows, exported=False)
+
+    def judge(self, rows, world, retired):
+        return self._advance(rows, exported=True)
+
+
 def _build(plan: Any, cdef: Any) -> _Law:
     lw = cdef.law
     kind = lw.kind
@@ -698,20 +1008,29 @@ def _build(plan: Any, cdef: Any) -> _Law:
             return _NeverNegativeRows(cdef, name, col)
         return _NeverNegativeState(cdef, plan, path, where, name, col)
     if kind == "total_le":
-        return _TotalLe(cdef, *_event_table(plan, lw.arg("lhs")), lw.arg("limit"))
+        return _TotalLe(cdef, *_event_table(plan, lw.arg("lhs")), lw.arg("limit"),
+                        lw.get("per"))
     if kind == "at_most_once":
         return _AtMostOnce(cdef, lw.arg("event"), lw.arg("key"))
     if kind == "balanced":
         return _Balanced(cdef, lw.arg("table"), lw.arg("amount"), lw.arg("side"), lw.arg("by"))
     if kind == "sum_le":
-        lhs, rhs, by = _event_table(plan, lw.arg("lhs")), _event_table(plan, lw.arg("rhs")), \
-            lw.arg("by")
+        by = lw.arg("by")
+        lhs = _event_table(plan, lw.arg("lhs"))
+        where, part, col = resolve_path(plan, lw.arg("rhs"))
+        if where == "owner":                             # D81: against owner state
+            if not any(c.name == by for e in plan.events if e.name == lhs[0] for c in e.cols):
+                raise ValueError(f"check {cdef.id}: {lhs[0]} has no column {by}")
+            return _SumLeState(cdef, plan, lhs, part, col, by)
+        rhs = _event_table(plan, lw.arg("rhs"))
         for table, _ in (lhs, rhs):
             if not any(c.name == by for e in plan.events if e.name == table for c in e.cols):
                 raise ValueError(f"check {cdef.id}: {table} has no column {by}")
         return _SumLe(cdef, lhs, rhs, by)
     if kind == "resolved":
         return _Resolved(cdef, lw.arg("event"), lw.arg("by"), lw.arg("key"), lw.arg("within"))
+    if kind == "lifecycle":
+        return _Lifecycle(cdef, lw.arg("key"), lw.arg("edges"))
     raise ValueError(f"check {cdef.id}: unknown law {kind!r}")
 
 
@@ -720,6 +1039,7 @@ class LawBook:
     """Every declared check of `plan`, evaluated step by step (see the module docstring)."""
 
     def __init__(self, plan: Any, *, max_keys: int):
+        self.plan = plan
         self.max_keys = int(max_keys)
         self.cap_bytes = checker_state_bytes(plan, self.max_keys)   # `checker_state`
         self._laws = [_build(plan, c) for c in plan.checks]
@@ -728,7 +1048,7 @@ class LawBook:
         self.end_us: int | None = None
 
     def _reserve(self, law: _Law, keys: int) -> None:
-        need = law_peak_bytes(law.lw, keys) + sum(o.keys() * o.key_bytes for o in self._laws
+        need = law_peak_bytes(law.lw, keys, self.plan) + sum(o.keys() * o.key_bytes for o in self._laws
                                                   if o is not law)
         if need > self.cap_bytes:
             raise CapExceeded("checker_state", self.cap_bytes, need)
@@ -753,15 +1073,17 @@ class LawBook:
         out: dict[str, int] = {}
         for law in self._laws:
             law.t_end = int(sealed.t_end)
+        retired = getattr(sealed, "retired", _NONE)
         if exported:
             rows = {**sealed.events, **sealed.postings}
-            retired = getattr(sealed, "retired", _NONE)
             for law in self._laws:
+                law.refresh(world, retired)
                 n = law.judge(rows, world, retired)
                 law.checked += n
                 out[law.id] = n
         else:
             for law in self._laws:
+                law.refresh(world, retired)
                 law.warm(sealed.warmup_rows)
                 out[law.id] = 0
         return out

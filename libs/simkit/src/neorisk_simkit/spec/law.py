@@ -15,6 +15,9 @@ class LawSpec:
     def arg(self, name: str) -> Any:
         return dict(self.args)[name]
 
+    def get(self, name: str, default: Any = None) -> Any:
+        return dict(self.args).get(name, default)
+
 
 def never_negative(path: str) -> LawSpec:
     """`<table|shard>.<column>` never drops below zero."""
@@ -28,7 +31,9 @@ def resolved(event: str, *, by: tuple[str, ...], key: str, within: str | None = 
 
 
 def sum_le(lhs: str, rhs: str, *, by: str) -> LawSpec:
-    """Per `by` key, the sum of `lhs` (`event.column`) never exceeds the sum of `rhs`."""
+    """Per `by` key, the sum of `lhs` (`event.column`) never exceeds the sum of `rhs`
+    (`event.column`), or, when `rhs` is `<owner table>.<column>` and `by` that table's key, the
+    owner's last value of that column seen at a seal (0 for a key never seen; D81)."""
     return LawSpec("sum_le", (("lhs", lhs), ("rhs", rhs), ("by", by)))
 
 
@@ -38,13 +43,16 @@ def at_most_once(event: str, *, key: tuple[str, ...] | str) -> LawSpec:
     return LawSpec("at_most_once", (("event", event), ("key", key)))
 
 
-def total_le(lhs: str, limit: int) -> LawSpec:
-    """The running total of `lhs` (`event.column`) over the whole run never exceeds `limit`.
+def total_le(lhs: str, limit: int, per: str | None = None) -> LawSpec:
+    """The running total of `lhs` (`event.column`) over the whole run never exceeds `limit`;
+    with `per` (a duration such as `"30d"`), over each window `event_time // per` (epoch
+    aligned) instead: the total restarts at 0 in every window.
 
     Warm-up rows count toward the total but are never judged. Each exported row that leaves the
     total above `limit` is one violation, so a non-required law that is exceeded keeps
-    counting every later row until the total falls back to `limit`."""
-    return LawSpec("total_le", (("lhs", lhs), ("limit", int(limit))))
+    counting every later row until the total falls back to `limit` (or its window ends)."""
+    args = (("lhs", lhs), ("limit", int(limit)))
+    return LawSpec("total_le", args if per is None else (*args, ("per", per)))
 
 
 def balanced(table: str, *, amount: str = "amount", side: str = "side",
@@ -53,3 +61,11 @@ def balanced(table: str, *, amount: str = "amount", side: str = "side",
     equals Σ `amount` of `side == "credit"` rows."""
     return LawSpec("balanced", (("table", table), ("amount", amount), ("side", side),
                                 ("by", tuple(by))))
+
+
+def lifecycle(key: str, edges: dict[str, tuple[str, ...]]) -> LawSpec:
+    """Per `key`, the rows of the listed event or posting tables (every edge source and target)
+    follow `edges` in canonical order: a row's table must be in the edge list of the key's
+    previous listed row, and a key's first row must be a table that no edge targets."""
+    return LawSpec("lifecycle", (("key", key),
+                                 ("edges", tuple((a, tuple(b)) for a, b in edges.items()))))

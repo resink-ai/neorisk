@@ -75,6 +75,24 @@ def _law_reason(plan, law) -> str | None:
             return r
         return None if kind == "event" else f"{path!r} is not an event or posting column"
 
+    def state_rhs(lhs: str, rhs: str, by: str) -> str | None:
+        """D81: `sum_le` against `<owner table>.<column>`, keyed by that table's key."""
+        _, part, col = resolve_path(plan, rhs)
+        table = plan.partition(part).table
+        t = plan.table(table)
+        if by != t.key:
+            return f"sum_le against {rhs}: by must be {table}'s key {t.key}, not {by}"
+        lt = next(c.ltype for c in t.cols if c.name == col)
+        if lt.kind == "ref" or storage_dtype(lt).kind not in "iu":
+            return f"sum_le against {rhs}: {table}.{col} must be an integer column"
+        ltab = resolve_path(plan, lhs)[1]
+        key = events[ltab].get(by)
+        if key is None:
+            return f"{ltab} has no column {by}"
+        if key.kind != "ref" or key.target != table:
+            return f"sum_le against {rhs}: {ltab}.{by} must be a ref to {table}"
+        return None
+
     k = law.kind
     if k == "never_negative":
         try:
@@ -83,9 +101,33 @@ def _law_reason(plan, law) -> str | None:
             return str(e)
         return label(table) if kind == "event" else None
     if k == "total_le":
+        per = law.get("per")
+        if per is not None:
+            from neorisk_simkit.spec.project import ProjectError, parse_duration
+
+            try:
+                ok = parse_duration(per) > 0
+            except ProjectError:
+                ok = False
+            if not ok:
+                return f"total_le per={per!r} must be a positive duration"
         return event_path(law.arg("lhs"))
     if k == "sum_le":
-        return event_path(law.arg("lhs")) or event_path(law.arg("rhs"))
+        if (r := event_path(law.arg("lhs"))) is not None:
+            return r
+        try:
+            if resolve_path(plan, law.arg("rhs"))[0] == "owner":
+                return state_rhs(law.arg("lhs"), law.arg("rhs"), law.arg("by"))
+        except ValueError as e:
+            return str(e)
+        return event_path(law.arg("rhs"))
+    if k == "lifecycle":
+        edges = law.arg("edges")
+        if not edges:
+            return "lifecycle needs at least one edge"
+        names = sorted({a for a, _ in edges} | {b for _, bs in edges for b in bs})
+        key = (law.arg("key"),)
+        return next((r for r in (event_cols(n, key) for n in names) if r), None)
     if k == "at_most_once":
         return event_cols(law.arg("event"), law.arg("key"))
     if k == "resolved":

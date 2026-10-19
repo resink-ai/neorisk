@@ -24,42 +24,66 @@ _LOCAL_TYPE_BYTES = {"i8": 1, "u8": 1, "i16": 2, "i32": 4, "u32": 4, "i64": 8, "
 _ORDERING_COLS_BYTES = 5 * 8        # entity_id, valid_from, lamport, partition_id, seq
 
 
-def law_key_bytes(lw) -> int:
+def sum_le_on_state(lw, plan) -> bool:
+    """Whether a `sum_le` law's right side is an owner table column (D81), not an event."""
+    from neorisk_simkit.checks.laws import resolve_path  # checks imports this module
+
+    try:
+        return resolve_path(plan, lw.arg("rhs"))[0] == "owner"
+    except ValueError:
+        return False
+
+
+def law_key_bytes(lw, plan: Plan | None = None) -> int:
     """Bytes a keyed law's reducer carries per key, from its real layout (spec section 10:
     keyed aggregates x bytes per key; D47). `checks.laws` charges exactly these sizes."""
     if lw.kind == "at_most_once":
         n = len(lw.arg("key"))
         return 8 if n == 1 else 8 * (1 + n)   # the value; or the hash index plus every column
     if lw.kind == "sum_le":
-        return 3 * 8                          # key, sum of lhs, sum of rhs
+        return 3 * 8                          # key, sum of lhs, sum of rhs (or the rhs state
+                                              # value last seen: one key array serves both)
     if lw.kind == "resolved":
         return 7 * 8                          # key, opened at, deadline, pid, seq, action, warm
-    return 0
+    if lw.kind == "lifecycle":
+        return 2 * 8                          # key, last listed table code (int64)
+    return 0                                  # total_le (with or without per): one total
 
 
 RESOLVED_CHUNK = 1 << 16            # `resolved` matches its open keys in chunks of this many
+SUM_LE_STATE_PEAK = 58              # bytes per key, see `law_peak_bytes`
 
 
-def law_peak_bytes(lw, keys: int) -> int:
+def law_peak_bytes(lw, keys: int, plan: Plan | None = None) -> int:
     """Peak bytes a keyed law holds while it updates its state to `keys` keys: the old and the
     new arrays live together, plus the update's own workspace (`checks.laws`; spec section 10
     `checker_state`). Upper bounds from the arrays the update keeps alive at once (measured
-    with `tracemalloc` in `test_checks_laws_keyed`); the step's own rows (a few arrays the
-    size of the step) are not counted here:
+    with `tracemalloc` in `test_checks_laws_keyed` and `test_checks_laws_m3`); the step's own
+    rows (a few arrays the size of the step) are not counted here:
 
     - `at_most_once`: `np.insert` builds the new key array (then the new column array) while
       the old one is alive, with a 1-byte mask per key: `2 x key bytes + 1` per key.
     - `sum_le`: three `np.insert`s (keys, then the two sums), each freeing its old array; the
       last holds the new keys and sums plus the old rhs and a mask: `8 x old + 25 x new`,
       at most 33 B per key.
+    - `sum_le` against owner state (D81; needs `plan` to tell the forms apart): the seal's
+      refresh reads every live and just-retired owner (each one a key after the update), so
+      beside the 24 B state it holds per owner at most four 8-byte arrays at once (sorting
+      the public IDs: IDs, values, the order and one sorted copy; the hit test and the state
+      update run in chunks of `RESOLVED_CHUNK`); merging new keys holds the old and new
+      arrays with one shared mask, as `sum_le` (33 B). Measured at most 56 B per key:
+      `SUM_LE_STATE_PEAK` = 58 B per key.
+    - `lifecycle`: like `at_most_once` with a 16 B key (key, last table code): `2 x 16 + 1`.
     - `resolved`: the open table grows one column at a time (each old column freed as it is
       replaced), is matched in chunks of `RESOLVED_CHUNK` keys and filtered one column at a
       time: the 56 B table, a 1-byte mask and one 8-byte column copy, rounded up to 66 B per
       key, plus 64 B per key of one chunk for the matching temporaries.
     """
-    if lw.kind == "at_most_once":
+    if lw.kind in ("at_most_once", "lifecycle"):
         return (2 * law_key_bytes(lw) + 1) * keys
     if lw.kind == "sum_le":
+        if plan is not None and sum_le_on_state(lw, plan):
+            return SUM_LE_STATE_PEAK * keys
         return 33 * keys
     if lw.kind == "resolved":
         return 66 * keys + 64 * min(keys, RESOLVED_CHUNK)
@@ -70,7 +94,7 @@ def checker_state_bytes(plan: Plan, max_keys: int) -> int:
     """`checker_state`: the largest peak any declared keyed law reaches at `max_keys` keys (0
     when none is declared). The laws share it: a law's update must fit beside the state the
     others carry (`checks.laws.LawBook`)."""
-    return max((law_peak_bytes(c.law, max_keys) for c in plan.checks), default=0)
+    return max((law_peak_bytes(c.law, max_keys, plan) for c in plan.checks), default=0)
 
 
 @dataclass(frozen=True)
