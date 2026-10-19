@@ -182,7 +182,7 @@ def test_requests_and_sends_carry_no_sender_of_their_own():
     (D74: a cohort executor's own id); a machine that must name its actor passes it in the
     payload (`std.actor()`), as mx_pay's receipt does with `payment_id`."""
     text = make_run("mx_pay").plan.machine_sources["payment"]
-    assert ("out.request_capture(ctx.t, shard=ctx.cfg.x_pay.v0, tag=mx_tag(0, i, g, 7, 0), "
-            "amount=s.amount)") in text
+    assert ("out.request_capture(ctx.t, shard=ctx.cfg.x_pay.v0, "
+            "tag=mx_tag_payment(0, i, g, 7, 0), amount=s.amount)") in text
     assert "out.send_void(ctx.t, to=ctx.cfg.x_pay.v8, amount=loc.pay__captured[i])" in text
     assert "sender" not in text

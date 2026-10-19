@@ -103,6 +103,7 @@ def write_manifest(run_dir: Path, run: Any, files: list[FileEntry], counts: dict
         "seed": int(run.seed),
         "profile": run.profile,
         "overrides": list(run.overrides),
+        "overlays": {name: jsonable(params) for name, params in getattr(run, "overlays", ())},
         "config": merged_config(run),
         "writer": writer,
         "counts": dict(sorted(counts.items())),

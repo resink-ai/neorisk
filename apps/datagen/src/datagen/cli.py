@@ -7,10 +7,18 @@ from datagen.scenarios import SCENARIOS
 from neorisk_simkit import export
 
 
+def _overlay_args(p: argparse.ArgumentParser) -> None:
+    p.add_argument("--overlay", action="append", default=[], metavar="NAME",
+                   help="enable an overlay on top of the profile's list (repeatable)")
+    p.add_argument("--no-overlays", action="store_true",
+                   help="ignore the profile's overlays (then add only --overlay ones)")
+
+
 def _project_args(p: argparse.ArgumentParser) -> None:
     p.add_argument("project")
     p.add_argument("--profile", default="sample")
     p.add_argument("--set", action="append", default=[], metavar="K=V")
+    _overlay_args(p)
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -38,6 +46,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     sch.add_argument("target", help="project folder or dataset folder")
     sch.add_argument("--profile", default="sample")
     sch.add_argument("--set", action="append", default=[], metavar="K=V")
+    _overlay_args(sch)
     sch.add_argument("--format", default="sql", help="sql (default) or json")
     sch.add_argument("--dialect", default="postgres", help="postgres (default) or duckdb")
     sch.add_argument("--tables", default=None, help="comma-separated table names")

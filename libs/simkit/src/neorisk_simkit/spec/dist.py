@@ -8,7 +8,7 @@ from dataclasses import dataclass
 import numpy as np
 
 (CONST, EXP, LOGNORMAL, SHIFTED_LOGNORMAL, GAMMA, NORMAL, PARETO, GEOMETRIC, NEGBINOM,
- UNIFORM_INT, CATEGORICAL, ZIPF, POISSON_DAILY, LOGNORMAL_MINOR) = range(14)
+ UNIFORM_INT, CATEGORICAL, ZIPF, POISSON_DAILY, LOGNORMAL_MINOR, BURST) = range(15)
 
 _MS = 1_000.0
 _S = 1_000_000.0
@@ -175,12 +175,28 @@ def lognormal_minor(median: float, sigma: float, min: int | None = None,
     return Dist(LOGNORMAL_MINOR, (float(median), float(sigma), 0.0), weights=(lo, hi))
 
 
+def burst(start_day: float, span_days: float) -> Dist:
+    """An arrival schedule (population or cohort `arrivals=`): arrivals uniform in
+    `[run start + start_day days, + span_days days)`; arrivals at or after the run end never
+    happen. Not a delay: `encode` and `min_us` refuse it."""
+    _finite("start_day", start_day)
+    _pos("span_days", span_days)
+    return Dist(BURST, (float(start_day), float(span_days), 0.0))
+
+
+def _not_burst(d: Dist) -> None:
+    if d.kind == BURST:
+        raise ValueError("burst is an arrival schedule only")
+
+
 def encode(d: Dist) -> tuple[int, float, float, float]:
+    _not_burst(d)
     p = d.params
     return (d.kind, p[0], p[1], p[2])
 
 
 def min_us(d: Dist) -> int:
+    _not_burst(d)
     if d.kind in (CONST, SHIFTED_LOGNORMAL):
         return int(d.params[0])
     return 0

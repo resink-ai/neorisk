@@ -13,7 +13,8 @@ Recipe protocol (objects passed as `population(refs={...})` values or as a shard
 - refs recipes: `max_csr_entries(n_owners) -> int` (plan time): an upper bound on the int64
   entries of its owner CSR (`offs` plus `idx`); `spec.caps` counts them as read inputs.
 - build time, called once by `World.build` before any of the accessors below:
-  population refs: `generate(plan=, seed=, stream=, owner_times=)`;
+  population refs: `generate(plan=, seed=, stream=, owner_times=[, row_offset=])` (a recipe
+  whose table already holds rows of earlier recipes is given `row_offset`, D94);
   shard init: `init(n_items=, n_shards=, seed=, stream=, item_weights=) -> {field: values}`
   (per-item fields in items-table row order).
 - `extra_read_columns(table) -> {column: array}` and `table_rows(table) -> {column: array} | None`
@@ -151,7 +152,10 @@ class DevicesRecipe:
         return (n_owners + 1) + n_owners * (self.max_per_user + 1)
 
     # build time
-    def generate(self, *, plan: Any, seed: int, stream: int, owner_times: np.ndarray) -> None:
+    def generate(self, *, plan: Any, seed: int, stream: int, owner_times: np.ndarray,
+                 row_offset: int = 0) -> None:
+        """`row_offset`: rows of `table` built by earlier recipes (D94); the CSR indices point
+        past them, at this recipe's rows appended after theirs."""
         tdef = plan.table(self.table)
         lt = {c.name: c.ltype for c in tdef.cols}
         for col in ("os", "kind", "first_seen"):
@@ -190,7 +194,7 @@ class DevicesRecipe:
         pick = np.minimum((u_pick[sharer] * m[prev]).astype(np.int64), m[prev] - 1)
         idx[offs[sharer] + m[sharer]] = own_off[prev] + pick
         self._rows = {"os": os_, "kind": kind, "first_seen": times[owner]}
-        self._csr = (offs, idx)
+        self._csr = (offs, idx + row_offset if row_offset else idx)
 
     def _built(self) -> None:
         if self._rows is None:

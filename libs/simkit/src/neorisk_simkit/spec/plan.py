@@ -161,6 +161,9 @@ class Plan:
     member_tables: tuple[str, ...] = ()           # tables of acted-for partitions (D74, D75)
     machines: tuple[Any, ...] = ()                # machine.spec.MachineDef (spec §04)
     machine_sources: Mapping[str, str] = MappingProxyType({})   # partition -> generated text
+    overlays: tuple[str, ...] = ()                # enabled overlays, in application order
+    cohorts: tuple[Any, ...] = ()                 # spec.overlay.CohortDef (spec §08)
+    exposed: Mapping[str, Any] = MappingProxyType({})           # p.expose: name -> object
 
     def table(self, name: str) -> TableDef:
         return _find(self.tables, name, "table")
@@ -204,14 +207,20 @@ def _frozen(d: dict) -> Mapping:
     return MappingProxyType(dict(d))
 
 
-def build_plan(pack_module, cfg, specs_dir: Path, *, default_spawn_depth: int = 3) -> Plan:
-    """Run the pack's `define(p, cfg)` and normalize the declarations into a `Plan`; machines
-    compile into one generated process `mx_<partition>` per owner partition, appended after the
-    pack's processes (D62). `default_spawn_depth` is `budget.max_spawn_depth` (D72, F-21)."""
+def build_plan(pack_module, cfg, specs_dir: Path, *, default_spawn_depth: int = 3,
+               overlays=()) -> Plan:
+    """Run the pack's `define(p, cfg)`, then each overlay's `apply(Overlay(p, name), **params)`
+    (`overlays`: `(name, apply, params)` in order, spec §08), and normalize the declarations
+    into a `Plan`; machines compile into one generated process `mx_<partition>` per owner
+    partition, appended after the pack's processes (D62). `default_spawn_depth` is
+    `budget.max_spawn_depth` (D72, F-21)."""
+    from neorisk_simkit.spec.overlay import Overlay  # overlay imports spec.pack
     from neorisk_simkit.spec.project import parse_duration  # project imports this module
 
     p = Pack(pack_module.PACK, pack_module.SCHEMA_VERSION)
     pack_module.define(p, cfg)
+    for name, apply, params in overlays:
+        apply(Overlay(p, name), **dict(params))
     from neorisk_simkit.machine.spec import build_machines  # machine.spec imports spec.pack
     machines, errs = build_machines(p)
     if errs:
@@ -279,12 +288,29 @@ def build_plan(pack_module, cfg, specs_dir: Path, *, default_spawn_depth: int = 
             raise PackError(f"process {proc}: every= must be > 0")
         return us
 
+    def keyed_refs(part: str, refs) -> Mapping[str, str]:
+        """D94, F-08: a bare refs name means the population of the process partition's table
+        (`"<table>:<name>"`); one that population does not declare keeps the first population
+        declaring it; a keyed `"<table>:<name>"` stays."""
+        own = p.partitions[part]["table"]
+        out = {}
+        for local, name in refs.items():
+            if isinstance(name, str) and ":" not in name:
+                tables = [t for t, d in p.populations.items() if name in d["refs"]]
+                if own in tables:
+                    name = f"{own}:{name}"
+                elif tables:
+                    name = f"{tables[0]}:{name}"
+            out[local] = name
+        return _frozen(out)
+
     processes = tuple(
         ProcessDef(name=d["name"], partition=d["partition"], action_id=i, kernel=d["kernel"],
                    config=d["config"], start=d["start"], requests=_frozen(d["requests"]),
                    messages=_frozen(d["messages"]), on_request=_frozen(d["on_request"]),
                    on_response=_frozen(d["on_response"]), on_message=_frozen(d["on_message"]),
-                   reads=_frozen(d["reads"]), refs=_frozen(d["refs"]), commands=d["commands"],
+                   reads=_frozen(d["reads"]), refs=keyed_refs(d["partition"], d["refs"]),
+                   commands=d["commands"],
                    every_us=every_us(d["name"], d["every"]), jitter=d["jitter"],
                    max_spawn_depth=d["max_spawn_depth"])
         for i, d in enumerate(p.processes.values()))
@@ -314,7 +340,9 @@ def build_plan(pack_module, cfg, specs_dir: Path, *, default_spawn_depth: int = 
                 processes=processes, populations=populations, change_groups=change_groups,
                 checks=checks, cfg=cfg, accumulators=accumulators,
                 exposed_owners=tuple(p.exposed_owners), member_tables=tuple(member_tables),
-                machines=machines)
+                machines=machines, overlays=tuple(name for name, _, _ in overlays),
+                cohorts=tuple(c.define() for c in p.cohorts.values()),
+                exposed=_frozen(p.exposed))
     if not machines:
         return plan0
     from neorisk_simkit.machine.compile import compile_machines  # machine imports spec
@@ -324,7 +352,8 @@ def build_plan(pack_module, cfg, specs_dir: Path, *, default_spawn_depth: int = 
         name=x.name, partition=x.partition, action_id=base + j, kernel=x.kernel,
         config=x.config, start=x.start, requests=x.requests, messages=x.messages,
         on_request=_frozen({}), on_response=x.on_response, on_message=_frozen({}),
-        reads=x.reads, refs=x.refs, commands=x.commands, every_us=None, jitter=None,
+        reads=x.reads, refs=keyed_refs(x.partition, x.refs), commands=x.commands,
+        every_us=None, jitter=None,
         max_spawn_depth=x.max_spawn_depth, machine_partition=x.partition)
         for j, x in enumerate(mx))
     return dataclasses.replace(plan0, processes=plan0.processes + extra,

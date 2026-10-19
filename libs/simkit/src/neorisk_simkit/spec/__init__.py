@@ -6,5 +6,6 @@ from neorisk_simkit.spec.pack import Pack, PackError
 # isort: split
 # `std` imports spec submodules, so it is imported last to resolve the spec <-> std cycle.
 from neorisk_simkit import std
+from neorisk_simkit.spec.overlay import Overlay
 
-__all__ = ["Pack", "PackError", "dist", "law", "pack", "sources", "std", "types"]
+__all__ = ["Overlay", "Pack", "PackError", "dist", "law", "pack", "sources", "std", "types"]

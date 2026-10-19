@@ -65,6 +65,7 @@ class MachineDef:
     member_table: str | None = None                 # cohort machines (Task 10)
     root_member: bool = False
     member_values: tuple[tuple[str, Any], ...] = ()
+    root_init: tuple[tuple[str, Any], ...] = ()     # root instance fields set at START
     labels: str | None = None
     label_delay: Dist | None = None
     overlay: str | None = None
@@ -277,7 +278,35 @@ def _machine_errors(m: MachineDef, names, pack) -> list[str]:
         for chain in _state_chains(st):
             for act in _chain_acts(chain):
                 e += _act_errors(w, sw, act, m, names, pack)
+    e += _member_errors(w, m, pack)
     return list(dict.fromkeys(e))          # one line per distinct error, first-seen order
+
+
+def _member_errors(w: str, m: MachineDef, pack) -> list[str]:
+    """Cohort machines (Task 10): member values name columns of the member table; `root_init`
+    sets declared fields of a root machine (`std.pick_ref` of a declared refs into a ref
+    field)."""
+    e: list[str] = []
+    if m.member_table is not None:
+        cols = pack.tables[m.member_table]["cols"]
+        e += [f"{w}: member value {c!r} is not a column of {m.member_table!r}"
+              for c, _ in m.member_values if c not in cols]
+    if m.root_init and not m.root_member:
+        e.append(f"{w}: init= is for root machines")
+    for f, v in m.root_init:
+        if f not in m.fields:
+            e.append(f"{w}: init sets unknown field {f!r}")
+        elif isinstance(v, h.PickRef):
+            if v.refs not in m.refs:
+                e.append(f"{w}: std.pick_ref({v.refs!r}): machine {m.name} declares no refs "
+                         f"{v.refs!r}")
+            if m.fields[f] != "ref":
+                e.append(f"{w}: std.pick_ref initializes {f!r}, which is not a ref field")
+            if v.parent_share is not None:
+                e.append(f"{w}: init {f!r}: a root instance has no parent (parent_share=)")
+        else:
+            e += _field_errors(w, m, v)
+    return e
 
 
 def _allowed(m: MachineDef, pack) -> tuple[str, ...]:
@@ -420,6 +449,14 @@ def _act_errors(w: str, sw: str, act, m: MachineDef, names, pack) -> list[str]:
                    for pm in names.values()):
             e.append(f"{w}: send_parent({act.msg!r}) but no machine that spawns {m.name!r} "
                      f"joins on {act.msg!r}")
+    elif isinstance(act, h.LabelAct):
+        if m.labels is None:
+            e.append(f"{w}: std.label needs o.label(...) on its cohort")
+        else:
+            cols = pack.events[m.labels]["cols"]
+            for col, v in (("role", act.role), ("outcome", act.outcome)):
+                if v not in cols[col].values:
+                    e.append(f"{sw}: std.label: {v!r} is not a declared {col} of {m.labels}")
     elif isinstance(act, h.SetField):
         if act.name not in m.fields:
             e.append(f"{w}: unknown field {act.name!r}")

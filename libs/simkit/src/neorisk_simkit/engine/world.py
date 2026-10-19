@@ -209,15 +209,26 @@ def flatten_config(cfg: Any) -> tuple:
     return () if cfg is None else flat(cfg)
 
 
-def arrival_times(d: Dist | None, u: np.ndarray, t0: int, t1: int) -> np.ndarray:
+def arrival_times(d: Dist | None, u: np.ndarray, t0: int, t1: int,
+                  origin: int | None = None) -> np.ndarray:
     """Arrival time per uniform over `[t0, t1)` by inverse cdf of a per-UTC-day density.
 
     `poisson_daily(weekly, trend)`: day k of the window (k = 0 for the day holding t0) has
     density proportional to `weekly[weekday] * (1 + trend) ** k` (weekday 0 = Monday); `None`
     is a flat density.
+
+    `burst(start_day, span_days)`: uniform in `[origin + start_day d, + span_days d)` (`origin`
+    is the run start), never before `t0` and not clamped at `t1`: an owner arriving at or after
+    `t1` is never admitted.
     """
     if len(u) == 0:
         return np.zeros(0, np.int64)
+    if d is not None and d.kind == _dist.BURST:
+        if origin is None:
+            raise EngineError("burst arrivals need the run start (origin)")
+        lo = int(origin) + round(d.params[0] * _DAY_US)
+        t = lo + np.floor(np.asarray(u, np.float64) * (d.params[1] * _DAY_US)).astype(np.int64)
+        return np.maximum(t, np.int64(t0))
     if t1 <= t0:
         raise EngineError("population arrivals need a non-empty simulated window")
     first = (t0 // _DAY_US + 1) * _DAY_US
@@ -226,7 +237,8 @@ def arrival_times(d: Dist | None, u: np.ndarray, t0: int, t1: int) -> np.ndarray
     weights = lengths.copy()
     if d is not None:
         if d.kind != _dist.POISSON_DAILY:
-            raise EngineError("population arrivals must be dist.poisson_daily(...)")
+            raise EngineError("population arrivals must be dist.poisson_daily(...) or "
+                              "dist.burst(...)")
         days = edges[:-1] // _DAY_US
         weekday = (days + 3) % 7                     # 1970-01-01 was a Thursday
         weights *= np.asarray(d.weights, np.float64)[weekday]
@@ -308,15 +320,27 @@ class World:
 
     def _build_recipes(self) -> None:
         """Generate every population-refs recipe (the recipe protocol of `std.sources`): the
-        rows of the tables it builds and its owner CSR, keyed by population and refs name."""
+        rows of the tables it builds and its owner CSR, keyed by population and refs name.
+        Recipes building the same table append their rows after those of earlier recipes (plan
+        order, D94): each gets `row_offset` = the rows already built, so base IDs never move."""
         times = {pop.table: pop.times for pop in self.populations}
+        built: dict[str, int] = {}                  # table -> rows built by earlier recipes
         for pop in self.plan.populations:
             for name, r in pop.refs.items():
                 if hasattr(r, "generate"):
                     stream = rng.mix(rng.name_key(pop.table), rng.name_key("refs"),
                                      rng.name_key(name))
+                    bound = getattr(r, "max_table_rows", lambda t, n: None)
+                    tables = [t.name for t in self.plan.tables
+                              if bound(t.name, pop.n) is not None]
+                    offset = built.get(tables[0], 0) if tables else 0
+                    kw = {"row_offset": offset} if offset else {}
                     r.generate(plan=self.plan, seed=self.seed, stream=stream,
-                               owner_times=times[pop.table])
+                               owner_times=times[pop.table], **kw)
+                    for t in tables:
+                        rows = r.table_rows(t)
+                        n = len(next(iter(rows.values()))) if rows else 0
+                        built[t] = built.get(t, 0) + n
 
     def _build_tables(self) -> None:
         """Rows of every read-only table: from its source, or from the recipe that builds it."""
@@ -333,12 +357,14 @@ class World:
                     w = np.asarray(t.source.row_weights(self.seed, stream), np.float64)
                     self.weights[t.name] = w
                     self.cumw[t.name] = self._cumw(w)
-            else:
-                for r in self._recipes():
-                    built = r.table_rows(t.name)
-                    if built is not None:
-                        rows = built
-                        break
+            else:                       # every recipe's rows, in plan order (D94)
+                parts = [b for b in (r.table_rows(t.name) for r in self._recipes())
+                         if b is not None]
+                if len(parts) == 1:
+                    rows = parts[0]
+                elif parts:
+                    rows = {c.name: np.concatenate([np.asarray(b[c.name]) for b in parts])
+                            for c in t.cols}
             if rows is not None:
                 self.tables[t.name] = {c.name: np.asarray(rows[c.name], slab_dtype(c))
                                        for c in t.cols}
@@ -467,7 +493,7 @@ class World:
             n_arr = pop.n - n_init
             s = rng.mix(rng.name_key(pop.table), rng.name_key("arrivals"))
             arr = arrival_times(pop.arrivals, rng.uniforms(self.seed, s, n_arr),
-                                self.sim_start, self.sim_end)
+                                self.sim_start, self.sim_end, origin=int(self.run.start_us))
             # ordinal = rank by (arrival time, draw index); initial owners come first at t0
             times = np.concatenate([np.full(n_init, self.sim_start, np.int64),
                                     np.sort(arr, kind="stable")])
@@ -484,12 +510,15 @@ class World:
                               and p.start.table == pop.table], np.int64)
             self.populations.append(_Population(pop.table, part, times, attrs, procs))
 
-    def _refs_csr(self, name: str) -> tuple[np.ndarray, np.ndarray]:
+    def _refs_csr(self, key: str) -> tuple[np.ndarray, np.ndarray]:
+        """The owner CSR of `"<population table>:<refs name>"` (D94, F-08); a bare name is
+        looked up in the first population that declares it."""
+        table, sep, name = key.rpartition(":")
         for pop in self.plan.populations:
-            if name in pop.refs:
+            if (not sep or pop.table == table) and name in pop.refs:
                 offs, idx = pop.refs[name].csr()
                 return np.asarray(offs, np.int64), np.asarray(idx, np.int64)
-        raise EngineError(f"no population declares refs {name!r}")
+        raise EngineError(f"no population declares refs {key!r}")
 
     def _build_world_tuple(self) -> None:
         plan, hid = self.plan, self.hidden

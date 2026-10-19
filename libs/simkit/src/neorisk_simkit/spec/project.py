@@ -3,7 +3,9 @@
 `resolve_run` merges `[defaults]` <- `[profiles.<p>]` <- `profiles.<p>.set` <- overrides.
 Override keys prefixed `engine.` / `budget.` / `writer.` route to those tables, `run.` to the
 run keys (`start`, `span`, `warmup`, `seed`), and everything else walks the pack's `Config`
-dataclass by dotted path (D21)."""
+dataclass by dotted path (D21). Overlays (spec §08, D77) come from the profile's `overlays`
+list (or an explicit list); their `apply` parameters from `[profiles.<p>.overlay.<name>]`, then
+overrides `<name>.<param>=v`."""
 
 from __future__ import annotations
 
@@ -12,6 +14,7 @@ import hashlib
 import importlib
 import importlib.machinery
 import importlib.util
+import inspect
 import re
 import sys
 import tomllib
@@ -108,6 +111,7 @@ class Project:
     name: str
     pack_path: Path
     toml: Mapping[str, Any]
+    overlays_dir: Path | None = None        # [project] overlays (default specs/overlays)
 
 
 @dataclass(frozen=True)
@@ -125,6 +129,7 @@ class RunSpec:
     cfg: Any
     plan: Plan
     overrides: tuple[str, ...]
+    overlays: tuple[tuple[str, Mapping[str, Any]], ...] = ()   # (name, apply params) in order
 
 
 def _int(key: str, v: Any) -> int:
@@ -216,7 +221,11 @@ def load_project(dir: str | Path) -> Project:
     pack_path = d / proj.get("pack", "specs/pack.py")
     if not pack_path.is_file():
         raise ProjectError(f"pack file {pack_path} not found")
-    return Project(dir=d, name=name, pack_path=pack_path, toml=toml)
+    overlays = proj.get("overlays", "specs/overlays")
+    if not isinstance(overlays, str):
+        raise ProjectError(f"{f}: [project].overlays must be a folder path")
+    return Project(dir=d, name=name, pack_path=pack_path, toml=toml,
+                   overlays_dir=d / overlays)
 
 
 def import_pack(project: Project) -> ModuleType:
@@ -245,6 +254,56 @@ def import_pack(project: Project) -> ModuleType:
         if not hasattr(module, attr):
             raise ProjectError(f"pack {project.pack_path} does not define {attr}")
     return module
+
+
+# ---------------------------------------------------------------------------- overlays
+def import_overlay(project: Project, pack_module: ModuleType, name: str) -> Callable:
+    """The `apply` function of overlay `name`: `<overlays folder>/<name>.py`, imported as
+    `<pack package>.overlays.<name>` (an implicit namespace subpackage of the specs package)."""
+    folder = project.overlays_dir or project.pack_path.parent / "overlays"
+    path = folder / f"{name}.py"
+    if not re.fullmatch(r"[A-Za-z_]\w*", name) or not path.is_file():
+        raise ProjectError(f"overlay {name!r}: {path} not found")
+    pkg = pack_module.__name__.rpartition(".")[0]
+    modname = f"{pkg}.overlays.{name}"
+    if modname in sys.modules:
+        module = sys.modules[modname]
+    elif folder.resolve() == (project.pack_path.parent / "overlays").resolve():
+        module = importlib.import_module(modname)
+    else:
+        spec = importlib.util.spec_from_file_location(modname, path)
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[modname] = module
+        spec.loader.exec_module(module)
+    apply = getattr(module, "apply", None)
+    if not callable(apply):
+        raise ProjectError(f"overlay {name!r}: {path} does not define apply(o, ...)")
+    return apply
+
+
+def _overlay_defaults(name: str, apply: Callable) -> dict[str, Any]:
+    """`apply(o, **params)`'s keyword defaults (every parameter after `o` needs one)."""
+    out = {}
+    for k, prm in list(inspect.signature(apply).parameters.items())[1:]:
+        if prm.default is inspect.Parameter.empty:
+            raise ProjectError(f"overlay {name}: parameter {k!r} needs a default")
+        out[k] = prm.default
+    return out
+
+
+def _set_overlay(name: str, params: dict[str, Any], defaults: dict[str, Any], key: str,
+                 value: Any) -> None:
+    from neorisk_simkit.spec.dist import Dist
+
+    if key not in defaults:
+        raise ProjectError(f"overlay {name}: unknown parameter {key!r}")
+    cur = defaults[key]
+    if isinstance(cur, Dist):
+        raise ProjectError(f"overlay {name}: parameter {key!r} is a Dist and fixed in code")
+    if not isinstance(cur, int | float | str | bool):
+        raise ProjectError(f"overlay {name}: parameter {key!r} is not settable "
+                           "(only int, float, str and bool defaults are)")
+    params[key] = _coerce(f"{name}.{key}", cur, value)
 
 
 # ---------------------------------------------------------------------------- resolution
@@ -288,7 +347,9 @@ def _set_config(cfg: Any, path: list[str], value: Any, key: str) -> Any:
 
 
 def resolve_run(project: Project, profile: str, overrides: Iterable[str] = (),
-                seed: int | None = None) -> RunSpec:
+                seed: int | None = None, overlays: Iterable[str] | None = None) -> RunSpec:
+    """Resolve one run. `overlays=None` enables the profile's `overlays` list; an explicit
+    list (`[]` included) replaces it (F-15)."""
     toml = project.toml
     profiles = toml.get("profiles", {})
     if profile not in profiles:
@@ -301,6 +362,13 @@ def resolve_run(project: Project, profile: str, overrides: Iterable[str] = (),
             raise ProjectError(f"unknown setting 'defaults.{k}'")
     tables: dict[str, dict[str, Any]] = {t: dict(toml.get(t, {})) for t in _TABLES}
     sets = prof.pop("set", {})
+    prof_overlays = prof.pop("overlays", [])
+    prof_params = prof.pop("overlay", {})
+    if not isinstance(prof_overlays, list) or not all(isinstance(o, str) for o in prof_overlays):
+        raise ProjectError(f"profiles.{profile}.overlays must be a list of overlay names")
+    if not isinstance(prof_params, Mapping):
+        raise ProjectError(f"profiles.{profile}.overlay must be a table of overlay tables")
+    enabled = list(dict.fromkeys(prof_overlays if overlays is None else overlays))
     for k, v in prof.items():
         if k not in _RUN_KEYS:
             raise ProjectError(f"unknown setting 'profiles.{profile}.{k}'")
@@ -317,9 +385,20 @@ def resolve_run(project: Project, profile: str, overrides: Iterable[str] = (),
     module = import_pack(project)
     config_cls = getattr(module, "Config", None)
     cfg = config_cls() if config_cls is not None else None
+    applies = {o: import_overlay(project, module, o) for o in enabled}
+    defaults = {o: _overlay_defaults(o, a) for o, a in applies.items()}
+    params = {o: dict(d) for o, d in defaults.items()}
+    for o in enabled:
+        given = prof_params.get(o, {})
+        if not isinstance(given, Mapping):
+            raise ProjectError(f"profiles.{profile}.overlay.{o} must be a table")
+        for k, v in given.items():
+            _set_overlay(o, params[o], defaults[o], k, v)
     for key, value in pairs:
         head, _, rest = key.partition(".")
-        if head in _TABLES and rest:
+        if head in applies and rest:                  # an overlay parameter (D77)
+            _set_overlay(head, params[head], defaults[head], rest, value)
+        elif head in _TABLES and rest:
             tables[head][rest] = value
         elif head == "run" and rest:
             if rest not in _RUN_OVERRIDABLE:
@@ -338,12 +417,15 @@ def resolve_run(project: Project, profile: str, overrides: Iterable[str] = (),
 
     budget = _settings(Budget, "budget", _BUDGET, tables["budget"])
     plan = build_plan(module, cfg, project.pack_path.parent,
-                      default_spawn_depth=budget.max_spawn_depth)   # D72, F-21
+                      default_spawn_depth=budget.max_spawn_depth,   # D72, F-21
+                      overlays=tuple((o, applies[o], params[o]) for o in enabled))
     return RunSpec(
-        name=f"{profile}-s{seed}", profile=profile, seed=seed,
+        name=f"{profile}-s{seed}" + "".join(f"+{o}" for o in enabled), profile=profile,
+        seed=seed,
         start_us=parse_time(run_raw["start"]), span_us=parse_duration(run_raw["span"]),
         warmup_us=parse_duration(run_raw.get("warmup", "0s")), mode=mode,
         budget=budget,
         writer=_settings(WriterSettings, "writer", _WRITER, tables["writer"]),
         engine=_settings(EngineSettings, "engine", _ENGINE, tables["engine"]),
-        cfg=cfg, plan=plan, overrides=overrides)
+        cfg=cfg, plan=plan, overrides=overrides,
+        overlays=tuple((o, params[o]) for o in enabled))

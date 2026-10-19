@@ -11,6 +11,7 @@ _FORMATS = ("sql", "json")
 
 
 def cmd_schema(args: argparse.Namespace) -> int:
+    from datagen.run_cmds import overlay_list
     from neorisk_simkit.io.schema.schema_json import load_schema, schema_document
     from neorisk_simkit.io.schema.sql import DIALECTS, SqlError, render_sql
     from neorisk_simkit.spec.project import ProjectError, load_project, resolve_run
@@ -26,10 +27,17 @@ def cmd_schema(args: argparse.Namespace) -> int:
         if (target / "manifest.json").is_file():
             doc = load_schema(target)
         else:
-            doc = schema_document(resolve_run(load_project(target), args.profile, args.set).plan)
+            project = load_project(target)
+            doc = schema_document(resolve_run(project, args.profile, args.set,
+                                              overlays=overlay_list(project, args.profile,
+                                                                    args)).plan)
         if args.format == "json":
             print(json.dumps(doc, sort_keys=True, indent=2))
             return 0
+        # D95: DDL holds the base tables, plus the tables of overlays named with --overlay
+        named = set(args.overlay or [])
+        doc = {**doc, "tables": [t for t in doc["tables"]
+                                 if t.get("overlay") is None or t["overlay"] in named]}
         tables = [t for t in args.tables.split(",") if t] if args.tables else None
         sql = render_sql(doc, args.dialect, tables=tables, with_fks=args.with_fks)
     except (ProjectError, SqlError, FileNotFoundError) as e:

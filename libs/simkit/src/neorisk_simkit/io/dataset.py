@@ -102,14 +102,18 @@ def run_to_dataset(project_dir: str | Path, profile: str = "sample",
                    overrides: Iterable[str] = (), *, seed: int | None = None,
                    out_dir: Path | None = None, threads: int | None = None,
                    checked: bool = False, force: bool = False,
-                   engine_overrides: dict[str, Any] | None = None) -> RunResult:
+                   engine_overrides: dict[str, Any] | None = None,
+                   overlays: Iterable[str] | None = None) -> RunResult:
     """Run one profile of a project into `out_dir` (default `<project>/<paths.out>/<run name>`).
+    `overlays`: the overlays to enable (None: the profile's list; an explicit list, `[]`
+    included, replaces it, F-15).
 
     Raises `ValidationFailed` before creating any folder, `FileExistsError` if `out_dir` exists
     and `force` is false. The dataset is written to `<out_dir>.partial` and renamed when done."""
     t_entry = time.perf_counter()
     project = load_project(project_dir)
-    run = resolve_run(project, profile, overrides, seed=seed)
+    run = resolve_run(project, profile, overrides, seed=seed,
+                      overlays=None if overlays is None else list(overlays))
     if engine_overrides:
         run = dataclasses.replace(run, engine=dataclasses.replace(run.engine,
                                                                   **engine_overrides))

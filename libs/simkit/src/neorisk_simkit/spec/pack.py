@@ -53,6 +53,9 @@ class Pack:
         self.accumulators: dict[str, dict[str, Any]] = {}
         self.exposed_owners: list[str] = []
         self.machines: dict[str, Any] = {}           # name -> machine.spec.Machine builder
+        self.exposed: dict[str, Any] = {}            # p.expose: name -> action / chain / request
+        self.exposed_params: dict[str, Any] = {}     # p.expose_param: path -> value
+        self.cohorts: dict[str, Any] = {}            # overlay cohorts (spec.overlay.Cohort)
 
     # ------------------------------------------------------------------ helpers
     def _table(self, name: str) -> dict[str, Any]:
@@ -347,12 +350,27 @@ class Pack:
         self.machines[name] = m
         return m
 
-    # ------------------------------------------------------------------ later tasks, milestones
-    def expose(self, *args, **kwargs):
-        raise PackError("expose arrives in M3")
+    # ------------------------------------------------------------------ overlay extension points
+    def expose(self, **named) -> None:
+        """Expose named base actions (an `@action`, a `.then` chain or a `std.request`) to
+        overlays (spec section 08): an overlay reads them as `o.base.<name>`."""
+        from neorisk_simkit.engine.abi import ActionRef
+        from neorisk_simkit.machine.helpers import Chain, Request
+        for name, v in named.items():
+            if name in self.exposed:
+                raise PackError(f"expose: {name!r} is already exposed")
+            if not isinstance(v, (ActionRef, Chain, Request)):
+                raise PackError(f"expose {name}: expected an @action, a chain or a std.request, "
+                                f"got {type(v).__name__}")
+            self.exposed[name] = v
 
-    def expose_param(self, *args, **kwargs):
-        raise PackError("expose_param arrives in M3")
+    def expose_param(self, path: str, value) -> None:
+        """Expose a base value to overlays (`o.param(path)`)."""
+        if path in self.exposed_params:
+            raise PackError(f"expose_param: {path!r} is already exposed")
+        self.exposed_params[path] = value
+
+    # ------------------------------------------------------------------ later milestones
 
     def feature(self, *args, **kwargs):
         raise PackError("feature arrives in M4 (D-deferred)")

@@ -51,16 +51,28 @@ def schema_document(plan: Any) -> dict[str, Any]:
     from neorisk_simkit.spec.types import COMMON_COLUMNS
 
     tables: list[dict[str, Any]] = []
+    # D95: an overlay adds its cohorts' entity tables and label tables, marked with its name
+    overlay = {}
+    for c in getattr(plan, "cohorts", ()):
+        overlay[c.partition] = c.overlay
+        if c.labels is not None:
+            overlay[c.labels] = c.overlay
+
+    def mark(entry: dict[str, Any]) -> dict[str, Any]:
+        if entry["name"] in overlay:
+            entry["overlay"] = overlay[entry["name"]]
+        return entry
+
     for e in plan.events:
         cols = [_column(c.name, c.ltype, _COMMON_DOCS.get(c.name, "") if i < len(COMMON_COLUMNS)
                         else "") for i, c in enumerate(e.cols)]
         kind = {"postings": "posting", "labels": "label"}.get(e.group, "event")
-        tables.append({"name": e.name, "kind": kind, "doc": e.doc, "columns": cols})
+        tables.append(mark({"name": e.name, "kind": kind, "doc": e.doc, "columns": cols}))
     entity_types = {"id": i64(), "created_at": ts(), "origin": text()}
     for t in plan.tables:
         cols = _head(ENTITY_HEAD, entity_types, _ENTITY_DOCS)
         cols += [_column(c.name, c.ltype) for c in t.cols]
-        tables.append({"name": t.name, "kind": "entity", "doc": t.doc, "columns": cols})
+        tables.append(mark({"name": t.name, "kind": "entity", "doc": t.doc, "columns": cols}))
     hist_types = {"entity_id": i64(), "valid_from": ts(), "lamport": i64(),
                   "partition_id": i64(), "seq": i32()}
     for g in plan.change_groups:

@@ -131,12 +131,13 @@ def _table_rows(plan: Plan, name: str) -> int:
     t = plan.table(name)
     if t.source is not None and t.source.n is not None:
         return t.source.n
-    for pop in plan.populations:                 # tables built by a recipe (std.devices, ...)
+    total = 0                                    # tables built by recipes (std.devices, ...):
+    for pop in plan.populations:                 # a cohort's recipe appends rows (D94)
         for r in pop.refs.values():
             bound = r.max_table_rows(name, pop.n) if hasattr(r, "max_table_rows") else None
             if bound is not None:
-                return int(bound)
-    return 0
+                total += int(bound)
+    return total
 
 
 def _csr_entries(recipe, n_owners: int) -> int:
