@@ -153,6 +153,35 @@ def test_fire_dispatch_checks_the_op():
     assert "c = ctx.cfg.x_ship" not in text
 
 
+@pytest.mark.parametrize("fixture,part", [("mx_basic", "parcel"), ("mx_pay", None),
+                                          ("mx_family", None)])
+def test_a_machine_command_reserves_once_at_its_root(fixture, part):
+    # Task 16: one `out.reserve` per command (the union of the handlers' needs, all-or-nothing)
+    # keeps the generic `_reserve_<process>` from being inlined once per handler
+    plan = make_run(fixture).plan
+    for p, text in plan.machine_sources.items():
+        if part is not None and p != part:
+            continue
+        assert text.count("out.reserve(") == 1, p
+        root = text.split(f"def mx_{p}(ctx, s, loc, cmd, out):\n", 1)[1]
+        assert root.lstrip().startswith("if not out.reserve("), p
+        mx = plan.process(f"mx_{p}")
+        assert f"out.reserve({_need_src(mx.kernel.max)})" in text
+
+
+def _need_src(res) -> str:
+    from neorisk_simkit.machine.compile import Need
+    return Need.of(res).src()
+
+
+def test_machine_timer_handlers_stay_real_calls():
+    # Task 16: `mx_fire_<m>` is not inlined into `dispatch` (compile memory); the rest is
+    from neorisk_simkit.engine.codegen import _JIT, _JIT_INLINE, generate_module
+    src = generate_module(make_run("mx_basic").plan, checked=False)
+    assert f"{_JIT}\ndef mx_fire_ship(" in src
+    assert f"{_JIT_INLINE}\ndef mx_parcel(" in src
+
+
 def test_action_sites_must_be_literals(tmp_path):
     from neorisk_simkit.engine import ActionSpec, Res
     from neorisk_simkit.machine.copy import copy_action
