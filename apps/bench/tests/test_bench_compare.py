@@ -11,19 +11,14 @@ pytest_plugins = ["legacy_fixture"]
 
 
 @pytest.mark.large
-def test_run_compare_all_models(legacy_dir):
-    r = run_compare(legacy_dir, shap_rows=400, ann_shap_rows=40, seed=0)
+def test_run_compare_all_models(legacy_compare_dir):
+    r = run_compare(legacy_compare_dir, shap_rows=400, ann_shap_rows=40, seed=0)
     assert set(r["models"]) == {"logreg", "rf", "xgb", "ann_small", "ann_large"}
     for name, m in r["models"].items():
         assert m["failed"] is None, (name, m["failed"])
-        assert 0 <= m["metrics"]["auc"] <= 1
+        assert m["metrics"]["auc"] > 0.5
         assert m["shap"] and m["shap"]["importance"]
-    # every model beat chance on the old 20k-row data; on the ~3.5k-row legacy export the ANNs
-    # get 2-3 mini-batches per epoch and their test AUC is seed noise (0.48-0.66), so only the
-    # models that converge on it are held to it
-    for name in ("logreg", "rf", "xgb"):
-        assert r["models"][name]["metrics"]["auc"] > 0.5, name
-    n = pl.read_parquet(legacy_dir / "events.parquet").height
+    n = pl.read_parquet(legacy_compare_dir / "events.parquet").height
     assert r["run"]["n_events"] == n and r["run"]["n_features"] > 10
     assert sum(r["run"]["split_sizes"].values()) == n
     assert r["models"]["ann_small"]["epochs"] >= 1
