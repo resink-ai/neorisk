@@ -17,16 +17,18 @@ out. Only event tables are compared (postings are not, D78 scope of this check).
 
 `answered_differently` (D79) is, per shared partition, the base requests it answered
 differently in the two runs. A base request is a command of the shared partition caused by a
-base row (a row of a base owner: cohort requests are left out); it is identified across the
-runs by its causing row's table, `event_time` and `partition_id` plus the serving
-`partition_id` (the canonical key without the Lamport clock and `seq`, which move when cohort
-commands interleave). Its answer is the set of event types the partition wrote for it (`granted`
-or `refused`, `bonus_granted` or `bonus_rejected`). `changed` counts the requests of both runs
-whose answer differs, by direction `"<base answer> -> <answer with overlay>"`; `base_only` and
-`with_only` count the requests found in one run only (a base owner whose request moved or
-vanished). A requester that is a created owner is matched by its dense `partition_id`, which a
-cohort-created owner of the same partition earlier in the step can shift (review M-6); such a
-request shows under `base_only`/`with_only`, never as answered differently.
+base row (a row of a base owner: cohort requests are left out). It is identified across the
+runs as the requester's k-th request to that partition instance: requester `partition_id`,
+serving `partition_id` and the ordinal of its causing row in canonical order (event time, then
+table). Times, Lamport clocks and `seq` are not part of the identity: after the overlay's first
+contact, knock-on effects move a base request's time by milliseconds. Its answer is the set of
+event types the partition wrote for it (`granted` or `refused`, `bonus_granted` or
+`bonus_rejected`). `changed` counts the requests of both runs whose answer differs, by direction
+`"<base answer> -> <answer with overlay>"`; `base_only` and `with_only` count requests found in
+one run only (a base owner that made more or fewer requests). A requester that is a created
+owner is matched by its dense `partition_id`, which a cohort-created owner of the same partition
+earlier in the step can shift (review M-6); such a request shows under `base_only`/`with_only`,
+never as answered differently.
 
 `regression_failures` turns the report into the §08 regression rule (D78): sharing ⇒ base
 users' exogenous draws identical; no sharing ⇒ base rows identical; either way every required
@@ -177,9 +179,10 @@ def _laws_ok(d: Path) -> bool:
 
 
 def _answers(rows: dict[str, pl.DataFrame], served: list[str]) -> pl.DataFrame:
-    """`(_ct, _cti, _cp, _sp, _ans)`: per base request served by the partition whose event
-    tables are `served`, its causing base row (table, time, partition) and serving partition,
-    and its answer (the sorted event types written for it, joined by "+")."""
+    """`(_cp, _sp, _k, _ans)`: per base request served by the partition whose event tables are
+    `served`, its requester and serving partition, its ordinal among that requester's
+    requests to that partition (by causing row time, then table) and its answer (the sorted
+    event types written for it, joined by "+")."""
     causes = [t.select(pl.col("event_id").alias("_cid"), pl.lit(n).alias("_ct"),
                        pl.col("event_time").dt.epoch("us").alias("_cti"),
                        pl.col("partition_id").alias("_cp"))
@@ -187,15 +190,18 @@ def _answers(rows: dict[str, pl.DataFrame], served: list[str]) -> pl.DataFrame:
     parts = [rows[n].select(pl.col("cause_id").alias("_cid"),
                             pl.col("partition_id").alias("_sp"), pl.lit(n).alias("_e"))
              for n in served if rows[n].height]
-    empty = pl.DataFrame(schema={"_ct": pl.String, "_cti": pl.Int64,
-                                 "_cp": pl.Int64, "_sp": pl.Int64, "_ans": pl.String})
+    empty = pl.DataFrame(schema={"_cp": pl.Int64, "_sp": pl.Int64, "_k": pl.Int64,
+                                 "_ans": pl.String})
     if not causes or not parts:
         return empty
     hits = pl.concat(parts).join(pl.concat(causes), on="_cid", how="inner")
     if not hits.height:
         return empty
     return (hits.group_by("_ct", "_cti", "_cp", "_sp")
-            .agg(pl.col("_e").sort().str.join("+").alias("_ans")))
+            .agg(pl.col("_e").sort().str.join("+").alias("_ans"))
+            .sort("_cp", "_sp", "_cti", "_ct")
+            .with_columns(pl.int_range(pl.len(), dtype=pl.Int64).over("_cp", "_sp").alias("_k"))
+            .select("_cp", "_sp", "_k", "_ans"))
 
 
 def _answered_differently(rows_a: dict[str, pl.DataFrame], rows_b: dict[str, pl.DataFrame],
@@ -205,7 +211,7 @@ def _answered_differently(rows_a: dict[str, pl.DataFrame], rows_b: dict[str, pl.
     for s in shared:
         served = [e.name for e in plan.events if e.group == "events" and e.partition == s
                   and e.name in rows_a]
-        key = ["_ct", "_cti", "_cp", "_sp"]
+        key = ["_cp", "_sp", "_k"]
         a, b = _answers(rows_a, served), _answers(rows_b, served)
         both = a.join(b, on=key, how="full", coalesce=True, suffix="_with")
         diff = both.filter(pl.col("_ans").is_not_null() & pl.col("_ans_with").is_not_null()
