@@ -32,6 +32,8 @@ from typing import Any
 
 import yaml
 
+from neorisk_simkit.spec.project import ProjectError, parse_duration
+
 
 class ExpectationError(ValueError):
     """An `expectations.yaml` that does not follow the grammar."""
@@ -86,7 +88,7 @@ SIGNATURES = {name[1:]: inspect.signature(f) for name, f in (
 DEFAULTS = {"min_sample": 1, "confidence": 0.95, "sample_rate": 1.0}
 _TOP_KEYS = {"pack", "schema_version", "defaults", "laws", "expectations", "overlays"}
 _ITEM_KEYS = {"id", "metric", "target", "source", "required"}
-_SCALAR_TARGET = {"between", "lt", "gt", "around", "tolerance", "reported"}
+_SCALAR_TARGET = {"between", "lt", "gt", "around", "tolerance"}
 _QUANTILE_KEY = re.compile(r"p(\d{1,2})")
 _DISTRIBUTION_KEY = re.compile(r"median_days|p(\d{1,2})_days")
 _PLACEHOLDER = re.compile(r"\$\{([^}]+)\}")
@@ -110,33 +112,76 @@ def parse_metric(id: str, text: Any) -> tuple[str, tuple, dict]:
     try:
         args = tuple(ast.literal_eval(a) for a in node.args)
         kwargs = {k.arg: ast.literal_eval(k.value) for k in node.keywords}
-    except ValueError:
+    except (ValueError, TypeError, SyntaxError, MemoryError, RecursionError):
         raise err from None
     name = node.func.attr
     if name not in SIGNATURES:
         raise ExpectationError(f"{id}: unknown metric stat.{name} (known: "
                                f"{', '.join(SIGNATURES)})")
     try:
-        SIGNATURES[name].bind(*args, **kwargs)
+        bound = SIGNATURES[name].bind(*args, **kwargs).arguments
     except TypeError as e:
         raise ExpectationError(f"{id}: stat.{name}: {e}") from None
+    _check_args(f"{id}: stat.{name}", name, bound)
     return name, args, kwargs
 
 
+def _scalar(v: Any) -> bool:
+    return isinstance(v, str | int | float | bool)
+
+
+def _check_args(where: str, name: str, a: Mapping[str, Any]) -> None:
+    """The literal arguments' types (M-1): names are strings, `of` a string or a list of
+    strings, `where` a map of column -> scalar, `top` a share in [0, 1], `within` a duration
+    string (or microseconds), `between` two event names."""
+    def bad(arg: str, what: str) -> ExpectationError:
+        return ExpectationError(f"{where}: {arg} must be {what} (got {a[arg]!r})")
+
+    for arg in ("start", "step", "unit", "event", "event_or_column", "per", "by", "cohort",
+                "role", "base", "cause"):
+        if arg in a and a[arg] is not None and not (isinstance(a[arg], str) and a[arg]):
+            raise bad(arg, "a non-empty string")
+    if "of" in a and not (isinstance(a["of"], str) or (
+            isinstance(a["of"], list | tuple) and a["of"]
+            and all(isinstance(x, str) for x in a["of"]))):
+        raise bad("of", "an event name or a list of event names")
+    if a.get("where") is not None and not (
+            isinstance(a["where"], dict) and a["where"]
+            and all(isinstance(k, str) and _scalar(v) for k, v in a["where"].items())):
+        raise bad("where", "a map of column -> string, number or bool")
+    if "top" in a and not (_number(a["top"]) and 0 <= a["top"] <= 1):
+        raise bad("top", "a share in [0, 1]")
+    w = a.get("within")
+    if w is not None and not (isinstance(w, int) and not isinstance(w, bool) and w > 0):
+        try:
+            parse_duration(w)
+        except ProjectError:
+            raise bad("within", "a duration such as \"30d\"") from None
+    if "between" in a and not (isinstance(a["between"], list | tuple) and len(a["between"]) == 2
+                               and all(isinstance(x, str) for x in a["between"])):
+        raise bad("between", "two event names")
+    if name == "quantiles" and a.get("per") is not None and "." in a["event_or_column"]:
+        raise ExpectationError(f"{where}: per= counts rows; give an event, not a column")
+
+
 def _check_scalar_target(id: str, t: Any) -> None:
+    """A comparison target (every metric but `interference`)."""
     if not isinstance(t, Mapping) or not t or set(t) - _SCALAR_TARGET:
         raise ExpectationError(f"{id}: a target is a map of {sorted(_SCALAR_TARGET)}")
     if "between" in t and not (isinstance(t["between"], list) and len(t["between"]) == 2):
         raise ExpectationError(f"{id}: between takes [lo, hi]")
     if ("around" in t) != ("tolerance" in t):
         raise ExpectationError(f"{id}: around and tolerance go together")
-    if "reported" in t and t["reported"] is not True and not isinstance(t["reported"], str):
-        raise ExpectationError(f"{id}: reported takes true")
 
 
 def _check_target(id: str, metric: str, target: Any) -> None:
     if not isinstance(target, Mapping) or not target:
         raise ExpectationError(f"{id}: target must be a non-empty map")
+    if metric == "interference":                    # judged only on `reported` (D79)
+        if set(target) != {"reported"} or (target["reported"] is not True
+                                           and not isinstance(target["reported"], str)):
+            raise ExpectationError(f"{id}: the interference target is {{reported: true}}")
+        return
     keyed = {"quantiles": _QUANTILE_KEY, "distribution": _DISTRIBUTION_KEY}.get(metric)
     if keyed is None:
         _check_scalar_target(id, target)
@@ -257,11 +302,13 @@ def load(path: Path, *, overlays: dict[str, dict], cfg: Any) -> Expectations:
     sections = doc.get("overlays") or {}
     if not isinstance(sections, Mapping):
         raise ExpectationError("overlays: a map of overlay name -> expectations")
+    every = list(items)
     for name, rows in sections.items():
         parsed = [_item(raw, name) for raw in rows or []]
+        every.extend(parsed)
         if name in overlays:
             items.extend(parsed)
-    ids = [x.id for x in laws] + [x.id for x in items]
+    ids = [x.id for x in laws] + [x.id for x in every]
     dup = sorted({i for i in ids if ids.count(i) > 1})
     if dup:
         raise ExpectationError(f"duplicate ids {dup}")

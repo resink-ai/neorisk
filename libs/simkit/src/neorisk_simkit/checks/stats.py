@@ -9,6 +9,10 @@ owner is a whole campaign, so campaigns are sampled whole. `n_cases` (what `min_
 is the number of the metric's units within sampled owners (D85, F-30): funnel `unit` values
 and distribution units that are not censored, the rows' owners for shares and quantiles.
 
+`distribution` has no run-end censoring: a unit whose `a` has no later `b` (never, or not
+yet by the run's end) is left out of the gaps and counted in `censored_share`, so gaps near the
+run's end are under-represented (review M-2; the brief defines no window for it).
+
 Exact metrics are not sampled and never inconclusive by sample size: `top_share` (`n_cases` =
 its rows, inconclusive only without rows), `cohort_size` (owners) and `interference`.
 
@@ -138,12 +142,16 @@ def _need(df: pl.DataFrame, *cols: str) -> None:
 
 
 def _where(df: pl.DataFrame, where: Mapping | None) -> pl.DataFrame:
-    """Rows whose columns equal the given values (a null never matches)."""
+    """Rows whose columns equal the given values (a null never matches). A string matches a
+    string or `cat` column only, a number or bool a numeric or bool column only (M-5)."""
     for c, v in (where or {}).items():
         _need(df, c)
-        col = pl.col(c)
-        if isinstance(v, str):
-            col = col.cast(pl.String)
+        dt = df.schema[c]
+        textual = dt == pl.String or isinstance(dt, pl.Categorical | pl.Enum)
+        if isinstance(v, str) != textual or (not textual and not (dt.is_numeric()
+                                                                  or dt == pl.Boolean)):
+            raise _Missing(f"where {c}={v!r} does not match the column's type {dt}")
+        col = pl.col(c).cast(pl.String) if textual else pl.col(c)
         df = df.filter(col.is_not_null() & (col == v))
     return df
 
@@ -419,6 +427,8 @@ def _evaluate_one(x: Expectation, data: _Data, d: Mapping, baseline: Path | None
             r = _m_interference(data, baseline, **kw)
     except _Missing as e:
         return {**head, **_result(note=str(e)), "status": "missing"}
+    except Exception as e:                       # name the item, keep the cause (M-6)
+        raise RuntimeError(f"{x.id}: {x.text}: {type(e).__name__}: {e}") from e
     if not x.source:
         status = "unanchored"
     elif r["value"] is None or (x.metric not in EXACT and r["n_cases"] < d["min_sample"]):

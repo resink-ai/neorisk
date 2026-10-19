@@ -434,3 +434,101 @@ def test_the_ecommerce_expectations_match_the_pack():
                            "tolerance": 0.0}
     base = load(EX / "specs" / "expectations.yaml", overlays={}, cfg=run.cfg)
     assert len(base.items) == 9 and all(x.overlay is None for x in base.items)
+
+
+# ---------------------------------------------------------------- fix round 1 (review)
+
+@pytest.mark.parametrize("metric,target", [
+    ('stat.funnel(start="a", step="b", unit="k")', "{reported: true}"),
+    ('stat.funnel(start="a", step="b", unit="k")', "{lt: 1, reported: true}"),
+    ('stat.quantiles("a.k")', "{p50: {reported: true}}"),
+    ('stat.cohort_size("campaign")', "{reported: true}")])
+def test_reported_is_only_for_interference(tmp_path, metric, target):
+    """I-1: `reported` compares nothing, so on any other metric it would always pass."""
+    with pytest.raises(ExpectationError):
+        _exp(tmp_path, f"""
+expectations:
+  - id: bad
+    metric: '{metric}'
+    target: {target}
+    source: "x"
+""")
+
+
+@pytest.mark.parametrize("target", ["{lt: 1}", "{reported: true, lt: 1}", "{reported: false}",
+                                    "{p50: {lt: 1}}"])
+def test_interference_targets_are_reported_only(tmp_path, target):
+    """I-1: interference is judged only on `reported`; any other key would be ignored."""
+    with pytest.raises(ExpectationError, match="interference target"):
+        _exp(tmp_path, f"""
+expectations:
+  - id: bad
+    metric: stat.interference(base="a", cause="pool")
+    target: {target}
+    source: "x"
+""")
+
+
+@pytest.mark.parametrize("metric", [
+    'stat.share("a", of={[1]: 2})',                                   # unhashable literal
+    'stat.top_share("a", by="k", top="x")', 'stat.top_share("a", by="k", top=1.5)',
+    'stat.funnel(start="a", step="b", unit="k", within="5 days")',
+    'stat.funnel(start="a", step="b", unit="k", where={"c": [1]})',
+    'stat.funnel(start="a", step="b", unit="k", where={"c": None})',
+    'stat.share("a", of=[1])', 'stat.share("a", of=[])', 'stat.funnel(start=1, step="b", unit="k")',
+    'stat.distribution(between=["a"], unit="k")',
+    'stat.quantiles("a.amount", per="user_id")'])
+def test_metric_arguments_are_typed(tmp_path, metric):
+    """M-1, M-4: bad literals and argument types are load errors, never runtime crashes."""
+    with pytest.raises(ExpectationError):
+        _exp(tmp_path, f"""
+expectations:
+  - id: bad
+    metric: '{metric}'
+    target: {{lt: 1}}
+""")
+
+
+def test_duplicate_ids_in_disabled_sections_are_refused(tmp_path):
+    """M-3: ids are unique over every section, enabled or not."""
+    with pytest.raises(ExpectationError, match="duplicate"):
+        _exp(tmp_path, """
+expectations:
+  - {id: x, metric: 'stat.cohort_size("c")', target: {gt: 0}}
+overlays:
+  off:
+    - {id: x, metric: 'stat.cohort_size("c")', target: {gt: 0}}
+""")
+
+
+def test_where_type_mismatch_is_missing(tmp_path):
+    """M-5: a string never matches a numeric column (nor a number a `cat` column)."""
+    d = tmp_path / "run"
+    _write(d, "a", [{"t": 0, "o": 1, "k": 5, "cat": "x"}])
+    exp = _exp(tmp_path, """
+expectations:
+  - id: s
+    metric: 'stat.share("a", of=["a"], where={"k": "5"})'
+    target: {lt: 2}
+    source: "x"
+  - id: c
+    metric: 'stat.share("a", of=["a"], where={"cat": 1})'
+    target: {lt: 2}
+    source: "x"
+""")
+    s, c = evaluate(exp, d, plan=None, baseline=None)
+    assert s["status"] == c["status"] == "missing" and "type" in s["note"]
+
+
+def test_a_crashing_metric_names_its_item(tmp_path, data, monkeypatch):
+    """M-6: an unexpected error is re-raised with the expectation's id."""
+    exp = _exp(tmp_path, f"""
+expectations:
+  - id: f
+    metric: {FUNNEL})
+    target: {{lt: 1}}
+    source: "x"
+""")
+    monkeypatch.setattr(stats, "_wilson", lambda *a: 1 / 0)
+    with pytest.raises(RuntimeError, match="^f: stat.funnel"):
+        evaluate(exp, data, plan=None, baseline=None)
