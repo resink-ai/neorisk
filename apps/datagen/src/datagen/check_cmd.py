@@ -25,7 +25,13 @@ def _manifest(run_dir: Path, what: str) -> dict[str, Any]:
     if not path.is_file():
         raise _Usage(f"{what} {run_dir} is not a run folder (no manifest.json); "
                      f"run `datagen run` first")
-    return json.loads(path.read_text())
+    try:
+        doc = json.loads(path.read_text())
+    except (OSError, ValueError) as e:
+        raise _Usage(f"{what} {run_dir}: unreadable manifest.json ({e})") from None
+    if not isinstance(doc, dict):
+        raise _Usage(f"{what} {run_dir}: manifest.json is not an object")
+    return doc
 
 
 def _check_same_run(manifest: dict[str, Any], run: Any, run_dir: Path) -> None:
@@ -38,6 +44,16 @@ def _check_same_run(manifest: dict[str, Any], run: Any, run_dir: Path) -> None:
     if manifest.get("overlays", {}) != want:
         raise _Usage(f"{run_dir} was run with overlays {manifest.get('overlays')}, the command "
                      f"resolves {want}: pass the run's --overlay/--set values")
+    _check_same_config(manifest, run, run_dir)
+
+
+def _check_same_config(manifest: dict[str, Any], run: Any, run_dir: Path) -> None:
+    """Same seed and merged pack config (`--set` values) as the resolved run."""
+    from neorisk_simkit.io.manifest import jsonable
+
+    if manifest.get("seed") != run.seed:
+        raise _Usage(f"{run_dir} was run with seed {manifest.get('seed')}, the command "
+                     f"resolves {run.seed}")
     have_cfg = (manifest.get("config") or {}).get("pack")
     if have_cfg != jsonable(run.cfg):
         raise _Usage(f"{run_dir} was run with another pack config (overrides "
@@ -47,24 +63,30 @@ def _check_same_run(manifest: dict[str, Any], run: Any, run_dir: Path) -> None:
 def _baseline(args: argparse.Namespace, project: Any, run: Any) -> Path | None:
     """`--baseline`, else `<paths.out>/<profile>-s<seed>` when overlays are enabled and that
     run exists, else None."""
+    if not run.overlays:
+        if args.baseline is not None:
+            print("warning: --baseline is ignored: no overlay is enabled", file=sys.stderr)
+        return None
     if args.baseline is not None:
         base = Path(args.baseline)
-        m = _manifest(base, "baseline")
-        if m.get("overlays"):
-            raise _Usage(f"baseline {base} has overlays {sorted(m['overlays'])}; the baseline is "
-                         f"the same run without overlays")
-        return base
-    if not run.overlays:
-        return None
-    out = project.dir / project.toml.get("paths", {}).get("out", "out")
-    base = out / f"{run.profile}-s{run.seed}"
-    return base if (base / "manifest.json").is_file() else None
+    else:
+        out = project.dir / project.toml.get("paths", {}).get("out", "out")
+        base = out / f"{run.profile}-s{run.seed}"
+        if not (base / "manifest.json").is_file():
+            return None
+    m = _manifest(base, "baseline")
+    if m.get("overlays"):
+        raise _Usage(f"baseline {base} has overlays {sorted(m['overlays'])}; the baseline is "
+                     f"the same run without overlays")
+    _check_same_config(m, run, base)               # same seed and --set values (M-2)
+    return base
 
 
 def _interference(results: list[dict], baseline: Path | None, run_dir: Path,
                   run: Any) -> dict | None:
     """The compare report (D79) when overlays are enabled and a baseline exists: reused from an
-    `interference` expectation when one was evaluated, else computed."""
+    `interference` expectation when one was evaluated (the report depends only on the two runs
+    and the plan, so every such row holds the same one), else computed."""
     if not run.overlays or baseline is None:
         return None
     for r in results:
