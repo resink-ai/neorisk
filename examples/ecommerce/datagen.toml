@@ -3,59 +3,93 @@
 
 [project]
 name = "ecommerce"
-pack = "specs/pack.py"                 # define(p, cfg) and Config
+pack = "specs/pack.py"
 expectations = "specs/expectations.yaml"
-overlays = "specs/overlays"            # one module per overlay; apply(o, **params)
+overlays = "specs/overlays"
 
 [paths]
-out = "out"                            # out/<run>/          datasets
-reports = "reports"                    # reports/<run>/      report.html, checks.json, extracts
-logs = "logs"                          # logs/<run>-<utc>.jsonl
+out = "out"
+reports = "reports"
+logs = "logs"
 
 [defaults]
 seed = 42
 start = "2026-01-01T00:00:00Z"
-mode = "time"                          # time | population
+mode = "time"
 span = "90d"
-warmup = "14d"                         # generated, not exported; opening snapshot at the end
-drain = "0d"                           # open cases at the horizon are censored
+warmup = "14d"
 
-[budget]                               # validate refuses a run whose hard caps exceed this
+[budget]
 threads = 16
 memory = "16GB"
 max_step_rows = 4_000_000
+max_step_bytes = "1GB"
 max_spawn_depth = 3
-max_admissions_per_step = 200_000
+max_admissions_per_step = 500_000
+max_checker_keys = 20_000_000
 
 [writer]                               # pinned: affects bytes
 compression = "zstd"
 compression_level = 3
 row_group_rows = 131_072
 
-[profiles.sample]                      # the authoring loop: seconds, not minutes
+[engine]
+step = "1d"
+step_min = "1h"
+step_max = "1d"                        # inviter_credit needs latency >= step_max (D73)
+adapt = true
+slab_bytes = "4MB"
+timer_nodes = 20_000_000
+payload_slots = 2_000_000
+max_messages_per_step = 4_000_000
+parallel_min_partitions = 2_048
+
+[profiles.sample]                      # the authoring loop: minutes, not hours
 span = "21d"
 warmup = "3d"
-set = { users = 20_000, skus = 5_000, sku_groups = 64 }
 
-[profiles.full]                        # matches the S1 benchmark shape
-set = { users = 2_000_000, skus = 50_000, sku_groups = 512 }
+[profiles.sample.set]
+users = 20_000
+skus = 5_000
+sku_groups = 64
+"engine.timer_nodes" = 2_000_000
+"engine.payload_slots" = 200_000
+"engine.max_messages_per_step" = 500_000
+"budget.max_admissions_per_step" = 100_000
+"budget.max_checker_keys" = 2_000_000
 
-[profiles.abuse]                       # base + both overlays, for fraud benchmarks
-set = { users = 2_000_000 }
-overlays = ["bounty_hunters", "flash_sale"]
+[profiles.legacy]                      # the fraud-benchmark dataset (Task 20, D87/D88)
+span = "60d"
+warmup = "7d"
+overlays = ["bounty_hunters"]
+
+[profiles.legacy.set]
+users = 5_000
+skus = 2_000
+sku_groups = 16
+"engine.timer_nodes" = 600_000
+"engine.payload_slots" = 100_000
+"engine.max_messages_per_step" = 300_000
+"budget.max_admissions_per_step" = 50_000
+"budget.max_checker_keys" = 1_000_000
+
+[profiles.legacy.overlay.bounty_hunters]
+size = 12
+
+[profiles.full]                        # 2M users, 90 days
+[profiles.full.set]
+users = 2_000_000
+skus = 50_000
+sku_groups = 512
+
+[profiles.abuse]                       # base + bounty hunters at scale
+overlays = ["bounty_hunters"]
+
+[profiles.abuse.set]
+users = 2_000_000
 
 [profiles.abuse.overlay.bounty_hunters]
 size = 500
-share_device = 0.75
-
-[profiles.abuse.overlay.flash_sale]
-day = "day 60"
-category = "electronics"
-
-[export]
-golden = ["device_distinct_users_24h", "user_orders_7d"]   # written to golden/, never events/
-snapshots = true
-cases = true
 
 [replay.presets.peek]
 first = 100
@@ -64,10 +98,3 @@ sink = "stdout:?format=table"
 [replay.presets.last_json]
 last = 100
 sink = "file:last100.json?format=json-array"
-
-[replay.presets.kafka_dev]
-first = 10_000
-sink = "kafka://localhost:9092/ecom.{event_type}?key=user_id&format=avro"
-schema_registry = "http://localhost:8081"
-pace = "x60"
-rebase = "now"
