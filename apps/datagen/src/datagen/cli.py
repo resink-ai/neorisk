@@ -42,6 +42,17 @@ def main(argv: Sequence[str] | None = None) -> int:
     run.add_argument("--out", default=None, help="run folder (default <project>/out/<name>)")
     run.add_argument("--force", action="store_true", help="overwrite an existing run folder")
     run.add_argument("--checked", action="store_true", help="bounds-checked debug run")
+    chk = sub.add_parser("check", help="judge a run's laws and expectations; write "
+                         "report.html and checks.json (exit 5 if a required check fails)")
+    _project_args(chk)
+    chk.add_argument("--seed", type=int, default=None)
+    chk.add_argument("--run-dir", default=None, metavar="DIR",
+                     help="run folder (default <project>/<paths.out>/<run name>)")
+    chk.add_argument("--baseline", default=None, metavar="DIR",
+                     help="the same run without overlays (default <paths.out>/<profile>-s<seed> "
+                          "when it exists and overlays are enabled)")
+    chk.add_argument("--out", default=None, metavar="DIR",
+                     help="report folder (default <project>/<paths.reports>/<run name>)")
     sch = sub.add_parser("schema", help="print DDL or JSON schema of a project or dataset")
     sch.add_argument("target", help="project folder or dataset folder")
     sch.add_argument("--profile", default="sample")
@@ -95,6 +106,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         from datagen import schema_cmd
 
         return schema_cmd.cmd_schema(args)
+
+    if args.cmd == "check":
+        os.environ["NUMBA_NUM_THREADS"] = "1"
+        from datagen import check_cmd
+
+        return check_cmd.cmd_check(args)
 
     if args.cmd in ("validate", "run"):
         os.environ["NUMBA_NUM_THREADS"] = "1"
