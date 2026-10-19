@@ -160,11 +160,24 @@ def test_part_and_value_errors(build, message):
 def test_send_parent_needs_a_joining_spawner():
     p = _pack()
     p.machine("parent", owner="acct", initial="a").state(
-        "a", spawn={"kid": (1.0, None, 2)}, join={"b": "done"}, timer={"b": "1h"}).final("b")
-    p.machine("kid", owner="acct", initial="a").state(
+        "a", branch={"w": (1.0, None, std.spawn("kid", n=2))}).state(
+        "w", join={"b": "done"}, timer={"b": "1h"}).final("b")
+    p.machine("kid", owner="acct", initial="a", max_instances=2).state(
         "a", branch={"b": (1.0, None, std.send_parent("done"))}).final("b")
     machines, errs = build_machines(p)
     assert errs == [] and [m.index for m in machines] == [0, 1]
+
+
+def test_a_join_state_cannot_spawn():
+    # its entry would see zero children and complete before the spawn op's timer fires
+    p = _pack()
+    p.machine("parent", owner="acct", initial="a").state(
+        "a", spawn={"kid": (1.0, None, 2)}, join={"b": "done"}, timer={"b": "1h"}).final("b")
+    p.machine("kid", owner="acct", initial="a").state(
+        "a", branch={"b": (1.0, None, std.send_parent("done"))}).final("b")
+    assert ("machine parent: state 'a': a join state cannot declare spawn= (its join would "
+            "complete with zero children first; spawn with std.spawn on the transition into "
+            "the join)") in _errors(p)
 
 
 def test_machine_declaration_errors():

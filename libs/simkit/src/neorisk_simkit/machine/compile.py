@@ -5,6 +5,7 @@ writes it (the inspectable dispatch module of §04)."""
 
 from __future__ import annotations
 
+import ast
 import dataclasses
 from collections import Counter
 from collections.abc import Mapping
@@ -14,6 +15,7 @@ from types import MappingProxyType
 from typing import Any
 
 from neorisk_simkit.engine.abi import START, ActionSpec, KernelSpec, Local, Res
+from neorisk_simkit.engine.rng import _MAX_SITES as MAX_SITES
 from neorisk_simkit.machine import helpers as h
 from neorisk_simkit.machine import layout as L
 from neorisk_simkit.machine.copy import copy_action
@@ -255,11 +257,13 @@ class _Gen:
                         f"    loc.{m.name}__jl[i] = {2 if j.late == 'count' else 1}"]
         return out
 
-    def now_timer(self, m, inst: str, gen: str, target: str) -> str:
-        """An immediate firing (D68) that enters `target`; `mx_fire` dispatches its code."""
+    def now_timer(self, m, inst: str, gen: str, target: str, when: str = "ctx.t",
+                  prio: str = "PRIO_CONTINUE") -> str:
+        """A firing that enters `target` (`OP_NOW`; `mx_fire` dispatches its code): immediate
+        by default (D68), or at `when` with `prio` (a staggered spawn)."""
         code = m.code(target)
         self.now[m.name].add(code)
-        return (f"out.timer(ctx.t, MX_FIRE, prio=PRIO_CONTINUE, tag=mx_tag({m.index}, {inst}, "
+        return (f"out.timer({when}, MX_FIRE, prio={prio}, tag=mx_tag({m.index}, {inst}, "
                 f"{gen}, {L.OP_NOW}, {code}))")
 
     def operand(self, m, st, v) -> str:
@@ -348,9 +352,8 @@ class _Gen:
             gap = (f"ctx.rng.dist_us(site={self.site(m, st)}, "
                    f"d={self.param(m, f'v{len(self.params[p])}', stagger)})")
             body += [f"    loc.{q}__st[j] = -1",              # reserved: mx_alloc skips it
-                     f"    {self.now_timer(cm, 'j', f'loc.{q}__gen[j]', cm.initial)}"
-                     .replace("out.timer(ctx.t,", f"out.timer(ctx.t + k_ * {gap},")
-                     .replace("prio=PRIO_CONTINUE", "prio=PRIO_TIMER")]
+                     "    " + self.now_timer(cm, "j", f"loc.{q}__gen[j]", cm.initial,
+                                             when=f"ctx.t + k_ * {gap}", prio="PRIO_TIMER")]
             per = per.add(Need(timers=1))
         return body, per.times(cm.max_instances)
 
@@ -407,20 +410,22 @@ class _Gen:
             body.append(f"run = ctx.rng.bernoulli(site={self.site(m, st)}, "
                         f"p={self.param(m, f's{k}_rp', prob)})")
         body += [(f"nxt = ctx.rng.dist_us(site={self.site(m, st)}, "
-                 f"d={self.param(m, f's{k}_rd', d)})"),
-                 f"loc.{p}__rep[i] += 1"]
+                 f"d={self.param(m, f's{k}_rd', d)})")]
+        if st.then is None:              # no stop: repeat until another op leaves, rep saturates
+            body += [f"if loc.{p}__rep[i] < {L.REPEAT_CAP}:", f"    loc.{p}__rep[i] += 1"]
+        else:
+            body.append(f"loc.{p}__rep[i] += 1")
         rej = f"out.mstat({self.stat[p] + 1}, 1)"
         if call is not None:
             body += ["if run:", f"    rc = {call}", "    if rc != COMMIT:", f"        {rej}"]
             if fb is not None:
                 body += [f"        rc = {fb}", "        if rc != COMMIT:", f"            {rej}"]
-        stop = f"loc.{p}__rep[i] >= loc.{p}__mr[i]"
-        if st.until is not None:
-            stop += f" or {self.cond(m, st, st.until)}"
-        done = (self.enter_call(m, st.then) if st.then is not None
-                else f"mx_end_{p}(ctx, s, loc, cmd, out, i, 0)")
-        body += [f"if {stop}:", f"    {done}", "    return COMMIT",
-                 (f"out.timer(ctx.t + nxt, MX_FIRE, prio=PRIO_TIMER, tag=mx_tag({m.index}, i, "
+        if st.then is not None:          # validate: until / max_repeats need then=
+            stop = f"loc.{p}__rep[i] >= loc.{p}__mr[i]"
+            if st.until is not None:
+                stop += f" or {self.cond(m, st, st.until)}"
+            body += [f"if {stop}:", f"    {self.enter_call(m, st.then)}", "    return COMMIT"]
+        body += [(f"out.timer(ctx.t + nxt, MX_FIRE, prio=PRIO_TIMER, tag=mx_tag({m.index}, i, "
                  f"loc.{p}__gen[i], {L.OP_REPEAT}, {t}))"),
                  "return COMMIT"]
         self.fn(f"mx_rep_{p}_{t}", "ctx, s, loc, cmd, out, i", body)
@@ -474,7 +479,7 @@ class _Gen:
             elif isinstance(mr, int):
                 src = self.count(m, st, mr, f"s{k}_mr")
             else:
-                src = f"min({self.count(m, st, mr)}, {L.REPEAT_CAP})"
+                src = f"max(0, min({self.count(m, st, mr)}, {L.REPEAT_CAP}))"   # fits i16
             t = self.tid(m, st, "repeat", 0, st.then or st.name, st.repeat[2])
             lines += [f"loc.{p}__mr[i] = {src}",
                       (f"out.timer({self.delay(m, st, f's{k}_rd', st.repeat[0])}, MX_FIRE, "
@@ -705,6 +710,7 @@ class _Gen:
         self.root()
         body = "\n\n\n".join(self.funcs + self.copy_src)
         text = _HEADER.format(part=self.part) + "\n\n" + body + "\n"
+        check_command_sites(self.part, text)
         return self.process(text)
 
     def config(self):
@@ -750,6 +756,56 @@ class _Gen:
 
     def messages(self) -> dict[str, str]:
         return {}                                            # Task 8 (std.send parts)
+
+
+def _sites_and_calls(nodes) -> tuple[set[int], set[str]]:
+    sites, calls = set(), set()
+    for n in (x for node in nodes for x in ast.walk(node)):
+        if isinstance(n, ast.Call):
+            if isinstance(n.func, ast.Name):
+                calls.add(n.func.id)
+            for kw in n.keywords:
+                if kw.arg == "site" and isinstance(kw.value, ast.Constant):
+                    sites.add(kw.value.value)
+    return sites, calls
+
+
+def check_command_sites(part: str, text: str) -> None:
+    """The engine keeps at most `MAX_SITES` distinct draw sites per command (`rng.next_k`).
+    A command's draws can span several site blocks (a spawn inlines the child's entry; a
+    part calls an action copy), so count the sites each command reaches. Commands: a chain
+    part (`mx_tr_*`, one per `if part == q:` block), a repetition, a spawn op, a state entry
+    by `OP_NOW` and START."""
+    funcs = {n.name: n for n in ast.parse(text).body if isinstance(n, ast.FunctionDef)}
+    own = {name: _sites_and_calls([fn]) for name, fn in funcs.items()}
+
+    def reach(sites: set[int], calls: set[str]) -> set[int]:
+        out, todo, seen = set(sites), list(calls), set()
+        while todo:
+            f = todo.pop()
+            if f in seen or f not in own:
+                continue
+            seen.add(f)
+            out |= own[f][0]
+            todo += own[f][1]
+        return out
+
+    roots: list[tuple[str, list]] = []
+    for name, fn in funcs.items():
+        if name.startswith("mx_tr_"):
+            blocks = [st for st in fn.body if isinstance(st, ast.If)
+                      and isinstance(st.test, ast.Compare)
+                      and isinstance(st.test.left, ast.Name) and st.test.left.id == "part"]
+            if blocks:
+                roots += [(f"{name} part {b.test.comparators[0].value}", [b]) for b in blocks]
+                continue
+        if name.startswith(("mx_tr_", "mx_rep_", "mx_sp_", "mx_enter_", "mx_start_")):
+            roots.append((name, [fn]))
+    for name, nodes in roots:
+        n = len(reach(*_sites_and_calls(nodes)))
+        if n > MAX_SITES:
+            raise PackError(f"partition {part}: command {name} draws from {n} sites; the engine "
+                            f"allows {MAX_SITES} per command")
 
 
 def compile_machines(plan, default_spawn_depth: int = 3) -> list[MxProcess]:

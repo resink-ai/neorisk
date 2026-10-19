@@ -21,6 +21,8 @@ class Config:
     max_rounds: int = 10
     recurse_p: float = 0.0            # 1.0: every chick spawns a chick (depth limit test)
     chick_slots: int = 8
+    stagger_s: float = 0.0            # > 0: chicks hatch one per stagger (structural)
+    recall_s: float = 600.0           # a chick's second call after its first
 
 
 def define(p: Pack, cfg: Config) -> None:
@@ -34,7 +36,9 @@ def define(p: Pack, cfg: Config) -> None:
     mother = p.machine("mother", owner="nest", start=p.on_created("nest"), initial="laying",
                        config=cfg, fields={"meals": "i32"})
     mother.state("laying", branch={
-        "waiting": (1.0, dist.constant(s=60), std.spawn("chick", n=std.col("brood")))})
+        "waiting": (1.0, dist.constant(s=60), std.spawn(
+        "chick", n=std.col("brood"),
+        stagger=dist.constant(s=cfg.stagger_s) if cfg.stagger_s else None))})
     mother.state("waiting", join={"feeding": "hungry"}, timer={"timeout": cfg.wait},
                  late="count")
     mother.state("feeding", repeat=(dist.constant(s=60), 1.0, k.feed),
@@ -47,6 +51,6 @@ def define(p: Pack, cfg: Config) -> None:
         1.0, dist.constant(s=300),
         std.emit("called", nest_id=std.actor(), chick=1).then(std.send_parent("hungry")))},
         spawn={"chick": (cfg.recurse_p, dist.constant(s=1), dist.uniform_int(1, 1))})
-    chick.state("calling", branch={"done": (1.0, dist.constant(s=600),
+    chick.state("calling", branch={"done": (1.0, dist.constant(s=cfg.recall_s),
                                             std.send_parent("hungry"))})
     chick.final("done")

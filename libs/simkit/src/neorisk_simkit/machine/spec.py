@@ -11,7 +11,7 @@ from typing import Any
 
 from neorisk_simkit.engine.abi import _LOCAL_RE, ActionSpec
 from neorisk_simkit.machine import helpers as h
-from neorisk_simkit.machine.layout import IMPLICIT, READABLE_IMPLICIT, REPEAT_CAP
+from neorisk_simkit.machine.layout import IMPLICIT, MAX_CHILDREN, READABLE_IMPLICIT, REPEAT_CAP
 from neorisk_simkit.spec.dist import CATEGORICAL, GEOMETRIC, UNIFORM_INT, Dist
 from neorisk_simkit.spec.pack import PackError, Trigger
 
@@ -250,6 +250,9 @@ def _machine_errors(m: MachineDef, names, pack) -> list[str]:
         if st.max_repeats is not None and not _is_count(st.max_repeats, REPEAT_CAP):
             e.append(f"{sw}: max_repeats must be an int, std.field, std.col or a "
                      "geometric/uniform_int/categorical Dist")
+        if st.join is not None and st.spawn:
+            e.append(f"{sw}: a join state cannot declare spawn= (its join would complete with "
+                     "zero children first; spawn with std.spawn on the transition into the join)")
         if st.join is not None and not st.timers:
             e.append(f"{sw}: join needs a timer= (its timeout)")
         if st.late not in LATE:
@@ -267,7 +270,7 @@ def _machine_errors(m: MachineDef, names, pack) -> list[str]:
             e += _field_errors(w, m, (req.shard, req.payload))
         for child, _p, _delay, n in st.spawn:
             e += _spawn_errors(sw, child, m, names)
-            e += _count_errors(sw, child, n)
+            e += _count_errors(sw, child, n, names)
             e += _field_errors(w, m, n)
         e += _field_errors(w, m, (st.until, st.max_repeats))
         for chain in _state_chains(st):
@@ -312,11 +315,13 @@ def _is_count(v, cap: int) -> bool:
     return isinstance(v, Dist) and v.kind in (GEOMETRIC, UNIFORM_INT, CATEGORICAL)
 
 
-def _count_errors(sw: str, child: str, n) -> list[str]:
-    if _is_count(n, MAX_INSTANCES):
+def _count_errors(sw: str, child: str, n, names) -> list[str]:
+    """An int count is bounded by the child's instances and the 63-child bitset (D69)."""
+    cap = min(MAX_CHILDREN, names[child].max_instances if child in names else MAX_INSTANCES)
+    if _is_count(n, cap):
         return []
-    return [(f"{sw}: spawn count of {child!r} must be an int, std.field, std.col or a "
-            "geometric/uniform_int/categorical Dist")]
+    return [(f"{sw}: spawn count of {child!r} must be an int in [0, {cap}], std.field, "
+             "std.col or a geometric/uniform_int/categorical Dist")]
 
 
 def _spawn_errors(sw: str, child: str, m: MachineDef, names) -> list[str]:
@@ -364,12 +369,23 @@ def _act_errors(w: str, sw: str, act, m: MachineDef, names, pack) -> list[str]:
         e += _field_errors(w, m, act.values)
     elif isinstance(act, h.Spawn):
         e += _spawn_errors(sw, act.machine, m, names)
-        e += _count_errors(sw, act.machine, act.n)
+        e += _count_errors(sw, act.machine, act.n, names)
         e += _field_errors(w, m, (act.n, act.fields))
         child = names.get(act.machine)
         if child is not None:
-            e += [f"{sw}: spawn initializes unknown field {f!r} of {act.machine!r}"
-                  for f, _ in act.fields if f not in child.fields]
+            for f, v in act.fields:
+                if f not in child.fields:
+                    e.append(f"{sw}: spawn initializes unknown field {f!r} of {act.machine!r}")
+                elif isinstance(v, h.PickRef):
+                    if v.refs not in m.refs:
+                        e.append(f"{sw}: std.pick_ref({v.refs!r}): machine {m.name} declares "
+                                 f"no refs {v.refs!r}")
+                    if child.fields[f] != "ref":
+                        e.append(f"{sw}: std.pick_ref initializes {f!r} of {act.machine!r}, "
+                                 f"which is not a ref field")
+                    if v.parent_share is not None and m.fields.get(f) != "ref":
+                        e.append(f"{sw}: std.pick_ref(parent_share=) copies the parent's "
+                                 f"{f!r}, which is not a ref field of {m.name}")
     elif isinstance(act, h.SendParent):
         if not any(_spawns(pm, m.name) and any(s.join is not None and s.join[1] == act.msg
                                                for s in pm.states)

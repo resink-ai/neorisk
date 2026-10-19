@@ -66,6 +66,47 @@ def test_repeat_stops_at_its_maximum(tmp_path):
     assert ev["fed"].height == 4 and st["mother"]["entries"]["full"] == 4
 
 
+def test_a_duplicate_during_the_join_is_suppressed(tmp_path):
+    # chick 0 hatches at +60 s and calls at +360 s and again at +420 s, while the mother still
+    # waits for chick 1 (hatched at +660 s, calls at +960 s): the duplicate must not complete
+    # the join early; chick 1's second call (+1020 s) is the only late one
+    ev, _n, st = _run(tmp_path, ["brood_lo=2", "brood_hi=2", "stagger_s=600",
+                                 "recall_s=60"])
+    born = pl.read_parquet(tmp_path / "run" / "entities" / "nest").select(
+        pl.col("id").alias("nest_id"), pl.col("created_at").cast(pl.Int64).alias("t0"))
+    fed = ev["fed"].join(born, on="nest_id")
+    first = fed.group_by("nest_id").agg((pl.col("event_time").cast(pl.Int64) - pl.col("t0"))
+                                        .min().alias("dt"))
+    assert fed.height == 8 and (first["dt"] == 1020 * S).all()
+    assert st["mother"]["late"] == 4 and st["mother"]["entries"]["full"] == 4
+
+
+def test_sixty_three_children_fill_the_join_bitset(tmp_path):
+    ev, _n, st = _run(tmp_path, ["brood_lo=63", "brood_hi=63", "chick_slots=64",
+                                 "max_rounds=100"])
+    assert st["mother"]["spawned"] == 4 * 63 and st["mother"]["entries"]["full"] == 4
+    assert ev["fed"].height == 4 * 63
+
+
+def test_a_sixty_fourth_child_fails_the_run(tmp_path):
+    with pytest.raises(EngineError, match="mother: more than 63 children"):
+        _run(tmp_path, ["brood_lo=64", "brood_hi=64", "chick_slots=64"])
+
+
+def test_a_repeat_without_then_saturates_its_count_and_keeps_going(tmp_path, monkeypatch):
+    from neorisk_simkit.machine import layout
+    monkeypatch.setattr(layout, "REPEAT_CAP", 3)          # test hook: 32767 runs too long
+    res = run_to_dataset(FIXTURES / "mx_ticker", "sample", [], out_dir=tmp_path / "run",
+                         threads=2)
+    tick = read_events(res.out_dir)["tick"]
+    per = tick.group_by("clock_id").agg(pl.len().alias("n"), pl.col("rep").max().alias("mx"))
+    assert per.height == 2 and (per["n"] == 9).all() and (per["mx"] == 3).all()
+    assert sorted(tick.filter(pl.col("clock_id") == per["clock_id"][0])["rep"]) == [
+        1, 2, 3, 3, 3, 3, 3, 3, 3]
+    st = json.loads((res.out_dir / "run_stats.json").read_text())["machines"]["ticker"]
+    assert st["entries"]["stop"] == 2                      # the timer, not the cap, ends it
+
+
 def test_spawn_beyond_instances_fails_naming_the_machine(tmp_path):
     with pytest.raises(EngineError, match="mother: no free chick instance"):
         _run(tmp_path, ["brood_lo=2", "brood_hi=2", "chick_slots=1"])
@@ -85,10 +126,10 @@ def test_spawn_depth_is_bounded_per_machine(tmp_path):
 # ---------------------------------------------------------------- generation and validation
 def test_depth_limits_are_op_parameters():
     from conftest import make_run
-    plan = make_run("mx_family").plan
+    plan = make_run("mx_family", ["budget.max_spawn_depth=5"]).plan
     cfg = plan.process("mx_nest").config
     assert cfg.x_chick.maxdep == 3                          # declared on the machine
-    assert cfg.x_mother.maxdep == 3                         # budget.max_spawn_depth (D72, F-21)
+    assert cfg.x_mother.maxdep == 5                         # budget.max_spawn_depth (D72, F-21)
     src = plan.machine_sources["nest"]
     assert "from neorisk_simkit.engine import" in src and "EngineError" in src
 
@@ -131,6 +172,12 @@ def test_repeat_validation():
          ("machine m: state 'a': max_repeats must be an int, std.field, std.col or a "
           "geometric/uniform_int/categorical Dist")),
         (lambda m: _rep(m, max_repeats=std.field("ghost")), "machine m: unknown field 'ghost'"),
+        (lambda m: _rep(m, max_repeats=32768),
+         ("machine m: state 'a': max_repeats must be an int, std.field, std.col or a "
+          "geometric/uniform_int/categorical Dist")),
+        (lambda m: _rep(m, max_repeats=-1),
+         ("machine m: state 'a': max_repeats must be an int, std.field, std.col or a "
+          "geometric/uniform_int/categorical Dist")),
     ]
     for build, msg in cases:
         p = _pack()
@@ -212,3 +259,95 @@ def test_spawn_depth_must_fit_the_instance_field(tmp_path):
     assert "maxdep" in str(build_plan(mod(127), None, tmp_path).process("mx_acct").config)
     with pytest.raises(PackError, match="max_spawn_depth 128 exceeds 127"):
         build_plan(mod(128), None, tmp_path)
+
+
+def test_max_repeats_fits_the_i16_count():
+    from neorisk_simkit.machine.layout import REPEAT_CAP
+    assert REPEAT_CAP == 32767
+    p = _pack()
+    _rep(p.machine("m", owner="acct", initial="a"), max_repeats=32767)
+    assert _errors(p) == []
+
+
+def _codes_pack(n_finals: int):
+    from neorisk_simkit.spec import Pack
+
+    class Mod:
+        PACK, SCHEMA_VERSION = "codes", 1
+
+        @staticmethod
+        def define(p: Pack, cfg) -> None:
+            p.__dict__.update(_pack().__dict__)
+            finals = [f"f{j}" for j in range(n_finals)]
+            p.machine("m", owner="acct", start=p.on_created("acct"), initial="a").state(
+                "a", branch={"f0": (1.0, None, None)}).final(*finals)
+
+    return Mod
+
+
+def test_op_now_state_codes_fit_the_tag(tmp_path):
+    from neorisk_simkit.spec.pack import PackError
+    from neorisk_simkit.spec.plan import build_plan
+    build_plan(_codes_pack(4094), None, tmp_path)           # codes 1..4095
+    with pytest.raises(PackError, match="more than 4095 states and finals"):
+        build_plan(_codes_pack(4095), None, tmp_path)
+
+
+def _spawner(n, kid_instances=64, fields=None, kid_fields=None, refs=None):
+    from neorisk_simkit.spec import std
+    p = _pack()
+    p.machine("m", owner="acct", initial="a", refs=refs, fields={"dev": "ref"}).state(
+        "a", branch={"b": (1.0, None, std.spawn("k", n=n, fields=fields))}).final("b")
+    p.machine("k", owner="acct", initial="a", max_instances=kid_instances,
+              fields=kid_fields or {}).state("a", branch={"b": (1.0, None, None)}).final("b")
+    return p
+
+
+def test_int_spawn_counts_are_bounded_by_children_and_instances():
+    assert _errors(_spawner(63)) == []
+    msg = ("machine m: state 'a': spawn count of 'k' must be an int in [0, {}], std.field, "
+           "std.col or a geometric/uniform_int/categorical Dist")
+    assert msg.format(63) in _errors(_spawner(64))
+    assert _errors(_spawner(5, kid_instances=5)) == []
+    assert msg.format(5) in _errors(_spawner(6, kid_instances=5))
+
+
+def test_pick_ref_names_declared_refs_and_ref_fields():
+    from neorisk_simkit.spec import std
+    ok = _spawner(1, fields={"dev": std.pick_ref("device", parent_share=0.5)},
+                  kid_fields={"dev": "ref"}, refs={"device": "device"})
+    assert _errors(ok) == []
+    errs = _errors(_spawner(1, fields={"dev": std.pick_ref("devise")},
+                            kid_fields={"dev": "i64"}, refs={"device": "device"}))
+    assert "machine m: state 'a': std.pick_ref('devise'): machine m declares no refs 'devise'" \
+        in errs
+    assert ("machine m: state 'a': std.pick_ref initializes 'dev' of 'k', which is not a ref "
+            "field") in errs
+
+
+def _sites_pack(kid_outcomes: int):
+    """A parent's spawn part draws one site; the child's inlined entry draws 1 + outcomes."""
+    from neorisk_simkit.spec import Pack, dist, std
+
+    class Mod:
+        PACK, SCHEMA_VERSION = "sites", 1
+
+        @staticmethod
+        def define(p: Pack, cfg) -> None:
+            p.__dict__.update(_pack().__dict__)
+            p.machine("m", owner="acct", start=p.on_created("acct"), initial="a").state(
+                "a", branch={"b": (1.0, None, std.spawn("k", n=dist.uniform_int(1, 1)))}
+            ).final("b")
+            outs = {f"o{j}": (0.0, dist.constant(s=1 + j), None) for j in range(kid_outcomes)}
+            outs["o0"] = (None, dist.constant(s=1), None)
+            p.machine("k", owner="acct", initial="a").state("a", branch=outs).final(*outs)
+
+    return Mod
+
+
+def test_a_command_draws_from_at_most_16_sites(tmp_path):
+    from neorisk_simkit.spec.pack import PackError
+    from neorisk_simkit.spec.plan import build_plan
+    build_plan(_sites_pack(14), None, tmp_path)               # 1 + 1 + 14 = 16
+    with pytest.raises(PackError, match=r"command mx_tr_m_0 part 0 draws from 17 sites"):
+        build_plan(_sites_pack(15), None, tmp_path)
