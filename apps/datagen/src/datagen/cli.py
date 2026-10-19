@@ -53,6 +53,11 @@ def main(argv: Sequence[str] | None = None) -> int:
                           "when it exists and overlays are enabled)")
     chk.add_argument("--out", default=None, metavar="DIR",
                      help="report folder (default <project>/<paths.reports>/<run name>)")
+    exp = sub.add_parser("export", help="export a run for bench (M3: --legacy-fraud only)")
+    exp.add_argument("run_dir", help="run (dataset) folder")
+    exp.add_argument("--legacy-fraud", action="store_true",
+                     help="write events.parquet, golden.parquet and meta.json for bench (D87)")
+    exp.add_argument("--out", default=None, metavar="DIR", help="output folder")
     sch = sub.add_parser("schema", help="print DDL or JSON schema of a project or dataset")
     sch.add_argument("target", help="project folder or dataset folder")
     sch.add_argument("--profile", default="sample")
@@ -100,6 +105,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         from datagen import replay_cmd
 
         return replay_cmd.cmd_replay(args)
+
+    if args.cmd == "export":
+        from datagen import export_cmd
+
+        return export_cmd.cmd_export(args)
 
     if args.cmd == "schema":
         os.environ["NUMBA_NUM_THREADS"] = "1"
