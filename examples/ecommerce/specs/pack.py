@@ -40,13 +40,13 @@ HOLD_SLACK_S = 300
 @dataclass(frozen=True)
 class Journey:
     """Shopper behavior; consumed by kernels.shopper (ctx.cfg.journey)."""
-    signup_delay: dist.Dist = dist.exp(mean_s=3600)
-    session_gap_alpha: float = 1.2
-    session_gap_min_h: float = 30.0
+    signup_delay: dist.Dist = dist.exp(mean_days=1)
+    session_gap_alpha: float = 0.38
+    session_gap_min_h: float = 0.8
     views_mean: float = 6.0
     view_gap: dist.Dist = dist.exp(mean_s=40)
-    add_to_cart_p: float = 0.18
-    checkout_p: float = 0.5                 # per session end with a non-empty cart
+    add_to_cart_p: float = 0.06
+    checkout_p: float = 0.12                # per session end with a non-empty cart
     checkout_delay: dist.Dist = dist.exp(mean_s=25)
     substitute_p: float = 0.45
     auth_latency: dist.Dist = dist.lognormal(median_s=2.5, sigma=0.6)
@@ -71,7 +71,7 @@ class Fulfil:
     ship_p: float = 0.985
     return_apparel_p: float = 0.18
     return_shoes_p: float = 0.14
-    return_p: float = 0.045
+    return_p: float = 0.052
 
 
 @dataclass(frozen=True)
@@ -109,7 +109,7 @@ def define(p: Pack, cfg: Config) -> None:
         source=std.catalog(n=cfg.skus, category=dist.categorical(
             {c: 1 / len(CATEGORIES) for c in CATEGORIES}),
             price=dist.lognormal_minor(median=2_500, sigma=0.9, min=199, max=200_000),
-            group=dist.uniform_int(0, cfg.sku_groups - 1), weight=dist.zipf(s=1.07)))
+            group=dist.uniform_int(0, cfg.sku_groups - 1), weight=dist.zipf(s=0.69)))   # top 1% ~20% of views
     device = p.table("device", key="device_id", doc="Shopper devices", cols={
         "os": cat("ios", "android", "windows", "macos", "linux"),
         "kind": cat("phone", "tablet", "desktop"), "first_seen": ts()})
@@ -148,7 +148,8 @@ def define(p: Pack, cfg: Config) -> None:
     inventory = p.shard("inventory", key="sku_group", n=cfg.sku_groups, items=sku,
                         doc="Stock per inventory group",
                         state={"on_hand": "i32[sku]", "reserved": "i32[sku]"},
-                        init=std.stock(initial=dist.negbinom(mean=40, disp=0.7), by_weight=8.0))
+                        init=std.stock(initial=dist.negbinom(mean=39, disp=0.7),   # OOS 1-3%
+                                       by_weight=11.0))
     lat = dist.shifted_lognormal(min_ms=150, median_ms=240)
     reserve = p.request("reserve", frm="user", to=inventory,
                         payload={"sku_id": ref("sku"), "quantity": i16(), "line": i16()},

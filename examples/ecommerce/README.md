@@ -61,13 +61,64 @@ among the first users, so they exist from the start. Users never retire, so no c
 Deferred: the flash sale (one day of 8× traffic on a few hot SKUs). It needs cohorts of
 existing base owners and shard-state hooks (D93).
 
+## Calibration
+
+`datagen check` against [`specs/expectations.yaml`](specs/expectations.yaml) (seed 42; `legacy`
+is checked with `bounty_hunters` against its `--no-overlays` run as the baseline). R = required.
+
+| Metric | Target | Measured `sample` | Measured `legacy` |
+|---|---|---|---|
+| R `exp.session_to_checkout` | 0.06–0.10 | 0.085 | 0.085 |
+| R `exp.checkout_to_order` | 0.70–0.85 | **0.952 (fail, unreachable)** | **0.952 (fail, unreachable)** |
+| R `exp.auth_failure_rate` | 0.02–0.04 | 0.029 | 0.031 |
+| R `exp.return_rate` (30 d) | 0.05–0.08 | 0.064 | 0.062 |
+| `exp.return_rate_apparel` | 0.15–0.20 | 0.170 (inconclusive, 834 < 2000 cases) | 0.186 (inconclusive, 414 cases) |
+| `exp.orders_per_shopper` | p50 1, p90 4–6 | p50 1, p90 4 | p50 1, p90 3 (fail; 60-day run, the brief counts 90 days) |
+| R `exp.oos_failures` | 0.01–0.03 | 0.019 | 0.018 |
+| `exp.sku_view_concentration` | 0.17–0.23 | 0.193 | 0.177 |
+| `exp.delivery_lag` | median 3–4.5 d, p99 < 14 d | 3.16 d, 9.95 d | 3.15 d, 9.83 d |
+| R `exp.bh.campaigns` | = `size` (7) | – | 7 |
+| `exp.bh.min_order_hugging` | p50 $30.00–31.50 | – | $30.76 (inconclusive, 7 campaigns) |
+| R `exp.bh.interference_reported` | reported | – | reported: base `referral_bonus_rejected` 24 → 43, `referral_bonus_paid` 456 → 418 |
+
+All ten laws pass in every run. Seeds 7 and 99 give the same pass/fail pattern.
+
+**`exp.checkout_to_order` cannot be reached by configuration.** The shopper kernel has no
+checkout abandonment: a started checkout fails only when a line is out of stock (1–3%) or the
+payment is declined (2–4%), so about 95% of checkouts become orders whatever the knobs. The
+brief's 70–85% needs a third exit (a shopper leaving at payment), which is a kernel change
+(spec §16: fix the model, not the expectation). `test_example_ecom_calibration.py` pins every
+other required check and keeps a strict `xfail` on the full pass.
+
+What was set (`specs/pack.py` defaults and literals, `datagen.toml` profile values):
+
+| Knob | Value | Why |
+|---|---|---|
+| `journey.add_to_cart_p` / `checkout_p` | 0.06 / 0.12 | session → checkout 8.5%; carts average 2.6 of 5 lines |
+| `journey.session_gap_alpha` / `session_gap_min_h` | 0.38 / 0.8 | heavy-tailed revisits: half of buyers order once in 90 days |
+| `journey.signup_delay` | exp, mean 1 day | spreads the initial shoppers' first sessions (`full`, `abuse`) |
+| `fulfil.return_p` | 0.052 | return rate 6%; apparel (0.18) about 3× |
+| SKU view weights `dist.zipf(s=)` | 0.69 | top 1% of SKUs ≈ 20% of views at 2k, 5k and 50k SKUs |
+| initial stock `negbinom(mean=)`, `by_weight` | 39, 11.0 | out-of-stock checkouts ≈ 2% at about 4 shoppers per SKU |
+| `sample` span | 90 d | the 30-day return window and the brief's 90-day order counts need it |
+| `legacy` users | 16,000 | demand per SKU close to `sample`'s, so out-of-stock lands in band |
+| `legacy` `referral.monthly_budget` | 300,000 cents | tight enough that the rings drain it and ordinary claims get rejected |
+| `legacy` `bounty_hunters` | size 7, `zombies_mean` 6, `arrive_span_days` 40 | label rate ≈ 1% (≈ 4% at the parity test's 3,000 users) and rings in the test split |
+| `full`, `abuse` `engine.step` | 1h | 1.2M initial shoppers would overflow `max_step_rows` in a 1-day first step |
+
+Stock is a per-SKU level, so out-of-stock depends on shoppers per SKU: `full` (2M users,
+50k SKUs, 40 per SKU) is far from this calibration (a 3-day `abuse` probe saw about 40% of
+checkouts fail on stock). Timer nodes: `legacy` runs with 60,000 nodes and `sample` with
+300,000, so the configured 600,000 and 2,000,000 leave 10× and 6× headroom over the campaign
+machines' per-command reservation (32 creates and 32+ timers).
+
 ## Run
 
 ```bash
 datagen validate examples/ecommerce
 datagen run      examples/ecommerce --profile sample
 datagen check    examples/ecommerce --profile sample            # -> reports/sample-s42/report.html
-datagen run      examples/ecommerce --profile legacy            # 5k users + bounty_hunters
+datagen run      examples/ecommerce --profile legacy            # 16k users + bounty_hunters
 datagen export   examples/ecommerce/out/legacy-s42+bounty_hunters --legacy-fraud --out data/fraud
 datagen validate examples/ecommerce --dump-machines /tmp/machines   # the generated machine code
 datagen schema   examples/ecommerce --format sql --dialect postgres --with-fks

@@ -45,7 +45,7 @@ max_messages_per_step = 4_000_000
 parallel_min_partitions = 2_048
 
 [profiles.sample]                      # the authoring loop: minutes, not hours
-span = "21d"
+span = "90d"
 warmup = "3d"
 
 [profiles.sample.set]
@@ -59,12 +59,14 @@ sku_groups = 64
 "budget.max_checker_keys" = 2_000_000
 
 [profiles.legacy]                      # the fraud-benchmark dataset (Task 20, D87/D88)
+# 16k users keep the demand per SKU (and so out-of-stock failures) near `sample`'s; the
+# referral budget is tight so the rings visibly drain it (interference, D79).
 span = "60d"
 warmup = "7d"
 overlays = ["bounty_hunters"]
 
 [profiles.legacy.set]
-users = 5_000
+users = 16_000
 skus = 2_000
 sku_groups = 16
 "engine.timer_nodes" = 600_000
@@ -72,13 +74,18 @@ sku_groups = 16
 "engine.max_messages_per_step" = 300_000
 "budget.max_admissions_per_step" = 50_000
 "budget.max_checker_keys" = 1_000_000
+"referral.monthly_budget" = 300_000
 
 [profiles.legacy.overlay.bounty_hunters]
-size = 12
+size = 7
+zombies_mean = 6.0
+arrive_span_days = 40.0
 
-[profiles.full]                        # 2M users, 90 days
+[profiles.full]                        # 2M users, 90 days (validated, not calibrated)
+# 1.2M initial shoppers start together: 1h steps keep step 1 under max_step_rows.
 [profiles.full.set]
 users = 2_000_000
+"engine.step" = "1h"
 skus = 50_000
 sku_groups = 512
 
@@ -87,6 +94,7 @@ overlays = ["bounty_hunters"]
 
 [profiles.abuse.set]
 users = 2_000_000
+"engine.step" = "1h"
 
 [profiles.abuse.overlay.bounty_hunters]
 size = 500
