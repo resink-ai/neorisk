@@ -116,7 +116,10 @@ class _Gen:
         self.copies: dict[tuple[str, str], str] = {}
         self.copy_src: list[str] = []
         self.files: set[str] = set()
-        self.stat = L.stat_layout(machines)
+        # counter offsets into the plan-wide `mstat` array (slabs size it, world reads it by
+        # `stat_layout(plan.machines)`), not offsets within this partition's machines
+        self.stat = {n: b for n, b in L.stat_layout(plan.machines).items()
+                     if n in self.by_name}
         self.next_site: dict[tuple[str, int], int] = {}
         self.trans: dict[str, list[tuple]] = {m.name: [] for m in machines}
         self.responses: dict[tuple[str, str], int] = {}

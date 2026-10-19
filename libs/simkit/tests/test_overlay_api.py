@@ -3,6 +3,7 @@
 import dataclasses
 import importlib.util
 import json
+import re
 import sys
 import textwrap
 
@@ -17,6 +18,7 @@ from neorisk_simkit.engine.world import arrival_times
 from neorisk_simkit.io.dataset import run_to_dataset
 from neorisk_simkit.io.read import read_events
 from neorisk_simkit.io.seal import public_ids
+from neorisk_simkit.machine.layout import STAT_HEAD, stat_layout
 from neorisk_simkit.spec import Overlay, Pack, PackError, dist
 from neorisk_simkit.spec.plan import build_plan
 from neorisk_simkit.spec.project import ProjectError, load_project, resolve_run
@@ -335,6 +337,22 @@ def test_machine_partitions_in_different_files_share_one_engine_module(tmp_path)
                                        for q in ("a", "b")}), None, tmp_path)
     assert {p.kernel.module_file for p in plan.processes} == {"<machines:a>", "<machines:b>"}
     generate_module(plan, checked=False)
+
+
+def test_machine_counters_of_two_partitions_do_not_overlap(tmp_path):
+    """Task 14: a machine's `out.mstat` indices lie in its plan-wide block of the `mstat` array
+    (`stat_layout(plan.machines)`, which sizes the slabs' array and which the world reads), so
+    machines on two partitions (a base pack's and a cohort's) never count into each other."""
+    plan = build_plan(_two_partitions({q: std.emit(f"{q}_hi", who=std.actor())
+                                       for q in ("a", "b")}), None, tmp_path)
+    base = stat_layout(plan.machines)
+    assert base == {"m_a": 0, "m_b": len(STAT_HEAD) + 2}
+    for md in plan.machines:
+        lo = base[md.name]
+        hi = lo + len(STAT_HEAD) + len(md.states) + len(md.finals)
+        idx = [int(x) for x in re.findall(r"out\.mstat\((\d+)",
+                                          plan.machine_sources[md.partition])]
+        assert idx and all(lo <= i < hi for i in idx), (md.name, idx)
 
 
 def test_created_owner_depth_falls_back_to_the_budget_for_undeclared_machines(tmp_path):
