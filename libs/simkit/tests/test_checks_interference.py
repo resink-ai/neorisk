@@ -33,6 +33,7 @@ def test_a_quiet_overlay_leaves_base_rows_identical(tmp_path):
     assert rep["exogenous_identical"] is True
     assert rep["events"]["signed_up"] == {"base": 6, "with": 6}      # base rows were compared
     assert set(rep["changed_owners"].values()) == {0}
+    assert rep["answered_differently"] == {}                         # nothing shared
 
 
 def test_a_sharing_overlay_reports_interference(tmp_path):
@@ -45,6 +46,27 @@ def test_a_sharing_overlay_reports_interference(tmp_path):
     assert set(rep["events"]) >= {"signed_up", "bonus_paid"}
     assert rep["events"]["refused"] == {"base": 1, "with": 5}       # the pot serves the gang
     assert rep["changed_owners"]["refused"] == 1 and rep["first_contact"] is not None
+    # base users all claim at t=0, before the gang: the pot answers them alike in both runs
+    assert rep["answered_differently"] == {
+        "pot": {"changed": {}, "base_only": 0, "with_only": 0, "matched": 6}}
+
+
+def test_requests_answered_differently_are_counted_by_direction(tmp_path):
+    # D79: half the users arrive after the gang drained the pot. Base run: 3 initial users and
+    # 2 of the 3 late ones are granted (pot 5 x 1000), the 6th refused. With the gang (4 claims,
+    # 2 granted) the late three are all refused: 2 base requests granted -> refused.
+    sets = ["initial=0.5"]
+    a = run_to_dataset(RING, "sample", sets, out_dir=tmp_path / "a", threads=2).out_dir
+    b = run_to_dataset(RING, "sample", sets, overlays=["ring"], out_dir=tmp_path / "b",
+                       threads=2).out_dir
+    plan = resolve_run(load_project(RING), "sample", sets, overlays=["ring"]).plan
+    rep = compare(a, b, plan)
+    assert rep["answered_differently"] == {
+        "pot": {"changed": {"granted -> refused": 2}, "base_only": 0, "with_only": 0,
+                "matched": 6}}
+    assert rep["events"]["bonus_paid"] == {"base": 5, "with": 3}
+    assert rep["changed_owners"]["bonus_paid"] == 2
+    assert rep["exogenous_identical"] is True                 # late arrivals are exogenous
 
 
 def test_the_comparison_fails_when_base_rows_differ(tmp_path, monkeypatch):
@@ -60,6 +82,9 @@ def test_the_comparison_fails_when_base_rows_differ(tmp_path, monkeypatch):
     rep = compare(a, b, _plan(["ring"]))
     assert rep["identical_base_rows"] is False and rep["exogenous_identical"] is False
     assert rep["laws_ok"] == {"base": True, "with": False}
+    del m["laws"]                                    # no laws entry: nothing shows they hold
+    (b / "manifest.json").write_text(json.dumps(m))
+    assert compare(a, b, _plan(["ring"]))["laws_ok"] == {"base": True, "with": False}
 
 
 def test_moved_base_user_ids_are_a_difference(tmp_path):

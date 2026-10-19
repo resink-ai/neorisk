@@ -14,6 +14,23 @@ a base run and of the same run with the overlay:
 `events` counts every row of a base partition, so rows that cohort members cause on a base
 partition (zombie orders on `order`) are counted under "with"; `changed_owners` leaves members
 out. Only event tables are compared (postings are not, D78 scope of this check).
+
+`answered_differently` (D79) is, per shared partition, the base requests it answered
+differently in the two runs. A base request is a command of the shared partition caused by a
+base row (a row of a base owner: cohort requests are left out); it is identified across the
+runs by its causing row's table, `event_time` and `partition_id` plus the serving
+`partition_id` (the canonical key without the Lamport clock and `seq`, which move when cohort
+commands interleave). Its answer is the set of event types the partition wrote for it (`granted`
+or `refused`, `bonus_granted` or `bonus_rejected`). `changed` counts the requests of both runs
+whose answer differs, by direction `"<base answer> -> <answer with overlay>"`; `base_only` and
+`with_only` count the requests found in one run only (a base owner whose request moved or
+vanished). A requester that is a created owner is matched by its dense `partition_id`, which a
+cohort-created owner of the same partition earlier in the step can shift (review M-6); such a
+request shows under `base_only`/`with_only`, never as answered differently.
+
+`regression_failures` turns the report into the §08 regression rule (D78): sharing ⇒ base
+users' exogenous draws identical; no sharing ⇒ base rows identical; either way every required
+law holds in both runs.
 """
 
 from __future__ import annotations
@@ -151,8 +168,73 @@ def _same_tables(a: dict[str, pl.DataFrame], b: dict[str, pl.DataFrame]) -> bool
 
 
 def _laws_ok(d: Path) -> bool:
-    laws = json.loads((d / "manifest.json").read_text())["laws"]
+    """Every required law of the run's manifest has no violation (a manifest without a `laws`
+    entry cannot show that: False)."""
+    laws = json.loads((d / "manifest.json").read_text()).get("laws")
+    if not isinstance(laws, Mapping):
+        return False
     return all(v["violations"] == 0 for v in laws.values() if v.get("required", True))
+
+
+def _answers(rows: dict[str, pl.DataFrame], served: list[str]) -> pl.DataFrame:
+    """`(_ct, _cti, _cp, _sp, _ans)`: per base request served by the partition whose event
+    tables are `served`, its causing base row (table, time, partition) and serving partition,
+    and its answer (the sorted event types written for it, joined by "+")."""
+    causes = [t.select(pl.col("event_id").alias("_cid"), pl.lit(n).alias("_ct"),
+                       pl.col("event_time").dt.epoch("us").alias("_cti"),
+                       pl.col("partition_id").alias("_cp"))
+              for n, t in rows.items() if t.height]
+    parts = [rows[n].select(pl.col("cause_id").alias("_cid"),
+                            pl.col("partition_id").alias("_sp"), pl.lit(n).alias("_e"))
+             for n in served if rows[n].height]
+    empty = pl.DataFrame(schema={"_ct": pl.String, "_cti": pl.Int64,
+                                 "_cp": pl.Int64, "_sp": pl.Int64, "_ans": pl.String})
+    if not causes or not parts:
+        return empty
+    hits = pl.concat(parts).join(pl.concat(causes), on="_cid", how="inner")
+    if not hits.height:
+        return empty
+    return (hits.group_by("_ct", "_cti", "_cp", "_sp")
+            .agg(pl.col("_e").sort().str.join("+").alias("_ans")))
+
+
+def _answered_differently(rows_a: dict[str, pl.DataFrame], rows_b: dict[str, pl.DataFrame],
+                          plan: Any, shared: list[str]) -> dict[str, dict[str, Any]]:
+    """Per shared partition: base requests answered differently in the two runs (D79)."""
+    out = {}
+    for s in shared:
+        served = [e.name for e in plan.events if e.group == "events" and e.partition == s
+                  and e.name in rows_a]
+        key = ["_ct", "_cti", "_cp", "_sp"]
+        a, b = _answers(rows_a, served), _answers(rows_b, served)
+        both = a.join(b, on=key, how="full", coalesce=True, suffix="_with")
+        diff = both.filter(pl.col("_ans").is_not_null() & pl.col("_ans_with").is_not_null()
+                           & (pl.col("_ans") != pl.col("_ans_with")))
+        changed = (diff.group_by("_ans", "_ans_with").len().sort("_ans", "_ans_with")
+                   .iter_rows())
+        out[s] = {"changed": {f"{x} -> {y}": n for x, y, n in changed},
+                  "base_only": both.filter(pl.col("_ans_with").is_null()).height,
+                  "with_only": both.filter(pl.col("_ans").is_null()).height,
+                  "matched": both.filter(pl.col("_ans").is_not_null()
+                                         & pl.col("_ans_with").is_not_null()).height}
+    return out
+
+
+def regression_failures(rep: Mapping[str, Any]) -> list[str]:
+    """Why the §08 regression rule (D78) fails for a `compare` report; empty when it holds:
+    with sharing, base users' exogenous draws are identical; without, base rows are identical;
+    in both cases every required law holds in the base run and in the run with overlays."""
+    why = []
+    if rep.get("shared"):
+        if rep.get("exogenous_identical") is not True:
+            why.append("base users' exogenous draws differ between the runs")
+    elif rep.get("identical_base_rows") is not True:
+        why.append("base rows differ although the overlay shares no state with the base")
+    laws = rep.get("laws_ok") or {}
+    for run, name in (("base", "the base run"), ("with", "the run with overlays")):
+        if laws.get(run) is not True:
+            why.append(f"a required law fails in {name}")
+    return why
 
 
 def _exogenous_entities(base_dir: Path, overlay_dir: Path, plan: Any) -> bool:
@@ -259,5 +341,6 @@ def compare(base_dir: Path, overlay_dir: Path, plan: Any) -> dict[str, Any]:
         "events": {n: {"base": rows_a[n].height, "with": rows_b[n].height}
                    for n in base_events},
         "changed_owners": {n: changed(n) for n in base_events},
+        "answered_differently": _answered_differently(rows_a, rows_b, plan, shared),
         "laws_ok": {"base": _laws_ok(base_dir), "with": _laws_ok(overlay_dir)},
     }

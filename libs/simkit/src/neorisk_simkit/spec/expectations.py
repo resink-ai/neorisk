@@ -264,10 +264,13 @@ def _item(raw: Any, overlay: str | None) -> Expectation:
                        overlay=overlay)
 
 
-def load(path: Path, *, overlays: dict[str, dict], cfg: Any) -> Expectations:
+def load(path: Path, *, overlays: dict[str, dict], cfg: Any,
+         known_overlays: set[str] | None = None) -> Expectations:
     """Parse `expectations.yaml`. `overlays` maps every enabled overlay to its parameters (the
     sections of other overlays are checked but left out); `cfg` is the pack config the
-    `${<config path>}` placeholders read."""
+    `${<config path>}` placeholders read; `known_overlays`, when given, are the overlays the
+    project defines: a section naming another one (a typo) is refused, since it would never
+    apply (Task 18 review M-3)."""
     try:
         doc = yaml.safe_load(Path(path).read_text())
     except yaml.YAMLError as e:
@@ -302,6 +305,11 @@ def load(path: Path, *, overlays: dict[str, dict], cfg: Any) -> Expectations:
     sections = doc.get("overlays") or {}
     if not isinstance(sections, Mapping):
         raise ExpectationError("overlays: a map of overlay name -> expectations")
+    if known_overlays is not None:
+        unknown = sorted(set(sections) - set(known_overlays) - set(overlays))
+        if unknown:
+            raise ExpectationError(f"overlays: no overlay named {unknown} (the project has "
+                                   f"{sorted(known_overlays)})")
     every = list(items)
     for name, rows in sections.items():
         parsed = [_item(raw, name) for raw in rows or []]

@@ -14,9 +14,12 @@ yet by the run's end) is left out of the gaps and counted in `censored_share`, s
 run's end are under-represented (review M-2; the brief defines no window for it).
 
 Exact metrics are not sampled and never inconclusive by sample size: `top_share` (`n_cases` =
-its rows, inconclusive only without rows), `cohort_size` (owners) and `interference`.
+its rows, inconclusive only without rows), `cohort_size` (the cohort's arrived owners) and `interference`.
 
-Each result is `{"id", "kind": "law"|"expectation", "metric", "value", "ci", "n_cases",
+`regression_result` adds the §08 regression rule as a required result (`kind: "regression"`)
+when a run with overlays is compared with its baseline.
+
+Each result is `{"id", "kind": "law"|"expectation"|"regression", "metric", "value", "ci", "n_cases",
 "censored_share", "target", "status", "required", "source", "note"}`; `status` is `missing`
 (unknown event, column, cohort or law id; no baseline for `interference`), `unanchored` (no
 `source:`), `inconclusive` (`n_cases < min_sample`, no cases, a law with `checked == 0`), else
@@ -37,7 +40,7 @@ from typing import Any
 import numpy as np
 import polars as pl
 
-from neorisk_simkit.checks.interference import compare
+from neorisk_simkit.checks.interference import compare, regression_failures
 from neorisk_simkit.checks.laws import _mix64
 from neorisk_simkit.io.read import read_events
 from neorisk_simkit.io.schema.schema_json import load_schema
@@ -117,6 +120,11 @@ class _Data:
             raise _Missing(f"unknown cohort {name!r}")
         part = {p.name: p for p in self.plan.partitions}[cohorts[name].partition]
         return part.ptype_code, cohorts[name].labels
+
+    def cohort_table(self, name: str) -> str:
+        """The entity table of a cohort's owners (one row per arrived campaign)."""
+        cohorts = {c.name: c for c in self.plan.cohorts}
+        return {p.name: p for p in self.plan.partitions}[cohorts[name].partition].table
 
     def roles(self, table: str | None) -> pl.DataFrame:
         """`(target_id, role)` of every label target, from its last label row; all label
@@ -366,9 +374,14 @@ def _m_top_share(data: _Data, event, by, top) -> dict:
 
 
 def _m_cohort_size(data: _Data, cohort) -> dict:
-    ptype, _ = data.cohort(cohort)
-    pid = data.column("partition_id").drop_nulls()
-    n = pid.filter(pid // (1 << PTYPE_SHIFT) == ptype).n_unique()
+    """The cohort's owners that arrived before the run's end: the rows of its entity table
+    (owners arriving at or after the end are never written, Task 10 I1). Counting owners with
+    event rows instead would miss a campaign that arrived in the run's last minutes and had not
+    acted yet (final review M3)."""
+    data.cohort(cohort)
+    table = data.cohort_table(cohort)
+    files = sorted((data.dir / "entities" / table).glob("*.parquet"))
+    n = sum(pl.read_parquet(f, columns=["origin"]).height for f in files)
     return _result(value=n, n_cases=n)
 
 
@@ -399,8 +412,8 @@ def _meets(v: Any, t: Mapping) -> bool:
 
 
 def _judge(x: Expectation, kw: Mapping, value: Any) -> bool:
-    if x.metric == "interference":
-        return kw["cause"] in value.get("shared", ())
+    if x.metric == "interference":                 # reported, and the §08 rule holds (D78)
+        return kw["cause"] in value.get("shared", ()) and not regression_failures(value)
     if x.metric in ("quantiles", "distribution"):
         return all(_meets(value[k], t) for k, t in x.target.items())
     return _meets(value, x.target)
@@ -448,6 +461,22 @@ def _law(ref: Any, laws: Mapping | None) -> dict:
     checked, violations = int(v.get("checked", 0)), int(v.get("violations", 0))
     status = "inconclusive" if checked == 0 else ("pass" if violations == 0 else "fail")
     return {**head, **_result(value=violations, n_cases=checked), "status": status}
+
+
+REGRESSION_ID = "regression"
+
+
+def regression_result(rep: Mapping[str, Any]) -> dict:
+    """The §08 regression rule (D78) of a `compare` report as a required result, so `datagen
+    check` gates on it whenever overlays run against a baseline, whether or not an expectation
+    names `interference`."""
+    why = regression_failures(rep)
+    shared = ", ".join(rep.get("shared") or []) or "none"
+    return {"id": REGRESSION_ID, "kind": "regression",
+            "metric": f"regression rule (shared: {shared})", "target": {"holds": True},
+            "required": True, "source": "spec §08 Regression (D78)",
+            **_result(value="holds" if not why else "fails", note="; ".join(why) or None),
+            "status": "fail" if why else "pass"}
 
 
 def evaluate(exp: Expectations, run_dir: Path, plan: Any, *,

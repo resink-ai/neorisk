@@ -130,6 +130,8 @@ def _bound(t: Mapping) -> str:
         parts.append(f"{_fmt(t['around'])} ± {_fmt(100 * float(t['tolerance']))}%")
     if "reported" in t:
         parts.append("reported")
+    if "holds" in t:
+        parts.append("holds")
     if "violations" in t:
         parts.append(f"{_fmt(t['violations'])} violations")
     return ", ".join(parts) or _fmt(dict(t))
@@ -331,9 +333,26 @@ def _interference(rep: Mapping | None) -> str:
     changed = rep.get("changed_owners") or {}
     rows = [[n, d.get("base"), d.get("with"), d.get("with", 0) - d.get("base", 0),
              changed.get(n)] for n, d in sorted((rep.get("events") or {}).items())]
+    answered = []
+    for part, d in sorted((rep.get("answered_differently") or {}).items()):
+        answered += [[part, *k.split(" -> ", 1), n] for k, n in d.get("changed", {}).items()]
+        answered += [[part, "(base run only)", "—", d.get("base_only", 0)],
+                     [part, "—", "(with overlay only)", d.get("with_only", 0)]]
+    requests = ""
+    if shared:
+        requests = ("<h3>Requests answered differently</h3>"
+                    '<p class="muted">Base requests each shared partition served in both runs, '
+                    "by the answer it wrote (granted ↔ rejected), matched by the causing base "
+                    "row; requests found in one run only are counted apart.</p>"
+                    + _table(("shared partition", "base run answer", "with overlay answer",
+                              "requests"), answered, numeric=(3,),
+                             empty="no base requests reached a shared partition"))
     return (_table(("check", "result"), facts) + note
+            + '<p class="muted">Rows with the overlay include the rows cohort members cause '
+              "on base partitions; changed owners leave members out.</p>"
             + _table(("base event", "base run rows", "with overlay rows", "Δ rows",
-                      "changed owners"), rows, numeric=(1, 2, 3, 4), empty="no base events"))
+                      "changed owners"), rows, numeric=(1, 2, 3, 4), empty="no base events")
+            + requests)
 
 
 def _checks(results: Sequence[Mapping]) -> str:

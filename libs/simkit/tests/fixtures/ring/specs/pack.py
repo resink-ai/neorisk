@@ -17,6 +17,7 @@ class Config:
     users: int = 6
     pot: int = 5_000
     bonus: int = 1_000
+    initial: float = 1.0        # < 1: the rest arrive later in the day (D79 test)
 
 
 def define(p: Pack, cfg: Config) -> None:
@@ -26,7 +27,8 @@ def define(p: Pack, cfg: Config) -> None:
     user = p.table("user", key="user_id", mutable=True,
                    cols={"tier": cat("a", "b"), "invited_by": opt(ref("user"))})
     p.owner("user", table=user, max_live=cfg.users)
-    p.population(user, n=cfg.users, initial=1.0,
+    p.population(user, n=cfg.users, initial=cfg.initial,
+                 arrivals=dist.burst(start_day=0.5, span_days=0.4),
                  attrs={"tier": dist.categorical({"a": 0.5, "b": 0.5})},
                  refs={"device": std.devices(per_user=dist.categorical({1: 1.0}), table=device,
                                              share=0.0)})

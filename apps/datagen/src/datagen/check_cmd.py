@@ -3,7 +3,13 @@
 
 Exit 0 when every required check passes, 5 when a required check fails or is missing,
 inconclusive or unanchored, 2 on usage errors (unknown profile or overlay, no such run, a run
-made with other overlay parameters or another pack config, a bad `expectations.yaml`)."""
+made with other overlay parameters or another pack config, a bad `expectations.yaml`).
+
+With overlays and a baseline, the §08 regression rule (D78) is one more required result
+(`regression`), so an overlay that changes base users' exogenous draws, base rows it should not
+touch, or breaks a required law in either run exits 5 even when no expectation names
+`interference`. The expectations file is `[project].expectations` of `datagen.toml` (default
+`specs/expectations.yaml`); a section of it naming no overlay of the project is refused."""
 
 from __future__ import annotations
 
@@ -13,7 +19,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-EXPECTATIONS = "expectations.yaml"
+EXPECTATIONS = "specs/expectations.yaml"
 
 
 class _Usage(Exception):
@@ -98,6 +104,21 @@ def _interference(results: list[dict], baseline: Path | None, run_dir: Path,
     return compare(baseline, run_dir, run.plan)
 
 
+def _expectations_path(project: Any) -> Path:
+    """`[project].expectations` of datagen.toml, relative to the project (final review M2)."""
+    rel = project.toml.get("project", {}).get("expectations", EXPECTATIONS)
+    if not isinstance(rel, str) or not rel:
+        raise _Usage("[project].expectations must be a file path")
+    return project.dir / rel
+
+
+def _overlay_names(project: Any) -> set[str]:
+    """The overlays the project defines (`<overlays folder>/<name>.py`)."""
+    folder = project.overlays_dir or project.pack_path.parent / "overlays"
+    return {f.stem for f in folder.glob("*.py") if not f.name.startswith("_")} \
+        if folder.is_dir() else set()
+
+
 def _resolve(args: argparse.Namespace):
     from datagen.run_cmds import overlay_list
     from neorisk_simkit.spec.project import ProjectError, load_project, resolve_run
@@ -112,7 +133,7 @@ def _resolve(args: argparse.Namespace):
 
 
 def cmd_check(args: argparse.Namespace) -> int:
-    from neorisk_simkit.checks.stats import evaluate
+    from neorisk_simkit.checks.stats import evaluate, regression_result
     from neorisk_simkit.io.manifest import jsonable
     from neorisk_simkit.report import render
     from neorisk_simkit.spec.expectations import ExpectationError, load
@@ -125,11 +146,12 @@ def cmd_check(args: argparse.Namespace) -> int:
         manifest = _manifest(run_dir, "run")
         _check_same_run(manifest, run, run_dir)
         baseline = _baseline(args, project, run)
-        exp_path = project.pack_path.parent / EXPECTATIONS
+        exp_path = _expectations_path(project)
         if not exp_path.is_file():
             raise _Usage(f"no {exp_path}: nothing to check")
         try:
-            exp = load(exp_path, overlays={n: dict(p) for n, p in run.overlays}, cfg=run.cfg)
+            exp = load(exp_path, overlays={n: dict(p) for n, p in run.overlays}, cfg=run.cfg,
+                       known_overlays=_overlay_names(project))
         except ExpectationError as e:
             raise _Usage(f"{exp_path}: {e}") from None
     except _Usage as e:
@@ -141,6 +163,8 @@ def cmd_check(args: argparse.Namespace) -> int:
 
     results = evaluate(exp, run_dir, run.plan, baseline=baseline)
     interference = _interference(results, baseline, run_dir, run)
+    if interference is not None:
+        results.append(regression_result(interference))
     failing = [r for r in results if r["required"] and r["status"] != "pass"]
     ok = not failing
     out = (Path(args.out) if args.out is not None

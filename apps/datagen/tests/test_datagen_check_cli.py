@@ -148,7 +148,10 @@ def test_check_writes_the_report_and_passes(ring_report):
     assert checks["run"] == "sample-s7+ring" and checks["pack"] == "ring"
     assert checks["overlays"] == {"ring": {"arrive_day": 0.0, "minions": 2, "share_device": 0.5,
                                            "size": 2, "wait": "2h"}}
-    assert {r["id"] for r in checks["results"]} == {"exp.signups", "exp.gangs", "exp.intf"}
+    assert {r["id"] for r in checks["results"]} == {"exp.signups", "exp.gangs", "exp.intf",
+                                                    "regression"}
+    reg = next(r for r in checks["results"] if r["id"] == "regression")
+    assert (reg["status"], reg["required"], reg["kind"]) == ("pass", True, "regression")
 
 
 def test_the_report_sections_hold_the_datasets_values(ring_report):
@@ -204,14 +207,19 @@ def test_the_report_sections_hold_the_datasets_values(ring_report):
               .group_by("role", "outcome").len())
     assert by_role == {(r, o): str(n) for r, o, n in expect.iter_rows()}
 
-    facts, events = page["Interference"]["tables"]
+    facts, events, answered = page["Interference"]["tables"]
     assert _rows(facts)["shared partitions"] == ["pot"]
     assert "knock-on effects" in page["Interference"]["text"]
     ref = _rows(events)["refused"]
     assert ref[:2] == [str(_n(base, "refused")), str(_n(run, "refused"))]
+    # D79: every base user claims before the gang arrives, so no answer changed
+    assert "Requests answered differently" in page["Interference"]["text"]
+    assert answered[1:] == [["pot", "(base run only)", "—", "0"],
+                            ["pot", "—", "(with overlay only)", "0"]]
 
     checks = _rows(page["Checks"]["tables"][0])
-    assert {k.split("stat.")[0] for k in checks} == {"exp.signups", "exp.gangs", "exp.intf"}
+    assert {k.split("stat.")[0].split("regression rule")[0] for k in checks} == {
+        "exp.signups", "exp.gangs", "exp.intf", "regression"}
     assert all("pass" in v for v in checks.values())
 
 
@@ -348,3 +356,99 @@ def test_render_escapes_every_value(tmp_path):
     for section in ("Counts", "Linkages", "Transitions", "Rejections", "Cohorts",
                     "Interference", "Checks"):
         assert evil in page[section]["text"], section          # shown, as text
+
+
+# ---------------------------------------------------------------------------- regression gate
+
+_BASE_ONLY = """
+pack: ring
+defaults: {min_sample: 1}
+expectations:
+  - id: exp.signups
+    metric: stat.share("bonus_paid", of=["signed_up"])
+    target: {between: [0.0, 1.0]}
+    source: "test"
+    required: true
+"""
+
+
+@pytest.fixture(scope="module")
+def gated(tmp_path_factory):
+    """A ring project whose expectations name no interference, with a base run and runs with
+    the sharing `ring` and the quiet (sharing nothing) `quiet` overlays."""
+    proj = _ring(tmp_path_factory.mktemp("gate"), _BASE_ONLY)
+    run_to_dataset(proj, "sample", [], threads=2)
+    run_to_dataset(proj, "sample", [], overlays=["ring"], threads=2)
+    run_to_dataset(proj, "sample", [], overlays=["quiet"], threads=2)
+    return proj
+
+
+def _gate(proj, overlay):
+    rc = main(["check", str(proj), "--profile", "sample", "--overlay", overlay])
+    checks = json.loads((proj / "reports" / f"sample-s7+{overlay}" / "checks.json").read_text())
+    return rc, {r["id"]: r for r in checks["results"]}
+
+
+@pytest.mark.parametrize("overlay", ["ring", "quiet"])
+def test_the_regression_rule_gates_check_without_an_interference_expectation(gated, overlay):
+    # final review I1: with overlays and a baseline the §08 rule is a required result
+    rc, res = _gate(gated, overlay)
+    assert rc == 0 and set(res) == {"exp.signups", "regression"}
+    assert res["regression"]["status"] == "pass" and res["regression"]["required"] is True
+
+
+@pytest.mark.parametrize("overlay, change, why", [
+    ("ring", {"exogenous_identical": False}, "exogenous draws differ"),
+    ("ring", {"laws_ok": {"base": False, "with": True}}, "law fails in the base run"),
+    ("quiet", {"identical_base_rows": False}, "base rows differ"),
+])
+def test_a_broken_regression_rule_exits_5(gated, monkeypatch, overlay, change, why):
+    from neorisk_simkit.checks import interference
+
+    real = interference.compare
+    monkeypatch.setattr(interference, "compare", lambda a, b, p: {**real(a, b, p), **change})
+    rc, res = _gate(gated, overlay)
+    assert rc == 5 and res["regression"]["status"] == "fail"
+    assert why in res["regression"]["note"]
+    assert res["exp.signups"]["status"] == "pass"          # only the rule fails
+
+
+def test_a_law_broken_in_the_overlay_run_exits_5(tmp_path):
+    proj = _ring(tmp_path, _BASE_ONLY)
+    run_to_dataset(proj, "sample", [], threads=2)
+    out = run_to_dataset(proj, "sample", [], overlays=["ring"], threads=2).out_dir
+    m = json.loads((out / "manifest.json").read_text())
+    m["laws"]["chk.x"] = {"required": True, "checked": 1, "violations": 1}
+    (out / "manifest.json").write_text(json.dumps(m))
+    rc, res = _gate(proj, "ring")
+    assert rc == 5 and res["regression"]["note"] == ("a required law fails in the run with "
+                                                     "overlays")
+
+
+# ---------------------------------------------------------------------------- expectations file
+
+def test_the_expectations_file_comes_from_datagen_toml(base_run):
+    # final review M2: `[project].expectations` names the file (default specs/expectations.yaml)
+    v = {"min_sample": 1, "target": "{gt: 2.0}", "source": '    source: "t"\n',
+         "required": "true"}
+    (base_run / "specs" / "expectations.yaml").write_text(_ONE.format(**v))      # would fail
+    v["target"] = "{between: [0.0, 1.0]}"
+    (base_run / "checks").mkdir(exist_ok=True)
+    (base_run / "checks" / "ring.yaml").write_text(_ONE.format(**v))
+    toml = (base_run / "datagen.toml").read_text()
+    try:
+        (base_run / "datagen.toml").write_text(toml.replace(
+            'pack = "specs/pack.py"', 'pack = "specs/pack.py"\nexpectations = "checks/ring.yaml"'))
+        assert main(["check", str(base_run), "--profile", "sample"]) == 0
+        (base_run / "checks" / "ring.yaml").unlink()
+        assert main(["check", str(base_run), "--profile", "sample"]) == 2       # named, absent
+    finally:
+        (base_run / "datagen.toml").write_text(toml)
+    assert main(["check", str(base_run), "--profile", "sample"]) == 5           # the default
+
+
+def test_a_section_for_an_unknown_overlay_is_refused(base_run):
+    # Task 18 review M-3: a misspelt overlay section would silently never apply
+    (base_run / "specs" / "expectations.yaml").write_text(EXPECTATIONS.replace("  ring:",
+                                                                               "  rnig:"))
+    assert main(["check", str(base_run), "--profile", "sample"]) == 2

@@ -245,8 +245,8 @@ expectations:
 
 def _plan():
     return SimpleNamespace(
-        partitions=(SimpleNamespace(name="user", ptype_code=1),
-                    SimpleNamespace(name="campaign", ptype_code=2)),
+        partitions=(SimpleNamespace(name="user", ptype_code=1, table="user"),
+                    SimpleNamespace(name="campaign", ptype_code=2, table="campaign")),
         cohorts=(SimpleNamespace(name="campaign", partition="campaign",
                                  labels="labels_campaign"),))
 
@@ -266,6 +266,7 @@ def test_quantiles_cohorts_roles_and_sizes(tmp_path):
                  for k in range(5)]
               + [{"t": 0, "o": 8, "p": 2, "user_id": 200, "amount": 5}])
     _write(d, "order_placed", orders)
+    _campaigns(d, 3)                     # three arrived; campaign 7 has no event row yet
     # 100..104 are zombies (104 first a hunter, then a zombie: the last row wins), 200 a hunter
     _labels(d, [(104, "hunter"), *[(100 + k, "zombie") for k in range(5)], (200, "hunter")])
     exp = _exp(tmp_path, """
@@ -280,7 +281,7 @@ expectations:
     source: "x"
   - id: size
     metric: stat.cohort_size("campaign")
-    target: {around: 2, tolerance: 0.0}
+    target: {around: 3, tolerance: 0.0}
     source: "x"
 """)
     per, z, size = evaluate(exp, d, plan=_plan(), baseline=None)
@@ -288,7 +289,33 @@ expectations:
     assert per["value"] == {"p50": 1, "p95": 2} and per["status"] == "pass"
     assert per["n_cases"] == 7                                  # owners 1..5, 8, 9
     assert z["value"] == {"p50": 3002} and z["status"] == "pass" and z["n_cases"] == 1
-    assert size["value"] == 2 and size["status"] == "pass"
+    assert size["value"] == 3 and size["status"] == "pass"
+
+
+def _campaigns(d: Path, n: int) -> None:
+    f = d / "entities" / "campaign" / "part-000.parquet"
+    f.parent.mkdir(parents=True, exist_ok=True)
+    pq.write_table(pa.table({"id": pa.array([7, 8, 9][:n], pa.int64()),
+                             "origin": pa.array(["population"] * n, pa.string())}), f)
+
+
+def test_cohort_size_counts_arrived_owners_not_owners_with_rows(tmp_path):
+    # final review M3: a campaign arriving in the run's last minutes has an entity row but no
+    # event row yet; it arrived, so it counts. No entity rows: none arrived (0, not missing).
+    d = tmp_path / "run"
+    _write(d, "order_placed", [{"t": 0, "o": 9, "p": 2, "user_id": 100, "amount": 1}])
+    exp = _exp(tmp_path, """
+expectations:
+  - id: size
+    metric: stat.cohort_size("campaign")
+    target: {around: 3, tolerance: 0.0}
+    source: "x"
+""")
+    (r,) = evaluate(exp, d, plan=_plan(), baseline=None)
+    assert (r["value"], r["status"]) == (0, "fail")
+    _campaigns(d, 3)
+    (r,) = evaluate(exp, d, plan=_plan(), baseline=None)
+    assert (r["value"], r["n_cases"], r["status"]) == (3, 3, "pass")
 
 
 def test_distribution_of_gaps(tmp_path):
@@ -332,7 +359,9 @@ expectations:
 
     def fake(base_dir, overlay_dir, plan):
         seen["args"] = (base_dir, overlay_dir)
-        return {"shared": ["pool"], "events": {"session_started": {"base": 1, "with": 2}}}
+        return {"shared": ["pool"], "identical_base_rows": None, "exogenous_identical": True,
+                "laws_ok": {"base": True, "with": True},
+                "events": {"session_started": {"base": 1, "with": 2}}}
 
     monkeypatch.setattr(stats, "compare", fake)
     (r,) = evaluate(exp, data, plan=_plan(), baseline=tmp_path / "base")
@@ -341,6 +370,50 @@ expectations:
     monkeypatch.setattr(stats, "compare", lambda a, b, p: {**fake(a, b, p), "shared": []})
     (r,) = evaluate(exp, data, plan=_plan(), baseline=tmp_path / "base")
     assert r["status"] == "fail"
+
+
+@pytest.mark.parametrize("change", [
+    {"exogenous_identical": False},                      # base users' draws moved
+    {"exogenous_identical": None},
+    {"laws_ok": {"base": False, "with": True}},          # a required law fails in a run
+    {"laws_ok": {"base": True, "with": False}},
+    {"laws_ok": {}},
+])
+def test_reported_interference_fails_when_the_regression_rule_fails(tmp_path, data, monkeypatch,
+                                                                     change):
+    # final review I1: `{reported: true}` passes only when the §08 rule holds (D78)
+    exp = _exp(tmp_path, """
+expectations:
+  - id: i
+    metric: stat.interference(base="session_started", cause="pool")
+    target: {reported: true}
+    source: "x"
+""")
+    good = {"shared": ["pool"], "identical_base_rows": None, "exogenous_identical": True,
+            "laws_ok": {"base": True, "with": True}, "events": {}}
+    monkeypatch.setattr(stats, "compare", lambda a, b, p: {**good, **change})
+    (r,) = evaluate(exp, data, plan=_plan(), baseline=tmp_path / "base")
+    assert r["status"] == "fail"
+
+
+@pytest.mark.parametrize("change, why", [
+    ({}, []),
+    ({"exogenous_identical": False}, ["base users' exogenous draws differ between the runs"]),
+    ({"laws_ok": {"base": False, "with": True}}, ["a required law fails in the base run"]),
+    ({"laws_ok": {"base": True}}, ["a required law fails in the run with overlays"]),
+    ({"shared": [], "identical_base_rows": True, "exogenous_identical": False}, []),
+    ({"shared": [], "identical_base_rows": False},
+     ["base rows differ although the overlay shares no state with the base"]),
+    ({"shared": [], "identical_base_rows": None},
+     ["base rows differ although the overlay shares no state with the base"]),
+])
+def test_the_regression_result_gates_on_the_rule(change, why):
+    rep = {"shared": ["pool"], "identical_base_rows": None, "exogenous_identical": True,
+           "laws_ok": {"base": True, "with": True}, **change}
+    r = stats.regression_result(rep)
+    assert (r["id"], r["kind"], r["required"]) == ("regression", "regression", True)
+    assert r["status"] == ("fail" if why else "pass")
+    assert (r["note"] or "") == "; ".join(why)
 
 
 def test_sampling_raises_rates_to_min_sample(tmp_path):
@@ -391,6 +464,12 @@ overlays:
     assert exp.items[1].overlay == "bh" and exp.items[1].required is False
     with pytest.raises(ExpectationError, match="placeholder"):
         _exp(tmp_path, text, overlays={"bh": {"size": 12}}, cfg=None)
+    # a section naming no overlay of the project never applies: refused (Task 18 review M-3)
+    f = tmp_path / "expectations.yaml"
+    assert len(load(f, overlays={"bh": {"size": 12}}, cfg=cfg,
+                    known_overlays={"bh", "other"}).items) == 2
+    with pytest.raises(ExpectationError, match=r"no overlay named \['other'\]"):
+        load(f, overlays={"bh": {"size": 12}}, cfg=cfg, known_overlays={"bh"})
 
 
 @pytest.mark.parametrize("metric", [
