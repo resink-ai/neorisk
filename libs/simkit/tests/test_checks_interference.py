@@ -1,10 +1,13 @@
 """D78: base rows are identical with and without an overlay that shares nothing."""
 
+import json
+import shutil
 from datetime import datetime, timedelta
 
 import polars as pl
 from conftest import FIXTURES
 
+from neorisk_simkit.checks import interference
 from neorisk_simkit.checks.interference import canonical_rows, compare, shared_partitions
 from neorisk_simkit.io.dataset import run_to_dataset
 from neorisk_simkit.spec.project import load_project, resolve_run
@@ -28,6 +31,8 @@ def test_a_quiet_overlay_leaves_base_rows_identical(tmp_path):
     rep = compare(a, b, _plan(["quiet"]))
     assert rep["shared"] == [] and rep["identical_base_rows"] is True
     assert rep["exogenous_identical"] is True
+    assert rep["events"]["signed_up"] == {"base": 6, "with": 6}      # base rows were compared
+    assert set(rep["changed_owners"].values()) == {0}
 
 
 def test_a_sharing_overlay_reports_interference(tmp_path):
@@ -38,6 +43,41 @@ def test_a_sharing_overlay_reports_interference(tmp_path):
     assert rep["shared"] == ["pot"] and rep["identical_base_rows"] is None
     assert rep["exogenous_identical"] is True and rep["laws_ok"] == {"base": True, "with": True}
     assert set(rep["events"]) >= {"signed_up", "bonus_paid"}
+    assert rep["events"]["refused"] == {"base": 1, "with": 5}       # the pot serves the gang
+    assert rep["changed_owners"]["refused"] == 1 and rep["first_contact"] is not None
+
+
+def test_the_comparison_fails_when_base_rows_differ(tmp_path, monkeypatch):
+    # the ring overlay changes the pot's answers; declared as sharing nothing, both verdicts
+    # must turn False (the equality is not vacuous), and a required law violation shows
+    a = run_to_dataset(RING, "sample", [], out_dir=tmp_path / "a", threads=2).out_dir
+    b = run_to_dataset(RING, "sample", [], overlays=["ring"], out_dir=tmp_path / "b",
+                       threads=2).out_dir
+    m = json.loads((b / "manifest.json").read_text())
+    m["laws"]["chk.x"] = {"required": True, "violations": 1}
+    (b / "manifest.json").write_text(json.dumps(m))
+    monkeypatch.setattr(interference, "shared_partitions", lambda plan: ())
+    rep = compare(a, b, _plan(["ring"]))
+    assert rep["identical_base_rows"] is False and rep["exogenous_identical"] is False
+    assert rep["laws_ok"] == {"base": True, "with": False}
+
+
+def test_moved_base_user_ids_are_a_difference(tmp_path):
+    # base user IDs are fixed before the run (members come after them, D94): `user` is a
+    # member table of the overlay plan, yet it is never canonicalized away
+    a = run_to_dataset(RING, "sample", [], out_dir=tmp_path / "a", threads=2).out_dir
+    b = tmp_path / "b"
+    shutil.copytree(a, b)
+    users = {"signed_up": ("user_id", "invited_by"), "bonus_paid": ("user_id",),
+             "granted": ("who",), "refused": ("who",), "refunded": ("who",)}
+    for name, cols in users.items():
+        for f in (b / "events" / name).glob("date=*/step-*.parquet"):
+            t = pl.read_parquet(f)
+            t.with_columns(pl.col(c) + 1 for c in cols).write_parquet(f)
+    plan = _plan(["quiet"])
+    assert "user" in plan.namespaces
+    assert compare(a, a, plan)["identical_base_rows"] is True
+    assert compare(a, b, plan)["identical_base_rows"] is False
 
 
 def _rows(ids, times, causes, refs):

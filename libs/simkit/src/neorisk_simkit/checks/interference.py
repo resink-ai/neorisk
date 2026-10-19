@@ -10,6 +10,10 @@ a base run and of the same run with the overlay:
   population entity rows, the base rows of read tables, and the base rows strictly before the
   overlay's first contact with a shared partition), every required law holds in both runs
   (`laws_ok`), and the report lists the changes (`events`, `changed_owners`).
+
+`events` counts every row of a base partition, so rows that cohort members cause on a base
+partition (zombie orders on `order`) are counted under "with"; `changed_owners` leaves members
+out. Only event tables are compared (postings are not, D78 scope of this check).
 """
 
 from __future__ import annotations
@@ -55,6 +59,16 @@ def base_ptypes(plan: Any) -> frozenset[int]:
     """`ptype_code`s of the base (non-cohort) partitions."""
     cohorts = _cohort_partitions(plan)
     return frozenset(p.ptype_code for p in plan.partitions if p.name not in cohorts)
+
+
+def created_namespaces(plan: Any) -> set[str]:
+    """The ID namespaces whose values depend on steps and creation order: creatable tables and
+    `p.ids` names. Member tables (`user`) are in `plan.namespaces` too, but base rows of a member
+    table keep their IDs (members are appended after them, D94), so they are never renamed: an
+    overlay that moves a base user's ID must fail the comparison."""
+    creatable = {t.name for t in plan.tables if t.creatable}
+    members = set(plan.member_tables) - creatable
+    return {ns for ns in plan.namespaces if ns not in members}
 
 
 def _strings(df: pl.DataFrame) -> pl.DataFrame:
@@ -137,7 +151,7 @@ def _same_tables(a: dict[str, pl.DataFrame], b: dict[str, pl.DataFrame]) -> bool
 
 
 def _laws_ok(d: Path) -> bool:
-    laws = json.loads((d / "manifest.json").read_text()).get("laws", {})
+    laws = json.loads((d / "manifest.json").read_text())["laws"]
     return all(v["violations"] == 0 for v in laws.values() if v.get("required", True))
 
 
@@ -184,7 +198,7 @@ def _changed_owners(a: pl.DataFrame, b: pl.DataFrame, unstable: set[str],
     diff = both.group_by(cols).agg(pl.col("_n").sum()).filter(pl.col("_n") != 0)
     if owner == "user_id":
         diff = diff.filter(~pl.col(owner).is_in(members.to_list()))
-    return diff[owner].n_unique()
+    return diff[owner].drop_nulls().n_unique()
 
 
 def _members(d: Path, plan: Any) -> pl.Series:
@@ -221,7 +235,7 @@ def compare(base_dir: Path, overlay_dir: Path, plan: Any) -> dict[str, Any]:
 
     refs = {t["name"]: {c["name"]: c["ref"] for c in t["columns"] if c.get("ref")}
             for t in load_schema(overlay_dir)["tables"] if t["kind"] == "event"}
-    created = set(plan.namespaces)
+    created = created_namespaces(plan)
 
     def canon(rows: dict[str, pl.DataFrame], before: Any = None) -> dict[str, pl.DataFrame]:
         if before is not None:
@@ -231,13 +245,10 @@ def compare(base_dir: Path, overlay_dir: Path, plan: Any) -> dict[str, Any]:
     exogenous = (_exogenous_entities(base_dir, overlay_dir, plan)
                  and _same_tables(canon(rows_a, first_contact), canon(rows_b, first_contact)))
     identical = None if shared else _same_tables(canon(rows_a), canon(rows_b))
-    stable_members = {t.name for t in plan.tables
-                      if t.name in plan.member_tables and not t.creatable}
     members = _members(overlay_dir, plan)
 
     def changed(n: str) -> int:
-        unstable = {c for c, ns in refs.get(n, {}).items()
-                    if ns in created and ns not in stable_members}
+        unstable = {c for c, ns in refs.get(n, {}).items() if ns in created}
         return _changed_owners(rows_a[n], rows_b[n], unstable, members)
 
     return {
