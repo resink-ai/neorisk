@@ -93,21 +93,19 @@ class Simulation:
                                      "static", rows, seed)
         for pop in w.populations:
             t, part = plan.table(pop.table), pop.part.name
-            n = len(pop.times)
-            n_init = int(np.floor(n * self._initial(pop.table) + 0.5))
+            n = len(pop.times)                  # owners arriving before the run end
+            pd = next(p for p in plan.populations if p.table == pop.table)
+            n_init = min(n, int(np.floor(pd.n * pd.initial + 0.5)))
             origin = np.where(np.arange(n) < n_init, "initial", "arrival").astype(object)
             rows, valid = {}, {}
             for c, arr, init in zip(t.cols, w.state[part], w.state_init[part], strict=True):
                 given = c.name in pop.attrs
-                rows[c.name] = pop.attrs[c.name] if given else np.full(n, init, arr.dtype)
+                rows[c.name] = pop.attrs[c.name][:n] if given else np.full(n, init, arr.dtype)
                 if c.ltype.nullable and c.ltype.kind != "ref":     # refs: NULL is null
                     valid[c.name] = np.full(n, given, bool)
             out[pop.table] = entity_table(pop.table, t.cols, np.arange(n, dtype=np.int64),
                                           pop.times, origin, rows, seed, valid)
         return out
-
-    def _initial(self, table: str) -> float:
-        return next(p.initial for p in self.run.plan.populations if p.table == table)
 
     # ------------------------------------------------------------------ steps
     def steps(self) -> Iterator[SealedStep]:

@@ -262,6 +262,9 @@ def import_overlay(project: Project, pack_module: ModuleType, name: str) -> Call
     `<pack package>.overlays.<name>` (an implicit namespace subpackage of the specs package)."""
     folder = project.overlays_dir or project.pack_path.parent / "overlays"
     path = folder / f"{name}.py"
+    if name in (*_TABLES, "run"):           # `<name>.<param>` overrides would shadow these
+        raise ProjectError(f"overlay {name!r}: the name is reserved for "
+                           f"{name}.<setting> overrides")
     if not re.fullmatch(r"[A-Za-z_]\w*", name) or not path.is_file():
         raise ProjectError(f"overlay {name!r}: {path} not found")
     pkg = pack_module.__name__.rpartition(".")[0]
@@ -388,6 +391,10 @@ def resolve_run(project: Project, profile: str, overrides: Iterable[str] = (),
     applies = {o: import_overlay(project, module, o) for o in enabled}
     defaults = {o: _overlay_defaults(o, a) for o, a in applies.items()}
     params = {o: dict(d) for o, d in defaults.items()}
+    folder = project.overlays_dir or project.pack_path.parent / "overlays"
+    for o in prof_params:                   # a typo in [profiles.<p>.overlay.<name>]
+        if o not in applies and not (folder / f"{o}.py").is_file():
+            raise ProjectError(f"profiles.{profile}.overlay.{o}: no overlay {o!r} in {folder}")
     for o in enabled:
         given = prof_params.get(o, {})
         if not isinstance(given, Mapping):

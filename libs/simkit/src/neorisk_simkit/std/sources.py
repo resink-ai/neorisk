@@ -14,7 +14,9 @@ Recipe protocol (objects passed as `population(refs={...})` values or as a shard
   entries of its owner CSR (`offs` plus `idx`); `spec.caps` counts them as read inputs.
 - build time, called once by `World.build` before any of the accessors below:
   population refs: `generate(plan=, seed=, stream=, owner_times=[, row_offset=])` (a recipe
-  whose table already holds rows of earlier recipes is given `row_offset`, D94);
+  whose table already holds rows of earlier recipes is given `row_offset`, D94; the offset is
+  that of the first table it builds, so a recipe building several tables would need one
+  offset per table);
   shard init: `init(n_items=, n_shards=, seed=, stream=, item_weights=) -> {field: values}`
   (per-item fields in items-table row order).
 - `extra_read_columns(table) -> {column: array}` and `table_rows(table) -> {column: array} | None`

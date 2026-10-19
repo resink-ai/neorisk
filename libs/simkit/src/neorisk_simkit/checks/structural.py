@@ -88,7 +88,7 @@ def ref_bounds(world: Any, id_bases: dict[str, int]) -> dict[str, Bound]:
         bounds[pop.table] = max(bounds.get(pop.table, 0), int(pop.next))
     for ns in world.plan.namespaces:
         if ns in members and ns in pops:
-            n = len(pops[ns].times)
+            n = next(p.n for p in world.plan.populations if p.table == ns)   # D75 member base
             bounds[ns] = (int(pops[ns].next), n, max(n, int(id_bases.get(ns, n))))
         elif ns in id_bases:
             bounds[ns] = max(bounds.get(ns, 0), int(id_bases[ns]))

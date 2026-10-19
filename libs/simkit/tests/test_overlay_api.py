@@ -1,5 +1,6 @@
 """The overlay contract's engine side (§08, D74-D77, D94, D95; Review Focus 5)."""
 
+import dataclasses
 import importlib.util
 import json
 import sys
@@ -76,6 +77,12 @@ def test_overlay_parameter_errors():
         _run(overlays=["nope"])
     with pytest.raises(ProjectError, match="unknown setting 'ring.size'"):
         _run(overlays=[], overrides=["ring.size=1"])              # not enabled: a pack key
+    project = load_project(RING)
+    toml = {**project.toml, "profiles": {"sample": {"overlay": {"rnig": {"size": 1}}}}}
+    with pytest.raises(ProjectError, match="profiles.sample.overlay.rnig: no overlay 'rnig'"):
+        resolve_run(dataclasses.replace(project, toml=toml), "sample")
+    with pytest.raises(ProjectError, match="overlay 'budget': the name is reserved"):
+        _run(overlays=["budget"])
 
 
 def test_overlay_params_never_change_the_source():
@@ -169,6 +176,29 @@ def test_a_cohort_arriving_after_the_end_never_acts(tmp_path, ring):
     assert m["label_counts"] == {"labels_gang": 0}
     assert pl.read_parquet(ro.out_dir / "entities" / "user").filter(
         pl.col("origin") == "member").height == 0
+    # owners arriving at or after the run end never exist: no campaign rows, no recipe rows
+    gang = ro.out_dir / "entities" / "gang"
+    assert not gang.exists() or pl.read_parquet(gang).height == 0
+    for t in ("device", "user"):
+        assert pl.read_parquet(ro.out_dir / "entities" / t).equals(
+            pl.read_parquet(rb.out_dir / "entities" / t)), t
+
+
+def test_granted_members_get_paid_and_the_boss_joins_on_their_payouts(tmp_path):
+    """The grant path of a cohort request: `store=` into an instance field, `pay_bonus` for a
+    member actor, the `paid` label and `send_parent` completing the boss's join. A rich pot
+    grants every claim; `wait=2d` cannot fire in a 1d run, so `done` is reached by the join.
+    Config only: the generated source (and the compiled module) is the shared run's."""
+    res, ev = _data(tmp_path, ["pot=20000", "ring.wait=2d"])
+    d = res.out_dir
+    members = pl.read_parquet(d / "entities" / "user").filter(pl.col("origin") == "member")
+    paid = ev["bonus_paid"].join(members.select(pl.col("id").alias("user_id")), on="user_id")
+    assert paid.height == 4 and paid["amount"].to_list() == [1000] * 4
+    labels = pl.read_parquet(sorted((d / "labels" / "labels_gang").rglob("*.parquet")))
+    assert labels.filter((pl.col("role") == "minion") & (pl.col("outcome") == "paid")
+                         ).height == 4
+    stats = json.loads((d / "run_stats.json").read_text())
+    assert stats["machines"]["boss"]["entries"]["done"] == 2
 
 
 def test_schema_marks_overlay_tables(ring):

@@ -257,7 +257,8 @@ def arrival_times(d: Dist | None, u: np.ndarray, t0: int, t1: int,
 class _Population:
     table: str
     part: Any                                  # owner PartitionDef
-    times: np.ndarray                          # admission time per ordinal (ascending)
+    times: np.ndarray                          # admission time per ordinal (ascending), only
+                                               # owners arriving before the run end
     attrs: dict[str, np.ndarray]               # column -> value per ordinal
     procs: np.ndarray                          # actions started by on_created(table)
     next: int = 0                              # first ordinal not yet admitted
@@ -497,6 +498,10 @@ class World:
             # ordinal = rank by (arrival time, draw index); initial owners come first at t0
             times = np.concatenate([np.full(n_init, self.sim_start, np.int64),
                                     np.sort(arr, kind="stable")])
+            # owners arriving at or after the run end never exist (a `burst` past the end):
+            # a time-sorted tail, so dropping it moves no ordinal; they get no entity row and
+            # no recipe rows. Member IDs still start at `pop.n` (D75).
+            times = times[:int(np.searchsorted(times, self.sim_end, side="left"))]
             table = plan.table(pop.table)
             dts = {c.name: slab_dtype(c) for c in table.cols}
             attrs = {}
