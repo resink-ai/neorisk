@@ -13,6 +13,11 @@ IMPLICIT = (("st", "i16"), ("gen", "i64"), ("ep", "i64"), ("rep", "i16"), ("mr",
             ("t0", "i64"), ("dep", "i8"), ("par", "i8"), ("pm", "i8"), ("pep", "i64"),
             ("ord", "i8"), ("kids", "i8"), ("jb", "i64"), ("jn", "i8"), ("jl", "i8"),
             ("actor", "ref"), ("pactor", "ref"))
+READABLE_IMPLICIT = tuple(f for f, _ in IMPLICIT if f in ("rep", "kids", "jn"))  # std.field
+REPEAT_CAP = (1 << 15) - 1        # rep / mr are i16: a repeat state stops by this count
+MAX_CHILDREN = 63                 # jb is an i64 bitset of child ordinals (bit 63 is the sign)
+MAX_DEPTH = 127                   # dep is i8
+TAG_X = 1 << 12                   # the tag's x field: transitions (t << 4) and state codes
 STATE_SITES, MAX_STATES_PER_SITEBLOCK = 16, 32
 ACTION_SITE_BASE, ACTION_SITE_SPAN, MAX_COPIES = 9000, 128, 163
 

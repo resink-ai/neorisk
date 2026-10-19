@@ -11,8 +11,8 @@ from typing import Any
 
 from neorisk_simkit.engine.abi import _LOCAL_RE, ActionSpec
 from neorisk_simkit.machine import helpers as h
-from neorisk_simkit.machine.layout import IMPLICIT
-from neorisk_simkit.spec.dist import Dist
+from neorisk_simkit.machine.layout import IMPLICIT, READABLE_IMPLICIT, REPEAT_CAP
+from neorisk_simkit.spec.dist import CATEGORICAL, GEOMETRIC, UNIFORM_INT, Dist
 from neorisk_simkit.spec.pack import PackError, Trigger
 
 MAX_MACHINES, MAX_STATES, MAX_INSTANCES = 16, 32, 64
@@ -243,6 +243,13 @@ def _machine_errors(m: MachineDef, names, pack) -> list[str]:
                 e.append(f"{sw}: branch probabilities sum to {total:.6g} > 1")
         if (st.until is not None or st.max_repeats is not None) and st.then is None:
             e.append(f"{sw}: until/max_repeats need then=")
+        if st.until is not None and st.repeat is None:
+            e.append(f"{sw}: until needs repeat=")
+        if st.repeat is not None and st.repeat[2] is not None and len(st.repeat[2].parts) > 1:
+            e.append(f"{sw}: repeat runs one action, not a chain")
+        if st.max_repeats is not None and not _is_count(st.max_repeats, REPEAT_CAP):
+            e.append(f"{sw}: max_repeats must be an int, std.field, std.col or a "
+                     "geometric/uniform_int/categorical Dist")
         if st.join is not None and not st.timers:
             e.append(f"{sw}: join needs a timer= (its timeout)")
         if st.late not in LATE:
@@ -260,6 +267,7 @@ def _machine_errors(m: MachineDef, names, pack) -> list[str]:
             e += _field_errors(w, m, (req.shard, req.payload))
         for child, _p, _delay, n in st.spawn:
             e += _spawn_errors(sw, child, m, names)
+            e += _count_errors(sw, child, n)
             e += _field_errors(w, m, n)
         e += _field_errors(w, m, (st.until, st.max_repeats))
         for chain in _state_chains(st):
@@ -286,7 +294,29 @@ def _field_refs(x):
 
 
 def _field_errors(w: str, m: MachineDef, x) -> list[str]:
-    return [f"{w}: unknown field {f!r}" for f in _field_refs(x) if f not in m.fields]
+    """`std.field` reads name a declared field or one of the readable implicit fields `rep`,
+    `kids`, `jn` (e.g. `max_repeats=std.field("jn")`); writes (`set_field`) are checked apart."""
+    return [f"{w}: unknown field {f!r}" for f in _field_refs(x)
+            if f not in m.fields and f not in READABLE_IMPLICIT]
+
+
+def _is_count(v, cap: int) -> bool:
+    """A count source (F-18): an int in [0, cap], std.field, std.col, or a geometric /
+    uniform_int / categorical Dist."""
+    if isinstance(v, bool):
+        return False
+    if isinstance(v, int):
+        return 0 <= v <= cap
+    if isinstance(v, (h.Field, h.Col)):
+        return True
+    return isinstance(v, Dist) and v.kind in (GEOMETRIC, UNIFORM_INT, CATEGORICAL)
+
+
+def _count_errors(sw: str, child: str, n) -> list[str]:
+    if _is_count(n, MAX_INSTANCES):
+        return []
+    return [(f"{sw}: spawn count of {child!r} must be an int, std.field, std.col or a "
+            "geometric/uniform_int/categorical Dist")]
 
 
 def _spawn_errors(sw: str, child: str, m: MachineDef, names) -> list[str]:
@@ -334,7 +364,12 @@ def _act_errors(w: str, sw: str, act, m: MachineDef, names, pack) -> list[str]:
         e += _field_errors(w, m, act.values)
     elif isinstance(act, h.Spawn):
         e += _spawn_errors(sw, act.machine, m, names)
+        e += _count_errors(sw, act.machine, act.n)
         e += _field_errors(w, m, (act.n, act.fields))
+        child = names.get(act.machine)
+        if child is not None:
+            e += [f"{sw}: spawn initializes unknown field {f!r} of {act.machine!r}"
+                  for f, _ in act.fields if f not in child.fields]
     elif isinstance(act, h.SendParent):
         if not any(_spawns(pm, m.name) and any(s.join is not None and s.join[1] == act.msg
                                                for s in pm.states)
