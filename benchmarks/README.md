@@ -454,3 +454,66 @@ type, D12). S1 reduced profile, warm, this machine, median of 3 runs after a war
 **10.02 s before → 9.28 s after (−7.4%)**, dataset hash unchanged
 (`4659ac00c0af3e400065aee6cf9d7d89d26a42a4c3a635a0e9d593fada09695d`). The full S1 benchmark
 was not re-run (the same share would put it near 51 s: an estimate, not a measurement).
+
+## M3 (this machine, 14 cores / 36 GiB)
+
+§18 sets no M3 gate (D92). This section re-measures the S1 gate and `s2_pool` after the M3
+engine changes (Tasks 1–12: spawn depth, owner messages, members, labels, machines, `cause_id`).
+All rows: arm64, 14 cores / 36 GiB (not the reference machine), 14 threads (`min(16, cores)`,
+D30), seed 42, HEAD 129d9dd, 2026-10-19 UTC. Each module was warm before its run (digest
+checked in the JIT cache, then the harness's own compile run). Reports: `results/s1-warm-m3.json`
+and `results/s2_pool-warm-m3.json` (git-ignored).
+
+| Code | Exported events | Warm s | events/s (end to end) | shard-phase events/s (shard events / shard-phase s) | Peak RSS GiB | build / generate / seal / check / write s | Rounds (total / compiled) | Module | Verdict |
+|---|---|---|---|---|---|---|---|---|---|
+| S1 (`s1-warm-m3.json`) | 10,022,123 | 53.22 (repeat: 53.49) | 188,309 | 198,669 (1,060,936 / 5.34) | 3.19 (repeat: 3.28) | 0.35 / 44.86 / 5.28 / 0.00 / 2.70 | 1,388,004 / 1,387,955 | gen_895fe0ed2a2131f0 | **pass** |
+| s2_pool (`s2_pool-warm-m3.json`) | 9,966,583 | 87.54 | 113,851 | 101,012 (1,525,466 / 15.10) | 3.88 | 0.42 / 78.68 / 5.50 / 0.41 / 2.50 | 1,222,197 / 1,222,112 | gen_604cbb824ba31780 | **fail** (`shard_command_share`) |
+| s2 at scale 1 | — | — | — | — | — | — | — | — | **not measured — needs the 64 GB reference machine** (caps 37.0 GiB) |
+
+### S1: pass
+
+53.22 s warm against 60 s, 3.19 GiB against 16 GiB; 10,022,123 exported events, inventory share
+of proposals 0.0774, 29 steps and 1,388,004 rounds, all as in the S2 re-measure. Against the S2
+row (54.90 s): −1.7 s, all in **generate** (47.14 → 44.86 s; most likely the S2 final fix wave's
+admission and sender-key skips, made after the S2 row), partly given back in **seal**
+(4.49 → 5.28 s, +0.79 s: `cause_id` resolution at seal, Task 12); write 2.86 → 2.70 s. Margin to the gate: 6.8 s. Peak RSS rose 2.73 → 3.19 GiB
+(+0.46 GiB; not profiled — Task 12 added two command-node fields and the per-worker commit log).
+
+S1 reduced profile (`--profile full --set users=400000 --set run.span=30d`, seed 42, warm, one
+warm-up and 3 runs, datagen `total_s`): **9.97 s** median (9.95 / 9.97 / 10.08 s), hash
+`d4329bb59d319661469e6b097cefcb74962164ce81ac98a93714fe654f01915a`, unchanged since Task 12.
+Against the S2 final fix (9.28 s): +7.4%, the cost Task 12 measured for `cause_id` (~+7%); the
+full profile does not show a rise because the S2 row predates that fix wave (a cause
+analysis from timings, not a profile).
+
+### `s2_pool`: fail
+
+The shard-path rate (§18) passes at 101,012 shard-phase events/s against 80,000. The end-to-end
+rate was measured at 113,851 events/s, but on a workload that is not shard-dominated
+(`shard_command_share` 0.1708 < 0.5), so D55 part (1) is unmet: it is not a shard-path rate. The
+verdict is `fail` on that expectation. Part (1) stays an open item for the user (accept a lower
+share threshold, or a shard-heavier pool workload); M3 does not change `examples/ecommerce_s2`.
+`campaign_member_share` 0.0095 and `exported_events` hold. Against the S2 warm row (89.82 s):
+−2.3 s, in **generate** (81.56 → 78.68 s) and **check** (0.58 → 0.41 s), partly given back in
+**seal** (4.71 → 5.50 s, `cause_id`); shard-phase seconds 15.98 → 15.10 s, so the shard rate rose
+95,433 → 101,012 and the end-to-end rate 110,956 → 113,851. Peak RSS 3.51 → 3.88 GiB (not
+profiled).
+
+### `s2`: not measured at scale 1
+
+`datagen validate examples/ecommerce_s2 --profile full` passes against the profile's `40GB`
+budget. Caps total **37,939.1 MiB (37.0 GiB)**, was 36,448.4 MiB (35.6 GiB): `timer_heaps`
+6,351.5 → 7,724.8 MiB (Task 12's `cpid`/`ceid` node fields), `output_slabs` 3,008.0 → 3,072.0,
+`live_partition_state` 17,208.5 → 17,261.9; every other item unchanged. Above ~30 GiB usable of
+36 GiB, so **not measured — needs the 64 GB reference machine**. Its expectation conflicts
+(`exported_events` vs `payments`, `postings_per_payment_event` 2.374) stay open for the user.
+
+### Other M3 measurements (warm, same machine)
+
+| What | Measured |
+|---|---|
+| `examples/ecommerce` `sample` (20k users, 90 d + 3 d warm-up; the `fulfillment` machine on every order) | 8.51 s engine (median of 3: 8.49 / 8.51 / 8.61), 1,953,090 exported events, 229.6k events/s; build 0.14 / generate 6.21 / seal 1.17 / check 0.10 / write 0.82 s; 2,628,287 commands, 83,841 machine state entries; peak RSS 0.62 GiB; module `b85bed5daaf7bf9e` |
+| `examples/ecommerce` `legacy` (16k users, 60 d + 7 d, `bounty_hunters` on) | 7.16 s engine (median of 3), 1,150,876 exported events, 160.8k events/s; generate 5.53 / seal 0.78 / check 0.07 / write 0.53 s; module `75c878fb98c4ad0e` |
+| Cost of the `mx_fire_*` real calls (Task 16 fix) | **not measured**: isolating it needs the same module with `mx_fire_` inlined, i.e. an `engine/codegen.py` edit (forbidden after Task 12) and a recompile; with the overlay that build is the one that exceeded this machine's memory in Task 16. The `sample` timing above includes it |
+| State-side `sum_le` refresh share of check time (`chk.refund_le_paid`) | not in `run_stats.json`; a timing probe around `_SumLeState.refresh` (no code change): `sample` 0.019 s of 0.102 s check (19%, 93 refreshes), `legacy` 0.013 s of 0.067 s (19%); check is 1.2% of engine time |
+| `datagen check` on the `sample` run (reads every event file: 1,973 parquet files) | 1.42 s wall, 0.72 GiB max RSS (2 runs, equal); exit 5 on `exp.checkout_to_order`, the known Task 22 item |
