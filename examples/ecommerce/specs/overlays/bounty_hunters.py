@@ -37,7 +37,7 @@ def apply(o: Overlay, share: float = 0.002, zombies_mean: float = 8.0,
         s.acquisition = CHANNELS[rng.integers(len(CHANNELS))]
         ctx.call("signup", n_devices=1 + int(rng.integers(2)))
         ctx.local["sku"] = cheapest_qualifying_sku(ctx)
-        ctx.label(s.uid, "hunter", campaign_id=s.uid,
+        ctx.label(s.uid, "hunter", table="users", campaign_id=s.uid,
                   available_at=ctx.now + label_delay_days * DAY)
         for _ in range(1 + int(rng.poisson(zombies_mean - 1))):
             ctx.create("user", cohort="zombie", inviter=s.uid, inviter_pid=ctx.self_id,
@@ -62,14 +62,14 @@ def apply(o: Overlay, share: float = 0.002, zombies_mean: float = 8.0,
         device = s.devices[rng.integers(len(s.devices))]
         ctx.call("signup", devices=[device])
         ctx.local["label_at"] = ctx.now + label_delay_days * DAY
-        ctx.label(s.uid, "zombie", outcome="attempted", campaign_id=s.inviter,
+        ctx.label(s.uid, "zombie", table="users", outcome="attempted", campaign_id=s.inviter,
                   available_at=ctx.local["label_at"])
         ctx.after(rng.uniform(0.1, 1.0) * DAY, "first_order")
 
     @zombie.action
     def first_order(ctx, s, cmd):
         device, sku = s.devices[0], cheapest_qualifying_sku(ctx)
-        ctx.label(s.uid, "zombie", outcome="qualified", campaign_id=s.inviter,
+        ctx.label(s.uid, "zombie", table="users", outcome="qualified", campaign_id=s.inviter,
                   available_at=ctx.local["label_at"])     # its order is sized to qualify
         sid = ctx.new_id("session")
         ctx.emit("session_started", user_id=s.uid, device_id=device, session_id=sid)
@@ -79,5 +79,5 @@ def apply(o: Overlay, share: float = 0.002, zombies_mean: float = 8.0,
 
     @zombie.action
     def claim_outcome(ctx, s, cmd):
-        ctx.label(s.uid, "zombie", outcome="paid" if cmd.ok else "rejected",
+        ctx.label(s.uid, "zombie", table="users", outcome="paid" if cmd.ok else "rejected",
                   campaign_id=s.inviter, available_at=ctx.local["label_at"])

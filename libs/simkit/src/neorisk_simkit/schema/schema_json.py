@@ -14,7 +14,8 @@ from neorisk_simkit.spec.types import LType, i32, i64, opt, text, ts
 
 FORMAT = 1
 
-LABELS = {"target_id": i64(doc="The labeled entity's id"), "final_label": i32(),
+LABELS = {"target_table": text(doc="The labeled entity's table"),
+          "target_id": i64(doc="The labeled entity's id"), "final_label": i32(),
           "role": text(), "outcome": opt(text()), "campaign_id": opt(i64()),
           "labeled_at": ts(doc="When the simulation decided the label"),
           "label_available_at": ts(doc="When the label becomes known downstream")}

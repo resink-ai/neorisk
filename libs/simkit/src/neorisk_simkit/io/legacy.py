@@ -39,7 +39,8 @@ def tables(run: str | Path | RunData | Output) -> dict[str, pl.DataFrame]:
     for k, v in t.items():                     # bench reads naive UTC timestamps
         if "event_time" in v.columns:
             t[k] = v.with_columns(pl.col("event_time").dt.replace_time_zone(None))
-    t["labels"] = run.labels.select(pl.col("target_id").alias("user_id"), "role")
+    t["labels"] = run.labels.filter(pl.col("target_table") == "users").select(
+        pl.col("target_id").alias("user_id"), "role")
     return t
 
 

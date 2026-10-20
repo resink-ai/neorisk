@@ -20,11 +20,15 @@ COMMON = {"event_id", "event_type", "event_time", "seq", "partition_id", "cause_
           "action_id"}
 
 
-def load_rows(run_dir: str | Path, event: str, key: str,
-              roles: list[str] | None = None) -> pl.DataFrame:
+def load_rows(run_dir: str | Path, event: str, key: str, roles: list[str] | None = None,
+              table: str | None = None) -> pl.DataFrame:
+    """`table`: the entity table the labels must target (default: the key without `_id`,
+    pluralized, when such a table exists)."""
     run = read(run_dir)
     df = run.events[event]
-    lab = run.labels
+    table = table or next((t for t in (key.removesuffix("_id") + "s", key.removesuffix("_id"))
+                           if t in run.entities), None)
+    lab = run.labels if table is None else run.labels.filter(pl.col("target_table") == table)
     if roles:
         lab = lab.filter(pl.col("role").is_in(roles))
     lab = lab.select(pl.col("target_id").alias(key), pl.lit(1).alias("label"),

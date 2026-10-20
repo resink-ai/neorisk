@@ -14,3 +14,7 @@ run = { days = 45.0 }
 [profiles.full]
 config = { customers = 1200 }
 run = { days = 90.0 }
+
+[overlays.card_testing]
+size = 6
+cards_per_burst = 25

@@ -346,12 +346,16 @@ class Ctx(_Base):
         self._effects += 1
         return self._e._insert(table, cols, self.part.ns, self._e.now)
 
-    def label(self, target_id: int, role: str, *, outcome: str | None = None,
+    def label(self, target_id: int, role: str, *, table: str, outcome: str | None = None,
               campaign_id: int | None = None, available_at: float | None = None) -> None:
-        """A hidden label row; the last one written for a target is its final label."""
-        self._effects += 1
+        """A hidden label on row `target_id` of entity `table`; the last one written for a
+        (table, target) is its final label. `available_at` is when it becomes known."""
         e = self._e
-        for k, v in (("target_id", target_id), ("role", role), ("outcome", outcome),
+        if table not in e.plan.entities:
+            raise SimError(f"{self._where()}: label on unknown entity table {table!r}")
+        self._effects += 1
+        for k, v in (("target_table", table), ("target_id", target_id), ("role", role),
+                     ("outcome", outcome),
                      ("campaign_id", campaign_id), ("labeled_at", e.now),
                      ("label_available_at", e.now if available_at is None else available_at)):
             e.labels[k].append(v)
@@ -407,7 +411,7 @@ class Engine:
                     for name, t in plan.events.items()}
         self._ent = {name: {c: [] for c in t.columns()} for name, t in plan.entities.items()}
         self.labels: dict[str, list] = {c: [] for c in (
-            "target_id", "role", "outcome", "campaign_id", "labeled_at", "label_available_at")}
+            "target_table", "target_id", "role", "outcome", "campaign_id", "labeled_at", "label_available_at")}
         self.snapshot: dict[str, list[dict]] | None = None
         self._cohorts = {c.name: c for o in plan.overlays for c in o.cohorts}
 

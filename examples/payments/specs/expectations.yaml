@@ -32,3 +32,14 @@ expectations:
     target: {between: [0.55, 0.62]}
     min_sample: 100          # units are merchants
     source: "brief: Rates we know, row 6"
+
+overlays:
+  card_testing:
+    - id: exp.card_testers
+      metric: stat.cohort_size("card_tester")
+      target: {reported: true}
+      source: "payments_subscriptions brief: abuse to model"
+    - id: exp.declines_with_testers
+      metric: stat.share("payment_declined", of=["payment_authorized", "payment_declined"])
+      target: {reported: true}
+      source: "payments_subscriptions brief: abuse to model (stolen cards decline more)"

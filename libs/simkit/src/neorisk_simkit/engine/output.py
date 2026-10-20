@@ -13,7 +13,7 @@ from neorisk_simkit.engine.loop import DAY, Engine, RunConfig, SimError, Stats
 from neorisk_simkit.spec.plan import Plan
 from neorisk_simkit.spec.types import INT64_MAX, INT64_MIN, LType, polars_type
 
-LABEL_SCHEMA = {"target_id": pl.Int64, "final_label": pl.Int32, "role": pl.String,
+LABEL_SCHEMA = {"target_table": pl.String, "target_id": pl.Int64, "final_label": pl.Int32, "role": pl.String,
                 "outcome": pl.String, "campaign_id": pl.Int64,
                 "labeled_at": pl.Datetime("us", "UTC"),
                 "label_available_at": pl.Datetime("us", "UTC")}
@@ -97,11 +97,13 @@ def simulate(plan: Plan, cfg: Any, run: RunConfig | None = None) -> Output:
     entities = {name: _frame(t, e._ent[name], start_us) for name, t in plan.entities.items()}
     lab = e.labels
     labels = pl.DataFrame({
-        "target_id": lab["target_id"], "final_label": [1] * len(lab["target_id"]),
+        "target_table": lab["target_table"], "target_id": lab["target_id"],
+        "final_label": [1] * len(lab["target_id"]),
         "role": lab["role"], "outcome": lab["outcome"], "campaign_id": lab["campaign_id"],
         "labeled_at": _times(start_us, lab["labeled_at"]),
         "label_available_at": _times(start_us, lab["label_available_at"]),
-    }, schema=LABEL_SCHEMA).unique("target_id", keep="last", maintain_order=True)
+    }, schema=LABEL_SCHEMA).unique(["target_table", "target_id"], keep="last",
+                                   maintain_order=True)
     parts = list(e.parts.values())
     cases = pl.DataFrame({
         "partition_id": [p.pid for p in parts], "kind": [p.kind.name for p in parts],

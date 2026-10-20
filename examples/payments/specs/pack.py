@@ -229,10 +229,11 @@ def define(p: Pack) -> None:
         if s.fraud:
             if rng.random() < cfg.fraud_dispute_p:
                 delay = rng.gamma(4.0, cfg.dispute_mean_days / 4.0) * DAY
-                ctx.label(s.pid, "fraud", available_at=ctx.now + delay)
+                ctx.label(s.pid, "fraud", table="payments", available_at=ctx.now + delay)
                 ctx.after(delay, "open_dispute", cause="fraud")
             else:
-                ctx.label(s.pid, "fraud", available_at=ctx.now + 120 * DAY)   # never reported
+                ctx.label(s.pid, "fraud", table="payments",
+                          available_at=ctx.now + 120 * DAY)        # never reported
         elif rng.random() < cfg.dispute_p:
             ctx.after(rng.gamma(4.0, cfg.dispute_mean_days / 4.0) * DAY, "open_dispute",
                       cause=DISPUTE_REASONS[1 + rng.integers(2)])

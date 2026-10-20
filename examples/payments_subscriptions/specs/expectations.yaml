@@ -1,0 +1,21 @@
+pack: payments_subscriptions
+defaults: {min_sample: 300}
+expectations:
+  - id: exp.trial_conversion
+    metric: stat.share("trial_converted", of=["subscription_started"])
+    target: {between: [0.65, 0.80]}
+    source: "brief: Rates we know, row 1"
+    required: true
+  - id: exp.first_attempt_declines
+    metric: 'stat.share("charge_failed", of=["invoice_paid", "charge_failed"], where={"attempt": 1})'
+    target: {between: [0.04, 0.12]}
+    source: "brief: Rates we know, row 2"
+    required: true
+  - id: exp.dunning_recoveries
+    metric: 'stat.count("invoice_paid", where={"attempt": [2, 3, 4]})'
+    target: {reported: true}
+    source: "brief: Rates we know, row 3"
+  - id: exp.plan_mix_basic
+    metric: 'stat.share("subscription_started", of=["subscription_started"], where={"plan": "basic"})'
+    target: {around: 0.4, tolerance: 0.15}
+    source: "brief: Rates we know, row 5"

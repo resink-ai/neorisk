@@ -91,8 +91,8 @@ def select(run: RunData, sel: Selection) -> pl.DataFrame:
         lab = run.labels.select(
             pl.lit(None, pl.Int64).alias("event_id"), pl.lit("label_available").alias("event_type"),
             pl.col("label_available_at").alias("event_time"),
-            (pl.lit(LABEL_SEQ0) + pl.col("target_id")).alias("seq"),
-            "target_id", "role", "outcome", "campaign_id", "final_label")
+            (pl.lit(LABEL_SEQ0) + pl.int_range(pl.len())).alias("seq"),
+            "target_table", "target_id", "role", "outcome", "campaign_id", "final_label")
         lab = _filter(lab, clauses) if clauses else lab
         if lab is not None:
             frames.append(lab)
@@ -180,8 +180,8 @@ def replay(run: RunData, sel: Selection, sinks: list, pacing: Pacing | None = No
     pacing = pacing or Pacing()
     df = select(run, sel)
     columns_of = {t["name"]: [c["name"] for c in t["columns"]] for t in run.schema["tables"]}
-    columns_of["label_available"] = ["event_type", "event_time", "target_id", "role", "outcome",
-                                     "campaign_id", "final_label"]
+    columns_of["label_available"] = ["event_type", "event_time", "target_table", "target_id",
+                                     "role", "outcome", "campaign_id", "final_label"]
     big = big_columns(run.schema)
     speed = pacing.speed()
     shift = None
