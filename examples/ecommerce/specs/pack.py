@@ -18,6 +18,7 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
+from neorisk_simkit.checks import laws
 from neorisk_simkit.engine import DAY
 from neorisk_simkit.spec import Latency, Pack, amount, cat, i32, i64, opt, ref
 from neorisk_simkit.std import reservations
@@ -272,6 +273,20 @@ def define(p: Pack) -> None:
                 s.units[sku] += qty
                 ctx.emit("stock_restocked", sku_id=sku, qty=qty)
         ctx.after(ctx.cfg.restock_days * DAY, "restock")
+
+    p.check("order_lifecycle", laws.lifecycle("order_id", {
+        None: {"order_placed"}, "order_placed": {"order_returned"}}))
+    p.check("returns_le_order", laws.sum_le(("order_returned", "amount"),
+                                            ("order_placed", "amount"), by="order_id"))
+    p.check("stock_never_negative", laws.running_nonneg(
+        "sku_id", plus=[("stock_restocked", "qty"), ("reservation_released", "qty")],
+        minus=[("reservation_granted", "qty")], what="stock"))
+    p.check("reservations_resolved_by_ttl", laws.reservations_resolved(), group="cross")
+    p.check("one_bonus_per_invitee", laws.unique("referral_bonus_paid", ["invitee_id"]),
+            group="cross")
+    p.check("monthly_budget", laws.pool_within_cap(
+        "referral_bonus_paid", "amount", "cfg.monthly_budget_cents", period_days=30),
+        group="cross")
 
     @p.source
     def population(src):

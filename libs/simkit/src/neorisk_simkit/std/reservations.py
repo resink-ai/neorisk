@@ -78,4 +78,6 @@ def install(p: Pack, kind: Kind, *, item: str = "item_id", item_ref: str | None 
 
     @proc.action
     def expire_reservation(ctx, s, cmd):
+        if cmd.reservation not in s.held:
+            return ctx.commit()                          # resolved before its TTL: the norm
         return _free(ctx, s, cmd.reservation, "reservation_released", "expired")

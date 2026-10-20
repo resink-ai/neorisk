@@ -54,6 +54,7 @@ class Reject:
 
 
 COMMIT = None
+RESERVED = frozenset({"action", "t", "payload", "status", "reason", "sender", "req", "ok"})
 
 
 class Cmd:
@@ -359,6 +360,9 @@ class Ctx(_Base):
     def _push(self, t: float, act: Action, default_prio: int, pid: int, payload: dict,
               meta: tuple | None) -> None:
         self._effects += 1
+        if payload and not RESERVED.isdisjoint(payload):
+            raise SimError(f"{self._where()}: payload keys {sorted(RESERVED & set(payload))} "
+                           f"shadow command fields; rename them")
         prio = default_prio if act.priority is None else act.priority
         self._e._push(t, prio, pid, act.name, payload, self.last, meta)
 
