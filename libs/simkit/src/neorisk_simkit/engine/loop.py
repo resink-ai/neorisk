@@ -241,6 +241,12 @@ class Ctx(_Base):
         self._reply = payload
         return COMMIT
 
+    def decline(self, reason: str, **payload: Any) -> None:
+        """Commit this action (its decision rows stay) but answer the request as 'rejected'.
+        Use `reject` instead when nothing was written."""
+        self._reply = {**payload, "__status": "rejected", "__reason": reason}
+        return COMMIT
+
     # --- effects ------------------------------------------------------------------------
     def emit(self, event: str, **cols: Any) -> int:
         e = self._e
@@ -287,7 +293,7 @@ class Ctx(_Base):
         self._push(t, act, MESSAGE, pid, copy.deepcopy(payload), ("msg", self.part.pid))
 
     def request(self, pid: int, action: str, *, reply: str, timeout: float | None = None,
-                **payload: Any) -> int:
+                latency: float | None = None, **payload: Any) -> int:
         """Ask partition `pid` (usually a shard) to run `action`; the answer arrives as
         `reply` on this partition at now + latency, with `cmd.status` ok | rejected | timeout."""
         e = self._e
@@ -295,7 +301,11 @@ class Ctx(_Base):
         act = self._act(target.kind, action)
         self._act(self.part.kind, reply)
         lat = target.kind.latency
-        latency = self.rng.uniform(lat.min, lat.hi)
+        if latency is None:
+            latency = self.rng.uniform(lat.min, lat.hi)
+        elif latency < lat.min:
+            raise SimError(f"{self._where()}: latency {latency} is below δ={lat.min} of "
+                           f"{target.kind.name}")
         e.req += 1
         self.part.pending[e.req] = reply
         meta = ("req", self.part.pid, e.req, reply, latency)
@@ -518,8 +528,14 @@ class Engine:
                                f"its partition state")
         if meta is not None and meta[0] == "req":
             _, requester, req, reply, latency = meta
-            st, why, payload = (("rejected", res.reason, {}) if rejected
-                                else ("ok", None, ctx._reply or {}))
+            payload = ctx._reply or {}
+            if rejected:
+                st, why, payload = "rejected", res.reason, {}
+            elif "__status" in payload:
+                st, why = payload.pop("__status"), payload.pop("__reason")
+                self.stats.rejections[(part.kind.name, act.name, why)] += 1
+            else:
+                st, why = "ok", None
             self._push(self.now + latency, MESSAGE, requester, reply, payload, ctx.last,
                        ("reply", req, st, why, part.pid))
 

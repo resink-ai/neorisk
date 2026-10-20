@@ -17,6 +17,7 @@ import numpy as np
 
 from neorisk_simkit.engine import DAY
 from neorisk_simkit.spec import Latency, Pack, amount, cat, i32, i64, opt, ref
+from neorisk_simkit.std.pool import CappedPool
 
 NAME = "ecommerce"
 SCHEMA_VERSION = 1
@@ -62,7 +63,7 @@ class User:
 
 @dataclass
 class Pool:
-    used: dict[int, int] = field(default_factory=dict)   # month -> cents paid
+    budget: CappedPool = field(default_factory=lambda: CappedPool(0))
 
 
 def define(p: Pack) -> None:
@@ -159,11 +160,9 @@ def define(p: Pack) -> None:
     @pool.action
     def claim(ctx, s, cmd):
         cfg = ctx.cfg
-        month = int(ctx.now // (30 * DAY))
-        if s.used.get(month, 0) + cfg.bonus_cents > cfg.monthly_budget_cents:
+        if not s.budget.take(ctx.now, cfg.bonus_cents):
             ctx.emit("referral_bonus_rejected", user_id=cmd.inviter, invitee_id=cmd.invitee)
-            return ctx.reply(granted=False)
-        s.used[month] = s.used.get(month, 0) + cfg.bonus_cents
+            return ctx.decline("budget_exhausted")
         ctx.emit("referral_bonus_paid", user_id=cmd.inviter, invitee_id=cmd.invitee,
                  amount=cfg.bonus_cents)
         ctx.send(cmd.inviter_pid, "bonus_credited", amount=cfg.bonus_cents)
@@ -204,7 +203,8 @@ def define(p: Pack) -> None:
             src.insert("skus", category=CATEGORIES[category[i]], price=int(price[i]))
         w = 1.0 / np.arange(1, cfg.skus + 1) ** cfg.sku_zipf
         src.share("catalog", price=price, cdf=np.cumsum(w) / w.sum())
-        src.create("referral_pool", key="main")
+        src.create("referral_pool", key="main",
+                   budget=CappedPool(cfg.monthly_budget_cents, period=30 * DAY))
         users: list[tuple[int, int]] = []
         for _ in range(cfg.users):
             t = rng.uniform(0, src.days * cfg.arrive_share) * DAY
