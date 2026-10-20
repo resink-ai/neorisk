@@ -1,0 +1,10 @@
+[run]
+seed = 7
+days = 10.0
+
+[config]
+wallets = 300
+
+[profiles.sample]
+config = { wallets = 100 }
+run = { days = 5.0 }

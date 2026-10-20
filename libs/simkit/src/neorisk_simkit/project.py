@@ -185,7 +185,8 @@ class Project:
         for m in mods:
             for k, v in vars(m).items():
                 if not k.startswith("__") and isinstance(v, (list, dict, set, bytearray)):
-                    errs.append(f"{m.__name__.split('.', 1)[-1]}.{k}: mutable module global "
+                    where = "pack" if m is self.module else m.__name__.split(".", 1)[-1]
+                    errs.append(f"{where}.{k}: mutable module global "
                                 f"({type(v).__name__}); use a tuple or a frozen mapping")
         return errs
 
