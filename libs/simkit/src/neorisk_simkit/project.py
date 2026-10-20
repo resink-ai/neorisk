@@ -18,6 +18,7 @@ Precedence: defaults, then the profile, then `--set` (`users=500`, `run.days=10`
 
 from __future__ import annotations
 
+import contextlib
 import dataclasses
 import hashlib
 import importlib
@@ -79,7 +80,8 @@ class Project:
             self._pkg, self.specs / "pack.py", submodule_search_locations=[str(self.specs)])
         mod = importlib.util.module_from_spec(spec)
         sys.modules[self._pkg] = mod
-        spec.loader.exec_module(mod)
+        with _no_bytecode():
+            spec.loader.exec_module(mod)
         self.module = mod
         if not hasattr(mod, "define"):
             raise PackError(f"{root}/specs/pack.py has no define(p)")
@@ -94,7 +96,8 @@ class Project:
     def overlay_module(self, name: str) -> types.ModuleType:
         if name not in self.overlay_names():
             raise PackError(f"{self.root}: no overlay {name!r} (have {self.overlay_names()})")
-        return importlib.import_module(f"{self._pkg}.overlays.{name}")
+        with _no_bytecode():
+            return importlib.import_module(f"{self._pkg}.overlays.{name}")
 
     # --- settings and plan --------------------------------------------------------------
     def settings(self, profile: str | None = None, sets: list[str] = (),
@@ -185,6 +188,17 @@ class Project:
                     errs.append(f"{m.__name__.split('.', 1)[-1]}.{k}: mutable module global "
                                 f"({type(v).__name__}); use a tuple or a frozen mapping")
         return errs
+
+
+@contextlib.contextmanager
+def _no_bytecode():
+    """Specs change often and fast: never cache them as .pyc, whose mtime+size check misses
+    two same-size edits within one second."""
+    old, sys.dont_write_bytecode = sys.dont_write_bytecode, True
+    try:
+        yield
+    finally:
+        sys.dont_write_bytecode = old
 
 
 def load_project(path: str | Path) -> Project:
