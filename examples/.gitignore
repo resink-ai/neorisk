@@ -1,0 +1,4 @@
+# datagen fills these; only specs/ is reviewed
+*/out/
+*/reports/
+*/logs/

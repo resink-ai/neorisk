@@ -1,0 +1,25 @@
+# datagen run examples/ecommerce --profile sample [--overlay bounty_hunters] [--set users=500]
+
+[run]
+seed = 7
+days = 30.0
+
+[config]
+users = 2000
+
+[profiles.sample]
+config = { users = 600 }
+run = { days = 20.0 }
+
+[profiles.full]
+config = { users = 5000 }
+run = { days = 60.0 }
+
+# what bench reads, through `datagen export --legacy-fraud`
+[profiles.legacy]
+config = { users = 2000 }
+run = { days = 30.0 }
+
+[overlays.bounty_hunters]
+share = 0.002
+zombies_mean = 8.0

@@ -1,0 +1,20 @@
+# datagen run examples/payments --profile sample
+
+[run]
+seed = 7
+days = 60.0
+
+[config]
+customers = 800
+
+[profiles.sample]
+config = { customers = 400 }
+run = { days = 45.0 }
+
+[profiles.full]
+config = { customers = 1200 }
+run = { days = 90.0 }
+
+[overlays.card_testing]
+size = 6
+cards_per_burst = 25

@@ -1,0 +1,10 @@
+[run]
+seed = 7
+days = 120.0
+
+[config]
+subscribers = 1500
+
+[profiles.sample]
+config = { subscribers = 500 }
+run = { days = 90.0 }

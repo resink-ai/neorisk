@@ -1,0 +1,10 @@
+[run]
+seed = 7
+days = 10.0
+
+[config]
+users = 1500
+
+[profiles.sample]
+config = { users = 500 }
+run = { days = 5.0 }

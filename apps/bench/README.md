@@ -8,7 +8,7 @@ Model benchmark runner for synthetic event datasets. Two commands:
 
 ## Data
 
-The benchmark data is a run of the e-commerce simulation (`neorisk_simkit.ecommerce`, with bounty-hunter rings), exported
+The benchmark data is a run of the e-commerce simulation (the `examples/ecommerce` pack with the `bounty_hunters` overlay), exported
 in the fraud dataset's shape (D87):
 
 ```

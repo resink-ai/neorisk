@@ -89,6 +89,17 @@ def _temporal(args) -> int:
     return 0
 
 
+def _datagen(args) -> int:
+    import json as _json
+
+    from bench.datagen_loader import run_maturity
+
+    res = run_maturity(args.run_dir, args.event, args.key, args.role or None,
+                       args.cutoff_day, args.test_days, args.seed)
+    print(_json.dumps(res, indent=2))
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="bench")
     sub = parser.add_subparsers(dest="cmd", required=True)
@@ -129,7 +140,18 @@ def main(argv: Sequence[str] | None = None) -> int:
     tp.add_argument("--seed", type=int, default=7)
     tp.add_argument("--lang", choices=("zh", "en"), default="zh")
 
+    dg = sub.add_parser("datagen", help="train on any datagen dataset with label maturity")
+    dg.add_argument("run_dir", help="a datagen dataset (with labels/labels.parquet)")
+    dg.add_argument("--event", required=True, help="the event table whose rows are scored")
+    dg.add_argument("--key", required=True, help="the column the labels' target_id matches")
+    dg.add_argument("--role", action="append", default=[], help="label roles (repeatable)")
+    dg.add_argument("--cutoff-day", type=float, default=60.0)
+    dg.add_argument("--test-days", type=float, default=14.0)
+    dg.add_argument("--seed", type=int, default=0)
+
     args = parser.parse_args(argv)
+    if args.cmd == "datagen":
+        return _datagen(args)
     if args.cmd == "temporal":
         return _temporal(args)
     if args.cmd == "curves":

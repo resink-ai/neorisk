@@ -1,0 +1,10 @@
+[run]
+seed = 7
+days = 10.0
+
+[config]
+traders = 120
+
+[profiles.sample]
+config = { traders = 60 }
+run = { days = 5.0 }
