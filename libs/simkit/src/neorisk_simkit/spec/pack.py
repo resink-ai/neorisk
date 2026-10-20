@@ -144,6 +144,12 @@ class Pack:
         self.kinds: dict[str, Kind] = {}
         self.sources: list[Source] = []
         self.checks: list[CheckSpec] = []
+        self.exogenous: set[str] = set()
+
+    def mark_exogenous(self, *events: str) -> None:
+        """Events whose base rows no overlay may change, even one that shares state with the
+        base (arrivals, attributes): the regression rule compares them in full."""
+        self.exogenous |= set(events)
 
     def _free(self, name: str) -> str:
         _name("table", name)

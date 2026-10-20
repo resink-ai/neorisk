@@ -101,7 +101,9 @@ def write(out: Output, out_dir: str | Path, *, provenance: dict | None = None,
                   "commands": st.commands,
                   "rejections": [{"kind": k, "action": a, "reason": r, "n": n}
                                  for (k, a, r), n in sorted(st.rejections.items())],
-                  "censored_cases": int(out.cases["censored"].sum())},
+                  "censored_cases": int(out.cases["censored"].sum()),
+                  "contacts": [{"overlay": out.plan.overlays[ns - 1].name, "kind": k, "t": t}
+                               for (ns, k), t in sorted(st.contacts.items())]},
         "checks": [{"name": c.name, "group": c.group, "required": c.required}
                    for c in out.plan.checks],
         "files": {str(p.relative_to(d)): _sha(p) for p in sorted(files)},

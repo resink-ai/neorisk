@@ -274,6 +274,7 @@ def define(p: Pack) -> None:
                 ctx.emit("stock_restocked", sku_id=sku, qty=qty)
         ctx.after(ctx.cfg.restock_days * DAY, "restock")
 
+    p.mark_exogenous("user_signed_up")              # arrivals: no overlay may change them
     p.check("order_lifecycle", laws.lifecycle("order_id", {
         None: {"order_placed"}, "order_placed": {"order_returned"}}))
     p.check("returns_le_order", laws.sum_le(("order_returned", "amount"),

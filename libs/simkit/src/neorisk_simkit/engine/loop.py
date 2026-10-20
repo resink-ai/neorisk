@@ -117,6 +117,7 @@ class Stats:
     late_replies: int = 0
     commands: int = 0
     rejections: Counter = field(default_factory=Counter)   # (kind, action, reason) -> n
+    contacts: dict = field(default_factory=dict)  # (overlay ns, base kind) -> first time
 
 
 class _Base:
@@ -294,6 +295,7 @@ class Ctx(_Base):
         e = self._e
         target = e._part(pid)
         act = self._act(target.kind, action)
+        self._contact(target)
         lat = target.kind.latency
         t = e.now + self.rng.uniform(lat.min, lat.hi)
         self._push(t, act, MESSAGE, pid, copy.deepcopy(payload), ("msg", self.part.pid))
@@ -306,6 +308,7 @@ class Ctx(_Base):
         target = e._part(pid)
         act = self._act(target.kind, action)
         self._act(self.part.kind, reply)
+        self._contact(target)
         lat = target.kind.latency
         if latency is None:
             latency = self.rng.uniform(lat.min, lat.hi)
@@ -359,6 +362,14 @@ class Ctx(_Base):
         self.part.retired_at = self._e.now
 
     # --- internals ----------------------------------------------------------------------
+    def _contact(self, target: Part) -> None:
+        """Record the first time an overlay partition reaches a base partition (the
+        regression rule then compares base rows only before it)."""
+        if self.part.ns and not target.ns:
+            k = (self.part.ns, target.kind.name)
+            if k not in self._e.stats.contacts:
+                self._e.stats.contacts[k] = self._e.now
+
     def _act(self, kind: Kind, name: str) -> Action:
         try:
             return kind.actions[name]
