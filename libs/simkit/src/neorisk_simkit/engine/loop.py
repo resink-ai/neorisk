@@ -58,12 +58,12 @@ COMMIT = None
 
 class Cmd:
     """The command an action runs for. Payload fields read as attributes (`cmd.sku`)."""
-    __slots__ = ("action", "payload", "reason", "sender", "status", "t")
+    __slots__ = ("action", "payload", "reason", "req", "sender", "status", "t")
 
     def __init__(self, action: str, t: float, payload: dict, sender: int | None = None,
-                 status: str = "ok", reason: str | None = None):
+                 status: str = "ok", reason: str | None = None, req: int | None = None):
         self.action, self.t, self.payload = action, t, payload
-        self.sender, self.status, self.reason = sender, status, reason
+        self.sender, self.status, self.reason, self.req = sender, status, reason, req
 
     def __getattr__(self, k: str) -> Any:
         try:
@@ -482,7 +482,7 @@ class Engine:
             if part.retired_at is not None:
                 stats.late_messages += 1
                 continue
-            sender, status, reason = None, "ok", None
+            sender, status, reason, req = None, "ok", None, None
             if meta is not None:
                 tag = meta[0]
                 if tag == "reply":
@@ -491,7 +491,8 @@ class Engine:
                         stats.late_replies += 1          # it already timed out
                         continue
                 elif tag == "timeout":
-                    if part.pending.pop(meta[1], None) is None:
+                    req = meta[1]
+                    if part.pending.pop(req, None) is None:
                         continue                         # answered in time
                     status = "timeout"
                 else:
@@ -500,7 +501,7 @@ class Engine:
             if part.cohort is not None:
                 action = self._cohorts[part.cohort].redirect.get(action, action)
             self._dispatch(ctx, part, part.kind.actions[action],
-                           Cmd(action, t, payload, sender, status, reason), cause, meta)
+                           Cmd(action, t, payload, sender, status, reason, req), cause, meta)
             if self.seq > run.max_events:
                 raise SimError(f"max_events={run.max_events} exceeded at t={t:.3f} by "
                                f"{part.kind.name}.{action}; a runaway pack, or raise the guard")

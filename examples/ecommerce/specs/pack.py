@@ -1,12 +1,15 @@
 """E-commerce shoppers with a referral program.
 
 Shoppers sign up, run sessions (view products, sometimes check out), place orders, sometimes
-return them, and sometimes move region. A referred shopper's first qualifying order claims its
+return them, and sometimes move region. A checkout reserves each cart line in the inventory
+shard of its SKU group (one hot group holds the most viewed SKUs), joins on the replies, then
+commits all or releases all; reservations expire after a TTL. A referred shopper's first qualifying order claims its
 inviter's bonus, after a delay, from a monthly budget held by the `referral_pool` shard. The
 pool pays (or rejects) and credits the inviter by message.
 
-Extension points for overlays: `signup` (payload `devices` or `n_devices`), `place_order`
-(payload `device`, `sku`, `amount`, `quantity`) and `bonus_credited` (no-op for shoppers).
+Extension points for overlays: `signup` (payload `devices` or `n_devices`), `checkout`
+(payload `device`, `lines` = [(sku, qty)], optional `amount`) and `bonus_credited` (a no-op
+for shoppers).
 """
 
 from __future__ import annotations
@@ -17,6 +20,7 @@ import numpy as np
 
 from neorisk_simkit.engine import DAY
 from neorisk_simkit.spec import Latency, Pack, amount, cat, i32, i64, opt, ref
+from neorisk_simkit.std import reservations
 from neorisk_simkit.std.pool import CappedPool
 
 NAME = "ecommerce"
@@ -48,6 +52,12 @@ class Config:
     bonus_cents: int = 1000
     monthly_budget_cents: int = 2_000_000
     credit_delay_days: tuple[float, float] = (1.0, 3.0)
+    second_line_p: float = 0.25       # a cart gets a second SKU
+    sku_groups: int = 12              # inventory shards; group 0 is the hot one
+    hot_skus: int = 10                # the most viewed SKUs, all in group 0
+    stock_mean: int = 30              # target units per SKU
+    restock_days: float = 1.0         # restock SKUs below a quarter of target this often
+    reserve_ttl: float = 600.0
 
 
 @dataclass
@@ -59,6 +69,12 @@ class User:
     inviter_pid: int | None = None    # ... and partition
     devices: list[int] = field(default_factory=list)
     claimed: bool = False             # the referral claim has been made
+    cart: dict | None = None          # the checkout waiting on inventory replies
+
+
+@dataclass
+class Inventory(reservations.Stock):
+    target: dict[int, int] = field(default_factory=dict)   # sku -> restock target
 
 
 @dataclass
@@ -75,7 +91,10 @@ def define(p: Pack) -> None:
         "kind": cat(*DEVICE_KINDS)})
     p.entity("skus", key="sku_id", cols={"category": cat(*CATEGORIES), "price": amount()})
     p.entity("orders", key="order_id", cols={
-        "user_id": ref("users"), "sku_id": ref("skus"), "quantity": i32(min=1),
+        "user_id": ref("users"), "sku_id": ref("skus", doc="First line"),
+        "quantity": i32(min=1, doc="First line"), "lines": i32(min=1), "amount": amount()})
+    p.entity("order_lines", key="line_id", cols={
+        "order_id": ref("orders"), "sku_id": ref("skus"), "quantity": i32(min=1),
         "amount": amount()})
 
     p.event("user_signed_up", doc="A user creates an account", cols={
@@ -89,6 +108,10 @@ def define(p: Pack) -> None:
     p.event("order_placed", doc="A shopper places an order", cols={
         "user_id": ref("users"), "device_id": ref("devices"), "order_id": ref("orders"),
         "sku_id": ref("skus"), "quantity": i32(min=1), "amount": amount()})
+    p.event("checkout_failed", doc="A cart line could not be reserved", cols={
+        "user_id": ref("users"), "device_id": ref("devices"),
+        "reason": cat("out_of_stock", "timeout")})
+    p.event("stock_restocked", cols={"sku_id": ref("skus"), "qty": i32(min=1)})
     p.event("order_returned", cols={
         "user_id": ref("users"), "order_id": ref("orders"), "amount": amount()})
     p.event("address_changed", cols={"user_id": ref("users"), "region": cat(*REGIONS)})
@@ -101,7 +124,11 @@ def define(p: Pack) -> None:
     user = p.owner("user", state=User, latency=Latency(0.05, 0.5))
     pool = p.shard("referral_pool", state=Pool, latency=Latency(0.2, 0.8),
                    doc="Monthly referral budget; every claim goes through it")
-    account = user.process("account", doc="Signup, orders and referral claims")
+    inventory = p.shard("inventory", state=Inventory, latency=Latency(0.1, 0.4),
+                        doc="One SKU group's stock")
+    reservations.install(p, inventory, item="sku_id", item_ref="skus", ttl=600.0)
+    stocking = inventory.process("stocking", start="open_store")
+    account = user.process("account", doc="Signup, checkout, orders and referral claims")
     shopper = user.process("shopper", start="arrive", doc="Browsing sessions")
 
     @account.action
@@ -126,16 +153,52 @@ def define(p: Pack) -> None:
                  invited_by=s.inviter, acquisition=s.acquisition)
 
     @account.action
+    def checkout(ctx, s, cmd):
+        if s.cart is not None:
+            return ctx.reject("checkout_in_progress")
+        group = ctx.shared.catalog.group
+        cart = {"device": cmd.device, "lines": list(cmd.lines),
+                "amount": cmd.payload.get("amount"), "waiting": {}, "held": [], "bad": None}
+        for sku, qty in cart["lines"]:
+            req = ctx.request(ctx.find("inventory", int(group[sku - 1])), "reserve",
+                              reply="reserved", item=sku, qty=qty, timeout=30.0)
+            cart["waiting"][req] = sku
+        s.cart = cart
+
+    @account.action
+    def reserved(ctx, s, cmd):
+        c = s.cart
+        del c["waiting"][cmd.req]
+        if cmd.ok:
+            c["held"].append((cmd.sender, cmd.reservation))
+        else:
+            c["bad"] = c["bad"] or ("timeout" if cmd.status == "timeout" else "out_of_stock")
+        if c["waiting"]:
+            return ctx.commit()                        # join: wait for every line
+        s.cart = None
+        done = "release_reservation" if c["bad"] else "commit_reservation"
+        for shard, rid in c["held"]:
+            ctx.send(shard, done, reservation=rid)
+        if c["bad"]:
+            ctx.emit("checkout_failed", user_id=s.uid, device_id=c["device"], reason=c["bad"])
+            return ctx.commit()
+        ctx.call("place_order", device=c["device"], lines=c["lines"], amount=c["amount"])
+
+    @account.action
     def place_order(ctx, s, cmd):
-        cfg, rng = ctx.cfg, ctx.rng
-        qty = cmd.payload.get("quantity", 1)
-        oid = ctx.insert("orders", user_id=s.uid, sku_id=cmd.sku, quantity=qty,
-                         amount=cmd.amount)
+        cfg, rng, price = ctx.cfg, ctx.rng, ctx.shared.catalog.price
+        lines = [(sku, qty, qty * int(price[sku - 1])) for sku, qty in cmd.lines]
+        amt = cmd.amount if cmd.amount is not None else sum(a for _, _, a in lines)
+        (sku, qty, _) = lines[0]
+        oid = ctx.insert("orders", user_id=s.uid, sku_id=sku, quantity=qty, lines=len(lines),
+                         amount=amt)
+        for k, q, a in lines:
+            ctx.insert("order_lines", order_id=oid, sku_id=k, quantity=q, amount=a)
         ctx.emit("order_placed", user_id=s.uid, device_id=cmd.device, order_id=oid,
-                 sku_id=cmd.sku, quantity=qty, amount=cmd.amount)
+                 sku_id=sku, quantity=qty, amount=amt)
         if rng.random() < cfg.return_p:
-            ctx.after(rng.uniform(1, 20) * DAY, "return_order", order=oid, amount=cmd.amount)
-        if s.inviter and not s.claimed and cmd.amount >= cfg.min_order_cents:
+            ctx.after(rng.uniform(1, 20) * DAY, "return_order", order=oid, amount=amt)
+        if s.inviter and not s.claimed and amt >= cfg.min_order_cents:
             s.claimed = True
             lo, hi = cfg.credit_delay_days
             ctx.after(rng.uniform(lo, hi) * DAY, "claim_referral")
@@ -185,14 +248,30 @@ def define(p: Pack) -> None:
             ctx.emit("product_viewed", user_id=s.uid, device_id=device, session_id=sid,
                      sku_id=int(sku))
         if rng.random() < cfg.checkout_p and rng.random() < cfg.order_p:
-            sku = int(viewed[-1])
-            qty = 1 + int(rng.poisson(0.3))
-            ctx.call("place_order", device=device, sku=sku, quantity=qty,
-                     amount=qty * int(cat_.price[sku - 1]))
+            lines = [(int(viewed[-1]), 1 + int(rng.poisson(0.3)))]
+            other = [int(k) for k in viewed[:-1] if k != viewed[-1]]
+            if other and rng.random() < cfg.second_line_p:
+                lines.append((other[-1], 1))
+            ctx.call("checkout", device=device, lines=lines)
         if rng.random() < cfg.move_p_per_day / max(cfg.sessions_per_day, 1e-9):
             s.region = REGIONS[rng.integers(len(REGIONS))]
             ctx.emit("address_changed", user_id=s.uid, region=s.region)
         ctx.after(rng.exponential(DAY / cfg.sessions_per_day), "session")
+
+    @stocking.action
+    def open_store(ctx, s, cmd):
+        for sku in sorted(s.target):
+            ctx.emit("stock_restocked", sku_id=sku, qty=s.units[sku])
+        ctx.after(ctx.cfg.restock_days * DAY, "restock")
+
+    @stocking.action
+    def restock(ctx, s, cmd):
+        for sku in sorted(s.target):
+            if s.units[sku] * 4 < s.target[sku]:
+                qty = s.target[sku] - s.units[sku]
+                s.units[sku] += qty
+                ctx.emit("stock_restocked", sku_id=sku, qty=qty)
+        ctx.after(ctx.cfg.restock_days * DAY, "restock")
 
     @p.source
     def population(src):
@@ -202,7 +281,13 @@ def define(p: Pack) -> None:
         for i in range(cfg.skus):
             src.insert("skus", category=CATEGORIES[category[i]], price=int(price[i]))
         w = 1.0 / np.arange(1, cfg.skus + 1) ** cfg.sku_zipf
-        src.share("catalog", price=price, cdf=np.cumsum(w) / w.sum())
+        sku = np.arange(1, cfg.skus + 1)
+        group = np.where(sku <= cfg.hot_skus, 0, 1 + (sku - 1) % (cfg.sku_groups - 1))
+        src.share("catalog", price=price, cdf=np.cumsum(w) / w.sum(), group=group)
+        target = 1 + src.rng.poisson(cfg.stock_mean, cfg.skus)
+        for g in range(cfg.sku_groups):
+            mine = {int(k): int(target[k - 1]) for k in sku[group == g]}
+            src.create("inventory", key=g, units=dict(mine), target=mine)
         src.create("referral_pool", key="main",
                    budget=CappedPool(cfg.monthly_budget_cents, period=30 * DAY))
         users: list[tuple[int, int]] = []

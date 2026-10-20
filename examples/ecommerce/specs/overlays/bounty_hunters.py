@@ -47,7 +47,7 @@ def apply(o: Overlay, share: float = 0.002, zombies_mean: float = 8.0,
 
     @hunter.action
     def cash_out_order(ctx, s, cmd):
-        ctx.call("place_order", device=s.devices[0], sku=ctx.local["sku"],
+        ctx.call("checkout", device=s.devices[0], lines=[(ctx.local["sku"], 1)],
                  amount=cmd.amount + int(ctx.rng.integers(0, 500)))
 
     @zombie.action
@@ -69,5 +69,5 @@ def apply(o: Overlay, share: float = 0.002, zombies_mean: float = 8.0,
         sid = ctx.new_id("session")
         ctx.emit("session_started", user_id=s.uid, device_id=device, session_id=sid)
         ctx.emit("product_viewed", user_id=s.uid, device_id=device, session_id=sid, sku_id=sku)
-        ctx.call("place_order", device=device, sku=sku,
+        ctx.call("checkout", device=device, lines=[(sku, 1)],
                  amount=ctx.cfg.min_order_cents + int(ctx.rng.integers(0, 150)))
