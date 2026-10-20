@@ -53,6 +53,9 @@ def test_validate_and_usage_errors(tmp_path, capsys):
     assert main(["run", ECOM, "--set", "bounty_hunters.share=1"]) == 2   # overlay not in run
     assert main(["run", ECOM, "--overlay", "nope"]) == 2
     assert main(["export", str(tmp_path), "--out", str(tmp_path / "x")]) == 2
+    assert main(["check", str(tmp_path / "nope"), "--project", ECOM]) == 2
+    assert main(["replay", str(tmp_path / "nope")]) == 2
+    assert main(["run", str(tmp_path / "no_project")]) == 2
 
 
 def test_debug_run_and_exports(tmp_path):

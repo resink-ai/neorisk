@@ -69,6 +69,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return COMMANDS[args.cmd](args)
     except PackError as e:
         return _err(str(e))
+    except FileNotFoundError as e:                   # not a project or not a dataset
+        return _err(str(e))
     except SimError as e:
         return _err(f"run failed: {e}", 1)
 
