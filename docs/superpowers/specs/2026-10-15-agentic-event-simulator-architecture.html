@@ -1,0 +1,934 @@
+<title>Agentic Event Simulator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,500..800&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: technical design report. Sticky contents rail on wide screens, single 74ch reading column,
+   wide tables/code/diagrams scroll inside their own boxes. Cobalt marks the system, amber marks human gates. */
+:root {
+  --bg: #f5f6f8;
+  --surface: #ffffff;
+  --sunk: #eceef3;
+  --ink: #161c26;
+  --muted: #566070;
+  --rule: #d8dce4;
+  --accent: #2f45c0;
+  --accent-soft: #e4e8fb;
+  --gate: #b26a00;
+  --gate-soft: #fbefd9;
+  --ok: #1d7a4a;
+  --ok-soft: #dcf1e5;
+  --warn: #a8321f;
+  --warn-soft: #f8e1dc;
+  --code-bg: #10151f;
+  --code-fg: #dbe2f0;
+  --code-dim: #8390a8;
+  --code-key: #9fb4ff;
+  --code-str: #f0c27b;
+  --code-add: #7fd6a3;
+  --font-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --step--1: 0.8125rem;
+  --step-0: 1rem;
+  --step-1: 1.1875rem;
+  --step-2: 1.5rem;
+  --step-3: 2.125rem;
+  --step-4: 2.875rem;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f131a; --surface: #161b24; --sunk: #1c2230; --ink: #e6e9ef; --muted: #9aa3b3; --rule: #2a3242;
+    --accent: #8fa2ff; --accent-soft: #1f2748; --gate: #f0b04a; --gate-soft: #3a2b12;
+    --ok: #6fd39b; --ok-soft: #14301f; --warn: #ff8f7a; --warn-soft: #3a1a14;
+    --code-bg: #0a0d13; --code-fg: #dbe2f0; --code-dim: #7f8aa0; --code-key: #9fb4ff; --code-str: #f0c27b; --code-add: #7fd6a3;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f131a; --surface: #161b24; --sunk: #1c2230; --ink: #e6e9ef; --muted: #9aa3b3; --rule: #2a3242;
+  --accent: #8fa2ff; --accent-soft: #1f2748; --gate: #f0b04a; --gate-soft: #3a2b12;
+  --ok: #6fd39b; --ok-soft: #14301f; --warn: #ff8f7a; --warn-soft: #3a1a14;
+  --code-bg: #0a0d13; --code-fg: #dbe2f0; --code-dim: #7f8aa0; --code-key: #9fb4ff; --code-str: #f0c27b; --code-add: #7fd6a3;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink);
+  font-family: var(--font-body); font-size: var(--step-0); line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: var(--accent); text-underline-offset: 2px; }
+a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+
+.shell {
+  display: grid; grid-template-columns: minmax(0, 1fr); gap: 2.5rem;
+  max-width: 1180px; margin: 0 auto; padding-inline: 20px; padding-block: 2.5rem 5rem;
+}
+@media (min-width: 1000px) { .shell { grid-template-columns: 220px minmax(0, 1fr); gap: 3.5rem; } }
+
+nav.toc { display: none; }
+@media (min-width: 1000px) {
+  nav.toc { display: block; position: sticky; top: calc(env(safe-area-inset-top, 0px) + 2rem); align-self: start; max-height: calc(100vh - 4rem); overflow-y: auto; }
+}
+nav.toc p { font-family: var(--font-display); font-size: var(--step--1); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 0 0 .75rem; }
+nav.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: .1rem; counter-reset: toc; }
+nav.toc li { counter-increment: toc; margin: 0; }
+nav.toc a { display: flex; gap: .6rem; color: var(--muted); text-decoration: none; font-size: .86rem; padding: .22rem .5rem; border-radius: 4px; }
+nav.toc a::before { content: counter(toc, decimal-leading-zero); font-family: var(--font-mono); font-size: .72rem; color: var(--muted); opacity: .6; padding-top: .12rem; }
+nav.toc a:hover { color: var(--ink); background: var(--sunk); }
+
+main { min-width: 0; }
+.col { max-width: 74ch; }
+
+header.hero { padding-bottom: 2rem; border-bottom: 1px solid var(--rule); margin-bottom: 2.5rem; }
+.eyebrow { font-family: var(--font-display); font-size: var(--step--1); letter-spacing: .1em; text-transform: uppercase; color: var(--accent); font-weight: 700; margin: 0 0 .75rem; }
+h1 { font-family: var(--font-display); font-stretch: 85%; font-weight: 800; font-size: clamp(2.1rem, 5vw, var(--step-4)); line-height: 1.04; letter-spacing: -.01em; margin: 0 0 1rem; text-wrap: balance; }
+.lede { font-size: var(--step-1); color: var(--muted); max-width: 62ch; margin: 0 0 1.5rem; }
+.meta { display: flex; flex-wrap: wrap; gap: .5rem 1.5rem; font-size: var(--step--1); color: var(--muted); }
+.meta b { color: var(--ink); font-weight: 600; }
+
+section { padding-block: 1.25rem 2.25rem; scroll-margin-top: 1.5rem; }
+h2 { font-family: var(--font-display); font-stretch: 90%; font-weight: 750; font-size: var(--step-3); line-height: 1.1; margin: 0 0 1rem; text-wrap: balance; display: flex; gap: .75rem; align-items: baseline; }
+h2 .n { font-family: var(--font-mono); font-size: .9rem; color: var(--accent); font-weight: 600; }
+h3 { font-family: var(--font-display); font-weight: 700; font-size: var(--step-1); margin: 1.75rem 0 .5rem; text-wrap: balance; }
+p { margin: 0 0 1rem; }
+ul, ol { margin: 0 0 1rem; padding-left: 1.25rem; }
+li { margin-bottom: .35rem; }
+li::marker { color: var(--muted); }
+code { font-family: var(--font-mono); font-size: .86em; background: var(--sunk); padding: .08em .35em; border-radius: 4px; }
+strong { font-weight: 600; }
+
+.decisions { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr)); gap: 1px; background: var(--rule); border: 1px solid var(--rule); border-radius: 8px; overflow: hidden; margin: 1.25rem 0; }
+.decision { background: var(--surface); padding: 1rem 1.1rem; display: grid; gap: .35rem; align-content: start; }
+.decision .k { font-family: var(--font-display); font-size: .75rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }
+.decision .v { font-weight: 600; line-height: 1.35; }
+.decision .why { font-size: .875rem; color: var(--muted); line-height: 1.45; }
+
+.reqs { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 1rem; margin: 1rem 0 1.5rem; }
+.req { border-top: 3px solid var(--accent); padding-top: .75rem; }
+.req h4 { font-family: var(--font-display); font-size: var(--step-0); margin: 0 0 .35rem; }
+.req p { font-size: .9rem; color: var(--muted); margin: 0; }
+
+.scroll { overflow-x: auto; margin: 1rem 0 1.5rem; border: 1px solid var(--rule); border-radius: 8px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: .9rem; }
+th, td { text-align: left; vertical-align: top; padding: .6rem .85rem; border-bottom: 1px solid var(--rule); }
+th { font-family: var(--font-display); font-weight: 700; font-size: .78rem; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); background: var(--sunk); white-space: nowrap; }
+tr:last-child td { border-bottom: 0; }
+td.num { font-family: var(--font-mono); color: var(--accent); white-space: nowrap; font-variant-numeric: tabular-nums; }
+td.nowrap { white-space: nowrap; }
+
+pre.code { background: var(--code-bg); color: var(--code-fg); font-family: var(--font-mono); font-size: .82rem; line-height: 1.55; padding: 1rem 1.15rem; border-radius: 8px; overflow-x: auto; margin: 1rem 0 1.5rem; }
+pre.code .c { color: var(--code-dim); }
+pre.code .k { color: var(--code-key); }
+pre.code .s { color: var(--code-str); }
+pre.code .add { color: var(--code-add); }
+.filecap { font-family: var(--font-mono); font-size: .75rem; color: var(--muted); margin: 1rem 0 -.6rem; }
+
+.diagram { background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; padding: 1rem; overflow-x: auto; margin: 1rem 0 1.5rem; }
+.diagram pre.mermaid { margin: 0; background: transparent; text-align: center; }
+.caption { font-size: var(--step--1); color: var(--muted); margin-top: -1rem; margin-bottom: 1.5rem; }
+
+.tag { display: inline-block; font-family: var(--font-body); font-size: .72rem; font-weight: 600; letter-spacing: .03em; text-transform: none; padding: .1rem .5rem; border-radius: 999px; background: var(--accent-soft); color: var(--accent); white-space: nowrap; }
+.tag.gate { background: var(--gate-soft); color: var(--gate); }
+.tag.ok { background: var(--ok-soft); color: var(--ok); }
+.tag.warn { background: var(--warn-soft); color: var(--warn); }
+.tag.seq { background: var(--sunk); color: var(--muted); }
+
+.split { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 1rem; margin: 1rem 0 1.5rem; }
+.panel { background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; padding: 1.1rem 1.2rem; min-width: 0; }
+.panel h4 { font-family: var(--font-display); font-size: var(--step-1); margin: 0 0 .2rem; }
+.panel .q { color: var(--muted); font-style: italic; margin: 0 0 .75rem; font-size: .92rem; }
+.panel ul, .panel ol { font-size: .9rem; margin: 0; }
+
+.guards { counter-reset: g; list-style: none; padding: 0; display: grid; gap: .75rem; margin: 1rem 0 1.5rem; }
+.guards li { counter-increment: g; display: grid; grid-template-columns: 2rem minmax(0, 1fr); gap: .75rem; margin: 0; }
+.guards li::before { content: counter(g); font-family: var(--font-display); font-weight: 800; font-size: 1.1rem; color: var(--accent); background: var(--accent-soft); border-radius: 6px; display: grid; place-items: center; height: 2rem; }
+.guards b { display: block; }
+
+.gate-legend { display: flex; flex-wrap: wrap; gap: .5rem 1rem; font-size: var(--step--1); color: var(--muted); margin: -.5rem 0 1rem; }
+
+.callout { border-left: 3px solid var(--gate); background: var(--gate-soft); padding: .8rem 1rem; border-radius: 0 6px 6px 0; margin: 1rem 0 1.5rem; font-size: .95rem; max-width: 80ch; }
+.callout.info { border-left-color: var(--accent); background: var(--accent-soft); }
+
+.road { list-style: none; padding: 0; margin: 1rem 0 1.5rem; display: grid; gap: 0; border-left: 2px solid var(--rule); }
+.road li { position: relative; padding: 0 0 1.25rem 1.5rem; margin: 0; }
+.road li::before { content: ""; position: absolute; left: -7px; top: .45rem; width: 12px; height: 12px; border-radius: 50%; background: var(--surface); border: 2px solid var(--accent); }
+.road li.exit::before { background: var(--gate); border-color: var(--gate); }
+.road li.later::before { border-style: dashed; border-color: var(--muted); }
+.road .m { font-family: var(--font-mono); font-weight: 600; color: var(--accent); margin-right: .5rem; }
+.road li.exit .m { color: var(--gate); }
+.road li.later .m { color: var(--muted); }
+.road .t { font-weight: 600; }
+.road .proves { display: block; font-size: .875rem; color: var(--muted); }
+
+.sev { font-family: var(--font-mono); font-size: .75rem; font-weight: 600; white-space: nowrap; }
+.sev.crit { color: var(--warn); }
+.sev.high { color: var(--gate); }
+.sev.med { color: var(--muted); }
+
+footer { border-top: 1px solid var(--rule); margin-top: 2rem; padding-top: 1.5rem; font-size: var(--step--1); color: var(--muted); }
+footer ul { padding-left: 1.1rem; }
+
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+</style>
+
+<div class="shell">
+  <nav class="toc" aria-label="Contents">
+    <p>Contents</p>
+    <ol>
+      <li><a href="#decisions">Decisions</a></li>
+      <li><a href="#requirements">Requirements</a></li>
+      <li><a href="#overview">System overview</a></li>
+      <li><a href="#vocab">Vocabulary &amp; pack API</a></li>
+      <li><a href="#abi">Action interface</a></li>
+      <li><a href="#execution">Execution model</a></li>
+      <li><a href="#traces">Worked traces</a></li>
+      <li><a href="#overlays">Behavior overlays</a></li>
+      <li><a href="#domains">Domain stress tests</a></li>
+      <li><a href="#perf">Performance &amp; memory</a></li>
+      <li><a href="#verify">Checks</a></li>
+      <li><a href="#repro">Identity &amp; reproducibility</a></li>
+      <li><a href="#dataset">Output layout</a></li>
+      <li><a href="#schema">Event schemas</a></li>
+      <li><a href="#replay">Replay &amp; sinks</a></li>
+      <li><a href="#workflow">Workflow &amp; review</a></li>
+      <li><a href="#layout">Repo layout &amp; size</a></li>
+      <li><a href="#roadmap">Roadmap</a></li>
+      <li><a href="#risks">Non-goals &amp; risks</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <p class="eyebrow">Architecture design · neorisk base</p>
+      <h1>Agentic Event Simulator</h1>
+      <p class="lede">A repo-native library and CLI where an AI agent turns a short business brief into a simulation pack, and the engine turns that pack into large volumes of realistic, checked event data. Owners and shards talk only through immutable, latency-bounded requests; mutable state has exactly one owner; one total order drives both execution and replay; every resource an action needs is reserved at once; and memory is bounded by workers, not actors.</p>
+      <div class="meta">
+        <span><b>Status</b> final design</span>
+        <span><b>Date</b> 2026-10-16</span>
+        <span><b>Builds on</b> 5 research notes in <code>docs/research/</code></span>
+      </div>
+    </header>
+
+    <section id="decisions">
+      <h2><span class="n">01</span>Decisions</h2>
+      <div class="decisions">
+        <div class="decision"><span class="k">Form</span><span class="v">One library (<code>simkit</code>) and one CLI (<code>datagen</code>)</span><span class="why">No services, no UI, nothing over a network. Agents author in the repo; humans review PRs and one report.</span></div>
+        <div class="decision"><span class="k">Vocabulary</span><span class="v">Five primitives: Table, Process, Action, Source, Check</span><span class="why">Ledgers, handoffs, holds, concentration and overlays are standard-library recipes.</span></div>
+        <div class="decision"><span class="k">Boundaries <span class="tag warn">changed</span></span><span class="v">Owners and shards interact only by immutable request/response with declared minimum latency</span><span class="why">No mutable state crosses a boundary. Joint constraints use holds: the owner holds its side, the shard decides its side, the owner commits or releases. Stages and shard "members" are gone.</span></div>
+        <div class="decision"><span class="k">Scheduling <span class="tag warn">changed</span></span><span class="v">Run ahead, suspend on request, process shards up to a safe horizon</span><span class="why">Owners run in parallel until they send a request; shards process every request below the earliest possible future request. Deterministic, deadlock-free, no global time scan.</span></div>
+        <div class="decision"><span class="k">Order <span class="tag warn">changed</span></span><span class="v">One total order for execution and replay</span><span class="why">Lamport clocks are assigned at commit from a partition-wide clock, so export order reproduces execution order, including same-time priorities.</span></div>
+        <div class="decision"><span class="k">Action interface <span class="tag warn">changed</span></span><span class="v">Validate → reserve every resource → commit</span><span class="why">Records, created rows, timers and messages are reserved in one vector. Retries replay the same random draws. Fan-out uses fixed sub-steps, never buffer-sized ones.</span></div>
+        <div class="decision"><span class="k">Memory <span class="tag warn">changed</span></span><span class="v">Bounded by workers and frontier steps, not by actors</span><span class="why">A fixed slab pool per worker, a per-step output cap, and hard caps enforced at runtime. Estimates and caps are reported separately.</span></div>
+        <div class="decision"><span class="k">Performance</span><span class="v">10⁸ ordinary events in ≤ 10 min warm on 16 cores / 64 GB</span><span class="why">Gated by committed, executable benchmark workloads in S1 and S2.</span></div>
+      </div>
+    </section>
+
+    <section id="requirements">
+      <h2><span class="n">02</span>Requirements</h2>
+      <div class="reqs">
+        <div class="req"><h4>Fast</h4><p>10⁷ events end to end in about a minute; 10⁸ ordinary events in ≤ 10 minutes warm on one 16-core, 64 GB machine. Shard-heavy workloads have their own budget.</p></div>
+        <div class="req"><h4>Simple</h4><p>One library, one CLI, three core commands. Nothing calls anything over a network.</p></div>
+        <div class="req"><h4>Expressive</h4><p>E-commerce, payments, exchanges, L1 chains and social networks fit five primitives. A distinct user group is an overlay, not a fork.</p></div>
+        <div class="req"><h4>Easy to modify</h4><p>Adding an event, behavior or user group is a small, local change reviewed in an ordinary PR.</p></div>
+        <div class="req"><h4>Easy to verify</h4><p>Declared domain laws are checked on every row; realism is measured on weighted, unit-appropriate samples.</p></div>
+        <div class="req"><h4>Easy to understand</h4><p>One compact report: counts, linkages, transitions, concentration, rejections, cohorts, interference, checks.</p></div>
+      </div>
+    </section>
+
+    <section id="overview">
+      <h2><span class="n">03</span>System overview</h2>
+      <div class="col">
+        <p>A pack is a Python module that loads into a small <strong>normalized plan</strong>. The engine advances simulated time in <strong>frontier steps</strong>. Within a step it alternates parallel owner execution and ordered shard processing in rounds until nothing below the step's end remains. It then merges the step's output into canonical order and streams it through cross-owner enrichment, checks and the Parquet writer.</p>
+      </div>
+      <div class="diagram">
+<pre class="mermaid">
+flowchart LR
+  BR["Brief"] --> AG["Authoring agent"]
+  AG --> PK["Pack + overlays"]
+  AG --> EXP["expectations.yaml"]
+  PK -->|load| PL[("Normalized plan")]
+  PL --> SRC["Sources"]
+  SRC --> RD["Frontier step:<br/>rounds of owners + shards"]
+  RD --> MG["Merge step output<br/>canonical order"]
+  MG --> EN["Cross-owner enrichment<br/>+ checks"]
+  EXP --> EN
+  EN --> DS[("Parquet + manifest")]
+  EN --> RP["report.html"]
+  DS --> AD["Legacy adapter"] --> BE["bench"]
+</pre>
+      </div>
+      <p class="caption">Everything runs in one Python process. Numba and Polars thread pools are capped so their sum never exceeds the core count.</p>
+    </section>
+
+    <section id="vocab">
+      <h2><span class="n">04</span>Vocabulary &amp; pack API</h2>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Primitive</th><th>Meaning</th><th>Absorbs</th></tr></thead>
+          <tbody>
+            <tr><td><b>Table</b></td><td>Typed records with identity and references. Mutable tables hold state; append-only tables hold events and postings.</td><td>Entities, attributes, edges, accounts, tokens, events, postings</td></tr>
+            <tr><td><b>Process</b></td><td>State-bearing behavior that lives in exactly one partition: an owner (user, payment, campaign) or a shard (order book, chain, bonus pool).</td><td>Lifecycles, journeys, flows, matching engines, pools</td></tr>
+            <tr><td><b>Action</b></td><td>An all-or-nothing step over its partition's state (<a href="#abi">05</a>).</td><td>Ledger operations, holds, handoffs, matching steps</td></tr>
+            <tr><td><b>Source</b></td><td>Populations, arrivals, exogenous timelines, graph generators, cohorts.</td><td>Clocks, distributions, scenario populations</td></tr>
+            <tr><td><b>Check</b></td><td>A declared domain law or statistical expectation evaluated on output.</td><td>Acceptance criteria, concentration targets, legality</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Two ways to define a process</h3>
+      <div class="split">
+        <div class="panel">
+          <h4>Handwritten kernel <span class="tag">S1</span></h4>
+          <p class="q">Any behavior; typed config</p>
+          <ul>
+            <li>A Numba function using the ABI in <a href="#abi">05</a>, parameterized by a typed config dataclass</li>
+            <li>S1's shopper journey and KYC; permanently matching, the L1 envelope, cascades</li>
+          </ul>
+        </div>
+        <div class="panel">
+          <h4>State machine <span class="tag seq">M3</span></h4>
+          <p class="q">Common behavior; no code</p>
+          <ul>
+            <li>A table-driven interpreter with closed semantics, built after two handwritten kernels show the common shape</li>
+            <li>Calls actions through a generated, inspectable dispatch module</li>
+          </ul>
+        </div>
+      </div>
+
+      <h3>State machine operations (M3)</h3>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Operation</th><th>Semantics</th><th>Edge cases decided</th></tr></thead>
+          <tbody>
+            <tr><td><code>branch</code></td><td>On entering a state, pick one outcome by probability, then wait its delay</td><td>Unpicked mass is an explicit <code>otherwise</code></td></tr>
+            <tr><td><code>timer</code></td><td>Fires after a delay unless the state is left first</td><td>Leaving bumps a generation counter; stale timers drop when popped</td></tr>
+            <tr><td><code>repeat</code></td><td>Self-transition with its own delay and maximum count</td><td>Stops at the maximum, or when <code>until</code> becomes true</td></tr>
+            <tr><td><code>until … then</code></td><td>Conditional termination evaluated after each committed action</td><td>Conditions are typed helpers, never expressions</td></tr>
+            <tr><td><code>spawn</code></td><td>Create child processes (same owner) or new owners</td><td>Counts declared; depth and admissions bounded (<a href="#execution">06</a>)</td></tr>
+            <tr><td><code>join</code></td><td>Wait for a named message from each expected child, with timeout</td><td>Zero children fires immediately. Duplicates are suppressed by a per-parent bitset of child ordinals, bounded by max children. Late arrivals follow a declared <code>late="ignore" | "count"</code></td></tr>
+            <tr><td><code>request</code></td><td>Send an immutable request to a shard and wait for its response</td><td>Timeout and a rejection branch are mandatory</td></tr>
+            <tr><td><code>then</code></td><td>Sequential composition: each part is its own atomic action</td><td>If the second rejects, the first stays committed and the second's fallback runs. An atomic composite is written as one kernel</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="filecap">examples/payments/specs/pack.py (state machine form, M3; simplified)</p>
+<pre class="code"><span class="k">def</span> define(p: Pack, execution_owner=<span class="s">"payment_id"</span>) -> None:
+    payment = p.table(<span class="s">"payment"</span>, cols={<span class="s">"amount"</span>: i64, <span class="s">"captured"</span>: i64, <span class="s">"refunded"</span>: i64,
+                                       <span class="s">"refund_hold"</span>: i64, <span class="s">"status"</span>: cat})
+    fees    = p.accumulator(<span class="s">"platform_fees"</span>, i64)        <span class="c"># additive; no decision reads it</span>
+
+    pay = p.machine(<span class="s">"payment"</span>, owner=execution_owner, initial=<span class="s">"authorized"</span>,
+                    start=p.on_created(<span class="s">"payment"</span>))
+    pay.state(<span class="s">"authorized"</span>,
+        branch={<span class="s">"captured"</span>: (<span class="s">0.93</span>, dist.lognormal(median_s=<span class="s">3600</span>), std.capture(fee_to=fees)),
+                <span class="s">"otherwise"</span>: (<span class="s">0.07</span>, None, None)},
+        timer={<span class="s">"expired"</span>: <span class="s">"7d"</span>})                            <span class="c"># earliest wins; leaving cancels</span>
+    pay.state(<span class="s">"captured"</span>,
+        repeat=(dist.exp(mean_days=<span class="s">9</span>), <span class="s">0.04</span>, std.refund(budget=std.remaining(<span class="s">"captured"</span>, <span class="s">"refunded"</span>))),
+        max_repeats=<span class="s">3</span>, spawn={<span class="s">"dispute"</span>: (<span class="s">0.006</span>, dist.gamma(mean_days=<span class="s">21</span>))})
+
+    p.check(<span class="s">"chk.refund_budget"</span>, law.sum_le(<span class="s">"refund.amount"</span>, <span class="s">"payment.captured"</span>, by=<span class="s">"payment_id"</span>),
+            required=True)</pre>
+    </section>
+
+    <section id="abi">
+      <h2><span class="n">05</span>Action interface</h2>
+      <div class="col">
+        <p>Every action, built-in or custom, follows one native calling convention: validate, reserve every resource it might use, then commit. Nothing after a successful reserve can fail.</p>
+      </div>
+      <p class="filecap">examples/payments/specs/kernels.py (simplified)</p>
+<pre class="code">@kernel(state=<span class="s">"payment"</span>, max=Res(records={<span class="s">"refund"</span>: <span class="s">1</span>}, timers=<span class="s">1</span>))
+<span class="k">def</span> partial_refund(ctx, s, cmd, out):
+    left = s.captured - s.refunded - s.refund_hold      <span class="c"># s: this partition's row view</span>
+    <span class="k">if</span> left <= <span class="s">0</span>:
+        <span class="k">return</span> reject(R_NOTHING_REFUNDABLE)             <span class="c"># 1. validate: no writes</span>
+    <span class="k">if not</span> out.reserve(records={<span class="s">"refund"</span>: <span class="s">1</span>}, timers=<span class="s">1</span>):
+        <span class="k">return</span> RETRY                                   <span class="c"># 2. runtime swaps slabs, re-invokes</span>
+    amt = std.checked_min(left, ctx.rng.lognormal_minor(site=<span class="s">1</span>, median=<span class="s">2500</span>))
+    s.refunded = std.checked_add(s.refunded, amt)      <span class="c"># 3. commit: cannot fail</span>
+    out.emit_refund(ctx.t, payment=ctx.self_id, amount=amt)
+    out.timer(ctx.t + DAY, T_SETTLE_REFUND)
+    <span class="k">return</span> COMMIT</pre>
+
+      <h3>The contract</h3>
+      <ol class="guards">
+        <li><div><b>Reservation vector.</b><code>reserve</code> takes counts for every resource: records per event table, created rows per table, timer-heap entries, outbound requests and messages. Each kernel declares its maxima (<code>max=Res(…)</code>); the runtime checks the vector against the worker's slabs and pools in one call. <code>reject</code> and <code>RETRY</code> are legal only before the first write; debug mode snapshots the row and fails the run otherwise.</div></li>
+        <li><div><b>Retries are invisible.</b><code>RETRY</code> means the runtime swaps in a fresh slab and re-invokes the same command. Random draws are keyed by <code>(seed, instance, action, occurrence, site, k)</code>, where <code>k</code> counts draws at one site within an invocation and <code>occurrence</code> advances only on commit or reject, so a retry replays identical draws.</div></li>
+        <li><div><b>Fixed fan-out sub-steps.</b>An action whose fan-out is unbounded declares a constant sub-step size (for example, 64 fills). It processes at most that many, stores a cursor, and schedules a same-time continuation at the top priority, so no other command at that timestamp interleaves. Results never depend on buffer capacity. All-or-nothing variants (fill-or-kill) run a read-only preflight before the first fill.</div></li>
+        <li><div><b>Composition.</b><code>a.then(b)</code> is two atomic actions. An atomic composite is one kernel.</div></li>
+        <li><div><b>Typed generated emitters.</b><code>out.emit_&lt;event&gt;</code>, <code>out.create_&lt;table&gt;</code>, <code>out.timer</code> and <code>out.request</code> are generated per schema and write into slabs. <code>create</code> returns a provisional handle usable immediately within the step (<a href="#repro">12</a>).</div></li>
+        <li><div><b>Restricted views; trusted code.</b>Kernels get a row view of their own partition's state and read-only arrays for shared inputs; Numba refuses to compile writes to read-only arrays. Kernels are still trusted, reviewed code. A lint flags mutable module globals. Debug mode runs compiled with bounds checking, and arithmetic on amounts uses checked helpers, so overflow behaves the same compiled and uncompiled.</div></li>
+        <li><div><b>Delivery and lateness.</b>A timer or message addressed to a retired instance is detected by slot generation, dropped, and counted as <code>late_messages</code> in the manifest.</div></li>
+      </ol>
+      <div class="callout info"><strong>S1 exit test, native ABI proof:</strong> a compiled kernel that emits several record types, creates rows, schedules timers and requests, and rejects. It runs under forced exhaustion of each resource in turn, compiled with checked mode and uncompiled, and must produce identical logical output.</div>
+    </section>
+
+    <section id="execution">
+      <h2><span class="n">06</span>Execution model</h2>
+
+      <h3>Partitions and boundaries</h3>
+      <ul class="col">
+        <li><strong>Every piece of mutable state has exactly one partition.</strong> An owner partition holds one user, payment or campaign with all its processes. A shard partition holds one order book, chain, inventory group or bonus pool with its own processes.</li>
+        <li><strong>Partitions interact only through immutable messages.</strong> An owner sends a <strong>request</strong> to a shard and waits for a <strong>response</strong>. The payload is copied (cart lines, amounts, a limit value), never aliased.</li>
+        <li><strong>Every boundary declares a minimum latency δ &gt; 0</strong>: the platform's response time, for example 200 ms for checkout. Responses arrive at <code>t_request + latency</code>, with latency ≥ δ sampled from a declared distribution. Shard-emitted records (order accepted, sale recorded) carry the shard's true decision time.</li>
+        <li><strong>Joint constraints use holds.</strong> If a decision needs both owner and shard state (spend from a wallet and take a unit of stock), the owner first places a hold on its own state, the shard decides on its own, and the owner then commits or releases the hold. No decision ever reads stale or shared mutable state.</li>
+        <li><strong>Multi-shard decisions use reservations, never merging.</strong> A cart with three SKUs in three inventory shards sends three reserve requests, joins on the responses, then commits all or releases all. Reservations carry a TTL, so a shard frees units if the commit never arrives. Shards stay small; nothing spreads transitively.</li>
+        <li><strong>Owner-to-owner messages</strong> (an inviter credited when an invitee qualifies) are allowed only when the target doesn't act on them within the step: they're delivered at the next step boundary or later. Anything tighter means the two belong to one owner (a campaign, a household).</li>
+        <li><strong>Creating an owner</strong> (checkout creates a payment) is a creation message. The new owner starts at its creation time in the next round of the same step.</li>
+      </ul>
+
+      <h3>Rounds within a frontier step</h3>
+      <div class="diagram">
+<pre class="mermaid">
+flowchart TD
+  A["Step starts: T to T+step"] --> B["Owners run ahead in parallel<br/>until step end or first request"]
+  B --> C["Shards process requests with<br/>time below horizon H, in canonical order"]
+  C --> D["Deliver responses and creations<br/>resume or start owners"]
+  D --> E{"Anything left<br/>below T+step?"}
+  E -->|yes| B
+  E -->|no| F["Seal step: merge, enrich, check, write"]
+</pre>
+      </div>
+      <ul class="col">
+        <li><strong>Run ahead.</strong> Each runnable owner executes its events in order until it reaches the step end or issues a request, at which point the whole owner suspends.</li>
+        <li><strong>Safe horizon.</strong> <code>H = min(step end, min over suspended owners of (their request time + δ))</code>. A suspended owner can't act before its response arrives, which is at least δ after its request, and an owner that reached the step end issues nothing more in this step. So every request with time &lt; H is already known. The shard processes all of them in canonical order.</li>
+        <li><strong>Progress.</strong> Because δ &gt; 0, the earliest outstanding request is always below H, so every round makes progress. There are no blocking waits and no cross-thread calls.</li>
+        <li><strong>Cost.</strong> Rounds per step ≈ the longest chain of request/response hops any owner makes within the step, usually a handful. Small rounds run single-threaded to avoid parallel launch overhead.</li>
+        <li><strong>Calendar queue.</strong> Partitions are kept in time buckets by next event time, so a step visits only partitions with work in it. No step scans all owners.</li>
+        <li><strong>Spawn bounds.</strong> Each process declares <code>max_spawn_depth</code> (default 3), and each step has a <code>max_admissions</code> limit. Exceeding either fails the run with a diagnostic naming the process.</li>
+        <li><strong>Step closure.</strong> A step seals only when no owner is runnable below the step end, no request below the step end is pending, and no creation is unadmitted.</li>
+        <li><strong>Shard-internal processes.</strong> Matching, block building and pool accounting run inside their shard, which executes its own heap in canonical order. Requests enter that heap as commands.</li>
+      </ul>
+
+      <h3>One total order</h3>
+      <ul class="col">
+        <li><strong>Execution:</strong> each partition pops commands by <code>(time, priority, cause_lamport, seq)</code>. Scheduled times must be ≥ the current time; validation and runtime enforce it.</li>
+        <li><strong>Lamport clocks are assigned at commit</strong>: <code>lamport = max(partition_clock, cause_lamport) + 1</code>, where <code>partition_clock</code> is one counter for the whole partition, shards included. So within a partition, commit order and Lamport order are identical, even when a high-priority command runs first.</li>
+        <li><strong>Replay:</strong> the canonical key is <code>(event_time, lamport, partition_id, seq)</code>. Within a partition it reproduces execution order. Across partitions, a response always has a larger clock and a later time than its request. Independent partitions are ordered by the deterministic <code>partition_id</code>.</li>
+        <li><strong>Same-time precedence</strong> is declared as command priority before execution: messages before timers by default, continuations first. KYC declares redemption at exactly the expiry instant as expired.</li>
+        <li>The S1 tests include priority inversion (a high-priority credit and a low-priority debit at the same time) and equal-key commands from different partitions.</li>
+      </ul>
+
+      <h3>Run boundaries</h3>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Mode</th><th>What is fixed</th><th>Behavior at the horizon</th></tr></thead>
+          <tbody>
+            <tr><td><code>time</code> (default)</td><td>Simulated span</td><td>Warm-up generated but not exported; opening snapshot written; open cases censored; optional drain</td></tr>
+            <tr><td><code>population</code></td><td>Number of actors</td><td>Each case runs to its natural end or a maximum step count</td></tr>
+            <tr><td>Event count</td><td>Never truncated</td><td>Reached approximately by arrival rates</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="traces">
+      <h2><span class="n">07</span>Worked traces</h2>
+      <h3>A recurring shopper buying two SKUs</h3>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Time</th><th>Partition</th><th>What happens</th></tr></thead>
+          <tbody>
+            <tr><td class="num">10:00:00.0</td><td>user U (owner)</td><td>Checks own spending limit, places a hold of 80 on it, sends <code>reserve(sku=A)</code> and <code>reserve(sku=B)</code> (immutable payloads), suspends. Join of 2, timeout 30 s</td></tr>
+            <tr><td class="num">round</td><td>shards A, B</td><td>H ≥ 10:00:00.2. A grants and holds one unit (TTL 10 min). B rejects: out of stock. Both emit their decision records at 10:00:00.0</td></tr>
+            <tr><td class="num">10:00:00.3</td><td>user U</td><td>Responses arrive (latency 0.3 s). B rejected, so U releases its spending hold, sends <code>release(A)</code>, emits <code>checkout_failed(out_of_stock)</code>, and returns to browsing</td></tr>
+            <tr><td class="num">10:02:10.0</td><td>user U</td><td>Picks a substitute SKU C, holds, sends <code>reserve(C)</code>, suspends</td></tr>
+            <tr><td class="num">10:02:10.4</td><td>user U</td><td>C granted: commits the spending hold, sends <code>commit(C)</code>, creates payment owner P (starts next round), emits <code>checkout_succeeded</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="caption">No mutable state crosses a partition, there are no backward stage edges, and the shopper keeps one continuous journey. Three rounds cover the whole sequence within one frontier step.</p>
+
+      <h3>A bounty-hunter campaign against a capped bonus pool</h3>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Time</th><th>Partition</th><th>What happens</th></tr></thead>
+          <tbody>
+            <tr><td class="num">day 12 09:14</td><td>campaign C (owner)</td><td>Zombie Z7 places its first order above the minimum; the campaign's zombie process sends <code>claim(invitee=Z7, amount=20)</code> to the pool shard and the owner suspends</td></tr>
+            <tr><td class="num">round</td><td>pool shard</td><td>Processes all claims below H in canonical order, from all campaigns and normal users. Grants Z7's claim and decrements the remaining cap</td></tr>
+            <tr><td class="num">09:14 + 0.5 s</td><td>campaign C</td><td>Response: granted. Emits <code>bonus_paid(Z7)</code>. Join counter decrements; the hunter process continues</td></tr>
+            <tr><td class="num">day 12 16:40</td><td>campaign C</td><td>Z11's claim is rejected (cap exhausted). Z11 leaves; label outcome = <code>attempted</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="caption">Campaigns run in parallel; the pool shard handles only claims. Because claims go through the pool's own heap, the cap is exact.</p>
+    </section>
+
+    <section id="overlays">
+      <h2><span class="n">08</span>Behavior overlays</h2>
+      <div class="col">
+        <p>An overlay adds a configurable group of actors with distinct behavior to an existing pack, without editing it, and makes them emit the same event schema as everyone else.</p>
+      </div>
+      <p class="filecap">examples/ecommerce/specs/overlays/bounty_hunters.py</p>
+<pre class="code"><span class="k">def</span> apply(o: Overlay, size=<span class="s">300</span>, zombies=dist.negbinom(mean=<span class="s">12</span>, disp=<span class="s">0.5</span>),
+          share_device=<span class="s">0.7</span>, arrive=dist.burst(start=<span class="s">"day 10"</span>, span=<span class="s">"30d"</span>),
+          qualify_timeout=<span class="s">"14d"</span>):
+    camp = o.cohort(<span class="s">"bounty_hunter"</span>, table=<span class="s">"user"</span>, size=size, arrivals=arrive,
+                    execution_owner=<span class="s">"campaign_id"</span>,      <span class="c"># hunter + zombies = one owner</span>
+                    suppress=[<span class="s">"shopper_journey"</span>])
+
+    h = o.machine(<span class="s">"hunter"</span>, members=camp, initial=<span class="s">"new"</span>)
+    h.state(<span class="s">"new"</span>, branch={<span class="s">"inviting"</span>: (<span class="s">1.0</span>, dist.lognormal(median_s=<span class="s">900</span>),
+             o.base.signup.then(std.spawn_members(<span class="s">"zombie"</span>, n=zombies, via=o.base.invite,
+                 refs={<span class="s">"device"</span>: std.share_with_parent(share_device)})))})
+    h.state(<span class="s">"inviting"</span>, join={<span class="s">"collecting"</span>: (<span class="s">"zombie_paid"</span>, <span class="s">"all_spawned"</span>)},
+            timer={<span class="s">"collecting"</span>: qualify_timeout}, late=<span class="s">"count"</span>)
+    h.state(<span class="s">"collecting"</span>, repeat=(dist.exp(mean_s=<span class="s">60</span>), <span class="s">1.0</span>, o.base.claim_inviter_bonus),
+            until=std.no_unclaimed(<span class="s">"zombie_paid"</span>), then=<span class="s">"gone"</span>)
+
+    z = o.machine(<span class="s">"zombie"</span>, members=camp.spawned(<span class="s">"zombie"</span>), initial=<span class="s">"invited"</span>)
+    z.state(<span class="s">"invited"</span>, branch={<span class="s">"ordered"</span>: (<span class="s">0.85</span>, dist.lognormal(median_s=<span class="s">600</span>),
+             o.base.signup_via_invite.then(o.base.first_order.with_params(
+                 amount=std.near(<span class="s">"referral.min_order"</span>, above=<span class="s">0.05</span>)))),
+             <span class="s">"otherwise"</span>: (<span class="s">0.15</span>, None, None)})
+    z.state(<span class="s">"ordered"</span>, request={<span class="s">"paid"</span>: o.base.claim_invitee_bonus},  <span class="c"># pool shard if capped</span>
+            on_reject=<span class="s">"gone"</span>)
+    z.state(<span class="s">"paid"</span>, branch={<span class="s">"gone"</span>: (<span class="s">1.0</span>, dist.exp(mean_s=<span class="s">300</span>), std.send_parent(<span class="s">"zombie_paid"</span>))})
+
+    o.label(camp, role={<span class="s">"hunter"</span>, <span class="s">"zombie"</span>}, outcome=(<span class="s">"attempted"</span>, <span class="s">"qualified"</span>, <span class="s">"paid"</span>),
+            available_at=std.after(<span class="s">"paid"</span>, dist.gamma(mean_days=<span class="s">30</span>)))</pre>
+<pre class="code">datagen run examples/ecommerce --profile full --overlay bounty_hunters --set bounty_hunters.size=500</pre>
+
+      <h3>The overlay contract</h3>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Need</th><th>Mechanism</th></tr></thead>
+          <tbody>
+            <tr><td>Configurable size</td><td><code>cohort(size=… | share=… | rate=…)</code> with arrivals; member IDs come from their own deterministic namespace</td></tr>
+            <tr><td>Same event schema</td><td>Overlays emit observable rows only through base-pack actions and <code>std</code> helpers</td></tr>
+            <tr><td>Different behavior</td><td>Cohort members run overlay processes; <code>suppress</code> disables named base processes for them</td></tr>
+            <tr><td>Base pack extension points</td><td>Named actions, named processes, a parameterized <code>execution_owner</code>, and reference hooks; <code>validate</code> checks them against the resolved plan</td></tr>
+            <tr><td>Waiting on children</td><td><code>join</code> with timeout, duplicate suppression and a declared late policy (<a href="#vocab">04</a>)</td></tr>
+            <tr><td>No cross-owner cycle</td><td>Hunter and zombies share the campaign owner; campaigns run in parallel</td></tr>
+            <tr><td>Bonus pool</td><td>Uncapped: <code>accumulate</code>. Capped: a pool shard reached by request; normal users' claims use the same shard</td></tr>
+            <tr><td>Labels</td><td>Hidden <code>labels/</code> rows: campaign, role, outcome, <code>label_available_at</code></td></tr>
+            <tr><td>Regression</td><td>If the overlay shares no decision-relevant state with the base (validation decides from access declarations), base rows must be identical with and without it. If it does (a capped pool, inventory), CI asserts instead that base users' exogenous draws (arrivals, attributes, journey choices before first contact) are identical, laws and conservation hold, and the report shows interference: base outcomes that changed, for example normal claims rejected because hunters drained the pool</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="domains">
+      <h2><span class="n">09</span>Domain stress tests</h2>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Case</th><th>Partitions</th><th>Kernels / rules</th><th>Declared limits</th></tr></thead>
+          <tbody>
+            <tr><td><b>Order book</b></td><td>Shard per symbol owns the book, resting orders and isolated-margin sub-balances. Traders are owners sending order requests (δ = order-entry latency)</td><td><code>match</code>: price/time priority, fixed 64-fill sub-steps at top priority, FOK preflight, IOC/GTC, reservation release; <code>cancel</code></td><td>Cross-margin moves account margin into one global shard. Fidelity levels: <code>matched</code> or <code>external_liquidity</code></td></tr>
+            <tr><td><b>L1 with reverts</b></td><td>One global chain shard holds account state and builds blocks; wallets are owners submitting transactions by request</td><td><code>tx_envelope</code>: validity first (nonce matches, balance covers max fee); invalid dropped. Included: nonce+1, gas charged; revert discards transfers and logs</td><td>No consensus, mempool or EVM. Declared quantum with checked int64, or exact 128-bit pairs</td></tr>
+            <tr><td><b>Social graph, reposts</b></td><td>Graph built per epoch as CSR read input; cascades owned by root post</td><td>Degree-corrected generator with reciprocity; <code>cascade</code> with parent IDs, delays, per-cascade dedup</td><td>Event-driven follow-back and cross-cascade dedup out of v1</td></tr>
+            <tr><td><b>Auth, capture, refund, dispute</b></td><td>Owner = payment; dispute is a child process</td><td>Capture races expiry. Refund holds, then commits or releases, against the remaining amount. Refunds rejected while a dispute is open. Repeated idempotency keys return the first result</td><td>Settlement totals accumulate; netting out of scope</td></tr>
+            <tr><td><b>Cross-device KYC</b></td><td>Owner = user</td><td><code>std.handoff</code>: token bound to flow and session; redemption at exactly expiry counts as expired; a second redemption emits <code>already_redeemed</code></td><td>Shared devices are references, never shared mutable state</td></tr>
+            <tr><td><b>Multi-SKU checkout</b></td><td>Owner = user; inventory shard per SKU group</td><td>Reserve in each shard, join, commit all or release all; TTL frees units</td><td>See the trace in <a href="#traces">07</a></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="perf">
+      <h2><span class="n">10</span>Performance &amp; memory</h2>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Workload</th><th>Target rate</th><th>10⁷ events</th><th>10⁸ events</th></tr></thead>
+          <tbody>
+            <tr><td>Owner-dominated, end to end (warm)</td><td class="num">≥ 167k/s</td><td>≤ 60 s</td><td>≤ 10 min</td></tr>
+            <tr><td>Shard-dominated, end to end</td><td class="num">80–300k/s</td><td>0.5–2 min</td><td>6–21 min</td></tr>
+            <tr><td>Generation only, owner kernels</td><td class="num">0.5–3M/s</td><td>3–20 s</td><td>0.5–3.3 min</td></tr>
+            <tr><td>Merge, enrichment, checks, export (each)</td><td class="num">0.25–2M/s</td><td>5–40 s</td><td>1–7 min</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="caption">Planning estimates. At the slow end of every stage, sequential work sums to about 19 min per 10⁸ events, so the 10-minute gate requires stage rates near the middle of their ranges. The run stats report which stage misses.</p>
+
+      <h3>Benchmark workloads</h3>
+      <ul class="col">
+        <li>Workloads are committed, runnable files: <code>benchmarks/s1.toml</code>, <code>s2.toml</code> and <code>s2_pool.toml</code>. Each fixes seed, actors, operation mix as shares of proposals, arrival schedules, live-owner curve, timer populations, postings per event, payload columns, skew, and overlay settings.</li>
+        <li><strong>S1:</strong> 2M users, 90 days, 10⁷ exported events, 12 property columns (~120 B/row), one typed change group, Pareto activity α = 1.2, 8% of proposals touching inventory shards.</li>
+        <li><strong>S2:</strong> 20M users, 30M payments, 10⁸ exported events, 2.5 postings per payment event, 90-day dispute timers, one hot SKU group taking 5% of checkouts.</li>
+        <li><strong>S2-pool:</strong> a global capped bonus pool that every referral claim reaches, with the bounty-hunter overlay at 1% of users.</li>
+        <li><strong>Accounting:</strong> exported events, histories, cases, snapshots, postings and labels are counted separately. Timing runs from engine start with a warm JIT cache to <code>manifest.json</code> written; cold compile is timed separately. Numba plus Polars threads are capped at 16.</li>
+        <li><strong>Also verified:</strong> identical logical records across 1, 4 and 16 threads, two slab sizes and two step lengths.</li>
+      </ul>
+
+      <h3>Memory model</h3>
+      <div class="col">
+        <p>Every item has a <strong>hard cap</strong> enforced at runtime and an <strong>expected size</strong> estimated by <code>validate</code>. A run whose caps exceed the machine budget is refused up front; a run that hits a cap fails with the item named. v1 has no spilling.</p>
+      </div>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Item</th><th>Hard cap</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td>Output slabs</td><td>workers × slabs per worker × slab bytes (e.g. 16 × 4 × 8 MB)</td><td>Independent of actor count; full slabs move to the step's collection</td></tr>
+            <tr><td>Step output</td><td>Per-step row and byte cap (e.g. 4M rows)</td><td>Step length adapts deterministically from the previous step's row count, targeting 25% of the cap</td></tr>
+            <tr><td>Merge and write working space</td><td>2 × step output</td><td>Sort to canonical order, Arrow conversion</td></tr>
+            <tr><td>Live partition state</td><td>declared max live partitions × row bytes (published byte layouts)</td><td>Rows freed at retirement</td></tr>
+            <tr><td>Timer heaps</td><td>physical entries, cancelled ones included, × 24 B</td><td>Compacted when stale entries exceed half the heap</td></tr>
+            <tr><td>Requests and inboxes</td><td>per-step message count × payload bytes</td><td>Payload size is declared per request type</td></tr>
+            <tr><td>Fan-out bursts</td><td>sub-step size × record bytes per partition</td><td>Fixed by the sub-step contract</td></tr>
+            <tr><td>Read inputs</td><td>Counted as resident even when memory-mapped</td><td>Graphs per epoch</td></tr>
+            <tr><td>Checker and reducer state</td><td>keyed aggregates × bytes per key, by dense index</td><td>Dropped with the case</td></tr>
+            <tr><td>Scorer and annotations</td><td>Fixed model size plus one batch</td><td>Fitted once on a sample</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Enrichment in the right order</h3>
+      <ul class="col">
+        <li>Owner-local values (static attributes, the owner's own history) attach inside kernels by gather or per-reader cursor.</li>
+        <li><strong>Cross-owner features</strong> (device-level rolling counts across users) run only after a step seals, over the step's output merged into canonical order. Reducers carry ring-buffer state across steps. A feature for event <i>e</i> counts only events with <code>event_time</code> strictly earlier than <i>e</i>, so simultaneous events never leak. The merge sort is part of the benchmark.</li>
+        <li>Fast measurements (battery, signal) are sampled at observation time. The scorer is fitted once on a sample, frozen, and applied per step.</li>
+      </ul>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Current code</th><th>Change</th></tr></thead>
+          <tbody>
+            <tr><td><code>attributes.sample_timeline</code></td><td>Incremental per step; observation-time sampling for fast attributes</td></tr>
+            <tr><td><code>entities.attach_asof</code>, <code>features.rolling</code></td><td>Gathers and cursors in kernels; cross-owner reducers on merged step output</td></tr>
+            <tr><td><code>scorer.XGBScorer.score</code>, calibration</td><td>Sample fit, frozen model, per-step predict, capped threads</td></tr>
+            <tr><td><code>entities.map_ids</code>, <code>export.export</code></td><td>Dense int64 indices and public permuted IDs (<a href="#repro">12</a>)</td></tr>
+            <tr><td><code>scenarios/fraud.generate</code></td><td>Replaced by the e-commerce pack plus the bounty-hunter overlay (M3)</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="verify">
+      <h2><span class="n">11</span>Checks</h2>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Group</th><th>Input and order</th><th>State</th><th>Examples</th></tr></thead>
+          <tbody>
+            <tr><td><b>Structural</b></td><td>Each sealed step</td><td>Uniqueness holds by construction (dense indices); referential integrity uses a bitset over dense indices (10⁸ ≈ 12.5 MB)</td><td>Types, required values, intervals, ordering keys, leakage</td></tr>
+            <tr><td><b>Per-partition laws</b></td><td>Each partition's records in execution order</td><td>Compiled reducers by dense index, initialized from the opening snapshot, retired with the case</td><td>Lifecycle legality, refunds ≤ captured, holds resolved, balances never negative, nonce sequence</td></tr>
+            <tr><td><b>Cross-partition laws</b></td><td>Merged step stream in canonical order</td><td>Keyed reducers carried across steps</td><td>Every reservation committed or released by TTL; pool grants ≤ cap; request/response pairing</td></tr>
+            <tr><td><b>Statistical</b></td><td>Samples or exact streams</td><td>See rules below</td><td>Funnels, gaps, degree, concentration, cohort shares</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <ul class="col">
+        <li><strong>Cases</strong> are sampled by owner hash, stratified so rare cohorts get a minimum count, including censored cases. Estimates use <strong>inverse-probability weights</strong> per stratum, and the censoring rate is reported next to every case metric.</li>
+        <li><strong>Concentration</strong> is exact from streaming per-entity aggregates. <strong>Graph metrics</strong> use exact degrees plus node or edge sampling. <strong>Campaigns</strong> are sampled whole.</li>
+        <li>Failures cite <code>(partition_id, seq)</code> and action ID; the report links a small extract.</li>
+        <li>Reference implementations for matching, the L1 envelope and holds run against the real kernels on fixtures in CI. Mutation tests and forced-path fixtures run in CI. Statistics carry minimum sample sizes and case-level confidence intervals on held-out seeds.</li>
+      </ul>
+    </section>
+
+    <section id="repro">
+      <h2><span class="n">12</span>Identity &amp; reproducibility</h2>
+      <h3>Identity</h3>
+      <ol class="guards">
+        <li><div><b>Provisional handles within a step.</b><code>create</code> returns <code>(partition, local ordinal)</code>, flagged provisional, usable immediately for messages and references in the same step.</div></li>
+        <li><div><b>Dense indices at step close.</b>New rows of each table get dense indices by prefix sum over partitions in <code>partition_id</code> order, then local ordinal. In-step references are remapped before writing. Dense indices back all arrays, bitsets and reducers.</div></li>
+        <li><div><b>Public IDs by keyed permutation.</b>Exported IDs are a seeded Feistel permutation of <code>(table, dense index)</code> into 63 bits, so they fit a signed BIGINT. They are collision-free by construction and look random.</div></li>
+        <li><div><b>Slots and generations.</b>Live state rows are slots, distinct from entity identity. Each slot carries a generation that is bumped on reuse, so timers or messages for a retired instance are detected and dropped.</div></li>
+      </ol>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Guarantee</th><th>Mechanism</th><th>Test</th></tr></thead>
+          <tbody>
+            <tr><td><b>Identical replay</b></td><td>Pack and engine revisions, <code>uv.lock</code>, seed and config in <code>manifest.json</code>; file boundaries follow frontier steps, which are deterministic</td><td>Byte-identical data files and manifest under a fixed writer config; <code>run_stats.json</code> excluded</td></tr>
+            <tr><td><b>Thread, slab and step invariance</b></td><td>Retry-stable RNG; deterministic IDs; canonical processing in shards; merges by canonical key</td><td>1, 4, 16 threads × two slab sizes × two step lengths; identical logical records</td></tr>
+            <tr><td><b>Edit stability</b> (best effort)</td><td>Draws keyed by action and site</td><td>An unrelated action leaves other rows identical; overlays follow the regression rule (<a href="#overlays">08</a>)</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="dataset">
+      <h2><span class="n">13</span>Output layout</h2>
+      <p>A run writes a <strong>directory of Parquet files</strong>, not one file. Each event type gets its own typed table, split into one file per frontier step. Every file is sorted by the canonical key, so any set of files merges back into the exact global order with a streaming k-way merge.</p>
+<pre class="code">examples/ecommerce/out/full-s42/
+  manifest.json                 <span class="c"># schema version, revisions, seed, config, counts per table, checks, file list + sha256</span>
+  run_stats.json                <span class="c"># timings, rates, peak RSS (not part of replay identity)</span>
+  schema/
+    schema.json                 <span class="c"># canonical schema: every table, column, type, nullability, refs, docs</span>
+  _index/steps.parquet          <span class="c"># one row per step: step, t_start, t_end, first/last canonical key, rows per table</span>
+  events/
+    order_placed/date=2026-03-01/step-000412.parquet
+    order_placed/date=2026-03-01/step-000413.parquet
+    payment_captured/date=2026-03-01/step-000412.parquet
+    …
+  entities/&lt;table&gt;/part-00000.parquet   <span class="c"># public id, created_at, origin, static columns</span>
+  history/&lt;group&gt;/   cases/   snapshots/   <span class="c"># change groups, process cases, opening state</span>
+  labels/part-*.parquet          <span class="c"># target id, final_label, label_available_at, campaign_id, role, outcome</span>
+  golden/   relations/   postings/         <span class="c"># optional, kept apart from events (no label leakage)</span></pre>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Choice</th><th>Why</th></tr></thead>
+          <tbody>
+            <tr><td><b>One table per event type</b></td><td>Each type has its own typed columns: no sparse wide table, no JSON payload column, and a direct mapping to one SQL table and one Kafka schema each (<a href="#schema">14</a>)</td></tr>
+            <tr><td><b>One file per step</b></td><td>The writer streams each sealed step straight to disk, so memory stays bounded by the step cap. Step boundaries are deterministic, so files are byte-identical across runs. Workers write different types in parallel</td></tr>
+            <tr><td><b><code>date=</code> directories</b></td><td>Hive-style partitioning that DuckDB, Polars, Spark, Trino and BigQuery external tables read natively, with date pruning</td></tr>
+            <tr><td><b>Step index</b></td><td>Lets replay jump to the first, last or any time range of events by reading one small file instead of scanning the dataset</td></tr>
+            <tr><td><b>Writer settings fixed</b></td><td>zstd level 3, 128k-row groups, dictionary encoding for categories, statistics on <code>event_time</code> and IDs. Pinned in the manifest because they affect bytes</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <ul class="col">
+        <li><strong>Common columns</strong>, first in every event table: <code>event_id</code>, <code>event_type</code>, <code>event_time</code> (timestamp µs UTC), <code>lamport</code>, <code>partition_id</code>, <code>seq</code>, <code>cause_id</code>, <code>action_id</code>. Type-specific columns follow.</li>
+        <li><strong>Sizes:</strong> S1's workload has 10⁷ events at about 120 B/row raw, roughly 0.4 GB on disk. S2's has 10⁸ events, about 4–5 GB, with steps of about 1M rows giving files of 10–60 MB per type.</li>
+        <li><strong>One file when you want it:</strong> <code>datagen export examples/ecommerce/out/full-s42 --single-file all.parquet</code> compacts everything into one canonically ordered file. It uses a unified schema: common columns, plus every type's columns, nullable. Good for small samples and notebooks; not the default, because it serializes the write.</li>
+        <li>Amounts are int64 at a declared per-asset quantum, exported as <code>decimal128(38,0)</code> base units where needed. <strong>Legacy adapter:</strong> <code>datagen export --legacy-fraud</code> writes today's <code>events.parquet</code> / <code>golden.parquet</code> / <code>meta.json</code> for <code>bench</code>.</li>
+      </ul>
+    </section>
+
+    <section id="schema">
+      <h2><span class="n">14</span>Event schemas</h2>
+      <p>The pack's declarations are the only source of truth. The engine turns them into <code>schema/schema.json</code>, and every other format is generated from that file. The same generator gives the same output with or without data: from a pack before a run, or from a finished dataset.</p>
+      <p class="filecap">examples/ecommerce/specs/pack.py</p>
+<pre class="code">order_placed = p.event(<span class="s">"order_placed"</span>, owner=<span class="s">"user"</span>, doc=<span class="s">"A shopper submits a cart"</span>, cols={
+    <span class="s">"order_id"</span>:    ref(<span class="s">"order"</span>),
+    <span class="s">"user_id"</span>:     ref(<span class="s">"user"</span>),
+    <span class="s">"sku_id"</span>:      ref(<span class="s">"sku"</span>),
+    <span class="s">"quantity"</span>:    i32(min=<span class="s">1</span>),
+    <span class="s">"amount"</span>:      amount(asset=<span class="s">"USD"</span>),               <span class="c"># int64 minor units</span>
+    <span class="s">"channel"</span>:     cat(<span class="s">"web"</span>, <span class="s">"app"</span>, <span class="s">"api"</span>),
+    <span class="s">"coupon_code"</span>: opt(text),
+})</pre>
+<pre class="code">$ datagen schema examples/ecommerce --overlay bounty_hunters --format sql --dialect postgres
+$ datagen schema examples/ecommerce/out/full-s42 --format avro --out schemas/       <span class="c"># from a dataset</span>
+$ datagen schema examples/ecommerce --format sql --tables order_placed,payment_authorized</pre>
+      <p class="filecap">generated: postgres</p>
+<pre class="code"><span class="c">-- generated by datagen schema · pack ecommerce @ 3f9c2a1 · schema_version 7</span>
+<span class="k">CREATE TABLE</span> order_placed (
+    event_id      BIGINT       <span class="k">NOT NULL PRIMARY KEY</span>,
+    event_type    TEXT         <span class="k">NOT NULL CHECK</span> (event_type = <span class="s">'order_placed'</span>),
+    event_time    TIMESTAMPTZ  <span class="k">NOT NULL</span>,
+    lamport       BIGINT       <span class="k">NOT NULL</span>,
+    partition_id  BIGINT       <span class="k">NOT NULL</span>,
+    seq           INTEGER      <span class="k">NOT NULL</span>,
+    cause_id      BIGINT,
+    action_id     SMALLINT     <span class="k">NOT NULL</span>,
+    order_id      BIGINT       <span class="k">NOT NULL</span>,
+    user_id       BIGINT       <span class="k">NOT NULL</span>,
+    sku_id        BIGINT       <span class="k">NOT NULL</span>,
+    quantity      INTEGER      <span class="k">NOT NULL CHECK</span> (quantity &gt;= 1),
+    amount        NUMERIC(38,0) <span class="k">NOT NULL</span>,   <span class="c">-- USD minor units (cents)</span>
+    channel       TEXT         <span class="k">NOT NULL CHECK</span> (channel <span class="k">IN</span> (<span class="s">'web'</span>, <span class="s">'app'</span>, <span class="s">'api'</span>)),
+    coupon_code   TEXT
+);
+<span class="k">COMMENT ON TABLE</span> order_placed <span class="k">IS</span> <span class="s">'A shopper submits a cart'</span>;
+<span class="k">CREATE INDEX</span> order_placed_time <span class="k">ON</span> order_placed (event_time, lamport);</pre>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Logical type</th><th>Arrow / Parquet</th><th>Postgres</th><th>DuckDB</th><th>BigQuery</th><th>ClickHouse</th></tr></thead>
+          <tbody>
+            <tr><td><code>ref</code>, ids</td><td>int64</td><td>BIGINT</td><td>BIGINT</td><td>INT64</td><td>Int64</td></tr>
+            <tr><td><code>i32</code> / <code>i64</code></td><td>int32 / int64</td><td>INTEGER / BIGINT</td><td>INTEGER / BIGINT</td><td>INT64</td><td>Int32 / Int64</td></tr>
+            <tr><td><code>amount</code></td><td>int64 (decimal128(38,0) on export)</td><td>NUMERIC(38,0)</td><td>DECIMAL(38,0)</td><td>BIGNUMERIC</td><td>Decimal(38,0)</td></tr>
+            <tr><td><code>timestamp</code></td><td>timestamp[µs, UTC]</td><td>TIMESTAMPTZ</td><td>TIMESTAMPTZ</td><td>TIMESTAMP</td><td>DateTime64(6,'UTC')</td></tr>
+            <tr><td><code>cat(…)</code></td><td>dictionary&lt;int16, string&gt;</td><td>TEXT + CHECK</td><td>ENUM</td><td>STRING</td><td>LowCardinality(String)</td></tr>
+            <tr><td><code>text</code>, <code>bool</code>, <code>f64</code></td><td>string, bool, float64</td><td>TEXT, BOOLEAN, DOUBLE PRECISION</td><td>VARCHAR, BOOLEAN, DOUBLE</td><td>STRING, BOOL, FLOAT64</td><td>String, Bool, Float64</td></tr>
+            <tr><td><code>opt(x)</code></td><td>nullable x</td><td colspan="4">column without <code>NOT NULL</code> (ClickHouse: <code>Nullable(x)</code>)</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <ul class="col">
+        <li><strong>Formats:</strong> <code>sql</code> (dialects: <code>postgres</code>, <code>duckdb</code>, <code>bigquery</code>, <code>snowflake</code>, <code>clickhouse</code>, <code>spark</code>), <code>avro</code> and <code>json-schema</code> (for Kafka and APIs), <code>arrow</code>, and <code>markdown</code> (a data dictionary for humans and agents). One file per table, or one file with <code>--single-file</code>.</li>
+        <li><strong>Also generated:</strong> entity, label and history tables; <code>--with-fks</code> adds foreign keys from <code>ref</code> columns; <code>--load</code> adds dialect load statements (<code>COPY … FROM</code>, <code>read_parquet</code>, <code>LOAD DATA</code>) pointing at the dataset files; <code>--unified-view</code> adds an <code>all_events</code> view over the common columns.</li>
+        <li><strong>IDs fit BIGINT:</strong> public IDs are a Feistel permutation into 63 bits, so they are always positive signed int64 in every dialect.</li>
+        <li><strong>Versioning:</strong> <code>schema_version</code> in <code>schema.json</code> and the manifest goes up on any column change. <code>datagen schema --diff A B</code> lists added, removed and retyped columns and fails on breaking changes unless the version was bumped. Overlays cannot add columns (<a href="#overlays">08</a>), so adding an overlay never changes the schema.</li>
+      </ul>
+    </section>
+
+    <section id="replay">
+      <h2><span class="n">15</span>Replay &amp; sinks</h2>
+      <p><code>datagen replay</code> reads a finished dataset and streams a chosen slice of events, in canonical order, to one or more sinks. It never reruns the simulation; it only reads Parquet. It is part of the same CLI, and sinks are small classes in <code>io/sinks/</code>, so there is still no service to run.</p>
+<pre class="code">$ datagen replay examples/ecommerce/out/full-s42 --first 100                       <span class="c"># default sink: stdout, one JSON object per line</span>
+$ datagen replay examples/ecommerce/out/full-s42 --last 100 --sink file:last100.json?format=json-array
+$ datagen replay examples/ecommerce/out/full-s42 --first 10000 \
+      --sink kafka://localhost:9092/ecom.{event_type}?key=user_id&amp;format=avro
+$ datagen replay examples/ecommerce/out/full-s42 --from 2026-03-01 --to 2026-03-02 \
+      --types order_placed,payment_captured --pace x3600 --rebase now \
+      --sink kafka://broker:9092/ecom.events --sink stdout:?format=table   <span class="c"># tee to two sinks</span></pre>
+      <h3>Selecting events</h3>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Option</th><th>Meaning</th><th>How it is read</th></tr></thead>
+          <tbody>
+            <tr><td><code>--first N</code></td><td>The first N events in canonical order</td><td>Reads steps forward from the index until N rows; stops early</td></tr>
+            <tr><td><code>--last N</code></td><td>The last N events</td><td>Sums row counts backward in the index, reads only those steps, emits the tail in forward order</td></tr>
+            <tr><td><code>--from T --to T</code></td><td>Events with <code>from ≤ event_time &lt; to</code></td><td>Index picks overlapping steps; row-group statistics skip the rest</td></tr>
+            <tr><td><code>--types a,b</code></td><td>Only these event types</td><td>Only those type directories are opened</td></tr>
+            <tr><td><code>--where "amount&gt;10000"</code></td><td>Column filters: comparisons joined by <code>and</code></td><td>Pushed down to Parquet. Not a general expression language</td></tr>
+            <tr><td><code>--owners 0.01</code> or <code>--owner-ids F</code></td><td>Every event of a 1% owner sample, or of listed owners</td><td>Hash of the owner ID, so each owner's history stays complete</td></tr>
+            <tr><td><code>--resume-from KEY</code></td><td>Start after a canonical key</td><td>Used by sinks that checkpoint (below)</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Filters combine first, then <code>--first</code> / <code>--last</code> apply to what is left. Order is always canonical, <code>(event_time, lamport, partition_id, seq)</code>, so a replay of the whole dataset equals the order the engine executed.</p>
+
+      <h3>Sinks</h3>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Sink URI</th><th>Formats</th><th>Behavior</th></tr></thead>
+          <tbody>
+            <tr><td><code>stdout</code></td><td><code>jsonl</code> (default), <code>table</code>, <code>csv</code></td><td>Pipes cleanly to <code>jq</code> and <code>head</code>; a closed pipe ends the replay without error</td></tr>
+            <tr><td><code>file:PATH</code></td><td><code>jsonl</code>, <code>json-array</code>, <code>csv</code>, <code>parquet</code></td><td>Written to <code>PATH.tmp</code> and renamed when complete. <code>json-array</code> writes one valid JSON list, streamed. <code>--rotate 1GB</code> splits large outputs</td></tr>
+            <tr><td><code>kafka://BROKERS/TOPIC</code></td><td><code>json</code> (default), <code>avro</code></td><td>Topic may be a template such as <code>ecom.{event_type}</code>. Key defaults to <code>partition_id</code>, so each owner's events stay ordered in one Kafka partition. Headers carry <code>event_type</code>, <code>schema_version</code>, <code>event_id</code>. Avro uses <code>--schema-registry URL</code> or embedded schemas. Idempotent producer, <code>acks=all</code>, zstd</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <ul class="col">
+        <li><strong>Message shape:</strong> one flat object per event: the common columns, then that type's columns. IDs and amounts are JSON strings by default, because 63-bit integers exceed JavaScript's safe range and amounts must not lose precision; <code>--numbers</code> emits them as numbers. Timestamps are RFC 3339 with microseconds.<br><code>{"event_id":"5823061146093315521","event_type":"order_placed","event_time":"2026-03-01T09:14:02.381220Z","lamport":"88213","user_id":"…","quantity":2,"amount":"4599","channel":"app","coupon_code":null}</code></li>
+        <li><strong>Pacing:</strong> <code>--pace asap</code> (default) sends as fast as the sink takes; <code>--pace realtime</code> or <code>x60</code> maps simulated gaps to wall-clock gaps; <code>--rate 5000/s</code> caps throughput. <code>--rebase now</code> shifts every timestamp so the first event is at the current time, keeping all gaps; useful when consumers or Kafka retention expect fresh data.</li>
+        <li><strong>Labels:</strong> excluded by default. <code>--with-labels</code> adds a <code>label_available</code> event for each label at its <code>label_available_at</code>, so a downstream system sees labels arrive late, as in production. Golden columns are never replayed.</li>
+        <li><strong>Delivery and resume:</strong> at-least-once. Kafka and file sinks write <code>.replay-state.json</code> with the last acknowledged canonical key; <code>--resume</code> continues from it. Consumers can deduplicate by <code>event_id</code>. <code>--dry-run</code> prints the plan, row count and estimated duration without sending.</li>
+        <li><strong>Exit report:</strong> rows read and sent per sink, rate, first and last canonical key, and errors. Exit code is non-zero if any sink failed.</li>
+      </ul>
+
+      <h3>How it works</h3>
+      <div class="diagram">
+<pre class="mermaid">
+flowchart LR
+  I["_index/steps.parquet"] --> P["Plan<br/>steps and types to read"]
+  P --> R["Read step files<br/>filters pushed down"]
+  R --> M["k-way merge<br/>on canonical key"]
+  M --> T["Apply first / last,<br/>pacing, rebase"]
+  T --> E["Encode once<br/>per format"]
+  E --> S1["stdout"]
+  E --> S2["file"]
+  E --> S3["Kafka"]
+</pre>
+      </div>
+<pre class="code"><span class="k">class</span> Sink(Protocol):                       <span class="c"># io/sinks/base.py — the whole extension surface</span>
+    <span class="k">def</span> open(self, schema: Schema, opts: SinkOptions) -> None: ...
+    <span class="k">def</span> write(self, batch: pa.RecordBatch) -> None: ...   <span class="c"># canonical order, ≤ 64k rows</span>
+    <span class="k">def</span> checkpoint(self) -> CanonicalKey | None: ...        <span class="c"># last key known delivered</span>
+    <span class="k">def</span> close(self) -> SinkReport: ...</pre>
+      <ul class="col">
+        <li>The reader works in Arrow record batches end to end; memory is bounded by one step per open type plus the batch size, whatever the replay length.</li>
+        <li>A new sink (S3, Postgres <code>COPY</code>, Pub/Sub, HTTP) is one class registered by URI scheme. Kafka support is an optional extra, <code>neorisk-simkit[kafka]</code> (<code>confluent-kafka</code>), so the base install stays small.</li>
+        <li><strong>Throughput (planning estimates):</strong> stdout/file JSON 0.5–1M events/s; Parquet file several million/s; local Kafka 100–300k msgs/s with batching (<code>linger.ms=20</code>, 1 MB batches), bounded by the broker. <code>--pace</code> and <code>--rate</code> slow it down, never speed it up.</li>
+      </ul>
+    </section>
+
+    <section id="workflow">
+      <h2><span class="n">16</span>Workflow &amp; review</h2>
+      <div class="diagram">
+<pre class="mermaid">
+flowchart TD
+  A["Brief"] --> B["Agent drafts expectations.yaml + pack or overlay"]
+  B --> V["datagen validate<br/>plan · partitions · latencies · memory caps"]
+  V -->|fail| B
+  V --> R["datagen run --profile sample, then check<br/>report.html at commit SHA"]
+  R -->|fail| B
+  R --> PR{{"PR review<br/>second reviewer for expectations and laws"}}
+  PR -->|changes| B
+  PR --> P["Merge, then production runs"]
+</pre>
+      </div>
+      <ul class="col">
+        <li>A one-line CODEOWNERS rule requires someone other than the author to approve changes to <code>expectations.yaml</code> or <code>checks/domains/</code>.</li>
+        <li>CI generates the report for the PR head SHA. Required checks fail CI if missing, inconclusive or unanchored.</li>
+        <li><code>validate</code> reports structural contradictions only: cross-partition writes, δ = 0 boundaries, unbounded spawns, caps over budget. It never claims stochastic feasibility. <code>sweep</code> is deferred.</li>
+        <li>Agent tooling: <code>examples/AGENTS.md</code>, one authoring guide, and five worked projects with overlays in <code>examples/</code>.</li>
+      </ul>
+      <h3>Projects</h3>
+      <p>A pack lives in a <strong>project folder</strong>: the reviewed spec plus three folders that <code>datagen</code> fills. Every command takes the folder. The repo ships five worked projects in <code>examples/</code>: <code>ecommerce</code>, <code>payments</code>, <code>crypto_exchange</code>, <code>layer1</code> and <code>social</code>.</p>
+<pre class="code">examples/ecommerce/
+  README.md            <span class="c"># model, overlays, commands</span>
+  datagen.toml         <span class="c"># run profiles (sample, full, abuse), budget, writer, overlay settings, replay presets</span>
+  specs/               <span class="c"># the only folder an agent edits; reviewed in the PR</span>
+    brief.md  expectations.yaml  pack.py  kernels.py  overlays/
+  out/                 <span class="c"># out/&lt;profile&gt;-s&lt;seed&gt;[+overlays]/   datasets (13)          git-ignored</span>
+  reports/             <span class="c"># reports/&lt;run&gt;/report.html, checks.json, extracts       git-ignored</span>
+  logs/                <span class="c"># logs/&lt;run&gt;-&lt;utc&gt;.jsonl  steps, rounds, rates, caps       git-ignored</span></pre>
+      <ul class="col">
+        <li><code>datagen run examples/ecommerce --profile sample</code> merges <code>[defaults]</code>, the profile, then <code>--set</code> overrides; the result is recorded in <code>manifest.json</code>.</li>
+        <li>Runs are deterministic, so a run folder is never overwritten without <code>--force</code>. Overlays are part of the run name: <code>full-s42+bounty_hunters</code>.</li>
+        <li><code>benchmarks/*.toml</code> point at a project and a profile, so the benchmark workloads are ordinary runs.</li>
+      </ul>
+    </section>
+
+    <section id="layout">
+      <h2><span class="n">17</span>Repo layout &amp; size</h2>
+<pre class="code">libs/simkit/src/neorisk_simkit/
+  spec/       <span class="c"># Pack, Overlay, types, plan, validate, memory caps</span>
+  engine/     <span class="c"># ABI, slabs, calendar queue, rounds, shards, requests, identity, rng</span>
+  machine/    <span class="c"># state machine + dispatch generator (M3)</span>
+  std/        <span class="c"># ledger, holds, reservations, handoff, spawn/join, refs, graph, timelines</span>
+  checks/     <span class="c"># structural, per-partition and cross-partition reducers, statistics</span>
+    domains/  <span class="c"># laws from public specs (second reviewer)</span>
+  io/         <span class="c"># merge, writer, manifest, step index, legacy adapter</span>
+    schema/   <span class="c"># schema.json, SQL dialects, Avro, JSON Schema, markdown</span>
+    replay/   <span class="c"># planner, reader, k-way merge, pacing</span>
+    sinks/    <span class="c"># stdout, file, kafka (optional extra)</span>
+  report/
+apps/datagen/ <span class="c"># CLI: validate · run · check · export · schema · replay</span>
+benchmarks/   <span class="c"># s1.toml · s2.toml · s2_pool.toml</span>
+examples/<span class="c">      # one datagen project per business (see 16)</span>
+  ecommerce/  payments/  crypto_exchange/  layer1/  social/</pre>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Module</th><th>Estimated production LOC</th><th>Milestone</th></tr></thead>
+          <tbody>
+            <tr><td>spec + validate + memory caps</td><td class="num">900–1,300</td><td>S1</td></tr>
+            <tr><td>engine: ABI, generated emitters, slabs, calendar queue, identity, rng</td><td class="num">2,000–3,000</td><td>S1</td></tr>
+            <tr><td>engine: rounds, shards, requests, reservations, spawn bounds</td><td class="num">1,000–1,500</td><td>S2</td></tr>
+            <tr><td>machine + dispatch generator (all operations in 05)</td><td class="num">1,000–1,500</td><td>M3</td></tr>
+            <tr><td>std</td><td class="num">1,200–1,800</td><td>S1–M3</td></tr>
+            <tr><td>checks</td><td class="num">1,000–1,400</td><td>S1–S2</td></tr>
+            <tr><td>io, merge, report, CLI, legacy adapter</td><td class="num">900–1,300</td><td>S1–M3</td></tr>
+            <tr><td>schema generators, replay, sinks</td><td class="num">700–1,000</td><td>S1–M4</td></tr>
+            <tr><td><b>Total (hypothesis)</b></td><td class="num"><b>9–13k</b></td><td>20–32 person-weeks, plus 4–6k lines of tests</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="col">
+        <p>This is a planning hypothesis, recalibrated after S1 from measured effort on the engine core. New dependencies: <code>numba</code>; <code>pyarrow</code> for the writer and replay; optional <code>confluent-kafka</code> for the Kafka sink.</p>
+      </div>
+    </section>
+
+    <section id="roadmap">
+      <h2><span class="n">18</span>Roadmap</h2>
+      <ol class="road">
+        <li><span class="m">S1</span><span class="t">Owner slice: e-commerce users with sessions, carts, single-SKU checkout against inventory shards, and cross-device KYC as handwritten kernels; <code>bench</code> feature allowlist; output layout with step index; <code>datagen schema</code> (Postgres, DuckDB); <code>replay</code> to stdout and file</span><span class="proves">Exit tests: native ABI proof under forced exhaustion of each resource; priority-inversion and equal-key ordering; thread/slab/step invariance; the recurring-shopper trace as a fixture; memory caps enforced. <b>Gate: <code>benchmarks/s1.toml</code> ≤ 60 s warm, peak RSS ≤ 16 GB.</b></span></li>
+        <li><span class="m">S2</span><span class="t">Shard slice: payments with refunds and disputes, multi-SKU reservations, a hot SKU group, a capped bonus pool</span><span class="proves">Rounds at scale, reservations with TTL, cross-partition laws, reference kernel tests, mutation tests. <b>Gates: <code>s2.toml</code> ≤ 10 min warm; <code>s2_pool.toml</code> shard path ≥ 80k events/s.</b></span></li>
+        <li><span class="m">M3</span><span class="t">State machine; e-commerce pack at parity through the legacy adapter; bounty-hunter overlay replaces the hand-coded fraud scenario</span><span class="proves">All machine operations, the overlay contract, the campaign trace, the interference report</span></li>
+        <li><span class="m">M4</span><span class="t">Payments with label delay; <code>bench</code> generic loader and maturity-aware splits; Kafka sink, pacing, <code>--with-labels</code>, remaining SQL dialects and Avro</span><span class="proves">Label maturity end to end, including late labels in a replayed stream</span></li>
+        <li><span class="m">M5</span><span class="t">Vocabulary trial: the order book, L1 envelope and SNS cascade from <code>examples/</code> run at small scale</span><span class="proves">All five domains fit before broad implementation</span></li>
+        <li class="exit"><span class="m">Exit</span><span class="t">A fresh agent session authors a payments variant and a new overlay from a brief with no engine changes; checks pass, review holds, gates still hold</span><span class="proves">Agent-native, fast and simple at once</span></li>
+        <li class="later"><span class="m">Later</span><span class="t">Production CEX, L1 and SNS packs; <code>sweep</code>; spilling; broader graph recipes</span><span class="proves">Breadth on a proven core</span></li>
+      </ol>
+    </section>
+
+    <section id="risks">
+      <h2><span class="n">19</span>Non-goals &amp; risks</h2>
+      <div class="split">
+        <div class="panel">
+          <h4>Not in v1</h4>
+          <ul>
+            <li>Services, UI, distributed execution, spilling</li>
+            <li>Live LLM agents at runtime</li>
+            <li>Expression languages; a general compiler</li>
+            <li>Zero-latency cross-partition interaction</li>
+            <li><code>sweep</code> and approval machinery</li>
+            <li>EVM, consensus, mempool; settlement netting</li>
+            <li>Ingestion delay and retroactive corrections (except label availability)</li>
+          </ul>
+        </div>
+        <div class="panel">
+          <h4>Remaining risks</h4>
+          <ul>
+            <li><b>Throughput is unmeasured.</b> Mitigation: committed workloads and per-item run stats from S1.</li>
+            <li><b>Minimum latency is a modeling choice.</b> Responses always take at least δ. Mitigation: δ is a realistic platform latency, and same-partition interactions remain instantaneous.</li>
+            <li><b>Hot shards serialize.</b> A global pool or chain runs one loop. Mitigation: the S2-pool workload measures it; shard sizes are reported.</li>
+            <li><b>Many rounds per step</b> if owners chain many requests. Mitigation: small rounds run single-threaded; rounds per step are reported.</li>
+            <li><b>Numba constrains kernels and kernels are trusted.</b> Mitigation: std covers common actions; checked compiled debug mode; review.</li>
+            <li><b>The size estimate may still be low.</b> Mitigation: recalibrate after S1 before committing to M3+.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      <p>Research behind this design, in <code>docs/research/</code>: <code>event-based-systems.md</code>, <code>event-simulation-techniques.md</code>, <code>event-simulation-programmability-and-agents.md</code>, <code>agent-authored-event-simulator.md</code>, <code>synthetic-data-inspection-and-validation.md</code>.</p>
+      <p>Throughput figures are planning estimates, not benchmarks.</p>
+    </footer>
+  </main>
+</div>

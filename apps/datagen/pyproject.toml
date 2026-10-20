@@ -1,10 +1,10 @@
 [project]
 name = "datagen"
 version = "0.1.0"
-description = "Synthetic tabular event data generator (fraud scenario first)"
+description = "Agentic event simulator CLI: validate, run, check, replay and export projects"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = ["neorisk-simkit", "numpy>=1.26", "polars>=1.0", "xgboost>=2.0"]
+dependencies = ["neorisk-simkit", "numpy>=1.26", "polars>=1.0"]
 
 [project.scripts]
 datagen = "datagen.cli:main"

@@ -6,6 +6,21 @@ Model benchmark runner for synthetic event datasets. Two commands:
   self-contained HTML report (plus optional JSON).
 - `bench run`: the original two-model raw-column baseline (and the `--oracle` ceiling).
 
+## Data
+
+The benchmark data is a run of the e-commerce simulation (`neorisk_simkit.ecommerce`, with bounty-hunter rings), exported
+in the fraud dataset's shape (D87):
+
+```
+uv run datagen run --users 5000 --days 60 --out data/legacy-run
+uv run datagen export data/legacy-run --legacy-fraud --out data/fraud
+```
+
+## Tests
+
+The tests that need data share one session fixture, `legacy_dir` (`tests/legacy_fixture.py`,
+registered with `pytest_plugins = ["legacy_fixture"]`): a 2,000-user, 30-day simulation exported for bench, built in about a second.
+
 ## `bench compare`
 
 ```
@@ -105,9 +120,19 @@ The split is chronological (60/20/20, ties broken by `event_id`). Raw features a
 non-`*_id` columns with NaN/null filled with -1. If the training split has a single class,
 each model still reports NaN metric rows for `valid` and `test`.
 
+## Feature allowlist
+
+`meta.json["feature_allowlist"]`, when present, is an upper bound on the raw model inputs: it
+must name existing event columns and none may be `label`, a golden column, an `*_id` column or
+an engine column (`lamport, partition_id, seq, cause_id, action_id`); otherwise loading fails.
+Without it the default is every numeric column except those. `datagen export --legacy-fraud`
+writes the allowlist equal to the default raw set (the numeric event columns other than `label`
+and `*_id`).
+
 ## About `--oracle`
 
 `--oracle` trains XGBoost on the raw numeric columns plus all golden columns **except `score`**
 (the probability the labels were sampled from; it stays in `golden.parquet` but is not a
 feature). The resulting model is a golden-feature ceiling, not a realistic upper bound for
-engineered features.
+engineered features. In the legacy export `score` equals `label`, and `actor_role` and
+`invitee_is_zombie` are the overlay's ground truth, so the oracle is close to a label leak.

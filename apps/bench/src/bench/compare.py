@@ -53,7 +53,7 @@ def run_compare(
     t_start = time.perf_counter()
     events, meta = load_events(data_dir)  # guards: label present, no golden leakage
     t0 = time.perf_counter()
-    feats = build_features(events)
+    feats = build_features(events, meta["_allowlist"])
     names = feature_names(feats)
     feature_seconds = time.perf_counter() - t0
     _log(verbose, f"features: {len(names)} columns in {feature_seconds:.1f}s")
@@ -146,7 +146,7 @@ def run_compare(
             "ann_shap_rows": ann_shap_rows,
             "generated_at": datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC"),
             "dataset_meta": {
-                **{k: meta.get(k) for k in ("scenario", "seed", "n_events", "bad_rate")},
+                **{k: meta.get(k) for k in ("scenario", "seed", "n_events", "bad_rate", "source")},
                 "config": meta.get("config"),
                 "observed": _observed(events),
             },

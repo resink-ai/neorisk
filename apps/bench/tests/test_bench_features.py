@@ -5,13 +5,13 @@ import polars as pl
 import pytest
 
 from bench.features import IDENTIFIER_LIKE, build_features, feature_names
-from datagen.config import FraudConfig
-from datagen.scenarios.fraud import generate
+
+pytest_plugins = ["legacy_fixture"]
 
 
 @pytest.fixture(scope="module")
-def events():
-    return generate(FraudConfig(n_events=5000, seed=5, span_days=40)).events
+def events(legacy_dir):
+    return pl.read_parquet(legacy_dir / "events.parquet")
 
 
 @pytest.fixture(scope="module")
@@ -64,9 +64,13 @@ def test_velocity_matches_bruteforce(events, feats):
 
 def test_inviter_side_counts_invites_before_event(events, feats):
     inv = events.filter(pl.col("event_type") == 1).drop_nulls("inviter_id")
-    hunter = inv.group_by("inviter_id").len().sort("len", descending=True)["inviter_id"][0]
+    # the busiest inviter that has rows of its own: a hunter cashes out only after its join,
+    # which can fall past the end of the run (the old generator's top inviter always had rows)
+    acting = inv.filter(pl.col("inviter_id").is_in(events["user_id"].implode()))
+    hunter = acting.group_by("inviter_id").len().sort("len", descending=True)["inviter_id"][0]
     mine = events.filter(pl.col("user_id") == hunter).select("event_id", "event_time")
     got = mine.join(feats.select("event_id", "obs_invr_bonus_count_30d"), on="event_id")
+    assert got.height > 0 and got["obs_invr_bonus_count_30d"].null_count() == 0
     assert got["obs_invr_bonus_count_30d"].max() > 0
 
 
@@ -86,7 +90,7 @@ def test_invitee_side_inviter_activity_is_point_in_time(events, feats):
         on="event_id",
     )
     by_user = {k: v for (k,), v in got.partition_by("user_id", as_dict=True).items()}
-    checked_after = nonzero = 0
+    checked_before = checked_after = nonzero = 0
     for r in inv_rows:
         t_inv = r["event_time"]
         lo = t_inv - timedelta(days=30)
@@ -101,13 +105,15 @@ def test_invitee_side_inviter_activity_is_point_in_time(events, feats):
             if e["event_time"] < t_inv:
                 assert e["obs_inv_bonus_count_30d"] == 0
                 assert e["obs_inv_bonus_sum_30d"] == 0
+                checked_before += 1
             elif e["event_time"] > t_inv:
                 assert e["obs_inv_bonus_count_30d"] == exp_count
                 assert e["obs_inv_bonus_sum_30d"] == pytest.approx(exp_sum)
                 checked_after += 1
                 nonzero += exp_count > 0
-    # generated invitees' invite is always their first event, so 'before' is pinned below
-    assert checked_after > 0 and nonzero > 0
+    # the old generator's "an invitee's invite is its first event" no longer holds: the bonus
+    # (the invite row) is paid after the invitee's qualifying order, so both sides are checked
+    assert checked_before > 0 and checked_after > 0 and nonzero > 0
 
 
 def test_window_semantics_on_hand_built_frame():

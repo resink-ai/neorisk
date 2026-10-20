@@ -1,100 +1,105 @@
-"""Report section describing how the benchmark data was generated (datagen fraud scenario)."""
+"""Report section describing how the benchmark data was generated: the e-commerce
+pack plus the `bounty_hunters` overlay, exported by `datagen export --legacy-fraud` (D87)."""
 
 import html as _html
 
 _esc = _html.escape
 
-# Mirrors datagen.scenarios.fraud (attributes, planted behaviours, scorer weights); the config
-# values and observed counts come from the run's dataset_meta, so they always match the data.
+# Mirrors the e-commerce pack, the bounty_hunters overlay and the legacy adapter
+# (`neorisk_simkit.legacy`); the run's identity, overlay parameters and counts come from
+# the run's dataset_meta (`meta["source"]` and `meta`), so they always match the data.
 _USER = [
-    ("age_bucket", "low (10)", "static"),
-    ("currency", "low (5)", "static"),
+    ("age_bucket", "low (5)", "static"),
+    ("segment", "low (5)", "static"),
     ("state", "low (50)", "slow"),
-    ("street", "high", "slow"),
-    ("zip", "high", "slow"),
-    ("segment", "low (8)", "slow"),
 ]
-_DEVICE = [
-    ("os", "low (4)", "static"),
-    ("model", "low (30)", "static"),
-    ("battery", "low (10)", "fast"),
-    ("ip", "high", "slow"),
-    ("user_agent", "low (20)", "slow"),
-]
-_PRODUCT = [("category", "low (20)", "static"), ("launch_day", "high (3650)", "static")]
-_WEIGHTS = [
-    ("amt_ratio_30d", 1.0),
-    ("u_amt_count_7d", 0.3),
-    ("u_amt_max_30d", 0.4),
-    ("dev_users_n_unique_7d", 0.8),
-    ("addr_chg_sum_30d", 0.5),
-    ("inv_bonus_count_30d", 0.8),
-    ("inv_bonus_sum_30d", 1.0),
-    ("inv_zombie_mean_30d", 1.2),
-    ("invr_bonus_count_30d", 0.8),
-    ("invr_bonus_sum_30d", 1.0),
-    ("invr_zombie_mean_30d", 1.2),
+_DEVICE = [("os", "low (5)", "static"), ("model", "low (3)", "static")]
+_PRODUCT = [("category", "low (24)", "static"), ("price", "high", "static")]
+_GOLDEN = [
+    ("u_amt_{count,sum,mean,max,min}_{7,14,30}d", "user"),
+    ("amt_ratio_30d", "user"),
+    ("dev_users_n_unique_7d", "device"),
+    ("inv_bonus_{count,sum,mean,max}_{7,14,30}d", "invitee"),
+    ("invr_bonus_{count,sum,mean,max}_{7,14,30}d", "inviter"),
+    ("invitee_is_zombie", "truth"),
+    ("actor_role", "truth"),
+    ("score", "truth"),
 ]
 
 T = {
     "zh": {
         "intro": (
-            "数据由 datagen 的 fraud 场景合成：先采样实体与事件，再按时间点计算隐藏的"
-            "“黄金特征”，用固定权重的 XGBoost 打分、校准到目标坏账率后抽样出标签。"
-            "基准测试只能看到原始事件列，看不到黄金特征和分数，因此真实信号是已知的。"
+            "数据由 datagen 的智能体事件模拟器生成：neorisk_simkit.ecommerce 电商场景模拟正常购物者，"
+            "bounty_hunters 叠加层注入刷推荐奖励的团伙，再由 datagen export --legacy-fraud "
+            "导出为基准测试使用的格式。标签来自叠加层的隐藏真值（labels/），"
+            "基准测试只能看到原始事件列，看不到黄金特征和真值，因此真实信号是已知的。"
         ),
         "steps_h": "生成流程",
         "steps": [
-            "实体：生成 user / device / product 的 UUID 与属性，属性按变更点时间线随时间变化。",
-            "事件：生成交易与邀请事件（均为合成整数值），按事件时间关联各实体当时的属性。",
-            "植入行为：多账号共用设备、预热后套现、赏金猎人与僵尸受邀人（见下表）。",
-            "黄金特征：对每个事件只用其之前的数据（窗口 [t-w, t)）滚动计算 7/14/30 天特征与图特征。",
-            "打分与标签：预设权重的 XGBoost 给出概率，校准到目标坏账率，再按伯努利抽样得到 label。",
-            "导出：events.parquet 仅含原始列与 label；golden.parquet 单独存放，并有泄漏检查。",
+            ("电商包：购物者注册、在会话中浏览商品、加入购物车、结账；结账向库存分片预留库存，"
+             "付款授权后下单，订单再经履约（发货、送达、退货）。"),
+            ("推荐计划：受邀用户首笔订单达到最低金额后，向推荐奖金池分片申领奖励，"
+             "邀请人与受邀人各得奖金；奖金池按周期设有预算上限。"),
+            ("叠加层：bounty_hunters 按到达时间加入团伙，每个团伙由一个活动执行者运行"
+             "猎人与其僵尸账号，只通过电商包公开的动作产生同样的事件。"),
+            ("隐藏标签：叠加层把每个成员的角色（猎人、僵尸）与结果写入 labels/，"
+             "正常购物者没有标签。"),
+            ("导出：order_placed 记为交易（event_type 0），邀请人的 referral_bonus_paid "
+             "记为邀请（event_type 1）；属性按事件时间取值；label = 行的用户"
+             "（邀请行为其邀请人）是带标签的团伙成员。"),
+            ("黄金特征：对每个事件只用其之前的数据（窗口 [t-w, t)）滚动计算 7/14/30 天特征与"
+             "图特征；events.parquet 仅含原始列与 label，golden.parquet 单独存放。"),
         ],
-        "attrs_h": "实体属性（取值均为合成整数）",
+        "attrs_h": "实体属性（取值均为整数编码）",
         "cols": ["实体", "属性", "基数", "变化速度"],
-        "vol": {"static": "静态", "slow": "慢变", "fast": "快变（随机游走）"},
-        "behav_h": "植入的风险行为",
+        "vol": {"static": "静态", "slow": "慢变（地址变更）"},
+        "behav_h": "电商包与叠加层的行为",
         "behav": [
             (
-                "活跃度偏斜",
-                "用户交易量服从偏斜分布，少数用户非常活跃；10% 的交易发生在随机设备上。",
+                "会话与购物车",
+                "购物者在会话中浏览商品并加入购物车，部分会话进入结账；活跃度呈长尾分布。",
             ),
             (
-                "预热后套现",
-                "3% 的用户先发小额交易（金额 ×0.3），最后 10% 的交易放大 ×15。",
+                "库存与订单",
+                "结账时逐行预留库存，缺货则整单失败；付款授权失败会释放库存。",
             ),
             (
-                "赏金猎人",
-                "少量早期用户作为猎人，邀请的人更多；来自猎人的邀请奖金 30–99，普通邀请 1–9。",
+                "推荐",
+                "部分购物者邀请朋友；受邀人首单达到最低金额后申领推荐奖金。",
             ),
             (
-                "僵尸受邀人",
-                (
-                    "猎人邀请的人有 90% 是僵尸（普通邀请 2%）；僵尸几乎不活跃，只在被邀请后约 2 天内"
-                    "发出约 3 笔小额交易。"
-                ),
+                "团伙",
+                "每个团伙由一名猎人和若干僵尸账号组成，猎人等待僵尸领到奖金后下单套现。",
             ),
-            ("多账号同设备", "70% 的猎人僵尸受邀人与邀请人共用同一台设备。"),
+            (
+                "最低金额的僵尸订单",
+                "多数僵尸注册后很快下一笔略高于推荐最低金额的订单，以满足领奖条件，然后不再活跃。",
+            ),
+            ("共用设备", "僵尸账号按比例复用猎人的设备。"),
+            (
+                "奖金池耗尽",
+                ("僵尸与正常用户从同一个有预算上限的奖金池申领，团伙会耗尽预算，"
+                 "使正常用户的申领被拒绝。"),
+            ),
         ],
-        "golden_h": "黄金特征与打分权重",
+        "golden_h": "黄金特征与隐藏真值",
         "golden_note": (
-            "下列特征组合后经预设 XGBoost（拟合到权重加权的 tanh 教师函数）得到分数；"
-            "inv_* 为被邀请一侧，invr_* 为邀请人一侧。窗口均严格取事件之前的数据。"
+            "golden.parquet 中的特征只用事件之前的数据计算；inv_* 为被邀请一侧，"
+            "invr_* 为邀请人一侧。invitee_is_zombie、actor_role 与 score（= label）"
+            "来自叠加层的真值，仅供 --oracle 上限参考。"
         ),
-        "golden_cols": ["特征", "权重"],
-        "cfg_h": "本次运行的生成参数与实际规模",
+        "golden_cols": ["特征", "类别"],
+        "kind": {"user": "用户", "device": "设备", "invitee": "被邀请一侧",
+                 "inviter": "邀请人一侧", "truth": "真值"},
+        "cfg_h": "本次运行的来源、参数与实际规模",
         "cfg_cols": ["参数", "值"],
+        "src": {"pack": "电商包", "revision": "包版本", "run": "运行"},
         "cfg": {
-            "n_events": "事件数",
             "seed": "随机种子",
-            "span_days": "时间跨度（天）",
-            "target_bad_rate": "目标坏账率",
-            "invite_frac": "被邀请用户占比",
-            "hunter_prob": "邀请来自猎人的概率",
-            "users_per_event": "每事件对应用户数",
+            "n_events": "事件数",
+            "bad_rate": "坏样本率",
         },
+        "overlay": "叠加层参数",
         "obs": {
             "n_users": "出现的用户数",
             "n_devices": "出现的设备数",
@@ -105,103 +110,122 @@ T = {
         },
         "limits_h": "使用时请注意",
         "limits": [
-            "这是合成数据：模型分数反映的是被植入的信号，不代表真实业务中的表现。",
-            "标签由概率抽样得到，因此存在不可约噪声，AUC 不会接近 1。",
-            "基准特征只用原始事件计算，golden.parquet 中的特征与分数不参与训练。",
+            "这是合成数据：模型分数反映的是模拟出的行为，不代表真实业务中的表现。",
+            "标签是团伙成员身份，未考虑标签成熟时间；团伙规模由叠加层参数决定。",
+            "导出不含预热期的历史：预热期内的地址变更不可见，用户所在地回落到注册时的取值。",
+            "基准特征只用原始事件计算，golden.parquet 中的特征与真值不参与训练。",
         ],
     },
     "en": {
         "intro": (
-            "The data comes from the datagen fraud scenario: entities and events are sampled, "
-            "hidden golden features are computed point-in-time, a fixed-weight XGBoost scorer "
-            "turns them into probabilities, and labels are drawn after calibrating to the target "
-            "bad rate. The benchmark sees only raw event columns, never the golden features or "
-            "the score, so the true signal is known."
+            "The data comes from datagen's agentic event simulator: the e-commerce scenario (neorisk_simkit.ecommerce) "
+            "simulates ordinary shoppers, the bounty_hunters overlay adds rings that farm the "
+            "referral program, and datagen export --legacy-fraud writes the run in the "
+            "benchmark's format. Labels come from the overlay's hidden ground truth (labels/). "
+            "The benchmark sees only raw event columns, never the golden features or the "
+            "ground truth, so the true signal is known."
         ),
         "steps_h": "Generation pipeline",
         "steps": [
             (
-                "Entities: UUIDs and attributes for users, devices and products; attributes change "
-                "over time along change-point timelines."
+                "E-commerce pack: shoppers sign up, browse products in sessions, add them to a "
+                "cart and check out; checkout reserves stock on the inventory shard, an order "
+                "is placed once payment is authorized, and fulfillment ships, delivers and "
+                "takes returns."
             ),
             (
-                "Events: transaction and invite events with synthetic integer values, joined to each "
-                "entity's attributes as of the event time."
+                "Referral program: when an invitee's first order reaches the minimum, a claim "
+                "goes to the referral pool shard and both inviter and invitee are paid; the "
+                "pool has a budget per period."
             ),
             (
-                "Planted behaviour: shared devices, warm-up then cash-out, bounty hunters and zombie "
-                "invitees (table below)."
+                "Overlay: bounty_hunters rings arrive over time; one campaign owner runs each "
+                "hunter and its zombies, which emit the same events through the actions the "
+                "pack exposes."
             ),
             (
-                "Golden features: rolling 7/14/30-day and graph features using only data strictly "
-                "before each event (window [t-w, t))."
+                "Hidden labels: the overlay writes each member's role (hunter, zombie) and "
+                "outcome to labels/; ordinary shoppers have no label."
             ),
             (
-                "Scoring and labels: preset-weight XGBoost gives a probability, calibrated to the "
-                "target bad rate, then Bernoulli-sampled into label."
+                "Export: order_placed becomes a transaction (event_type 0) and the inviter's "
+                "referral_bonus_paid an invite (event_type 1); attributes are taken as of the "
+                "event time; label = the row's user (the inviter on invite rows) is a labeled "
+                "ring member."
             ),
             (
-                "Export: events.parquet holds raw columns and label only; golden.parquet is kept "
-                "separate behind a leakage guard."
+                "Golden features: rolling 7/14/30-day and graph features using only data "
+                "strictly before each event (window [t-w, t)); events.parquet holds raw "
+                "columns and label only, golden.parquet is kept separate."
             ),
         ],
-        "attrs_h": "Entity attributes (values are synthetic integers)",
+        "attrs_h": "Entity attributes (values are integer codes)",
         "cols": ["Entity", "Attribute", "Cardinality", "Volatility"],
-        "vol": {"static": "static", "slow": "slow", "fast": "fast (random walk)"},
-        "behav_h": "Planted risk behaviour",
+        "vol": {"static": "static", "slow": "slow (address changes)"},
+        "behav_h": "Pack and overlay behaviour",
         "behav": [
             (
-                "Skewed activity",
+                "Sessions and carts",
                 (
-                    "Per-user volume is skewed so a few users are very active; 10% of transactions "
-                    "use a random device."
+                    "Shoppers browse products in sessions and add them to a cart; some sessions "
+                    "check out. Activity is heavy-tailed."
                 ),
             ),
             (
-                "Warm-up then cash-out",
+                "Inventory and orders",
                 (
-                    "3% of users send small amounts first (x0.3), then their last 10% of "
-                    "transactions are scaled x15."
+                    "Checkout reserves stock line by line and fails as a whole when a line is "
+                    "out of stock; a failed payment authorization releases the stock."
                 ),
             ),
             (
-                "Bounty hunters",
+                "Referrals",
                 (
-                    "A few early users act as hunters and invite more; hunter invites carry a bonus "
-                    "of 30-99, ordinary invites 1-9."
+                    "Some shoppers invite friends; an invitee's first order at or above the "
+                    "minimum claims the referral bonus."
                 ),
             ),
             (
-                "Zombie invitees",
+                "Rings",
                 (
-                    "90% of hunter invitees are zombies (2% for ordinary invites); zombies are "
-                    "nearly inactive apart from about 3 small transactions in the 2 days after the "
-                    "invite."
+                    "Each ring is one hunter and its zombie accounts; the hunter waits until "
+                    "its zombies are paid, then cashes out with orders of its own."
                 ),
             ),
             (
-                "Shared devices",
-                "70% of hunter zombie invitees reuse the inviter's device.",
+                "Zombies at the minimum order",
+                (
+                    "Zombies sign up through the hunter's invite; most soon place one order just "
+                    "above the referral minimum to qualify, then go dormant."
+                ),
+            ),
+            ("Shared devices", "A share of zombies reuse the hunter's devices."),
+            (
+                "Pool draining",
+                (
+                    "Zombies and ordinary shoppers claim from the same capped pool, so rings "
+                    "drain the budget and ordinary claims get rejected."
+                ),
             ),
         ],
-        "golden_h": "Golden features and scorer weights",
+        "golden_h": "Golden features and hidden ground truth",
         "golden_note": (
-            "These features feed a preset XGBoost fitted to a weighted tanh teacher to produce "
-            "the score. inv_* is the invitee side, invr_* the inviter side. Windows use only "
-            "data strictly before the event."
+            "Golden features use only data strictly before each event. inv_* is the invitee "
+            "side, invr_* the inviter side. invitee_is_zombie, actor_role and score (= label) "
+            "come from the overlay's ground truth and only feed the --oracle ceiling."
         ),
-        "golden_cols": ["Feature", "Weight"],
-        "cfg_h": "Generation parameters and realised size for this run",
+        "golden_cols": ["Feature", "Kind"],
+        "kind": {"user": "user", "device": "device", "invitee": "invitee side",
+                 "inviter": "inviter side", "truth": "ground truth"},
+        "cfg_h": "Source, parameters and realised size for this run",
         "cfg_cols": ["Parameter", "Value"],
+        "src": {"pack": "Pack", "revision": "Pack revision", "run": "Run"},
         "cfg": {
-            "n_events": "Events",
             "seed": "Seed",
-            "span_days": "Span (days)",
-            "target_bad_rate": "Target bad rate",
-            "invite_frac": "Share of users invited",
-            "hunter_prob": "Chance an invite is from a hunter",
-            "users_per_event": "Users per event",
+            "n_events": "Events",
+            "bad_rate": "Bad rate",
         },
+        "overlay": "overlay parameter",
         "obs": {
             "n_users": "Users seen",
             "n_devices": "Devices seen",
@@ -212,14 +236,19 @@ T = {
         },
         "limits_h": "Read with care",
         "limits": [
-            "The data is synthetic: scores reflect the planted signal, not real-world performance.",
+            ("The data is synthetic: scores reflect the simulated behaviour, not real-world "
+             "performance."),
             (
-                "Labels are sampled from probabilities, so there is irreducible noise and AUC stays "
-                "well below 1."
+                "Labels are ring membership with label maturity ignored; ring size is set by "
+                "the overlay's parameters."
             ),
             (
-                "Benchmark features use raw events only; golden features and the score are never "
-                "used for training."
+                "The export has no warm-up history: an address change during warm-up is not "
+                "seen, so the user's state falls back to its value at creation."
+            ),
+            (
+                "Benchmark features use raw events only; golden features and the ground truth "
+                "are never used for training."
             ),
         ],
     },
@@ -250,19 +279,28 @@ def _fmt_val(v) -> str:
     return str(v)
 
 
+def _cfg_rows(t: dict, meta: dict) -> list[list[str]]:
+    src = meta.get("source") or {}
+    obs = meta.get("observed") or {}
+    rows = [[t["src"][k], _fmt_val(src[k])] for k in t["src"] if src.get(k) is not None]
+    rows += [[t["cfg"][k], _fmt_val(meta[k])] for k in t["cfg"] if meta.get(k) is not None]
+    for name, params in (src.get("overlays") or {}).items():
+        rows += [[f"{name}.{p} ({t['overlay']})", _fmt_val(v)]
+                 for p, v in (params or {}).items()]
+    rows += [[t["obs"][k], _fmt_val(obs[k])] for k in t["obs"] if k in obs]
+    return rows
+
+
 def render_datagen(run: dict, lang: str) -> str:
     t = T.get(lang, T["zh"])
     meta = run.get("dataset_meta") or {}
-    cfg = meta.get("config") or {}
-    obs = meta.get("observed") or {}
     attrs = (
         [["user", *r] for r in _USER]
         + [["device", *r] for r in _DEVICE]
         + [["product", *r] for r in _PRODUCT]
     )
     attrs = [[e, a, c, t["vol"][v]] for e, a, c, v in attrs]
-    cfg_rows = [[t["cfg"][k], _fmt_val(cfg[k])] for k in t["cfg"] if k in cfg]
-    cfg_rows += [[t["obs"][k], _fmt_val(obs[k])] for k in t["obs"] if k in obs]
+    cfg_rows = _cfg_rows(t, meta)
     cfg_html = _table(t["cfg_cols"], cfg_rows) if cfg_rows else ""
     behav = _table([t["behav_h"], ""], [[a, b] for a, b in t["behav"]]).replace("<th></th>", "")
     return (
@@ -273,7 +311,7 @@ def render_datagen(run: dict, lang: str) -> str:
         f"<h3>{_esc(t['attrs_h'])}</h3>{_table(t['cols'], attrs)}"
         f"<h3>{_esc(t['behav_h'])}</h3>{behav}"
         f'<h3>{_esc(t["golden_h"])}</h3><p class="note">{_esc(t["golden_note"])}</p>'
-        f"{_table(t['golden_cols'], [[f, f'{w:g}'] for f, w in _WEIGHTS])}"
+        f"{_table(t['golden_cols'], [[f, t['kind'][k]] for f, k in _GOLDEN])}"
         f"<h3>{_esc(t['cfg_h'])}</h3>{cfg_html}"
         f'<div class="callout warn"><b>{_esc(t["limits_h"])}</b>{_ul(t["limits"])}</div>'
     )

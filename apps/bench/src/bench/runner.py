@@ -1,4 +1,5 @@
 import json
+from collections.abc import Sequence
 from pathlib import Path
 
 import numpy as np
@@ -8,6 +9,8 @@ from sklearn.metrics import average_precision_score, precision_recall_curve, roc
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 from xgboost import XGBClassifier
+
+from bench.allowlist import resolve_allowlist
 
 
 def load_events(data_dir: str | Path) -> tuple[pl.DataFrame, dict]:
@@ -21,6 +24,7 @@ def load_events(data_dir: str | Path) -> tuple[pl.DataFrame, dict]:
     leaked = [c for c in meta["golden_columns"] if c in events.columns]
     if leaked:
         raise ValueError(f"golden columns found in events.parquet: {leaked}")
+    meta["_allowlist"] = resolve_allowlist(meta, events)
     return events, meta
 
 
@@ -34,10 +38,13 @@ def time_split(df: pl.DataFrame, fracs=(0.6, 0.2, 0.2)):
     return df[:a], df[a:b], df[b:]
 
 
-def raw_features(df: pl.DataFrame) -> pl.DataFrame:
+def raw_features(df: pl.DataFrame, allowlist: Sequence[str] | None = None) -> pl.DataFrame:
     cols = [
         c for c, t in df.schema.items() if t.is_numeric() and c != "label" and not c.endswith("_id")
     ]
+    if allowlist is not None:
+        allowed = set(allowlist)
+        cols = [c for c in cols if c in allowed]
     floats = [c for c in cols if df.schema[c].is_float()]
     return (
         df.select(cols)
@@ -74,17 +81,19 @@ def oracle_frame(events: pl.DataFrame, golden: pl.DataFrame) -> pl.DataFrame:
 
 
 def run(data_dir: str | Path, oracle: bool = False) -> list[dict]:
-    events, _ = load_events(data_dir)
-    feature_sets = {"raw": events}
+    events, meta = load_events(data_dir)
+    allowlist = meta["_allowlist"]
+    feature_sets = {"raw": (events, allowlist)}
     if oracle:
         golden = pl.read_parquet(Path(data_dir) / "golden.parquet")
-        feature_sets["oracle"] = oracle_frame(events, golden)
+        golden_cols = [c for c in golden.columns if c not in ("event_id", "score")]
+        feature_sets["oracle"] = (oracle_frame(events, golden), [*allowlist, *golden_cols])
 
     rows: list[dict] = []
-    for fs_name, frame in feature_sets.items():
+    for fs_name, (frame, allowed) in feature_sets.items():
         tr, va, te = time_split(frame)
         splits = {"train": tr, "valid": va, "test": te}
-        xs = {k: raw_features(v).to_numpy().astype("float64") for k, v in splits.items()}
+        xs = {k: raw_features(v, allowed).to_numpy().astype("float64") for k, v in splits.items()}
         ys = {k: v["label"].to_numpy() for k, v in splits.items()}
         names = ["logreg", "xgb"] if fs_name == "raw" else ["xgb"]
         single_class = len(np.unique(ys["train"])) < 2

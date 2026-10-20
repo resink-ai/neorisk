@@ -1,40 +1,24 @@
 # datagen
 
-Synthetic tabular event data generator (fraud scenario first).
+Command line for the e-commerce event simulator (`neorisk_simkit.ecommerce`, built on
+`neorisk_simkit.sim`, a heap-based discrete-event loop in plain Python).
 
 ```bash
-uv run datagen generate --scenario fraud --n-events 100000 --seed 42 --out data/fraud
+uv run datagen run --out data/legacy-run [--users 5000] [--days 60] [--seed 7]
+uv run datagen export data/legacy-run --legacy-fraud --out data/fraud
 ```
 
-## Flags
+`run` writes one parquet file per table, plus `manifest.json`:
+- **Event tables:** `user_signed_up`, `session_started`, `product_viewed`, `order_placed`, `order_returned`, `address_changed`, `referral_bonus_paid` and `referral_bonus_rejected`.
+- **Entity tables:** `users`, `devices`, `skus` and `labels`. The labels are the bounty-hunter rings' ground truth.
 
-| Flag | Default | Meaning |
-|---|---|---|
-| `--scenario` | required | scenario name (`fraud`) |
-| `--n-events` | `FraudConfig.n_events` | number of events |
-| `--seed` | 0 | RNG seed; same seed gives identical output |
-| `--span-days` | `FraudConfig.span_days` | time span of the data |
-| `--bad-rate` | `FraudConfig.target_bad_rate` | calibrated target label rate |
-| `--out` | required | output directory |
+Shoppers sign up, browse, check out, return orders and move region. A referred shopper's first qualifying order pays its inviter a bonus from a monthly budget, after a delay. Bounty hunters run rings of zombie accounts on shared devices, all invited by the hunter, and cash the bonuses out.
 
-## Outputs
+Cost is O(E log Q) time and O(E) memory, where E is the number of events emitted and Q is the number of pending events. That is linear in users for a fixed span. `libs/simkit/tests/test_simkit_sim.py` asserts this as a scaling ratio, not as an absolute time.
 
-- `events.parquet` - raw event and entity columns plus `label` (benchmark input; no golden features)
-- `golden.parquet` - `event_id` + hidden golden features + `score`
-  (`u_amt_{count,sum,mean,max,min}_{7,14,30}d`, `dev_users_n_unique_7d`, `addr_chg_sum_30d`,
-  `amt_ratio_30d`, `inv_bonus_{count,sum,mean,max}_{7,14,30}d`, `inv_zombie_mean_30d`,
-  `invr_bonus_{count,sum,mean,max}_{7,14,30}d`, `invr_zombie_mean_30d`, `invitee_is_zombie`,
-  `score`).
-  - `inv_*` (invitee side): the inviter's invite activity at the invite row that brought the
-    event's user in, carried as-of to the user's later events, i.e. frozen at invite time.
-  - `invr_*` (inviter side): the event's user's own invites in [t-w, t), evaluated at every
-    event of that user, so bounty hunters' own transactions carry them.
-  - zombie ratios use the latent zombie flag, which is not exported in `events.parquet`.
-- `meta.json` - seed, scenario, config, achieved bad rate
+`export --legacy-fraud` writes the shape `bench` reads:
+- **`events.parquet`:** orders as `event_type` 0 and inviter bonuses as `event_type` 1, with the invitee as `user_id`. Attributes are integer codes; `user_state` is the user's region as of the event; `label` marks rows whose user, or whose inviter on invite rows, is a ring member.
+- **`golden.parquet`:** strictly-past rolling features (`u_amt_*`, `dev_users_*`, `inv_bonus_*`, `invr_bonus_*`, `amt_ratio_30d`) plus the ground truth (`invitee_is_zombie`, `actor_role`, `score`).
+- **`meta.json`:** run metadata.
 
-## Adding a scenario
-
-1. Create `src/datagen/scenarios/<name>.py` exposing `generate(cfg) -> Dataset`
-   (use `neorisk_simkit` primitives; keep entities as integer `idx` and let `export` attach UUIDs).
-2. Register it in `datagen.scenarios.SCENARIOS`: `{"fraud": fraud.generate, "<name>": <name>.generate}`.
-3. Add tests with a unique file basename.
+It exits 2 without `--legacy-fraud`.
