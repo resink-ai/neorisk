@@ -1,6 +1,28 @@
 # neorisk-simkit
 
-Scenario-agnostic primitives for synthetic event data. Import name: `neorisk_simkit`.
+The agentic event simulator's library, plus scenario-agnostic primitives for synthetic event
+data. Import name: `neorisk_simkit`. Pure Python (NumPy, Polars, PyArrow, PyYAML); Kafka is the
+optional extra `neorisk-simkit[kafka]`.
+
+## The simulator
+
+| Package | Responsibility |
+|---|---|
+| `spec` | The pack API (`Pack`, column types, `Latency`), overlays, the normalized plan and `validate`, distributions |
+| `engine` | The event loop (one heap, one thread), the action context, keyed random streams, typed output frames |
+| `machine` | The state-machine interpreter (branch, timer, repeat, spawn, join, request, then) |
+| `std` | Recipes: owner holds, shard reservations with a TTL, capped pools |
+| `checks` | Structural checks, law factories, reference implementations, expectations (`stats`), the overlay regression rule |
+| `io` | The dataset writer and reader, single-file export, public ids, the legacy fraud adapter |
+| `schema` | `schema.json`, SQL (six dialects), Avro, JSON Schema, Arrow, Markdown, `--diff` |
+| `replay` | Selection, pacing and sinks (stdout, file, Kafka) |
+| `report` | `report.html` |
+| `project` | Project folders, `datagen.toml` profiles, provenance |
+
+How to write packs and overlays: [`examples/AGENTS.md`](../../examples/AGENTS.md). The
+design: `docs/superpowers/specs/2026-10-20-agentic-event-simulator-pure-python.md`.
+
+## Primitives
 
 | Module | Responsibility | Interface |
 |---|---|---|

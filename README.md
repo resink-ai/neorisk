@@ -25,7 +25,8 @@ cd apps/<app> && uv add --workspace neorisk-<name> # app depends on a lib
 ## Synthetic event data + benchmark
 
 ```sh
-uv run datagen run --users 5000 --days 60 --out data/legacy-run
+uv run datagen run examples/ecommerce --profile legacy --overlay bounty_hunters --out data/legacy-run
+uv run datagen check data/legacy-run --project examples/ecommerce   # laws, expectations, report.html
 uv run datagen export data/legacy-run --legacy-fraud --out data/fraud
 uv run bench run data/fraud --oracle
 
@@ -34,12 +35,13 @@ uv run bench compare data/fraud --out reports/payment-risk-benchmark.html \
     --json reports/payment-risk-benchmark.json --lang zh
 ```
 
-`datagen run` simulates the e-commerce scenario with bounty-hunter rings (plain Python,
-linear in users); `datagen export --legacy-fraud` writes it in the benchmark's shape. `events.parquet` is
-the benchmark input; `golden.parquet` holds hidden golden features and labels' ground truth;
-`meta.json` records the seed, the source run (pack, revision, overlay parameters) and the
-achieved bad rate. The first run compiles the pack's engine module (45-90 min cold, cached
-afterwards).
+`datagen` is the agentic event simulator: plain Python, one event heap, sized for runs under
+about 10⁵ events, with time and memory linear in the events emitted. Projects live in
+[`examples/`](examples/README.md); agents author them by following
+[`examples/AGENTS.md`](examples/AGENTS.md). `datagen export --legacy-fraud` writes the e-commerce
+run in the benchmark's shape: `events.parquet` is the benchmark input; `golden.parquet` holds
+hidden golden features and labels' ground truth; `meta.json` records the seed, the source run
+(pack, revision, overlay parameters) and the achieved bad rate.
 
 `bench compare` trains Logistic Regression, Random Forest, XGBoost and two MLPs (`32-16` and
 `256-128-64`) on observable point-in-time features built from `events.parquet` only (it never
