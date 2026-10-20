@@ -112,7 +112,8 @@ def test_file_formats_and_resume(run_dir, tmp_path):
     assert first + rest == _lines(whole)
 
 
-def test_kafka_sink_with_a_fake_producer(run_dir):
+def test_kafka_sink_with_a_fake_producer(run_dir, tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)                      # the sink's resume state lands here
     class Fake:
         def __init__(self):
             self.msgs = []
