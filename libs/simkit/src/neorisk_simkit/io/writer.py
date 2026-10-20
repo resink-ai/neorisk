@@ -102,6 +102,8 @@ def write(out: Output, out_dir: str | Path, *, provenance: dict | None = None,
                   "rejections": [{"kind": k, "action": a, "reason": r, "n": n}
                                  for (k, a, r), n in sorted(st.rejections.items())],
                   "censored_cases": int(out.cases["censored"].sum())},
+        "checks": [{"name": c.name, "group": c.group, "required": c.required}
+                   for c in out.plan.checks],
         "files": {str(p.relative_to(d)): _sha(p) for p in sorted(files)},
     }
     (d / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
