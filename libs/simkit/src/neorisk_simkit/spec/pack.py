@@ -106,6 +106,11 @@ class Kind:
         self.processes[name] = p
         return p
 
+    def machine(self, name: str, *, initial: str, cohort: str | None = None):
+        """A state-machine process (see `neorisk_simkit.machine`)."""
+        from neorisk_simkit.machine import attach
+        return attach(self, name, initial=initial, cohort=cohort)
+
     def action(self, fn: Callable | None = None, **kw):
         """An action in the kind's default process (named like the kind)."""
         if self.name not in self.processes:

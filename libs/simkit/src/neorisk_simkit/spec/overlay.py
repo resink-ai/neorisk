@@ -55,6 +55,8 @@ class Overlay:
         self.checks: list[CheckSpec] = []
         self.processes: list[Process] = []
         self._tables = (set(base.events), set(base.entities))
+        if not hasattr(base, "base_actions"):        # numbered first: overlays never shift them
+            base.base_actions = [(k.name, a) for k in base.kinds.values() for a in k.actions]
 
     def cohort(self, name: str, *, kind: str, size: int | None = None,
                share: float | None = None, rate: float | None = None,
@@ -80,6 +82,14 @@ class Overlay:
         p.cohort = cohort
         self.processes.append(p)
         return p
+
+    def machine(self, kind: str, name: str, *, cohort: str, initial: str):
+        """A state-machine process run only by `cohort`'s members."""
+        if kind not in self.base.kinds:
+            raise PackError(f"overlay {self.name}: no partition kind {kind!r} in the base pack")
+        m = self.base.kinds[kind].machine(name, initial=initial, cohort=cohort)
+        self.processes.append(self.base.kinds[kind].processes[name])
+        return m
 
     def source(self, fn: Callable | None = None, *, name: str | None = None):
         def reg(f: Callable) -> Callable:

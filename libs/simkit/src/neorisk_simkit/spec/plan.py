@@ -49,10 +49,13 @@ def build_plan(pack: Pack, overlays: list[Any] = ()) -> Plan:
     plan.sources = [(s, 0) for s in pack.sources]
     for i, o in enumerate(plan.overlays, start=1):
         plan.sources += [(s, i) for s in o.sources]
-    for k in pack.kinds.values():
-        for a in k.actions.values():
-            a.id = len(plan.actions)
-            plan.actions.append(a)
+    first = getattr(pack, "base_actions", [])
+    order = [pack.kinds[k].actions[a] for k, a in first]
+    seen = {id(a) for a in order}
+    order += [a for k in pack.kinds.values() for a in k.actions.values() if id(a) not in seen]
+    for i, a in enumerate(order):
+        a.id = i
+    plan.actions = order
     return plan
 
 
@@ -78,6 +81,8 @@ def validate(plan: Plan) -> list[str]:
                 errs.append(f"{k.name}.{p.name}: start action {p.start!r} is not defined")
             if not isinstance(p.max_spawn_depth, int) or not 0 <= p.max_spawn_depth <= 16:
                 errs.append(f"{k.name}.{p.name}: max_spawn_depth must be an int in [0, 16]")
+            if p.machine is not None:
+                errs += p.machine.problems()
     for o in plan.overlays:
         errs += o.problems(plan)
     return errs

@@ -87,6 +87,8 @@ class Part:
         "kind",
         "local",
         "ns",
+        "ordinal",
+        "parent",
         "pending",
         "pid",
         "retired_at",
@@ -105,6 +107,8 @@ class Part:
         self.pending: dict[int, str] = {}           # open request id -> reply action
         self.children: Counter = Counter()          # kind -> ordinal, for child keys
         self.local: dict[str, dict] = {}            # process -> private state (ctx.local)
+        self.parent: int | None = None              # the creating partition, if any
+        self.ordinal = 0                            # among the parent's children of its kind
 
 
 @dataclass
@@ -221,12 +225,13 @@ class Ctx(_Base):
         """Run another action of this partition inline, inside the same atomic step (an
         overlay reaching a base extension point). Returns that action's result."""
         act = self._act(self.part.kind, action)
-        saved = self.action, self.cmd
-        self.action, self.cmd = act, Cmd(action, self._e.now, payload)
+        saved = self.action, self.cmd, self._effects
+        self.action, self.cmd, self._effects = act, Cmd(action, self._e.now, payload), 0
         try:
             return act.fn(self, self.part.state, self.cmd)
         finally:
-            self.action, self.cmd = saved
+            self.action, self.cmd = saved[:2]
+            self._effects += saved[2]
 
     # --- outcomes -----------------------------------------------------------------------
     def commit(self) -> None:
@@ -328,8 +333,11 @@ class Ctx(_Base):
         part.children[kind] += 1
         pkey = rngs.key(part.key, kind, part.children[kind])
         self._effects += 1
-        return e._create(e.plan.kinds[kind], init, part.ns, pkey, depth, e.now, self.last,
-                         key, e._cohort(cohort or part.cohort, part.ns))
+        pid = e._create(e.plan.kinds[kind], init, part.ns, pkey, depth, e.now, self.last,
+                        key, e._cohort(cohort or part.cohort, part.ns))
+        child = e.parts[pid]
+        child.parent, child.ordinal = part.pid, part.children[kind]
+        return pid
 
     def insert(self, table: str, **cols: Any) -> int:
         self._effects += 1
