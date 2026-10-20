@@ -141,7 +141,7 @@ Operations, all evaluated on entering a state:
 
 | Operation | Behavior |
 |-----------|----------|
-| `branch={target: (p, delay, action)}` | Probabilities must sum to 1; use `"otherwise"` for the unpicked mass |
+| `branch={target: (p, delay, action)}` | Probabilities must sum to 1; use `"otherwise"` for the unpicked mass (its p may be `None`: the remainder) |
 | `timer={target: delay \| (delay, action)}` | Leaving the state cancels it |
 | `repeat=(delay, p, action)` | With `max_repeats`, `until=cond...` and `then` |
 | `spawn=Spawn(kind, n)` | Create children |
@@ -150,7 +150,7 @@ Operations, all evaluated on entering a state:
 | `on_enter`, `on_reject`, `retire` | Run an action on entry; where to go on a rejection; end the partition |
 | `Then(a, b, fallback=c)` | Run `a`, then `b`; if `b` rejects, `a` stays committed and `c` runs |
 
-Children call `notify_parent(ctx, msg)`.
+Children call `notify_parent(ctx, msg)`. Probabilities and delays may be `"cfg.<field>"` to read the run config (a number of days for delays), so rates stay tunable from `datagen.toml`.
 
 ## Overlays — `specs/overlays/<name>.py`
 

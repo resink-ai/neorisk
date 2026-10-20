@@ -9,7 +9,8 @@
     m.state("expired", retire=True)
 
 Operations per state, all evaluated on entering it:
-    branch   {target: (p, delay, action)}; "otherwise" (target None) is the unpicked mass
+    branch   {target: (p, delay, action)}; "otherwise" is the unpicked mass (its p may be
+             None: the remainder). p and delays may be "cfg.<field>" to read the run config
     timer    {target: delay | (delay, action)}; leaving bumps a generation, stale timers drop
     repeat   (delay, p, action) with max_repeats; `until` (a cond) is evaluated after each
              committed action, then go to `then`
@@ -161,9 +162,12 @@ class Machine:
             for t in st.targets():
                 if t not in self.states:
                     errs.append(f"{where}.{st.name}: unknown target state {t!r}")
-            if st.branch and abs(sum(v[0] for v in st.branch.values()) - 1.0) > 1e-9:
+            ps = [v[0] for v in st.branch.values()]
+            if ps and all(isinstance(p, (int, float)) for p in ps) and abs(sum(ps) - 1) > 1e-9:
                 errs.append(f"{where}.{st.name}: branch probabilities must sum to 1 "
                             f"(use 'otherwise' for the unpicked mass)")
+            if any(p is None for k, (p, *_) in st.branch.items() if k != "otherwise"):
+                errs.append(f"{where}.{st.name}: only 'otherwise' may leave p as None")
             if st.until is not None and st.repeat is None:
                 errs.append(f"{where}.{st.name}: until needs repeat")
             if st.join and st.join_timeout is None:
@@ -195,16 +199,16 @@ class Machine:
         if st.branch:
             u, acc = rng.random(), 0.0
             for target, (p, delay, act) in st.branch.items():
-                acc += p
+                acc = 1.0 if p is None else acc + _param(ctx, p)
                 if u < acc:
                     if target != "otherwise":
-                        self._schedule(ctx, D.draw(delay, rng), gen, "go", target, act)
+                        self._schedule(ctx, _delay(ctx, delay), gen, "go", target, act)
                     break
         for target, spec in st.timer.items():
             delay, act = spec if isinstance(spec, tuple) else (spec, None)
-            self._schedule(ctx, D.draw(delay, rng), gen, "go", target, act)
+            self._schedule(ctx, _delay(ctx, delay), gen, "go", target, act)
         if st.repeat is not None:
-            self._schedule(ctx, D.draw(st.repeat[0], rng), gen, "repeat", None, None)
+            self._schedule(ctx, _delay(ctx, st.repeat[0]), gen, "repeat", None, None)
         for sp in st.spawn:
             n = int(D.draw(sp.n, rng)) if isinstance(sp.n, D.Dist) else int(sp.n)
             for i in range(n):
@@ -237,13 +241,13 @@ class Machine:
             return self._enter(ctx, s, cmd.target)
         loc["repeats"] += 1                          # repeat
         delay, p, act = st.repeat
-        if ctx.rng.random() < p:
+        if ctx.rng.random() < _param(ctx, p):
             res = _run(ctx, act)
             if not isinstance(res, Reject) and st.until is not None and st.until(ctx, s, loc):
                 return self._enter(ctx, s, st.then) if st.then else None
         if st.max_repeats is not None and loc["repeats"] >= st.max_repeats:
             return self._enter(ctx, s, st.then) if st.then else None
-        self._schedule(ctx, D.draw(delay, ctx.rng), loc["gen"], "repeat", None, None)
+        self._schedule(ctx, _delay(ctx, delay), loc["gen"], "repeat", None, None)
 
     def _rejected(self, ctx, s, st: State, res: Reject):
         if st.on_reject:
@@ -270,6 +274,20 @@ class Machine:
                 loc["joined"].add(msg)
                 return self._enter(ctx, s, target)
         return None
+
+
+def _param(ctx, v: Any) -> Any:
+    """A literal, or "cfg.<field>" read from the run's config."""
+    return getattr(ctx.cfg, v[4:]) if isinstance(v, str) and v.startswith("cfg.") else v
+
+
+def _delay(ctx, d: Any) -> float:
+    """A delay: a Dist, a duration ("7d"), a number of seconds, or "cfg.<field>" holding a
+    number of days (config is written in days) or any of the above."""
+    if isinstance(d, str) and d.startswith("cfg."):
+        v = _param(ctx, d)
+        return float(v) * 86_400.0 if isinstance(v, (int, float)) else D.draw(v, ctx.rng)
+    return D.draw(d, ctx.rng)
 
 
 def _child(ctx, s, cmd):

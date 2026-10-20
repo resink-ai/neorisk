@@ -5,9 +5,6 @@ subscriber cancels first. Every charge is a request to the processor shard; a de
 dunning, which retries 3, 5 and 7 days after the failure before cancelling (involuntary).
 Each renewal may be the moment a subscriber leaves (voluntary). Written from the brief with
 the public pack API only (examples/AGENTS.md).
-
-Machine branch probabilities and delays are literals, so the trial-cancel (25%) and renewal
-churn (4%) rates live here rather than in Config.
 """
 
 from __future__ import annotations
@@ -32,6 +29,8 @@ class Config:
     subscribers: int = 1500
     plan_mix: tuple[float, float, float] = (0.4, 0.4, 0.2)
     trial_days: float = 14.0
+    trial_cancel_p: float = 0.25
+    renewal_churn_p: float = 0.04
     card_health_alpha: float = 12.0        # Beta(a, 1): most cards are healthy
     retry_recover_p: float = 0.35          # a retry succeeds this often on a sick card
 
@@ -123,14 +122,14 @@ def define(p: Pack) -> None:
                             on_reject=no, payload=charge)}
 
     m.state("trial", on_enter="start",
-            branch={"trial_cancelled": (0.25, dist.uniform("1d", "13d"), None),
-                    "otherwise": (0.75, None, None)},
-            timer={"charging": ("14d", "convert")})
+            branch={"trial_cancelled": ("cfg.trial_cancel_p", dist.uniform("1d", "13d"), None),
+                    "otherwise": (None, None, None)},
+            timer={"charging": ("cfg.trial_days", "convert")})
     m.state("trial_cancelled", on_enter="cancel_trial_cancel", retire=True)
     m.state("charging", on_enter="new_cycle", request=ask("active", "dunning_1"))
     m.state("active", on_enter="paid",
-            branch={"churned": (0.04, dist.uniform("20d", "29d"), None),
-                    "otherwise": (0.96, None, None)},
+            branch={"churned": ("cfg.renewal_churn_p", dist.uniform("20d", "29d"), None),
+                    "otherwise": (None, None, None)},
             timer={"charging": "30d"})
     m.state("churned", on_enter="cancel_voluntary", retire=True)
     for i, days in enumerate(RETRY_DAYS, start=1):

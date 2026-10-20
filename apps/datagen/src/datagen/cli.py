@@ -3,7 +3,7 @@
     datagen validate PROJECT [--overlay NAME]...
     datagen run PROJECT [--profile P] [--overlay NAME]... [--set K=V]... [--seed S]
                         [--out DIR] [--force] [--debug]
-    datagen export RUN_DIR (--legacy-fraud --out DIR | --single-file FILE)
+    datagen export RUN_DIR (--legacy-fraud --out DIR | --single-file FILE | --public-ids --out DIR)
 
 Exit codes: 0 success, 1 the run or a required check failed, 2 usage error or refusal.
 """
@@ -47,6 +47,8 @@ def build_parser() -> argparse.ArgumentParser:
     e.add_argument("--legacy-fraud", action="store_true", help="the fraud dataset bench reads")
     e.add_argument("--single-file", default=None, metavar="FILE",
                    help="every event in one canonically ordered parquet file")
+    e.add_argument("--public-ids", action="store_true",
+                   help="a copy whose ids are a seeded Feistel permutation (refs consistent)")
     e.add_argument("--out", default=None)
     from datagen import check_cmd, replay_cmd, schema_cmd
     check_cmd.add_parser(sub)
@@ -117,8 +119,14 @@ def cmd_run(args) -> int:
 
 def cmd_export(args) -> int:
     from neorisk_simkit.io import read
-    if bool(args.legacy_fraud) == bool(args.single_file):
-        return _err("export: pass exactly one of --legacy-fraud or --single-file")
+    if sum(map(bool, (args.legacy_fraud, args.single_file, args.public_ids))) != 1:
+        return _err("export: pass exactly one of --legacy-fraud, --single-file, --public-ids")
+    if args.public_ids:
+        if not args.out:
+            return _err("export --public-ids needs --out")
+        from neorisk_simkit.io.public_ids import export_public
+        export_public(read(args.run_dir), args.out)
+        return 0
     if args.single_file:
         from neorisk_simkit.io.single import single_file
         single_file(read(args.run_dir), args.single_file)

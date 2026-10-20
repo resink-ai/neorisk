@@ -236,3 +236,26 @@ def test_machines_are_deterministic_and_debug_clean():
     b = _run(_pack(define, cases=50), debug=True)
     assert a.events["step"].equals(b.events["step"])
     assert DAY == 86_400.0
+
+
+def test_config_driven_branch_and_timer():
+    @dataclass
+    class Cfg:
+        p_a: float = 1.0
+        wait_days: float = 2.0
+
+    def define(k):
+        m = k.machine("c", initial="s0")
+        m.state("s0", branch={"s1": ("cfg.p_a", "1h", "a"), "otherwise": (None, None, None)},
+                timer={"s2": ("cfg.wait_days", "c")})
+        m.state("s1", on_enter="b")
+        m.state("s2")
+    plan = build_plan(_pack(define))
+    assert validate(plan) == []
+    out = simulate(plan, Cfg(), RunConfig(days=5))
+    assert _steps(out) == ["a", "b"]
+    out = simulate(build_plan(_pack(define)), Cfg(p_a=0.0), RunConfig(days=5))
+    assert _steps(out) == ["c"]
+    t = out.events["step"]["event_time"][0] - out.events["step"]["event_time"][0].replace(
+        day=1, hour=0, minute=0, second=0, microsecond=0)
+    assert t.total_seconds() == 2 * 86_400
