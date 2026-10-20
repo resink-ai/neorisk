@@ -7,7 +7,6 @@ from bench.runner import evaluate, load_events, oracle_frame, raw_features, run,
 pytest_plugins = ["legacy_fixture"]
 
 
-@pytest.mark.large
 def test_time_split_is_ordered_and_disjoint(legacy_dir):
     ev, _ = load_events(legacy_dir)
     tr, va, te = time_split(ev)
@@ -16,7 +15,6 @@ def test_time_split_is_ordered_and_disjoint(legacy_dir):
     assert va["event_time"].max() <= te["event_time"].min()
 
 
-@pytest.mark.large
 def test_raw_features_numeric_only_no_ids_no_label(legacy_dir):
     ev, _ = load_events(legacy_dir)
     x = raw_features(ev)
@@ -25,7 +23,6 @@ def test_raw_features_numeric_only_no_ids_no_label(legacy_dir):
     assert x.null_count().sum_horizontal().item() == 0
 
 
-@pytest.mark.large
 def test_load_events_rejects_leaked_golden(legacy_dir, tmp_path):
     ev = pl.read_parquet(legacy_dir / "events.parquet").with_columns(
         u_amt_sum_7d=pl.lit(0.0))
@@ -46,7 +43,6 @@ def test_evaluate_perfect_ranking():
     assert m["auc"] == 1.0 and m["recall_at_precision"] == 1.0
 
 
-@pytest.mark.large
 def test_oracle_beats_raw_beats_chance(legacy_dir):
     rows = run(legacy_dir, oracle=True)
     test = {r["model"]: r for r in rows if r["split"] == "test"}
@@ -54,7 +50,6 @@ def test_oracle_beats_raw_beats_chance(legacy_dir):
     assert test["xgb_oracle"]["auc"] > raw > 0.5
 
 
-@pytest.mark.large
 def test_oracle_features_exclude_score_but_include_golden(legacy_dir):
     ev, _ = load_events(legacy_dir)
     golden = pl.read_parquet(legacy_dir / "golden.parquet")
@@ -64,7 +59,6 @@ def test_oracle_features_exclude_score_but_include_golden(legacy_dir):
     assert "u_amt_count_7d" in cols
 
 
-@pytest.mark.large
 def test_load_events_requires_golden_columns_key(legacy_dir, tmp_path):
     import json
 
@@ -76,7 +70,6 @@ def test_load_events_requires_golden_columns_key(legacy_dir, tmp_path):
         load_events(tmp_path)
 
 
-@pytest.mark.large
 def test_single_class_train_emits_nan_rows(legacy_dir, tmp_path):
     ev = pl.read_parquet(legacy_dir / "events.parquet")
     cut = ev["event_time"].sort()[int(ev.height * 0.7)]
@@ -119,7 +112,6 @@ def test_time_split_is_stable_under_input_order():
     assert joined.equals(df.sort("event_time", "event_id"))
 
 
-@pytest.mark.large
 def test_graph_golden_features_hidden_from_raw(legacy_dir):
     ev, meta = load_events(legacy_dir)
     # invr_zombie_mean_30d (latent zombie ratio) is not in the legacy export (ruling, D87)

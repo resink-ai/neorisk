@@ -1,4 +1,4 @@
-"""Report section describing how the benchmark data was generated: the `examples/ecommerce`
+"""Report section describing how the benchmark data was generated: the e-commerce
 pack plus the `bounty_hunters` overlay, exported by `datagen export --legacy-fraud` (D87)."""
 
 import html as _html
@@ -6,7 +6,7 @@ import html as _html
 _esc = _html.escape
 
 # Mirrors the e-commerce pack, the bounty_hunters overlay and the legacy adapter
-# (`neorisk_simkit.io.legacy`); the run's identity, overlay parameters and counts come from
+# (`neorisk_simkit.legacy`); the run's identity, overlay parameters and counts come from
 # the run's dataset_meta (`meta["source"]` and `meta`), so they always match the data.
 _USER = [
     ("age_bucket", "low (5)", "static"),
@@ -29,7 +29,7 @@ _GOLDEN = [
 T = {
     "zh": {
         "intro": (
-            "数据由 datagen 的智能体事件模拟器生成：examples/ecommerce 电商包模拟正常购物者，"
+            "数据由 datagen 的智能体事件模拟器生成：neorisk_simkit.ecommerce 电商场景模拟正常购物者，"
             "bounty_hunters 叠加层注入刷推荐奖励的团伙，再由 datagen export --legacy-fraud "
             "导出为基准测试使用的格式。标签来自叠加层的隐藏真值（labels/），"
             "基准测试只能看到原始事件列，看不到黄金特征和真值，因此真实信号是已知的。"
@@ -118,7 +118,7 @@ T = {
     },
     "en": {
         "intro": (
-            "The data comes from datagen's agentic event simulator: the examples/ecommerce pack "
+            "The data comes from datagen's agentic event simulator: the e-commerce scenario (neorisk_simkit.ecommerce) "
             "simulates ordinary shoppers, the bounty_hunters overlay adds rings that farm the "
             "referral program, and datagen export --legacy-fraud writes the run in the "
             "benchmark's format. Labels come from the overlay's hidden ground truth (labels/). "

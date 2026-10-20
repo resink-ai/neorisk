@@ -5,11 +5,9 @@ description = "Framework for generating synthetic tabular event data with hidden
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "numba>=0.60",
     "numpy>=1.26",
     "polars>=1.0",
     "pyarrow>=17",
-    "pyyaml>=6",
     "xgboost>=2.0",
 ]
 

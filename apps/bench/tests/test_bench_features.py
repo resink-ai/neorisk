@@ -19,7 +19,6 @@ def feats(events):
     return build_features(events)
 
 
-@pytest.mark.large
 def test_rows_align_with_events_and_no_nulls(events, feats):
     assert feats["event_id"].equals(events["event_id"])
     names = feature_names(feats)
@@ -29,7 +28,6 @@ def test_rows_align_with_events_and_no_nulls(events, feats):
     assert feats.select(pl.col(floats).is_nan().sum()).row(0) == (0,) * len(floats)
 
 
-@pytest.mark.large
 def test_no_label_golden_or_id_columns(events, feats):
     names = set(feature_names(feats))
     assert "label" not in names and "event_time" not in names
@@ -39,7 +37,6 @@ def test_no_label_golden_or_id_columns(events, feats):
         assert banned not in names
 
 
-@pytest.mark.large
 def test_features_do_not_depend_on_labels(events, feats):
     shuffled = events.with_columns(
         label=pl.Series(np.random.default_rng(0).permutation(events["label"].to_numpy()))
@@ -47,7 +44,6 @@ def test_features_do_not_depend_on_labels(events, feats):
     assert build_features(shuffled).equals(feats)
 
 
-@pytest.mark.large
 def test_velocity_matches_bruteforce(events, feats):
     txn = events.filter(pl.col("event_type") == 0).select("user_id", "event_time", "amount")
     rows = txn.to_dicts()
@@ -66,7 +62,6 @@ def test_velocity_matches_bruteforce(events, feats):
         assert r["obs_u_amt_sum_30d"] == pytest.approx(sum(x["amount"] for x in prior))
 
 
-@pytest.mark.large
 def test_inviter_side_counts_invites_before_event(events, feats):
     inv = events.filter(pl.col("event_type") == 1).drop_nulls("inviter_id")
     # the busiest inviter that has rows of its own: a hunter cashes out only after its join,
@@ -79,13 +74,11 @@ def test_inviter_side_counts_invites_before_event(events, feats):
     assert got["obs_invr_bonus_count_30d"].max() > 0
 
 
-@pytest.mark.large
 def test_missing_required_column_raises(events):
     with pytest.raises(ValueError, match="inviter_id"):
         build_features(events.drop("inviter_id"))
 
 
-@pytest.mark.large
 def test_invitee_side_inviter_activity_is_point_in_time(events, feats):
     inv = events.filter((pl.col("event_type") == 1) & pl.col("inviter_id").is_not_null())
     inv_rows = inv.to_dicts()

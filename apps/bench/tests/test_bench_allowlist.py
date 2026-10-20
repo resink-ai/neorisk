@@ -37,7 +37,6 @@ def test_meta_allowlist_restricts_and_is_validated():
                           ev.with_columns(pl.lit(0).alias("g1")))
 
 
-@pytest.mark.large
 def test_legacy_dataset_carries_an_allowlist_equal_to_todays_raw_set(legacy_dir):
     meta = json.loads((legacy_dir / "meta.json").read_text())
     events, loaded = load_events(legacy_dir)

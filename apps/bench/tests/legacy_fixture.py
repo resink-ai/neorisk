@@ -1,35 +1,28 @@
-"""Session fixtures with legacy fraud exports (D87) shared by the bench tests.
+"""Session fixtures with legacy fraud exports shared by the bench tests.
 
-Registered from each bench test module that uses them with `pytest_plugins = ["legacy_fixture"]`
-(no second conftest.py, F-39). Building one compiles the ecommerce + bounty_hunters module
-(45-90 min cold, seconds warm; `users` and `run.span` are runtime config, so both sizes share
-one cached module), so every test that requests one is marked `large`.
+Registered from each bench test module that uses them with `pytest_plugins = ["legacy_fixture"]`.
 """
 
 from pathlib import Path
 
 import pytest
 
-EX = Path(__file__).resolve().parents[3] / "examples" / "ecommerce"
 
-
-def _export(tmp: Path, overrides: list[str]) -> Path:
+def _export(tmp: Path, users: int, days: int) -> Path:
     from datagen.cli import main
-    from neorisk_simkit.io.dataset import run_to_dataset
 
-    res = run_to_dataset(EX, "legacy", overrides, out_dir=tmp / "run", threads=4)
-    out = tmp / "fraud"
-    assert main(["export", str(res.out_dir), "--legacy-fraud", "--out", str(out)]) == 0
+    run, out = tmp / "run", tmp / "fraud"
+    assert main(["run", "--out", str(run), "--users", str(users), "--days", str(days)]) == 0
+    assert main(["export", str(run), "--legacy-fraud", "--out", str(out)]) == 0
     return out
 
 
 @pytest.fixture(scope="session")
 def legacy_dir(tmp_path_factory):
-    return _export(tmp_path_factory.mktemp("legacy"), ["users=2000", "run.span=30d"])
+    return _export(tmp_path_factory.mktemp("legacy"), 2000, 30)
 
 
 @pytest.fixture(scope="session")
 def legacy_compare_dir(tmp_path_factory):
-    """A larger export for `bench compare` (about 2x the rows): on `legacy_dir` the ANNs get
-    2-3 mini-batches per epoch and their test AUC is seed noise."""
-    return _export(tmp_path_factory.mktemp("legacy_cmp"), ["users=4000", "run.span=45d"])
+    """A larger export for `bench compare`, so the ANNs get enough mini-batches."""
+    return _export(tmp_path_factory.mktemp("legacy_cmp"), 4000, 45)

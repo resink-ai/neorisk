@@ -8,21 +8,18 @@ Model benchmark runner for synthetic event datasets. Two commands:
 
 ## Data
 
-The benchmark data is a run of `examples/ecommerce` with the `bounty_hunters` overlay, exported
+The benchmark data is a run of the e-commerce simulation (`neorisk_simkit.ecommerce`, with bounty-hunter rings), exported
 in the fraud dataset's shape (D87):
 
 ```
-uv run datagen run examples/ecommerce --profile legacy --out data/legacy-run
+uv run datagen run --users 5000 --days 60 --out data/legacy-run
 uv run datagen export data/legacy-run --legacy-fraud --out data/fraud
 ```
 
 ## Tests
 
 The tests that need data share one session fixture, `legacy_dir` (`tests/legacy_fixture.py`,
-registered with `pytest_plugins = ["legacy_fixture"]`): a `legacy` run with `users=2000` and
-`run.span=30d`, exported with `--legacy-fraud`. Building it compiles the ecommerce +
-bounty_hunters engine module, **45-90 min cold** (seconds once cached), so those tests are
-marked `large`; `pytest apps/bench -m "not large"` runs the rest.
+registered with `pytest_plugins = ["legacy_fixture"]`): a 2,000-user, 30-day simulation exported for bench, built in about a second.
 
 ## `bench compare`
 

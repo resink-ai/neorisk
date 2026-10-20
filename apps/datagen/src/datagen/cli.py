@@ -1,137 +1,58 @@
+"""datagen: run the e-commerce event simulation and export it for bench.
+
+    datagen run --out DIR [--users N] [--days D] [--seed S]
+    datagen export RUN_DIR --legacy-fraud --out DIR
+"""
+
+from __future__ import annotations
+
 import argparse
-import os
+import json
 import sys
 from collections.abc import Sequence
-
-GENERATE_REPLACED = (
-    "datagen generate was replaced (M3): datagen run examples/ecommerce --profile legacy && "
-    "datagen export <run dir> --legacy-fraud --out <dir>"
-)
-
-
-def _overlay_args(p: argparse.ArgumentParser) -> None:
-    p.add_argument("--overlay", action="append", default=[], metavar="NAME",
-                   help="enable an overlay on top of the profile's list (repeatable)")
-    p.add_argument("--no-overlays", action="store_true",
-                   help="ignore the profile's overlays (then add only --overlay ones)")
-
-
-def _project_args(p: argparse.ArgumentParser) -> None:
-    p.add_argument("project")
-    p.add_argument("--profile", default="sample")
-    p.add_argument("--set", action="append", default=[], metavar="K=V")
-    _overlay_args(p)
+from pathlib import Path
 
 
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="datagen")
     sub = parser.add_subparsers(dest="cmd", required=True)
-    gen = sub.add_parser("generate", add_help=False,
-                         help="replaced in M3 (prints the replacement commands)")
-    gen.add_argument("rest", nargs=argparse.REMAINDER)
-    val = sub.add_parser("validate", help="validate a project folder and print memory caps")
-    _project_args(val)
-    val.add_argument("--dump-machines", default=None, metavar="DIR",
-                     help="write each partition's generated machine module")
-    run = sub.add_parser("run", help="run a project profile into a dataset folder")
-    _project_args(run)
-    run.add_argument("--seed", type=int, default=None)
-    run.add_argument("--threads", type=int, default=None)
-    run.add_argument("--out", default=None, help="run folder (default <project>/out/<name>)")
-    run.add_argument("--force", action="store_true", help="overwrite an existing run folder")
-    run.add_argument("--checked", action="store_true", help="bounds-checked debug run")
-    chk = sub.add_parser("check", help="judge a run's laws and expectations; write "
-                         "report.html and checks.json (exit 5 if a required check fails)")
-    _project_args(chk)
-    chk.add_argument("--seed", type=int, default=None)
-    chk.add_argument("--run-dir", default=None, metavar="DIR",
-                     help="run folder (default <project>/<paths.out>/<run name>)")
-    chk.add_argument("--baseline", default=None, metavar="DIR",
-                     help="the same run without overlays (default <paths.out>/<profile>-s<seed> "
-                          "when it exists and overlays are enabled)")
-    chk.add_argument("--out", default=None, metavar="DIR",
-                     help="report folder (default <project>/<paths.reports>/<run name>)")
-    exp = sub.add_parser("export", help="export a run for bench (M3: --legacy-fraud only)")
-    exp.add_argument("run_dir", help="run (dataset) folder")
-    exp.add_argument("--legacy-fraud", action="store_true",
-                     help="write events.parquet, golden.parquet and meta.json for bench (D87)")
-    exp.add_argument("--out", default=None, metavar="DIR", help="output folder")
-    sch = sub.add_parser("schema", help="print DDL or JSON schema of a project or dataset")
-    sch.add_argument("target", help="project folder or dataset folder")
-    sch.add_argument("--profile", default="sample")
-    sch.add_argument("--set", action="append", default=[], metavar="K=V")
-    _overlay_args(sch)
-    sch.add_argument("--format", default="sql", help="sql (default) or json")
-    sch.add_argument("--dialect", default="postgres", help="postgres (default) or duckdb")
-    sch.add_argument("--tables", default=None, help="comma-separated table names")
-    sch.add_argument("--with-fks", action="store_true", help="emit REFERENCES clauses")
-    sch.add_argument("--out", default=None, help="write <table>.sql files into DIR")
-    rep = sub.add_parser("replay", help="replay a dataset's events to sinks in canonical order")
-    rep.add_argument("dataset", help="dataset (run) folder")
-    sel = rep.add_argument_group("selection")
-    sel.add_argument("--first", type=int, default=None, metavar="N")
-    sel.add_argument("--last", type=int, default=None, metavar="N")
-    sel.add_argument("--from", dest="t_from", default=None, metavar="T",
-                     help="inclusive, RFC 3339 or a date")
-    sel.add_argument("--to", dest="t_to", default=None, metavar="T", help="exclusive")
-    sel.add_argument("--types", default=None, help="comma-separated event types")
-    rep.add_argument("--sink", action="append", default=[], metavar="URI",
-                     help="stdout[:?format=jsonl|table|csv] or "
-                          "file:PATH[?format=jsonl|json-array|csv|parquet] (repeatable)")
-    rep.add_argument("--numbers", action="store_true", default=None,
-                     help="emit ids and amounts as JSON numbers")
-    rep.add_argument("--batch-rows", type=int, default=None, metavar="N")
-    rep.add_argument("--preset", default=None, help="[replay.presets.NAME] of datagen.toml")
-    bench = sub.add_parser("benchmark", help="run a benchmark workload and check its gate")
-    bench.add_argument("workload", help="workload file, e.g. benchmarks/s1.toml")
-    bench.add_argument("--scale", type=float, default=1.0,
-                       help="scale users by X (verdict 'skipped' unless 1)")
-    bench.add_argument("--cold", action="store_true",
-                       help="time the compile run with empty JIT caches")
-    bench.add_argument("--threads", type=int, default=None,
-                       help="default min(gate.threads, cores)")
-    bench.add_argument("--out", default=None, help="JSON report path")
-    bench.add_argument("--no-gate", action="store_true", help="exit 0 even if the gate fails")
-    argv = list(sys.argv[1:] if argv is None else argv)
-    # REMAINDER alone does not take a leading option (`generate --scenario fraud ...`)
-    args = (argparse.Namespace(cmd="generate") if argv[:1] == ["generate"]
-            else parser.parse_args(argv))
+    run = sub.add_parser("run", help="simulate the e-commerce scenario into parquet tables")
+    run.add_argument("--out", required=True)
+    run.add_argument("--users", type=int, default=2000)
+    run.add_argument("--days", type=float, default=30.0)
+    run.add_argument("--seed", type=int, default=7)
+    exp = sub.add_parser("export", help="export a run in the legacy fraud format for bench")
+    exp.add_argument("run_dir")
+    exp.add_argument("--legacy-fraud", action="store_true")
+    exp.add_argument("--out", required=True)
+    try:
+        args = parser.parse_args(argv)
+    except SystemExit as e:
+        return int(e.code or 0)
 
-    if args.cmd == "benchmark":
-        from datagen import benchmark
+    if args.cmd == "run":
+        from neorisk_simkit.ecommerce import Config, simulate, write
 
-        return benchmark.cmd_benchmark(args)
+        cfg = Config(users=args.users, days=args.days, seed=args.seed)
+        tables = simulate(cfg)
+        write(tables, args.out, cfg)
+        print(json.dumps({k: v.height for k, v in tables.items()}))
+        return 0
 
-    if args.cmd == "replay":
-        from datagen import replay_cmd
+    if not args.legacy_fraud:
+        print("datagen export: pass --legacy-fraud (the only export format)", file=sys.stderr)
+        return 2
+    from neorisk_simkit.export import export
+    from neorisk_simkit.legacy import legacy_fraud
 
-        return replay_cmd.cmd_replay(args)
-
-    if args.cmd == "export":
-        from datagen import export_cmd
-
-        return export_cmd.cmd_export(args)
-
-    if args.cmd == "schema":
-        os.environ["NUMBA_NUM_THREADS"] = "1"
-        from datagen import schema_cmd
-
-        return schema_cmd.cmd_schema(args)
-
-    if args.cmd == "check":
-        os.environ["NUMBA_NUM_THREADS"] = "1"
-        from datagen import check_cmd
-
-        return check_cmd.cmd_check(args)
-
-    if args.cmd in ("validate", "run"):
-        os.environ["NUMBA_NUM_THREADS"] = "1"
-        from datagen import run_cmds
-
-        return run_cmds.cmd_validate(args) if args.cmd == "validate" else run_cmds.cmd_run(args)
-
-    print(GENERATE_REPLACED, file=sys.stderr)       # args.cmd == "generate" (D89)
-    return 2
+    run_dir = Path(args.run_dir)
+    manifest = json.loads((run_dir / "manifest.json").read_text())
+    cfg = manifest["config"]
+    meta = {"seed": cfg["seed"],
+            "source": {"pack": "ecommerce", "overlays": {"bounty_hunters": {}},
+                       "run": run_dir.name, "config": cfg}}
+    export(legacy_fraud(run_dir, meta), args.out)
+    return 0
 
 
 if __name__ == "__main__":

@@ -10,7 +10,6 @@ from bench.compare import run_compare, write_outputs
 pytest_plugins = ["legacy_fixture"]
 
 
-@pytest.mark.large
 def test_run_compare_all_models(legacy_compare_dir):
     r = run_compare(legacy_compare_dir, shap_rows=400, ann_shap_rows=40, seed=0)
     assert set(r["models"]) == {"logreg", "rf", "xgb", "ann_small", "ann_large"}
@@ -37,7 +36,6 @@ def test_run_compare_all_models(legacy_compare_dir):
     assert all(m["shap_seconds"] >= 0 for m in r["models"].values())
 
 
-@pytest.mark.large
 def test_golden_parquet_is_never_read(legacy_dir, monkeypatch):
     real = pl.read_parquet
 
@@ -49,7 +47,6 @@ def test_golden_parquet_is_never_read(legacy_dir, monkeypatch):
     run_compare(legacy_dir, models=("logreg",), shap_rows=200, seed=0)
 
 
-@pytest.mark.large
 def test_failed_model_does_not_kill_run(legacy_dir, monkeypatch):
     import bench.models as m
 
@@ -60,7 +57,6 @@ def test_failed_model_does_not_kill_run(legacy_dir, monkeypatch):
     assert r["models"]["rf"]["failed"] and r["models"]["logreg"]["failed"] is None
 
 
-@pytest.mark.large
 def test_cli_writes_report_and_json(legacy_dir, tmp_path):
     html, js = tmp_path / "r.html", tmp_path / "m.json"
     rc = bench_main(
@@ -90,14 +86,12 @@ def test_cli_writes_report_and_json(legacy_dir, tmp_path):
     assert data["models"]["xgb"]["metrics"]["auc"] > 0.5
 
 
-@pytest.mark.large
 def test_cli_rejects_unknown_model(legacy_dir, tmp_path):
     with pytest.raises(SystemExit):
         bench_main(["compare", str(legacy_dir), "--out", str(tmp_path / "r.html"),
                     "--models", "svm"])
 
 
-@pytest.mark.large
 def test_single_class_labels_still_render(legacy_dir, tmp_path):
     d = tmp_path / "flat"
     d.mkdir()
