@@ -36,6 +36,9 @@ def tables(run: str | Path | RunData | Output) -> dict[str, pl.DataFrame]:
     if isinstance(run, (str, Path)):
         run = read(run)
     t = {k: _codes(v) for k, v in {**run.events, **run.entities}.items()}
+    for k, v in t.items():                     # bench reads naive UTC timestamps
+        if "event_time" in v.columns:
+            t[k] = v.with_columns(pl.col("event_time").dt.replace_time_zone(None))
     t["labels"] = run.labels.select(pl.col("target_id").alias("user_id"), "role")
     return t
 
