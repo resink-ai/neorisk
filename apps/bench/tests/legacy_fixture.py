@@ -7,12 +7,15 @@ from pathlib import Path
 
 import pytest
 
+ECOM = Path(__file__).resolve().parents[3] / "examples" / "ecommerce"
+
 
 def _export(tmp: Path, users: int, days: int) -> Path:
     from datagen.cli import main
 
     run, out = tmp / "run", tmp / "fraud"
-    assert main(["run", "--out", str(run), "--users", str(users), "--days", str(days)]) == 0
+    assert main(["run", str(ECOM), "--profile", "legacy", "--overlay", "bounty_hunters",
+                 "--set", f"users={users}", "--set", f"run.days={days}", "--out", str(run)]) == 0
     assert main(["export", str(run), "--legacy-fraud", "--out", str(out)]) == 0
     return out
 

@@ -84,6 +84,7 @@ class Part:
         "depth",
         "key",
         "kind",
+        "local",
         "ns",
         "pending",
         "pid",
@@ -102,6 +103,7 @@ class Part:
         self.rngs: dict[str, np.random.Generator] = {}
         self.pending: dict[int, str] = {}           # open request id -> reply action
         self.children: Counter = Counter()          # kind -> ordinal, for child keys
+        self.local: dict[str, dict] = {}            # process -> private state (ctx.local)
 
 
 @dataclass
@@ -125,6 +127,19 @@ class _Base:
     def shared(self) -> SimpleNamespace:
         return self._e.shared
 
+    @property
+    def days(self) -> float:
+        return self._e.run.days
+
+    @property
+    def horizon(self) -> float:
+        """The run end in seconds (infinite in population mode)."""
+        return self._e.horizon
+
+    def new_id(self, space: str) -> int:
+        """The next sequential id in `space` (for ids without an entity table, e.g. sessions)."""
+        return self._e._next_id(space, self.ns)
+
     def find(self, kind: str, key: Any) -> int:
         """The partition id a source registered as `create(kind, ..., key=key)`."""
         try:
@@ -139,7 +154,8 @@ class SourceCtx(_Base):
         self.rng = rngs.stream(e.run.seed, rngs.key("source", ns, name))
         self._n: Counter = Counter()
 
-    def create(self, kind: str, *, at: float = 0.0, key: Any = None, **init: Any) -> int | None:
+    def create(self, kind: str, *, at: float = 0.0, key: Any = None, cohort: str | None = None,
+               **init: Any) -> int | None:
         """Create a partition that starts at `at`; returns None if `at` is past the horizon."""
         e = self._e
         if at >= e.horizon:
@@ -147,10 +163,11 @@ class SourceCtx(_Base):
         self._n[kind] += 1
         pkey = rngs.key("source", self.ns, self.name, kind, self._n[kind])
         return e._create(e.plan.kinds[kind], init, self.ns, pkey, 0, at, None, key,
-                         self.cohort)
+                         e._cohort(cohort or self.cohort, self.ns))
 
-    def insert(self, table: str, **cols: Any) -> int:
-        return self._e._insert(table, cols, self.ns, 0.0)
+    def insert(self, table: str, *, at: float = 0.0, **cols: Any) -> int:
+        """An entity row created at `at` (sources may pre-assign ids for later arrivals)."""
+        return self._e._insert(table, cols, self.ns, at)
 
     def share(self, name: str, **arrays: np.ndarray) -> None:
         """Read-only shared inputs, visible to every action as `ctx.shared.<name>.<array>`."""
@@ -192,6 +209,23 @@ class Ctx(_Base):
         if g is None:
             g = p.rngs[proc] = rngs.stream(self._e.run.seed, p.key, rngs.key(proc))
         return g
+
+    @property
+    def local(self) -> dict:
+        """Private state of the running process in this partition (for overlay processes,
+        whose state is not part of the kind's state class)."""
+        return self.part.local.setdefault(self.action.process, {})
+
+    def call(self, action: str, **payload: Any) -> Any:
+        """Run another action of this partition inline, inside the same atomic step (an
+        overlay reaching a base extension point). Returns that action's result."""
+        act = self._act(self.part.kind, action)
+        saved = self.action, self.cmd
+        self.action, self.cmd = act, Cmd(action, self._e.now, payload)
+        try:
+            return act.fn(self, self.part.state, self.cmd)
+        finally:
+            self.action, self.cmd = saved
 
     # --- outcomes -----------------------------------------------------------------------
     def commit(self) -> None:
@@ -271,7 +305,8 @@ class Ctx(_Base):
                        {}, ("timeout", e.req))
         return e.req
 
-    def create(self, kind: str, *, key: Any = None, **init: Any) -> int:
+    def create(self, kind: str, *, key: Any = None, cohort: str | None = None,
+               **init: Any) -> int:
         """Create a partition (a creation message processed now). Depth is bounded."""
         e, part = self._e, self.part
         depth = part.depth + 1
@@ -283,7 +318,7 @@ class Ctx(_Base):
         pkey = rngs.key(part.key, kind, part.children[kind])
         self._effects += 1
         return e._create(e.plan.kinds[kind], init, part.ns, pkey, depth, e.now, self.last,
-                         key, part.cohort)
+                         key, e._cohort(cohort or part.cohort, part.ns))
 
     def insert(self, table: str, **cols: Any) -> int:
         self._effects += 1
@@ -362,6 +397,11 @@ class Engine:
             self._push(t, MESSAGE if act.priority is None else act.priority, pid, act.name, {},
                        cause, None)
         return pid
+
+    def _cohort(self, name: str | None, ns: int) -> str | None:
+        if name is not None and (name not in self._cohorts or self._cohorts[name].ns != ns):
+            raise SimError(f"cohort {name!r} is not declared by this overlay")
+        return name
 
     def _starting(self, part: Part):
         coh = self._cohorts.get(part.cohort)
@@ -447,6 +487,8 @@ class Engine:
                 else:
                     sender = meta[1]
             stats.commands += 1
+            if part.cohort is not None:
+                action = self._cohorts[part.cohort].redirect.get(action, action)
             self._dispatch(ctx, part, part.kind.actions[action],
                            Cmd(action, t, payload, sender, status, reason), cause, meta)
             if self.seq > run.max_events:

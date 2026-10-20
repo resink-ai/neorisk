@@ -1,4 +1,4 @@
-"""Legacy fraud dataset (what `bench` reads) from an e-commerce simulation run.
+"""Legacy fraud dataset (what `bench` reads) from an e-commerce + bounty_hunters run.
 
 Rows: `order_placed` → `event_type` 0; `referral_bonus_paid` → `event_type` 1 with `user_id` =
 the invitee and `inviter_id` = the paid inviter. Amounts are dollars. Attributes are integer
@@ -13,8 +13,10 @@ from pathlib import Path
 
 import polars as pl
 
+from neorisk_simkit.engine.output import Output
 from neorisk_simkit.export import Dataset
 from neorisk_simkit.features import rolling, rolling_asof
+from neorisk_simkit.io.read import RunData, read
 
 WINDOWS = [7, 14, 30]
 ROLES = ["hunter", "zombie"]
@@ -24,8 +26,18 @@ EVENT_COLUMNS = (
     "device_os", "device_model", "product_category", "product_price", "label")
 
 
-def load_run(run_dir: str | Path) -> dict[str, pl.DataFrame]:
-    return {f.stem: pl.read_parquet(f) for f in sorted(Path(run_dir).glob("*.parquet"))}
+def _codes(df: pl.DataFrame) -> pl.DataFrame:
+    """Categorical columns as integer codes, in declaration order."""
+    return df.with_columns(pl.col(pl.Enum).to_physical().cast(pl.Int64))
+
+
+def tables(run: str | Path | RunData | Output) -> dict[str, pl.DataFrame]:
+    """Event and entity tables by name (categoricals as codes), plus `labels` by user_id."""
+    if isinstance(run, (str, Path)):
+        run = read(run)
+    t = {k: _codes(v) for k, v in {**run.events, **run.entities}.items()}
+    t["labels"] = run.labels.select(pl.col("target_id").alias("user_id"), "role")
+    return t
 
 
 def _rows(t: dict[str, pl.DataFrame]) -> pl.DataFrame:
@@ -109,8 +121,8 @@ def _golden(events: pl.DataFrame) -> pl.DataFrame:
                       pl.col("label").cast(pl.Float64).alias("score"))
 
 
-def legacy_fraud(run: str | Path | dict[str, pl.DataFrame], meta: dict | None = None) -> Dataset:
-    t = load_run(run) if not isinstance(run, dict) else run
+def legacy_fraud(run: str | Path | RunData | Output, meta: dict | None = None) -> Dataset:
+    t = tables(run)
     rows = _attributes(_rows(t), t)
     lab = t["labels"].select(
         "user_id", (pl.col("role").replace_strict(ROLES, list(range(1, len(ROLES) + 1)),

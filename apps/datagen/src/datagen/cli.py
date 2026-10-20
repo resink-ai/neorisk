@@ -1,7 +1,11 @@
-"""datagen: run the e-commerce event simulation and export it for bench.
+"""datagen: validate, run, check, export, schema and replay simulation projects.
 
-    datagen run --out DIR [--users N] [--days D] [--seed S]
-    datagen export RUN_DIR --legacy-fraud --out DIR
+    datagen validate PROJECT [--overlay NAME]...
+    datagen run PROJECT [--profile P] [--overlay NAME]... [--set K=V]... [--seed S]
+                        [--out DIR] [--force] [--debug]
+    datagen export RUN_DIR (--legacy-fraud --out DIR | --single-file FILE)
+
+Exit codes: 0 success, 1 the run or a required check failed, 2 usage error or refusal.
 """
 
 from __future__ import annotations
@@ -13,46 +17,136 @@ from collections.abc import Sequence
 from pathlib import Path
 
 
-def main(argv: Sequence[str] | None = None) -> int:
+def _err(msg: str, code: int = 2) -> int:
+    print(f"datagen: {msg}", file=sys.stderr)
+    return code
+
+
+def _project_args(sp: argparse.ArgumentParser) -> None:
+    sp.add_argument("project", help="project folder (with specs/pack.py)")
+    sp.add_argument("--overlay", action="append", default=[], help="overlay name (repeatable)")
+    sp.add_argument("--profile", default=None)
+    sp.add_argument("--set", action="append", default=[], metavar="K=V",
+                    help="override: users=500 | run.days=10 | <overlay>.<param>=v")
+
+
+def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="datagen")
     sub = parser.add_subparsers(dest="cmd", required=True)
-    run = sub.add_parser("run", help="simulate the e-commerce scenario into parquet tables")
-    run.add_argument("--out", required=True)
-    run.add_argument("--users", type=int, default=2000)
-    run.add_argument("--days", type=float, default=30.0)
-    run.add_argument("--seed", type=int, default=7)
-    exp = sub.add_parser("export", help="export a run in the legacy fraud format for bench")
-    exp.add_argument("run_dir")
-    exp.add_argument("--legacy-fraud", action="store_true")
-    exp.add_argument("--out", required=True)
+    v = sub.add_parser("validate", help="report structural contradictions in a pack")
+    _project_args(v)
+    r = sub.add_parser("run", help="simulate a project into a dataset directory")
+    _project_args(r)
+    r.add_argument("--seed", type=int, default=None)
+    r.add_argument("--out", default=None, help="default: PROJECT/out/<profile>-s<seed>[+ovl]")
+    r.add_argument("--force", action="store_true", help="overwrite an existing run folder")
+    r.add_argument("--debug", action="store_true",
+                   help="check emits at emit time and snapshot state around rejections")
+    e = sub.add_parser("export", help="export a dataset in another layout")
+    e.add_argument("run_dir")
+    e.add_argument("--legacy-fraud", action="store_true", help="the fraud dataset bench reads")
+    e.add_argument("--single-file", default=None, metavar="FILE",
+                   help="every event in one canonically ordered parquet file")
+    e.add_argument("--out", default=None)
+    from datagen import check_cmd, replay_cmd, schema_cmd
+    check_cmd.add_parser(sub)
+    schema_cmd.add_parser(sub)
+    replay_cmd.add_parser(sub)
+    return parser
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    parser = build_parser()
     try:
         args = parser.parse_args(argv)
     except SystemExit as e:
         return int(e.code or 0)
+    from neorisk_simkit.engine import SimError
+    from neorisk_simkit.spec import PackError
+    try:
+        return COMMANDS[args.cmd](args)
+    except PackError as e:
+        return _err(str(e))
+    except SimError as e:
+        return _err(f"run failed: {e}", 1)
 
-    if args.cmd == "run":
-        from neorisk_simkit.ecommerce import Config, simulate, write
 
-        cfg = Config(users=args.users, days=args.days, seed=args.seed)
-        tables = simulate(cfg)
-        write(tables, args.out, cfg)
-        print(json.dumps({k: v.height for k, v in tables.items()}))
-        return 0
+def cmd_validate(args) -> int:
+    from neorisk_simkit.project import load_project
+    from neorisk_simkit.spec import validate
+    pr = load_project(args.project)
+    s = pr.settings(args.profile, args.set, args.overlay)
+    errs = validate(pr.plan(s.overlays)) + pr.lint()
+    for e in errs:
+        print(e)
+    print(json.dumps({"project": pr.name, "overlays": args.overlay, "problems": len(errs)}))
+    return 1 if errs else 0
 
-    if not args.legacy_fraud:
-        print("datagen export: pass --legacy-fraud (the only export format)", file=sys.stderr)
-        return 2
-    from neorisk_simkit.export import export
-    from neorisk_simkit.legacy import legacy_fraud
 
-    run_dir = Path(args.run_dir)
-    manifest = json.loads((run_dir / "manifest.json").read_text())
-    cfg = manifest["config"]
-    meta = {"seed": cfg["seed"],
-            "source": {"pack": "ecommerce", "overlays": {"bounty_hunters": {}},
-                       "run": run_dir.name, "config": cfg}}
-    export(legacy_fraud(run_dir, meta), args.out)
+def cmd_run(args) -> int:
+    import dataclasses
+
+    from neorisk_simkit.engine import simulate
+    from neorisk_simkit.io import DatasetExists, write
+    from neorisk_simkit.project import load_project
+    from neorisk_simkit.spec import validate
+    pr = load_project(args.project)
+    s = pr.settings(args.profile, args.set, args.overlay)
+    if args.seed is not None:
+        s.run = dataclasses.replace(s.run, seed=args.seed)
+    if args.debug:
+        s.run = dataclasses.replace(s.run, debug=True)
+    plan = pr.plan(s.overlays)
+    errs = validate(plan)
+    if errs:
+        return _err("invalid pack:\n  " + "\n  ".join(errs), 1)
+    out_dir = Path(args.out) if args.out else pr.root / "out" / pr.run_name(s, args.overlay)
+    if out_dir.exists() and any(out_dir.iterdir()) and not args.force:
+        return _err(f"{out_dir} exists; runs are deterministic, pass --force to overwrite")
+    out = simulate(plan, s.config, s.run)
+    try:
+        write(out, out_dir, force=args.force,
+              provenance={**pr.provenance(), "profile": s.profile, "sets": args.set})
+    except DatasetExists as e:
+        return _err(str(e))
+    print(json.dumps({"out": str(out_dir),
+                      "events": {k: v.height for k, v in out.events.items()},
+                      "late_messages": out.stats.late_messages}))
     return 0
+
+
+def cmd_export(args) -> int:
+    from neorisk_simkit.io import read
+    if bool(args.legacy_fraud) == bool(args.single_file):
+        return _err("export: pass exactly one of --legacy-fraud or --single-file")
+    if args.single_file:
+        from neorisk_simkit.io.single import single_file
+        single_file(read(args.run_dir), args.single_file)
+        return 0
+    if not args.out:
+        return _err("export --legacy-fraud needs --out")
+    from neorisk_simkit.export import export
+    from neorisk_simkit.io.legacy import legacy_fraud
+    run = read(args.run_dir)
+    m = run.manifest
+    meta = {"seed": m["seed"],
+            "source": {"pack": m["pack"], "run": run.root.name,
+                       "profile": m["provenance"].get("profile"),
+                       "pack_revision": m["provenance"].get("pack_revision"),
+                       "overlays": m["overlays"], "config": m["config"]}}
+    export(legacy_fraud(run, meta), args.out)
+    return 0
+
+
+def _late(name: str):
+    def go(args) -> int:
+        from datagen import check_cmd, replay_cmd, schema_cmd
+        return {"check": check_cmd, "schema": schema_cmd, "replay": replay_cmd}[name].run(args)
+    return go
+
+
+COMMANDS = {"validate": cmd_validate, "run": cmd_run, "export": cmd_export,
+            "check": _late("check"), "schema": _late("schema"), "replay": _late("replay")}
 
 
 if __name__ == "__main__":

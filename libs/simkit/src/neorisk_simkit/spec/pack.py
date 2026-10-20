@@ -73,6 +73,7 @@ class Process:
     max_spawn_depth: int = 3
     doc: str = ""
     machine: Any = None               # a machine.Machine, when the process is a state machine
+    cohort: str | None = None         # overlay processes run only for this cohort's members
 
     def action(self, fn: Callable | None = None, *, name: str | None = None,
                priority: int | None = None):
@@ -128,8 +129,11 @@ class CheckSpec:
 
 
 class Pack:
-    def __init__(self, name: str, config: type | None = None, doc: str = ""):
+    def __init__(self, name: str, config: type | None = None, doc: str = "",
+                 schema_version: int = 1):
+        """`schema_version` must go up on any column change (`datagen schema --diff`)."""
         self.name, self.config, self.doc = _name("pack", name), config, doc
+        self.schema_version = schema_version
         self.entities: dict[str, Table] = {}
         self.events: dict[str, Table] = {}
         self.kinds: dict[str, Kind] = {}

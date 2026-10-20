@@ -19,6 +19,12 @@ def feats(events):
     return build_features(events)
 
 
+@pytest.fixture(scope="module")
+def large_events(legacy_compare_dir):
+    """The larger export: invitees ordering after a busy inviter's bonus are rare."""
+    return pl.read_parquet(legacy_compare_dir / "events.parquet")
+
+
 def test_rows_align_with_events_and_no_nulls(events, feats):
     assert feats["event_id"].equals(events["event_id"])
     names = feature_names(feats)
@@ -79,7 +85,8 @@ def test_missing_required_column_raises(events):
         build_features(events.drop("inviter_id"))
 
 
-def test_invitee_side_inviter_activity_is_point_in_time(events, feats):
+def test_invitee_side_inviter_activity_is_point_in_time(large_events):
+    events, feats = large_events, build_features(large_events)
     inv = events.filter((pl.col("event_type") == 1) & pl.col("inviter_id").is_not_null())
     inv_rows = inv.to_dicts()
     by_inviter: dict[str, list] = {}
