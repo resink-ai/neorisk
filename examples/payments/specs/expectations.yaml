@@ -1,0 +1,34 @@
+# Statistical expectations for the payments pack; laws are declared in pack.py (p.check).
+pack: payments
+defaults:
+  min_sample: 300
+
+expectations:
+  - id: exp.decline_rate
+    metric: stat.share("payment_declined", of=["payment_authorized", "payment_declined"])
+    target: {between: [0.015, 0.03]}
+    source: "brief: Rates we know, row 1"
+    required: true
+  - id: exp.expiry_rate
+    metric: stat.share("payment_expired", of=["payment_authorized"])
+    target: {between: [0.05, 0.07]}
+    source: "brief: Rates we know, row 2"
+    required: true
+  - id: exp.refund_rate
+    metric: stat.share("refund_issued", of=["payment_captured"])
+    target: {between: [0.08, 0.13]}
+    source: "brief: Rates we know, row 3"
+    required: true
+  - id: exp.dispute_rate
+    metric: stat.share("dispute_opened", of=["payment_captured"])
+    target: {between: [0.003, 0.007]}
+    source: "brief: Rates we know, row 4"
+  - id: exp.capture_retries
+    metric: stat.share("capture_replayed", of=["payment_captured"])
+    target: {around: 0.05, tolerance: 0.2}
+    source: "brief: Rates we know, row 5"
+  - id: exp.merchant_concentration
+    metric: stat.top_share("payment_authorized", by="merchant_id", top=0.1)
+    target: {between: [0.55, 0.62]}
+    min_sample: 100          # units are merchants
+    source: "brief: Rates we know, row 6"

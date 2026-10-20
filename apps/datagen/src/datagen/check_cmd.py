@@ -1,4 +1,5 @@
-"""datagen check RUN_DIR [--project DIR] [--expectations FILE] [--baseline RUN] [--out DIR]
+"""datagen check RUN_DIR [--project DIR] [--expectations FILE] [--baseline RUN] [--seeds N]
+                       [--out DIR]
 
 Runs the structural checks, the pack's and overlays' laws, the expectations and (with an
 overlay) the regression rule against a finished dataset. Writes checks.json and report.html
@@ -21,6 +22,10 @@ def add_parser(sub) -> None:
                    help="default: PROJECT/specs/expectations.yaml if present")
     c.add_argument("--baseline", default=None,
                    help="the same run without overlays (default: rerun it in memory)")
+    c.add_argument("--skip-stats", action="store_true",
+                   help="laws and structure only (expectations are calibrated per profile)")
+    c.add_argument("--seeds", type=int, default=0,
+                   help="held-out seeds to rerun in memory for 95%% intervals on expectations")
     c.add_argument("--out", default=None, help="report folder (default: PROJECT/reports/<run>)")
 
 
@@ -50,9 +55,10 @@ def run(args) -> int:
                              detail="" if rev == ran else
                              f"specs changed since the run: {ran} -> {rev}; rerun it"))
     exp = Path(args.expectations) if args.expectations else pr.specs / "expectations.yaml"
-    if exp.exists():
+    if exp.exists() and not args.skip_stats:
         from neorisk_simkit.checks.stats import check_expectations
-        results += check_expectations(data, exp)
+        held = [pr.rerun(m, seed=m["seed"] + 1000 + i) for i in range(args.seeds)]
+        results += check_expectations(data, exp, held)
     if m["overlays"]:
         from neorisk_simkit.checks.interference import regression
         results += regression(pr, data, baseline=args.baseline)

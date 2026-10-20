@@ -138,6 +138,19 @@ class Project:
             applied.append(o)
         return build_plan(pack, applied)
 
+    def rerun(self, manifest: dict, *, overlays: bool = True, seed: int | None = None):
+        """Simulate a dataset's recorded settings again, in memory (baseline: no overlays;
+        held-out seeds: another seed)."""
+        from datetime import datetime
+
+        from neorisk_simkit.engine import simulate
+        run = {**manifest["run"], "start": datetime.fromisoformat(manifest["run"]["start"])}
+        if seed is not None:
+            run["seed"] = seed
+        rc = dataclasses.replace(RunConfig(), **run)
+        cfg = _coerce(self.Config, manifest["config"], "config") if self.Config else None
+        return simulate(self.plan(manifest["overlays"] if overlays else {}), cfg, rc)
+
     def run_name(self, s: Settings, overlays: list[str]) -> str:
         return f"{s.profile}-s{s.run.seed}" + "".join(f"+{o}" for o in overlays)
 

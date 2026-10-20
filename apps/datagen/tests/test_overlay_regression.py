@@ -76,7 +76,7 @@ def test_datagen_check_runs_the_rule(tmp_path, overlay):
     assert main(["run", str(proj), "--overlay", overlay, "--set", "users=300",
                  "--set", "run.days=15"]) == 0
     run = proj / "out" / f"default-s7+{overlay}"
-    assert main(["check", str(run)]) == 0
+    assert main(["check", str(run), "--skip-stats"]) == 0
     rep = json.loads((proj / "reports" / run.name / "checks.json").read_text())
     names = {r["name"]: r for r in rep["results"]}
     assert names["overlay.regression"]["status"] == "pass"

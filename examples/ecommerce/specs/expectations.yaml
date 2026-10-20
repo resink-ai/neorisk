@@ -1,0 +1,46 @@
+# Statistical expectations for the ecommerce pack. Every entry cites the brief row its target
+# comes from; required entries fail `datagen check`. Laws are declared in pack.py (p.check).
+# Changes need a second reviewer.
+pack: ecommerce
+defaults:
+  min_sample: 200            # units; fewer makes a metric inconclusive
+
+expectations:
+  - id: exp.signup_to_order
+    metric: stat.funnel("user_signed_up", "order_placed", unit="user_id", within="30d")
+    target: {between: [0.28, 0.42]}
+    source: "brief: Rates we know, row 1"
+    required: true
+  - id: exp.return_rate
+    metric: stat.funnel("order_placed", "order_returned", unit="order_id", within="30d")
+    target: {between: [0.02, 0.06]}
+    source: "brief: Rates we know, row 2"
+    required: true
+  - id: exp.stock_failures
+    metric: stat.share("checkout_failed", of=["checkout_failed", "order_placed"])
+    target: {lt: 0.02}
+    source: "brief: Rates we know, row 3"
+    required: true
+  - id: exp.sku_view_concentration
+    metric: stat.top_share("product_viewed", by="sku_id", top=0.01)
+    target: {between: [0.35, 0.42]}
+    source: "brief: Rates we know, row 4"
+  - id: exp.orders_per_shopper
+    metric: stat.quantiles("order_placed", per="user_id")
+    target: {p50: {between: [1, 1]}, p90: {between: [1, 3]}}
+    source: "brief: Rates we know, row 5"
+  - id: exp.orders_per_day
+    metric: stat.rate("order_placed")
+    target: {reported: true}
+    source: "brief: Rates we know, row 6 (scales with users)"
+
+overlays:
+  bounty_hunters:
+    - id: exp.hunters
+      metric: stat.cohort_size("hunter")
+      target: {reported: true}
+      source: "brief: Rates we know, row 7"
+    - id: exp.zombies
+      metric: stat.cohort_size("zombie")
+      target: {reported: true}
+      source: "brief: Rates we know, row 7"

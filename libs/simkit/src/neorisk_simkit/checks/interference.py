@@ -12,8 +12,7 @@ the same run without overlays, ignoring ordering columns (`event_id`, `seq`, `ca
 
 from __future__ import annotations
 
-import dataclasses
-from datetime import datetime, timedelta
+from datetime import timedelta
 from typing import Any
 
 import polars as pl
@@ -99,22 +98,11 @@ def compare(base: Data, over: Data, contacts: dict[str, float], exogenous: set[s
     return [r, interference]
 
 
-def baseline_for(project: Any, manifest: dict):
-    """Rerun a dataset's settings without its overlays, in memory."""
-    from neorisk_simkit.engine import RunConfig, simulate
-    from neorisk_simkit.project import _coerce
-    run = dict(manifest["run"])
-    run["start"] = datetime.fromisoformat(run["start"])
-    rc = dataclasses.replace(RunConfig(), **run)
-    cfg = _coerce(project.Config, manifest["config"], "config") if project.Config else None
-    return simulate(project.plan({}), cfg, rc)
-
-
 def regression(project: Any, data: Any, baseline: str | None = None) -> list[Result]:
     """For `datagen check`: compare a dataset with overlays against its baseline."""
     from neorisk_simkit.io import read
     m = data.manifest
-    base = read(baseline) if baseline else baseline_for(project, m)
+    base = read(baseline) if baseline else project.rerun(m, overlays=False)
     contacts: dict[str, float] = {}
     for c in m["stats"].get("contacts", []):
         contacts[c["kind"]] = min(contacts.get(c["kind"], c["t"]), c["t"])
