@@ -11,15 +11,23 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import numpy as np
 import polars as pl
 
 from neorisk_simkit.engine.output import Output
 from neorisk_simkit.export import Dataset
 from neorisk_simkit.features import rolling, rolling_asof
 from neorisk_simkit.io.read import RunData, read
+from neorisk_simkit.scorer import MLPScorer, XGBScorer, calibrate, sample_labels
 
 WINDOWS = [7, 14, 30]
 ROLES = ["hunter", "zombie"]
+LABELS = ("roles", "xgb", "mlp")
+# Planted signal: weight of each scorer input (golden columns plus `is_ring`) in `rescore`.
+SCORER_WEIGHTS = {
+    "amt_ratio_30d": 1.0, "u_amt_count_7d": 0.3, "u_amt_max_30d": 0.4,
+    "dev_users_n_unique_7d": 0.8, "inv_bonus_count_30d": 0.8, "inv_bonus_sum_30d": 1.0,
+    "invr_bonus_count_30d": 0.8, "invr_bonus_sum_30d": 1.0, "is_ring": 1.5}
 EVENT_COLUMNS = (
     "event_id", "event_time", "event_type", "user_id", "device_id", "product_id", "inviter_id",
     "amount", "currency", "referral_bonus", "user_age_bucket", "user_segment", "user_state",
@@ -147,3 +155,21 @@ def legacy_fraud(run: str | Path | RunData | Output, meta: dict | None = None) -
             "feature_allowlist": [c for c, dt in events.schema.items()
                                   if dt.is_numeric() and c != "label" and not c.endswith("_id")]}
     return Dataset(events, golden, meta)
+
+
+def rescore(ds: Dataset, kind: str = "xgb", bad_rate: float = 0.02, seed: int = 0) -> Dataset:
+    """Labels sampled from a scorer's probabilities, calibrated to ``bad_rate``; golden
+    ``score`` becomes that probability. ``kind`` is ``xgb`` or ``mlp``."""
+    if kind not in ("xgb", "mlp"):
+        raise ValueError(f"unknown scorer {kind!r}: expected xgb or mlp")
+    if not ds.golden["event_id"].equals(ds.events["event_id"]):
+        raise ValueError("golden rows are not aligned with events; labels would be scrambled")
+    x = ds.golden.with_columns(is_ring=(pl.col("actor_role") > 0).cast(pl.Float64))
+    scorer = (XGBScorer(SCORER_WEIGHTS, seed=seed) if kind == "xgb"
+              else MLPScorer(list(SCORER_WEIGHTS), seed=seed))
+    p = calibrate(scorer.score(x), bad_rate)
+    labels = sample_labels(p, np.random.default_rng(seed))
+    meta = {**ds.meta, "labels": {"source": "scorer", "scorer": kind,
+                                  "weights": SCORER_WEIGHTS, "target_bad_rate": bad_rate}}
+    return Dataset(ds.events.with_columns(label=pl.Series(labels)),
+                   ds.golden.with_columns(score=pl.Series(p)), meta)

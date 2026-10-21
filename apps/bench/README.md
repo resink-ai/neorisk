@@ -8,12 +8,18 @@ Model benchmark runner for synthetic event datasets. Two commands:
 
 ## Data
 
+Use scorer labels (`--labels xgb`) for model comparisons. The default role labels are noise-free,
+so every model scores AUC ≈ 1 on them. On the `bench` profile (50,000 users, 60 days, seed 42: 41k rows, 2.1% bad),
+XGB-scorer labels give test AUCs of 0.65–0.72, against a ceiling of 0.741: the AUC of the true
+probability `score` on the test split. The test split holds about 90 positives, so AUC differences
+under about 0.06 are noise.
+
 The benchmark data is a run of the e-commerce simulation (the `examples/ecommerce` pack with the `bounty_hunters` overlay), exported
 in the fraud dataset's shape (D87):
 
 ```
-uv run datagen run --users 5000 --days 60 --out data/legacy-run
-uv run datagen export data/legacy-run --legacy-fraud --out data/fraud
+uv run datagen run examples/ecommerce --profile bench --overlay bounty_hunters --out data/legacy-run   # ~10 s
+uv run datagen export data/legacy-run --legacy-fraud --labels xgb --out data/fraud
 ```
 
 ## Tests

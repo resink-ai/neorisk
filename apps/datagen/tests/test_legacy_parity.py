@@ -4,9 +4,10 @@ hand-coded scenario this pack replaced), and its planted signal."""
 from pathlib import Path
 
 import polars as pl
+import pytest
 
 from neorisk_simkit.engine import simulate
-from neorisk_simkit.io.legacy import legacy_fraud
+from neorisk_simkit.io.legacy import legacy_fraud, rescore
 from neorisk_simkit.project import load_project
 
 ECOM = Path(__file__).resolve().parents[3] / "examples" / "ecommerce"
@@ -41,3 +42,23 @@ def test_legacy_export_shape_is_pinned():
     assert ds.events["event_time"].is_sorted()
     assert set(ds.golden["actor_role"]) <= {0, 1, 2}
     assert "feature_allowlist" in ds.meta and "label" not in ds.meta["feature_allowlist"]
+
+
+def test_rescore_samples_calibrated_labels_from_the_scorer():
+    pr = load_project(ECOM)
+    s = pr.settings("legacy", [], ["bounty_hunters"])
+    ds = legacy_fraud(simulate(pr.plan(s.overlays), s.config, s.run))
+    for kind in ("xgb", "mlp"):
+        a, b = rescore(ds, kind, bad_rate=0.1, seed=3), rescore(ds, kind, bad_rate=0.1, seed=3)
+        assert a.events.equals(b.events) and a.golden.equals(b.golden)
+        assert dict(a.events.schema) == EVENTS and a.golden.columns == GOLDEN
+        p = a.golden["score"]
+        assert abs(p.mean() - 0.1) < 1e-3 and 0 < p.min() and p.max() < 1
+        assert set(a.events["label"]) == {0, 1}
+        assert a.meta["labels"]["scorer"] == kind and "labels" not in ds.meta
+        assert not a.events["label"].equals(rescore(ds, kind, 0.1, seed=4).events["label"])
+    ring = ds.golden["actor_role"] > 0
+    p = rescore(ds, "xgb", 0.1, seed=3).golden["score"]
+    assert p.filter(ring).mean() > 2 * p.filter(~ring).mean()   # the planted ring signal
+    with pytest.raises(ValueError, match="unknown scorer"):
+        rescore(ds, "gbm")

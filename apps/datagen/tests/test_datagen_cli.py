@@ -66,6 +66,13 @@ def test_debug_run_and_exports(tmp_path):
     meta = json.loads((fraud / "meta.json").read_text())
     assert meta["n_events"] > 0 and meta["feature_allowlist"]
     assert meta["source"]["overlays"] == {"bounty_hunters": {"share": 0.002, "zombies_mean": 8.0}}
+    scored = tmp_path / "scored"
+    assert main(["export", str(run), "--legacy-fraud", "--labels", "xgb", "--bad-rate", "0.1",
+                 "--out", str(scored)]) == 0
+    labels = json.loads((scored / "meta.json").read_text())["labels"]
+    assert labels["source"] == "scorer" and labels["target_bad_rate"] == 0.1
+    assert main(["export", str(run), "--legacy-fraud", "--labels", "xgb", "--bad-rate", "1",
+                 "--out", str(tmp_path / "bad")]) == 2
     assert main(["export", str(run), "--single-file", str(one)]) == 0
     df = pl.read_parquet(one)
     assert df["seq"].is_sorted() and df["event_type"].n_unique() >= 6

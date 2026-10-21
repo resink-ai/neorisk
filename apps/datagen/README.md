@@ -9,7 +9,7 @@ uv run datagen check    examples/ecommerce/out/sample-s7+bounty_hunters [--seeds
 uv run datagen schema   examples/ecommerce --format sql --dialect duckdb [--with-fks] [--load RUN] [--unified-view]
 uv run datagen schema   --diff OLD NEW
 uv run datagen replay   RUN --first 100 [--with-labels] [--sink file:x.jsonl] [--sink kafka://host:9092/ecom.{event_type}]
-uv run datagen export   RUN (--legacy-fraud --out DIR | --single-file all.parquet | --public-ids --out DIR)
+uv run datagen export   RUN (--legacy-fraud [--labels roles|xgb|mlp] [--bad-rate R] --out DIR | --single-file all.parquet | --public-ids --out DIR)
 ```
 
 ## Commands
@@ -44,5 +44,14 @@ uv run datagen export   RUN (--legacy-fraud --out DIR | --single-file all.parque
 
   Sinks are stdout, files (jsonl, json-array, csv, parquet) and Kafka. Kafka needs `neorisk-simkit[kafka]`. Delivery is at-least-once, with a `.replay-state.json` for resuming.
 - **`export --legacy-fraud`** writes the shape `bench` reads (`events.parquet`, `golden.parquet`, `meta.json`) from an e-commerce + `bounty_hunters` run.
+  - `--labels roles` (default): a row is bad exactly when its user, or its inviter, is a ring member.
+    These labels are noise-free, and the ring always buys the cheapest qualifying SKU, so every
+    `bench compare` model reaches AUC ≈ 1. Good for checking the plumbing, useless for ranking
+    models.
+  - `--labels xgb|mlp`: labels are sampled from a scorer over the golden features plus `is_ring`,
+    calibrated to `--bad-rate` (default 0.02) and seeded by the run's seed. This is how the
+    benchmark was labeled before D89. Golden `score` holds the probability, and `meta.json`
+    records the scorer and its weights under `labels`. See
+    `docs/superpowers/specs/2026-10-20-scorer-labels-design.md`.
 
 Exit codes: 0 success, 1 a failed run or check, 2 a usage error or refusal.

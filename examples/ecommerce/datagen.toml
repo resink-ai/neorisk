@@ -20,6 +20,13 @@ run = { days = 60.0 }
 config = { users = 2000 }
 run = { days = 30.0 }
 
+# `bench compare` with `export --legacy-fraud --labels xgb`: ~31k rows, ~10 s. Stock and
+# checkout_p are rescaled so a 50k-user run keeps every expectation in the brief; the referral
+# budget scales with users (10x), so claims are paid to the end of the run.
+[profiles.bench]
+config = { users = 50000, stock_mean = 500, checkout_p = 0.07, monthly_budget_cents = 20000000 }
+run = { days = 60.0, max_events = 10000000 }
+
 [overlays.bounty_hunters]
 share = 0.002
 zombies_mean = 8.0
