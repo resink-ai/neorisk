@@ -98,3 +98,33 @@ def test_same_seed_same_output(overlays):
     assert all(a.events[k].equals(b.events[k]) for k in a.events)
     assert all(a.entities[k].equals(b.entities[k]) for k in a.entities)
     assert a.labels.equals(b.labels)
+
+
+def _signup_device_owner(out):
+    devices = out.entities["devices"].select("device_id", pl.col("user_id").alias("owner"))
+    users = out.entities["users"].select("user_id", "invited_by")
+    return (out.events["user_signed_up"].select("user_id", "device_id")
+            .join(devices, on="device_id").join(users, on="user_id"))
+
+
+def test_stealth_and_promoters_blur_the_ring():
+    def labeled(out):
+        return set(out.labels.filter(pl.col("target_table") == "users")["target_id"])
+
+    plain = _run(users=2000)
+    s = _signup_device_owner(plain).filter(pl.col("user_id").is_in(labeled(plain))
+                                           & pl.col("invited_by").is_not_null())
+    assert s.height > 0 and (s["owner"] == s["invited_by"]).all()      # zombies: hunter's device
+    shared = _signup_device_owner(plain).filter(pl.col("owner") == pl.col("invited_by"))
+    assert set(shared["user_id"]) <= labeled(plain)                    # only the ring shares
+
+    out = _run(users=2000, **{"bounty_hunters.stealth_p": 1.0,
+                              "bounty_hunters.promoters_share": 0.01})
+    ring = labeled(out)
+    z = _signup_device_owner(out).filter(pl.col("user_id").is_in(ring)
+                                         & pl.col("invited_by").is_not_null())
+    assert z.height > 0 and (z["owner"] == z["user_id"]).all()         # stealth: own devices
+    friends = _signup_device_owner(out).filter(pl.col("owner") == pl.col("invited_by"))
+    assert friends.height > 0 and not set(friends["user_id"]) & ring   # look-alikes, unlabeled
+    paid = out.events["referral_bonus_paid"]
+    assert paid.filter(~pl.col("user_id").is_in(ring))["user_id"].value_counts()["count"].max() >= 3

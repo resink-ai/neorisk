@@ -26,6 +26,11 @@ run = { days = 30.0 }
 [profiles.bench]
 config = { users = 50000, stock_mean = 500, checkout_p = 0.07, monthly_budget_cents = 20000000 }
 run = { days = 60.0, max_events = 10000000 }
+# blur the ring: half its members act like ordinary shoppers (labeled misses), and 0.4% of
+# users are genuine promoters whose invited friends look like zombies (unlabeled false alarms)
+[profiles.bench.overlays.bounty_hunters]
+stealth_p = 0.5
+promoters_share = 0.004
 
 [overlays.bounty_hunters]
 share = 0.002

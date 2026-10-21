@@ -48,6 +48,13 @@ uv run datagen export   RUN (--legacy-fraud [--labels roles|xgb|mlp] [--bad-rate
     These labels are noise-free, and the ring always buys the cheapest qualifying SKU, so every
     `bench compare` model reaches AUC ≈ 1. Good for checking the plumbing, useless for ranking
     models.
+  - The `bench` profile blurs the ring with two `bounty_hunters` knobs, so role labels stop being
+    trivial. `stealth_p` (0.5 there) makes that share of ring members blend in: own device,
+    ordinary products at list price, ongoing browsing. They are still labeled, so they are the
+    misses. `promoters_share` (0.004 there) adds genuine users whose invited friends look like
+    zombies: some share the promoter's device and open with the cheapest qualifying order.
+    They are never labeled, so they are the false alarms. Both knobs default to 0, and other
+    profiles are unchanged.
   - `--labels xgb|mlp`: labels are sampled from a scorer over the golden features plus `is_ring`,
     calibrated to `--bad-rate` (default 0.02) and seeded by the run's seed. This is how the
     benchmark was labeled before D89. Golden `score` holds the probability, and `meta.json`

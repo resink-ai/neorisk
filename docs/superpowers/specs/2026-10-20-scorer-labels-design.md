@@ -68,22 +68,47 @@ scales the run to 50,000 users and rescales what a 10× population would otherwi
 
 All 23 `datagen check` checks pass, and the run takes about 10 s.
 
-## Results (seed 42, `bench` profile, 41,169 rows)
+## Blurring the ring (`bench` profile)
+
+Role labels stayed trivial (AUC 0.998–0.999) because every ring member followed the same script.
+Two `bounty_hunters` knobs now add deliberate overlap. Both default to 0 and draw no random numbers
+when off, so every other profile is byte-identical.
+
+| knob | `bench` | effect | error type |
+|---|---|---|---|
+| `stealth_p` | 0.5 | Ring member signs up on its own device, buys a popularity-drawn qualifying SKU at list price, keeps browsing; stealth hunters cash out on ordinary SKUs | labeled but normal-looking: misses |
+| `promoters_share` | 0.004 | Genuine users invite about 8 friends; half share the promoter's device and 60% open with the cheapest qualifying order, then shop normally | ring-looking but unlabeled: false alarms |
+
+Settings tried on the `bench` profile (role labels, five-model test AUC / PR-AUC):
+
+| `stealth_p` | `promoters_share` | AUC | PR-AUC |
+|---|---|---|---|
+| 0 | 0 | 0.998–0.999 | 0.97–0.98 |
+| 0.3 | 0.002 | 0.957–0.984 | 0.50–0.62 |
+| 0.5 | 0.004 | 0.909–0.942 | 0.44–0.52 |
+| 0.7 | 0.006 | 0.896–0.946 | 0.43–0.57 |
+
+The `bench` profile uses 0.5 / 0.004. Beyond that the gains are small, because the remaining tells
+are structural: ring members join by invitation (`user_segment`), and non-stealth zombies still buy
+the cheapest SKU (`product_price`).
+
+## Results (seed 42, `bench` profile, 45,605 rows)
 
 | labels | bad rate | test positives | ceiling AUC | five models, test AUC |
 |---|---|---|---|---|
-| roles | 6.0% | 69 | 1.000 | 0.998–0.999 |
-| xgb | 2.1% | 93 | 0.741 | 0.65–0.72 (LR 0.721, large ANN 0.694, small ANN 0.678, XGB 0.651, RF 0.647) |
-| mlp | 2.1% | 163 | 0.639 | 0.49–0.59 |
+| roles | 6.0% | 149 | 1.000 | 0.909–0.942 (XGB best) |
+| xgb | 2.0% | 95 | 0.836 | 0.78–0.82 (XGB 0.818, LR 0.812, large ANN 0.814, small ANN 0.808, RF 0.784) |
+| mlp | 2.0% | 167 | 0.625 | 0.55–0.63 |
 
 The ceiling is the AUC of the golden `score` on the test split.
 
-- The test split's bad rate (1.1%) is below the overall rate, because signups end around day 30
+- The test split's bad rate is below the overall rate, because sign-ups end around day 30
   (`arrive_share = 0.5`) and rings stop arriving at 80% of the run.
-- With about 90 test positives, the AUC standard error is about 0.03.
+- Before blurring, the XGB-scorer validation AUC (about 0.83) sat well above test AUC
+  (0.65–0.72), and XGBoost early-stopped at round 1. With blurring, validation is about 0.86 and
+  test 0.78–0.82, and XGBoost trains for 12 rounds.
 
 ## Out of scope
 
 - No change to `bench`.
-- No change to the pack or the overlay. The cheapest-SKU tell is still visible, but under scorer
-  labels it carries only `is_ring`'s share of the signal.
+- No change to the pack. The overlay gains the two knobs above, off by default.
