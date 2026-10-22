@@ -84,26 +84,24 @@ class Rules(Ranker):
 
 
 def dawid_skene(v: np.ndarray, clamp: dict[int, float]) -> np.ndarray:
-    """One-coin Dawid-Skene: each function has an accuracy; returns P(bad) per user."""
+    """Dawid-Skene with a confusion row per class: for each function, how often it votes bad,
+    benign or abstains on bad users and on good ones. EM starts from the majority vote, which
+    keeps it from swapping the classes; returns P(bad) per user, with `clamp` held fixed."""
     n, m = v.shape
-    acc = np.full(m, 0.7)
-    prior = 0.05
+    cat = v + 1                                        # 0 abstain, 1 benign, 2 bad
+    nb, ng = (v == 1).sum(axis=1), (v == 0).sum(axis=1)
+    p = nb / (nb + ng + 1.0)
     idx = np.fromiter(clamp, dtype=int, count=len(clamp))
     val = np.fromiter(clamp.values(), dtype=float, count=len(clamp))
+    p[idx] = val
+    onehot = np.stack([cat == c for c in range(3)], axis=2).astype(float)   # n, m, 3
     for _ in range(EM_ITERS):
-        lp1 = np.full(n, np.log(prior))
-        lp0 = np.full(n, np.log(1 - prior))
-        for j in range(m):
-            a = np.clip(acc[j], 0.5, 0.95)     # better than chance: keeps EM from flipping
-            lp1 += np.where(v[:, j] == 1, np.log(a), np.where(v[:, j] == 0, np.log(1 - a), 0))
-            lp0 += np.where(v[:, j] == 0, np.log(a), np.where(v[:, j] == 1, np.log(1 - a), 0))
-        p = 1 / (1 + np.exp(np.clip(lp0 - lp1, -50, 50)))
-        p[idx] = val
-        for j in range(m):
-            on = v[:, j] >= 0
-            if on.any():
-                acc[j] = (np.where(v[on, j] == 1, p[on], 1 - p[on])).mean()
         prior = float(np.clip(p.mean(), 1e-4, 0.5))
+        t1 = (np.einsum("i,ijc->jc", p, onehot) + 1) / (p.sum() + 3)
+        t0 = (np.einsum("i,ijc->jc", 1 - p, onehot) + 1) / ((1 - p).sum() + 3)
+        llr = np.einsum("ijc,jc->i", onehot, np.log(t1) - np.log(t0))
+        p = 1 / (1 + np.exp(-np.clip(np.log(prior / (1 - prior)) + llr, -50, 50)))
+        p[idx] = val
     return p
 
 

@@ -68,3 +68,18 @@ def test_every_method_scores_and_proposes_on_a_simulated_world(world_truth, key)
     p = m.propose(world, known, 10)
     assert len(p) == 10 and not set(p) & set(seeds)
     assert m.score(world, known).shape == s.shape            # deterministic shape across rounds
+
+
+def test_label_model_trusts_functions_that_only_ever_vote_bad():
+    rng = np.random.default_rng(0)
+    bad = rng.random(2000) < 0.05
+    v = np.full((2000, 3), -1)
+    for j in range(2):                       # fire on 80% of bad users, 2% of good ones
+        fire = np.where(bad, rng.random(2000) < 0.8, rng.random(2000) < 0.02)
+        v[fire, j] = 1
+    v[~bad & (rng.random(2000) < 0.5), 2] = 0      # a benign rule
+    p = dawid_skene(v, {})
+    from sklearn.metrics import roc_auc_score
+    assert roc_auc_score(bad, p) > 0.85
+    both = (v[:, 0] == 1) & (v[:, 1] == 1)
+    assert p[both].min() > p[(v < 0).all(axis=1)].max()
