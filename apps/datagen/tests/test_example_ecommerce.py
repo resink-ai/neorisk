@@ -128,3 +128,12 @@ def test_stealth_and_promoters_blur_the_ring():
     assert friends.height > 0 and not set(friends["user_id"]) & ring   # look-alikes, unlabeled
     paid = out.events["referral_bonus_paid"]
     assert paid.filter(~pl.col("user_id").is_in(ring))["user_id"].value_counts()["count"].max() >= 3
+
+
+def test_stealth_ring_members_carry_the_stealth_variant():
+    plain = _run(users=2000)
+    assert plain.labels["variant"].is_null().all()
+    out = _run(users=2000, **{"bounty_hunters.stealth_p": 0.5})
+    v = out.labels.filter(pl.col("target_table") == "users")["variant"]
+    n = (v == "stealth").sum()
+    assert 0 < n < v.len() and set(v.drop_nulls()) == {"stealth"}

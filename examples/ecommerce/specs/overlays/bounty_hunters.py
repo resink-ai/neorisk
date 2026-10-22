@@ -56,6 +56,9 @@ def apply(o: Overlay, share: float = 0.002, zombies_mean: float = 8.0,
     def stealthy(ctx) -> bool:
         return stealth_p > 0 and ctx.rng.random() < stealth_p
 
+    def variant(ctx) -> str | None:
+        return "stealth" if ctx.local.get("stealth") else None
+
     @hunter.action
     def hunt(ctx, s, cmd):
         rng = ctx.rng
@@ -66,7 +69,7 @@ def apply(o: Overlay, share: float = 0.002, zombies_mean: float = 8.0,
             ctx.local["stealth"] = True
             ctx.after(ctx.rng.uniform(0.1, 1.0) * DAY, "session")
         ctx.label(s.uid, "hunter", table="users", campaign_id=s.uid,
-                  available_at=ctx.now + label_delay_days * DAY)
+                  available_at=ctx.now + label_delay_days * DAY, variant=variant(ctx))
         for _ in range(1 + int(rng.poisson(zombies_mean - 1))):
             ctx.create("user", cohort="zombie", inviter=s.uid, inviter_pid=ctx.self_id,
                        acquisition="invite", devices=list(s.devices))
@@ -98,7 +101,7 @@ def apply(o: Overlay, share: float = 0.002, zombies_mean: float = 8.0,
             ctx.call("signup", devices=[s.devices[rng.integers(len(s.devices))]])
         ctx.local["label_at"] = ctx.now + label_delay_days * DAY
         ctx.label(s.uid, "zombie", table="users", outcome="attempted", campaign_id=s.inviter,
-                  available_at=ctx.local["label_at"])
+                  available_at=ctx.local["label_at"], variant=variant(ctx))
         ctx.after(rng.uniform(0.1, 1.0) * DAY, "first_order")
 
     @zombie.action
@@ -107,7 +110,7 @@ def apply(o: Overlay, share: float = 0.002, zombies_mean: float = 8.0,
         device = s.devices[0]
         sku = popular_qualifying_sku(ctx) if stealth else cheapest_qualifying_sku(ctx)
         ctx.label(s.uid, "zombie", table="users", outcome="qualified", campaign_id=s.inviter,
-                  available_at=ctx.local["label_at"])     # its order is sized to qualify
+                  available_at=ctx.local["label_at"], variant=variant(ctx))     # its order is sized to qualify
         sid = ctx.new_id("session")
         ctx.emit("session_started", user_id=s.uid, device_id=device, session_id=sid)
         ctx.emit("product_viewed", user_id=s.uid, device_id=device, session_id=sid, sku_id=sku)
@@ -121,7 +124,7 @@ def apply(o: Overlay, share: float = 0.002, zombies_mean: float = 8.0,
     @zombie.action
     def claim_outcome(ctx, s, cmd):
         ctx.label(s.uid, "zombie", table="users", outcome="paid" if cmd.ok else "rejected",
-                  campaign_id=s.inviter, available_at=ctx.local["label_at"])
+                  campaign_id=s.inviter, available_at=ctx.local["label_at"], variant=variant(ctx))
 
     if promoters_share <= 0:
         return
