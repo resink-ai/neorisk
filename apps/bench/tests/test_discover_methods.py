@@ -12,8 +12,10 @@ from bench.discover.protocol import draw_seeds
 pytest_plugins = ["discover_fixture"]
 
 SEED = 27                                             # one reported zombie
-FINDS_THE_TOY_RING = ["connection", "money_flow", "sync", "rules", "label_model", "vote"]
-FINDS_THE_LOOK_ALIKES = ["similarity", "pu_learn", "active"]      # zombies, not the hunter
+FINDS_THE_TOY_RING = ["connection", "money_flow", "sync", "rules", "label_model", "vote_plain",
+                      "reason_sim", "reason_hop", "reason_rules", "vote"]
+FINDS_THE_LOOK_ALIKES = ["similarity", "pu_learn_plain", "pu_learn", "active_plain",
+                         "active"]                                # zombies, not the hunter
 
 
 @pytest.fixture(scope="module")
@@ -83,3 +85,19 @@ def test_label_model_trusts_functions_that_only_ever_vote_bad():
     assert roc_auc_score(bad, p) > 0.85
     both = (v[:, 0] == 1) & (v[:, 1] == 1)
     assert p[both].min() > p[(v < 0).all(axis=1)].max()
+
+
+def test_rank_pct_gives_tied_scores_the_same_rank():
+    from bench.discover.methods.vote import rank_pct
+    p = rank_pct(np.array([0.0, 0.0, 0.0, 1.0, 0.0]))
+    assert len(set(p[[0, 1, 2, 4]])) == 1 and p[3] == 1.0
+
+
+def test_anomaly_baseline_needs_no_seeds_and_ranks_the_toy_ring_higher(toy):
+    s = make("anomaly", 0).score(toy, {})
+    assert s[ring_mask(toy)].mean() > 3 * s[~ring_mask(toy)].mean()
+
+
+def test_every_anchored_method_names_the_one_it_replaces():
+    from bench.discover.methods import BEFORE, METHODS
+    assert set(BEFORE) <= set(METHODS) and set(BEFORE.values()) <= set(METHODS)

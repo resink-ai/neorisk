@@ -5,6 +5,7 @@ from __future__ import annotations
 import numpy as np
 from xgboost import XGBClassifier
 
+from bench.discover import explain as ex
 from bench.discover.features import standardize, user_matrix
 from bench.discover.methods.behaviour import split
 from bench.discover.methods.graph import ALPHA, device_graph, known_bad, money_graph, ppr
@@ -35,7 +36,11 @@ class Active(Ranker):
                                  (ppr(money_graph(world), start) - ALPHA * s) * n])
         v = votes(world)
         return np.column_stack([standardize(user_matrix(world)[0]), graph,
-                                (v == 1).sum(axis=1), (v == 0).sum(axis=1)])
+                                (v == 1).sum(axis=1), (v == 0).sum(axis=1),
+                                *self.extra(world).T])
+
+    def extra(self, world: World) -> np.ndarray:
+        return ex.anomaly_profile(world)
 
     def score(self, world: World, known: dict[int, int]) -> np.ndarray:
         x = self.features(world, known)
@@ -51,3 +56,12 @@ class Active(Ranker):
                           n_jobs=4, verbosity=0)
         m.fit(x[rows], y, sample_weight=w)
         return m.predict_proba(x)[:, 1]
+
+
+class ActivePlain(Active):
+    """Without the anomaly profile: the "before" of anchoring on anomalies."""
+
+    key = "active_plain"
+
+    def extra(self, world: World) -> np.ndarray:
+        return np.zeros((len(world.user_ids), 0))

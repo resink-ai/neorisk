@@ -7,6 +7,7 @@ import polars as pl
 from sklearn.linear_model import LogisticRegression
 from sklearn.neighbors import NearestNeighbors
 
+from bench.discover import explain as ex
 from bench.discover.features import standardize, user_matrix
 from bench.discover.protocol import Ranker
 from bench.discover.world import World
@@ -46,13 +47,18 @@ class Similarity(Ranker):
 
 
 class PULearn(Ranker):
+    """Known bad against unlabeled users, on the behaviour vector and the anomaly profile."""
+
     key = "pu_learn"
 
     def __init__(self, seed: int):
         self.seed = seed
 
+    def features(self, world: World) -> np.ndarray:
+        return np.column_stack([standardize(user_matrix(world)[0]), ex.anomaly_profile(world)])
+
     def score(self, world: World, known: dict[int, int]) -> np.ndarray:
-        z = standardize(user_matrix(world)[0])
+        z = self.features(world)
         bad, good = split(world, known)
         rng = np.random.default_rng([self.seed, len(known)])     # same labels, same draw
         free = np.setdiff1d(np.arange(len(z)), np.concatenate([bad, good]))
@@ -61,6 +67,15 @@ class PULearn(Ranker):
         y = np.concatenate([np.ones(len(bad)), np.zeros(len(good) + len(unl))])
         m = LogisticRegression(max_iter=1000, class_weight="balanced").fit(x, y)
         return m.predict_proba(z)[:, 1]
+
+
+class PULearnPlain(PULearn):
+    """The behaviour vector only: the "before" of anchoring on anomalies."""
+
+    key = "pu_learn_plain"
+
+    def features(self, world: World) -> np.ndarray:
+        return standardize(user_matrix(world)[0])
 
 
 def milestones(world: World) -> pl.DataFrame:

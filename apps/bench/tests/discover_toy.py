@@ -1,5 +1,7 @@
 """A 30-user world built by hand: 25 ordinary shoppers (five share a café device, one invites
-two friends) and a ring of 5 (a hunter and 4 zombies on the hunter's device, in lockstep)."""
+two friends) and a ring of 5 (a hunter and 4 zombies on the hunter's device, in lockstep).
+
+With `probe=True` the ring also fails identity checks (and shopper 5 fails one, once)."""
 
 from datetime import UTC, datetime, timedelta
 
@@ -17,7 +19,7 @@ def _t(h: float) -> datetime:
     return T0 + timedelta(hours=h)
 
 
-def toy_world() -> World:
+def toy_world(probe: bool = False) -> World:
     users, devices, sess, views, signups, orders, bonuses = [], [], [], [], [], [], []
     sid, oid = [1000], [5000]
 
@@ -81,7 +83,16 @@ def toy_world() -> World:
                                        "user_id": pl.Int64, "region": pl.String}),
         user_ids=u.sort("created_at", "user_id")["user_id"].to_numpy(),
         min_order_cents=3000,
+        **({"verifications": _verifications()} if probe else {}),
     )
+
+
+def _verifications() -> pl.DataFrame:
+    rows = [(_t(200), 26, 300, "id_mismatch"), (_t(200), 26, 300, "phone_reused"),
+            (_t(30), 5, 105, "id_mismatch")]
+    rows += [(_t(200 + (z - 26) * 0.5), z, 300, r) for z in RING[1:]
+             for r in ("device_limit", "phone_reused")]
+    return pl.DataFrame(rows, orient="row", schema=["event_time", "user_id", "device_id", "reason"])
 
 
 def ring_mask(world: World) -> np.ndarray:
