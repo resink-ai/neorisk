@@ -162,6 +162,12 @@ Outputs:
 - `OUT/discover.html`: one page. It has the leaderboard, discovery curves, budget sweep, ROC and
   PR side by side, stealth and visible recall, and approval rate against bad share.
 
+`--profile probe` adds the anomaly an analyst looks for first: ring members fail identity checks
+and retry, and zombies try an order under the referral minimum. Methods prefixed `reason_`
+first explain why the known bad users are bad (`bench.discover.explain`: each user's anomalies
+against the population), then follow only that explanation. `anomaly` is the seedless
+baseline. `*_plain` methods are the versions without the explanation, kept for before/after.
+
 Methods see only a leak-free world (`bench.discover.world`):
 - every id is permuted;
 - `partition_id`, `action_id`, `cause_id` and `seq` are dropped;

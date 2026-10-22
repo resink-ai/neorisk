@@ -239,6 +239,117 @@ equals a separate shorter run.
 - **`sync` is near random.** Its 2-hour window is much tighter than the 0–2 day spread
   between a hunter and its zombies. Its default was frozen before scoring, so it stays.
 
+## Anomaly-anchored methods (2026-10-22)
+
+Plan: `docs/superpowers/plans/2026-10-22-anomaly-anchored-discovery.md`.
+
+An analyst starts from why a confirmed bad user is bad (repeated failed checks, probing the
+threshold), then looks for that behaviour in others and follows the connections it leads to.
+Before this change, no method did that. The rules encoded anomalies but ignored the seeds;
+similarity and the graph used the seeds but not what is anomalous about them.
+
+**Explaining the seed (`bench.discover.explain`).**
+- Every user gets a tail excess per signal: −log P(at least this suspicious) − log(1/0.2),
+  floored at 0. A value shared by more than 20% of users explains nothing.
+- The signals:
+  - 8 oriented behaviour features;
+  - the 5 bad-voting rules;
+  - failed identity checks (count, distinct reasons, per reason);
+  - an order under the referral minimum followed by a qualifying one within a day.
+- The weights are the mean excess of the known bad, less that of the reviewed good.
+
+**The anchored methods:**
+- `reason_sim` scores users on the seeds' anomalies.
+- `reason_hop` restarts personalised PageRank from the seeds plus the top 1% by `reason_sim`, on
+  a graph where every edge keeps max(rank of its two ends)^8 of its weight.
+- `reason_rules` weights the rules by how often they fire on the known bad.
+- `anomaly` uses no seeds.
+- `pu_learn`, `active` and `vote` take the anomaly profile, or anchored members. Their old forms
+  stay as `*_plain`.
+
+**New data (`probe` profile):**
+- 80% of visible and 15% of stealth ring members fail identity checks and retry. Zombies on the
+  hunter's device trip `device_limit` / `phone_reused`.
+- Visible zombies try an order just under the minimum first.
+- 3% of genuine users fail a check once.
+- `stealth_p = probe_p = 0` runs stay byte-identical, checked on three runs.
+
+**Correction to the table above.** `vote`'s rank percentiles broke ties by row order, which is
+sign-up time; most users tie at zero for `sync` and `connection`. With average ranks, the same
+five members (`vote_plain`) score a label-set recall of 0.756, not 0.536, and a stealth recall
+of 0.55, not 0.36. The tie noise was hurting `vote`, not inflating it.
+
+### Results (seed 42, 5 seed draws, 500 reviews)
+
+Before → after. Rec = label-set recall, Stealth = stealth recall, FA = false alarm.
+
+`bench` data (no probing, same run as above):
+
+| pair | found | rec | AUC | stealth | FA promoters | FA promoted friends |
+|---|---|---|---|---|---|---|
+| connection → reason_hop | 120 → **391** | 0.165 → **0.632** | 0.506 → **0.992** | 0.15 → 0.27 | 0.012 → 0.240 | 0.020 → 0.162 |
+| similarity → reason_sim | 445 → 473 | 0.565 → 0.536 | 0.712 → 0.874 | 0.13 → 0.07 | 0.874 → **0.000** | 0.091 → 0.256 |
+| rules → reason_rules | 413 → 419 | 0.457 → 0.457 | 0.573 → 0.592 | 0.01 → 0.01 | 0.055 → 0.000 | 0.286 → 0.302 |
+| pu_learn_plain → pu_learn | 469 → 462 | 0.556 → 0.556 | 0.812 → 0.782 | 0.11 → 0.11 | 0.155 → 0.335 | 0.211 → 0.178 |
+| active_plain → active | 259 → 287 | 0.407 → 0.347 | 0.666 → 0.613 | 0.33 → 0.34 | 0.010 → 0.009 | 0.040 → 0.026 |
+| vote_plain → vote | 463 → 447 | **0.756** → 0.682 | 0.928 → 0.948 | **0.55** → 0.37 | 0.200 → 0.447 | 0.086 → 0.108 |
+| anomaly (no seeds) | 484 | 0.554 | 0.865 | 0.11 | 0.775 | 0.156 |
+
+`probe` data (52,778 users, 913 bad, 454 stealth):
+
+| pair | found | rec | AUC | stealth | FA promoters | FA promoted friends |
+|---|---|---|---|---|---|---|
+| connection → reason_hop | 115 → **425** | 0.158 → **0.667** | 0.506 → **0.993** | 0.16 → 0.33 | 0.020 → 0.236 | 0.019 → 0.113 |
+| similarity → reason_sim | 468 → 486 | 0.543 → 0.581 | 0.869 → 0.871 | 0.08 → 0.16 | 0.396 → **0.005** | 0.193 → 0.166 |
+| rules → reason_rules | 225 → 302 | 0.469 → 0.469 | 0.674 → 0.666 | 0.03 → 0.03 | 0.195 → 0.002 | 0.227 → 0.267 |
+| pu_learn_plain → pu_learn | 454 → 474 | 0.560 → 0.618 | 0.817 → 0.849 | 0.11 → 0.23 | 0.086 → 0.232 | 0.211 → 0.113 |
+| active_plain → active | 278 → 252 | 0.374 → 0.490 | 0.593 → 0.656 | 0.27 → 0.36 | 0.031 → 0.015 | 0.055 → 0.038 |
+| vote_plain → vote | 456 → 442 | 0.757 → **0.767** | 0.928 → **0.958** | 0.56 → 0.53 | 0.204 → 0.151 | 0.096 → 0.078 |
+| anomaly (no seeds) | 477 | 0.566 | 0.872 | 0.13 | 0.695 | 0.151 |
+
+The seeds' top reasons in draw 1:
+- `bench`: few views per order, few sessions, silent after the bonus, a crowded device, the
+  cheapest minimum order.
+- `probe`: few views per order, few sessions, distinct failure reasons, failed checks, an order
+  under the minimum before a qualifying one.
+
+**What it shows:**
+- **Anchoring the graph on the anomaly breaks it out of the seeds' rings.**
+  - `reason_hop` finds 391–425 ring members against `connection`'s 115–120, and has the best
+    ranking of any method (AUC 0.99, PR-AUC 0.42–0.44).
+  - It reaches stealth members (0.27–0.33) by walking from anomalous hunters to the zombies they
+    invited.
+  - With no reviews at all, its label set already holds 81–85% of the ring.
+- **Anchoring similarity on the anomaly removes the promoter false alarms.**
+  - `similarity` flags 87% (`bench`) or 40% (`probe`) of genuine promoters; `reason_sim` flags
+    0–0.5%, with recall within ±0.04 of `similarity`.
+  - `anomaly` with no seeds already finds the visible half (0.55–0.57) but flags 70–78% of
+    promoters. What the seeds add is mostly the explanation that excludes them.
+  - The same holds for the rules: `reason_rules` drops the promoter false alarms to 0.
+- **The probing signal helps the learners.** On `probe` data:
+  - `pu_learn` rises from 0.560 to 0.618 and doubles its stealth recall;
+  - `active` rises from 0.374 to 0.490;
+  - `label_model` rises to 0.539.
+  - On `bench` data, with no probing, the anomaly inputs cost `pu_learn` and `active` a little.
+- **`vote` is mixed.** On `probe` data the anchored `vote` is best (0.767, AUC 0.958). On `bench`
+  data it is worse than `vote_plain` (0.682 against 0.756): it trades `vote_plain`'s stealth
+  recall for promoter false alarms.
+
+**Problems found, not fixed (fixing them now would tune on the scored run):**
+- **The explanation drifts as labels arrive.**
+  - `reason_hop`'s recall falls from 0.81 with no reviews to 0.63 at 500, although 78% of its
+    reviews are hits.
+  - The weights average every confirmed bad user. The seeds' specific tells (crowded device,
+    cheapest minimum order) are diluted by hundreds of later finds into generic low activity.
+    Reviewed promoters, who share some tells, subtract them further.
+  - `reason_rules` shows the same thing at round 2 (0.45 → 0.18 → 0.46).
+  - Proposed follow-up: a per-pattern explanation, where a candidate matches some confirmed
+    user's own reasons (max over the known bad, or clusters of reasons) instead of their
+    average.
+- **Reason precision does not discriminate.** It is 0.97–1.00 for every non-random method,
+  because "carries any of the seeds' anomaly" is too loose a test. It needs a threshold, such as
+  overlap ≥ half the seeds' weight, to say anything.
+
 ## Out of scope
 
 - A noisy or biased reviewer, and an LLM reviewer (see above).
