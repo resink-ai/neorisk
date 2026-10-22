@@ -39,9 +39,11 @@ class World:
     bonuses: pl.DataFrame
     addresses: pl.DataFrame
     user_ids: np.ndarray          # world ids in `users` row order: the index of every score array
+    min_order_cents: int = 3000   # the published referral rule: an invitee's qualifying order
 
     def tables(self) -> dict[str, pl.DataFrame]:
-        return {f.name: getattr(self, f.name) for f in fields(self) if f.name != "user_ids"}
+        return {f.name: getattr(self, f.name) for f in fields(self)
+                if isinstance(getattr(self, f.name), pl.DataFrame)}
 
     def index(self, ids) -> np.ndarray:
         """Positions in `user_ids` of world user ids (all must exist)."""
@@ -100,7 +102,8 @@ def load(run: str | Path | RunData, seed: int) -> tuple[World, Truth]:
         frames[name] = _sort(_public(df, schema[src], seed))
     users = frames["users"].sort("created_at", "user_id")
     frames["users"] = users
-    world = World(**frames, user_ids=users["user_id"].to_numpy())
+    world = World(**frames, user_ids=users["user_id"].to_numpy(),
+                  min_order_cents=int(run.manifest["config"].get("min_order_cents", 3000)))
 
     # truth, through raw ids, then mapped the same way
     raw_users = run.entities["users"]["user_id"]
