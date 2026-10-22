@@ -87,7 +87,6 @@ def dawid_skene(v: np.ndarray, clamp: dict[int, float]) -> np.ndarray:
     """Dawid-Skene with a confusion row per class: for each function, how often it votes bad,
     benign or abstains on bad users and on good ones. EM starts from the majority vote, which
     keeps it from swapping the classes; returns P(bad) per user, with `clamp` held fixed."""
-    n, m = v.shape
     cat = v + 1                                        # 0 abstain, 1 benign, 2 bad
     nb, ng = (v == 1).sum(axis=1), (v == 0).sum(axis=1)
     p = nb / (nb + ng + 1.0)
