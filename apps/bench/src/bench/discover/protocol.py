@@ -84,18 +84,34 @@ class Trace:
     hits: list[int] = field(default_factory=list)             # bad found per round
     known: dict[int, int] = field(default_factory=dict)
     scores: np.ndarray | None = None
+    snapshots: dict[int, Trace] = field(default_factory=dict)
+
+    def upto(self, rounds: int, scores: np.ndarray, known: dict[int, int]) -> Trace:
+        """This trace as it stood after `rounds` rounds."""
+        return Trace(self.key, self.seeds, self.reviewed[:rounds], self.hits[:rounds],
+                     known, scores)
 
 
 def run_method(method: Method, world: World, truth: Truth, *, seeds: list[int], k: int,
-               rounds: int) -> Trace:
+               rounds: int, checkpoints: tuple[int, ...] = ()) -> Trace:
+    """Run the rounds; `checkpoints` (round counts below `rounds`) also keep a scored
+    snapshot in `trace.snapshots`, so one run answers several budgets."""
     oracle = Oracle(truth, world, budget=k * rounds)
     known = {s: 1 for s in seeds}
     trace = Trace(method.key, list(seeds))
-    for _ in range(rounds):
+    snaps: dict[int, Trace] = {}
+    for r in range(rounds):
+        if r in checkpoints:
+            snaps[r] = trace.upto(r, _scores(method, world, known), dict(known))
         got = oracle.review(method.propose(world, dict(known), k))
         known.update(got)
         trace.reviewed.append(list(got))
         trace.hits.append(sum(got.values()))
     trace.known = known
-    trace.scores = np.asarray(method.score(world, dict(known)), dtype=float)
+    trace.scores = _scores(method, world, known)
+    trace.snapshots = snaps
     return trace
+
+
+def _scores(method: Method, world: World, known: dict[int, int]) -> np.ndarray:
+    return np.asarray(method.score(world, dict(known)), dtype=float)

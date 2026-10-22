@@ -71,3 +71,13 @@ def test_methods_never_import_truth():
 
 def test_every_registered_method_builds():
     assert {"random", "perfect"} <= set(METHODS)
+
+
+def test_checkpoints_snapshot_the_trace_at_earlier_budgets(world_truth):
+    world, truth = world_truth
+    seeds = draw_seeds(truth, world, 5, t_report_days=40, rng=np.random.default_rng(1))
+    t = run_method(make("perfect", 0, truth), world, truth, seeds=seeds, k=10, rounds=3,
+                   checkpoints=(0, 2))
+    assert set(t.snapshots) == {0, 2}
+    assert t.snapshots[0].hits == [] and len(t.snapshots[0].known) == 5
+    assert t.snapshots[2].hits == [10, 10] and len(t.snapshots[2].known) == 25

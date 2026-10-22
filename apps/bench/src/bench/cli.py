@@ -100,6 +100,67 @@ def _datagen(args) -> int:
     return 0
 
 
+def _method_list(value: str) -> list[str]:
+    from bench.discover.methods import ORDER
+
+    names = [n.strip() for n in value.split(",") if n.strip()]
+    bad = [n for n in names if n not in ORDER]
+    if bad or not names:
+        raise argparse.ArgumentTypeError(
+            f"unknown method(s) {bad or [value]}; choose from {','.join(ORDER)}")
+    return names
+
+
+def _ints(value: str) -> tuple[int, ...]:
+    return tuple(int(x) for x in value.split(",") if x.strip())
+
+
+def _discover(args) -> int:
+    from pathlib import Path
+
+    from bench.discover.bench import run_bench
+    from bench.discover.report import write
+    from bench.discover.world import load
+
+    out = Path(args.out)
+    run_dir = args.run
+    if args.generate:
+        try:
+            from datagen.cli import main as datagen
+        except ImportError:
+            print("--generate needs the datagen package (uv sync --all-packages)")
+            return 2
+        run_dir = out / "run"
+        cmd = ["run", args.generate, "--seed", str(args.seed), "--out", str(run_dir), "--force"]
+        cmd += ["--profile", args.profile] if args.profile else []
+        for o in args.overlay:
+            cmd += ["--overlay", o]
+        for kv in args.set:
+            cmd += ["--set", kv]
+        if datagen(cmd) != 0:
+            return 1
+    world, truth = load(run_dir, seed=args.seed)
+    print(f"world: {len(world.user_ids):,} users, {int(truth.bad.sum())} bad "
+          f"({int(truth.stealth.sum())} stealth)")
+    res = run_bench(world, truth, methods=args.methods, k=args.k, rounds=args.rounds,
+                    sweep=args.sweep, draws=args.seed_draws, n_seeds=args.n_seeds,
+                    report_day=args.report_day, seed=args.seed, log=print)
+    page = write(res, out, lang=args.lang)
+    full = str(args.rounds)
+    print(f"{'method':<13}{'found':>7}{'recall':>9}{'prec':>8}{'auc':>8}{'pr_auc':>8}"
+          f"{'stealth':>9}")
+    for k, m in sorted(res["methods"].items(),
+                       key=lambda kv: -kv[1]["by_budget"][full]["recall"]["mean"]):
+        a = m["by_budget"][full]
+        found = a["found"]["mean"][-1] if isinstance(a["found"], dict) and a["found"]["mean"] \
+            else 0
+        print(f"{k:<13}{found:>7.0f}{a['recall']['mean']:>9.3f}{a['precision']['mean']:>8.3f}"
+              f"{a['auc']['mean']:>8.3f}{a['pr_auc']['mean']:>8.3f}"
+              f"{a['stealth_recall']['mean']:>9.3f}")
+    print(f"report: {page}  json: {out / 'discover.json'}")
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="bench")
     sub = parser.add_subparsers(dest="cmd", required=True)
@@ -149,7 +210,31 @@ def main(argv: Sequence[str] | None = None) -> int:
     dg.add_argument("--test-days", type=float, default=14.0)
     dg.add_argument("--seed", type=int, default=0)
 
+    ds = sub.add_parser("discover", help="label discovery: grow hidden ring labels from seeds")
+    src = ds.add_mutually_exclusive_group(required=True)
+    src.add_argument("--run", help="an existing datagen run with ring labels")
+    src.add_argument("--generate", metavar="PROJECT", help="simulate the run first, into OUT/run")
+    ds.add_argument("--profile", default=None)
+    ds.add_argument("--overlay", action="append", default=[])
+    ds.add_argument("--set", action="append", default=[], metavar="K=V")
+    ds.add_argument("--seed", type=int, default=42, help="simulation, id and method seed")
+    ds.add_argument("--methods", type=_method_list, default=None, help="comma-separated keys")
+    ds.add_argument("--k", type=int, default=50, help="reviews per round")
+    ds.add_argument("--rounds", type=int, default=10)
+    ds.add_argument("--sweep", type=_ints, default=(0, 2, 5, 10), help="budgets in rounds")
+    ds.add_argument("--seed-draws", type=int, default=5)
+    ds.add_argument("--n-seeds", type=int, default=5)
+    ds.add_argument("--report-day", type=float, default=45.0,
+                    help="seeds are bad users whose label is known by this day")
+    ds.add_argument("--out", required=True)
+    ds.add_argument("--lang", choices=("zh", "en"), default="zh")
+
     args = parser.parse_args(argv)
+    if args.cmd == "discover":
+        if args.methods is None:
+            from bench.discover.methods import ORDER
+            args.methods = list(ORDER)
+        return _discover(args)
     if args.cmd == "datagen":
         return _datagen(args)
     if args.cmd == "temporal":
