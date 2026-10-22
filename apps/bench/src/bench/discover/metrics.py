@@ -36,12 +36,37 @@ def _pos(user_ids: np.ndarray, ids) -> np.ndarray:
     return order[np.searchsorted(user_ids[order], np.asarray(list(ids), dtype=np.int64))]
 
 
+def _known(trace: Trace, user_ids: np.ndarray) -> np.ndarray:
+    known = np.full(len(user_ids), -1)
+    if trace.known:
+        known[_pos(user_ids, trace.known)] = list(trace.known.values())
+    return known
+
+
+def ranking(trace: Trace, user_ids: np.ndarray) -> np.ndarray:
+    """One ranking of everyone: known bad, then unreviewed by score, then known good."""
+    known = _known(trace, user_ids)
+    key = np.where(known == 1, np.inf, np.where(known == 0, -np.inf, trace.scores))
+    return np.lexsort((user_ids, -key))      # ties: by world id, never row order
+
+
+def label_set(trace: Trace, user_ids: np.ndarray, size: int) -> np.ndarray:
+    chosen = np.zeros(len(user_ids), bool)
+    chosen[ranking(trace, user_ids)[:size]] = True
+    return chosen
+
+
+def reason_precision(trace: Trace, user_ids: np.ndarray, size: int,
+                     carries: np.ndarray) -> float:
+    """Share of the label set's unreviewed picks that carry the seeds' anomaly (world only)."""
+    picks = label_set(trace, user_ids, size) & (_known(trace, user_ids) < 0)
+    return float(carries[picks].mean()) if picks.any() else float("nan")
+
+
 def summarize(trace: Trace, user_ids: np.ndarray, truth: Truth,
               block_shares: list[float] = BLOCK_SHARES) -> dict:
     n = len(user_ids)
-    known = np.full(n, -1)
-    if trace.known:
-        known[_pos(user_ids, trace.known)] = list(trace.known.values())
+    known = _known(trace, user_ids)
     bad = truth.bad
     to_find = int(bad.sum()) - len(trace.seeds)
     found = np.cumsum(trace.hits).tolist()
@@ -62,9 +87,7 @@ def summarize(trace: Trace, user_ids: np.ndarray, truth: Truth,
     else:
         out.update(auc=float("nan"), pr_auc=float("nan"), roc=[], pr=[])
 
-    # one ranking of everyone: known bad, then unreviewed by score, then known good
-    key = np.where(known == 1, np.inf, np.where(known == 0, -np.inf, s))
-    rank = np.lexsort((user_ids, -key))      # ties: by world id, never row order
+    rank = ranking(trace, user_ids)
     size = int(bad.sum())
     chosen = np.zeros(n, bool)
     chosen[rank[:size]] = True

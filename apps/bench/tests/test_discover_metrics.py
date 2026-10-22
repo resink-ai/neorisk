@@ -69,3 +69,19 @@ def test_summary_does_not_depend_on_user_row_order():
     b = summarize(t2, IDS[perm], pt, block_shares=[0.4, 0.6])
     for k in ("precision", "recall", "stealth_recall", "risk", "false_alarm", "auc"):
         assert a[k] == b[k], k
+
+
+def test_label_set_is_the_known_bad_then_the_top_unreviewed():
+    from bench.discover.metrics import label_set
+    t, _ = _case()
+    chosen = label_set(t, IDS, 4)
+    assert set(IDS[chosen]) == {100, 101, 102, 105}          # 3 known bad, then 105 (0.95)
+
+
+def test_reason_precision_counts_unreviewed_picks_that_carry_the_seeds_anomaly():
+    from bench.discover.metrics import reason_precision
+    t, _ = _case()
+    carries = np.zeros(10, bool)
+    carries[[3]] = True
+    assert reason_precision(t, IDS, 4, carries) == 0.0        # the one pick, 105, does not
+    assert reason_precision(t, IDS, 5, carries) == 0.5        # then 103 (0.9), which does

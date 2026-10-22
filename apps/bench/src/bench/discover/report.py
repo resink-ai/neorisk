@@ -7,10 +7,14 @@ import json
 import math
 from pathlib import Path
 
-COLORS = {"random": "#9aa0ad", "perfect": "#1f2433", "connection": "#2f6fdf",
-          "money_flow": "#0f9488", "similarity": "#d98a00", "pu_learn": "#b8560f",
-          "sync": "#7c4ddb", "rules": "#c2367a", "label_model": "#e0567a",
-          "active": "#d23a4f", "vote": "#3d8b2f"}
+from bench.discover.methods import BEFORE
+
+COLORS = {"random": "#9aa0ad", "perfect": "#1f2433", "anomaly": "#6b7280",
+          "connection": "#2f6fdf", "money_flow": "#0f9488", "reason_hop": "#1d4ed8",
+          "similarity": "#d98a00", "reason_sim": "#a16207", "pu_learn_plain": "#e8a06a",
+          "pu_learn": "#b8560f", "sync": "#7c4ddb", "rules": "#c2367a",
+          "reason_rules": "#9d174d", "label_model": "#e0567a", "active_plain": "#ef8a98",
+          "active": "#d23a4f", "vote_plain": "#86c27a", "vote": "#3d8b2f"}
 
 TEXT = {
     "en": {"title": "Label discovery bench", "lead": "Every method starts from the same reported "
@@ -28,7 +32,18 @@ TEXT = {
            "approval": "approval rate", "badshare": "bad share among approved",
            "notes": "Label set = known bad plus the top-ranked unreviewed users, as many as there "
            "are bad users. Means over seed draws; ± is the spread.",
-           "perfect": "perfect reads the hidden truth: it is the ceiling, not a contender."},
+           "perfect": "perfect reads the hidden truth: it is the ceiling, not a contender.",
+           "rp": "reason precision",
+           "why": "Why are the seeds bad?",
+           "why_lead": "The anomalies the reported seeds of the first draw carry, weighted by "
+           "how far into the population's tail they sit. Anchored methods follow only these.",
+           "seed": "seed", "reasons": "its strongest anomalies", "signal": "signal",
+           "weight": "weight",
+           "ba": "Before and after anchoring on the seeds' anomalies",
+           "ba_lead": "Each anchored method next to the one it replaces, at the full budget. "
+           "Reason precision is the share of a label set's unreviewed picks that carry the "
+           "seeds' anomaly; it is computed from the world, not the truth.",
+           "pair": "before → after"},
     "zh": {"title": "标签发现基准", "lead": "每个方法从相同的举报种子出发，审核预算相同；"
            "评分对照隐藏的团伙标签。",
            "board": "满预算排行榜", "curves": "每次审核找到的坏用户", "sweep": "不同审核轮数下的标签集召回",
@@ -41,7 +56,15 @@ TEXT = {
            "badfound": "找到的坏用户", "rounds": "审核轮数", "approval": "通过率",
            "badshare": "通过用户中坏用户占比",
            "notes": "标签集 = 已确认坏用户 + 排名最高的未审核用户，总数等于真实坏用户数。数值为多次种子抽样的均值，± 为波动。",
-           "perfect": "perfect 直接读取真实标签，只作为上限，不参与比较。"},
+           "perfect": "perfect 直接读取真实标签，只作为上限，不参与比较。",
+           "rp": "原因精确率",
+           "why": "种子为什么是坏用户？",
+           "why_lead": "第一次抽样的举报种子身上的异常，按其在总体尾部的位置加权。锚定方法只沿这些异常扩展。",
+           "seed": "种子", "reasons": "最强的异常", "signal": "信号", "weight": "权重",
+           "ba": "锚定种子异常前后对比",
+           "ba_lead": "每个锚定方法与它替换的方法并列，取满预算。原因精确率 = 标签集中未审核用户里带有种子异常的比例，"
+           "只用世界数据计算，不读真实标签。",
+           "pair": "之前 → 之后"},
 }
 
 CSS = """
@@ -155,10 +178,45 @@ def render(res: dict, lang: str = "en") -> str:
             f"<td>{_f(fa.get('promoted_friend', {}).get('mean'))}</td>"
             f"<td>{_f(fa.get('promoter', {}).get('mean'))}</td>"
             f"<td>{_f(fa.get('base', {}).get('mean'), 4)}</td>"
+            f"<td>{_f(a.get('reason_precision', {}).get('mean'))}</td>"
             f"<td>{methods[k]['seconds']:.1f}</td></tr>")
     head = "".join(f"<th>{t[c]}</th>" for c in ("method", "found", "recall_b", "prec", "rec",
                                                   "auc", "prauc", "stealth", "visible",
-                                                  "fa_friend", "fa_prom", "fa_base", "secs"))
+                                                  "fa_friend", "fa_prom", "fa_base", "rp",
+                                                  "secs"))
+
+    def arrow(a: dict | None, b: dict | None, d: int = 3) -> str:
+        return f"{_f(a and a.get('mean'), d)} → <b>{_f(b and b.get('mean'), d)}</b>"
+
+    ba_rows = "".join(
+        f"<tr><td>{old} → {new}</td>"
+        f"<td>{arrow(top[old]['recall'], top[new]['recall'])}</td>"
+        f"<td>{arrow(top[old]['auc'], top[new]['auc'])}</td>"
+        f"<td>{arrow(top[old]['stealth_recall'], top[new]['stealth_recall'])}</td>"
+        f"<td>{arrow(top[old]['false_alarm'].get('promoter'), top[new]['false_alarm'].get('promoter'))}</td>"
+        f"<td>{arrow(top[old].get('reason_precision'), top[new].get('reason_precision'))}</td></tr>"
+        for new, old in BEFORE.items() if new in top and old in top)
+    ba_head = "".join(f"<th>{t[c]}</th>" for c in ("pair", "rec", "auc", "stealth", "fa_prom",
+                                                     "rp"))
+    why = (res.get("explain") or [None])[0]
+    why_html = ""
+    if why:
+        wmax = max((w for _, w in why["top"]), default=1) or 1
+        bars = "".join(
+            f"<tr><td>{html.escape(n)}</td><td><svg viewBox='0 0 200 10' style='width:200px'>"
+            f"<rect width='{200 * w / wmax:.1f}' height='10' fill='var(--accent)'/></svg></td>"
+            f"<td>{w:.2f}</td></tr>" for n, w in why["top"])
+        per_seed = "".join(f"<tr><td>{s}</td><td>{html.escape(', '.join(r) or '—')}</td></tr>"
+                           for s, r in why["reasons"].items())
+        why_html = (f"<section class='panel'><h2>{t['why']}</h2><p class='muted'>"
+                    f"{t['why_lead']}</p><div class='two'><div class='scroll'><table><thead><tr>"
+                    f"<th>{t['signal']}</th><th></th><th>{t['weight']}</th></tr></thead><tbody>"
+                    f"{bars}</tbody></table></div><div class='scroll'><table><thead><tr>"
+                    f"<th>{t['seed']}</th><th>{t['reasons']}</th></tr></thead><tbody>"
+                    f"{per_seed}</tbody></table></div></div></section>")
+    ba_html = (f"<section class='panel'><h2>{t['ba']}</h2><p class='muted'>{t['ba_lead']}</p>"
+               f"<div class='scroll'><table><thead><tr>{ba_head}</tr></thead><tbody>{ba_rows}"
+               f"</tbody></table></div></section>") if ba_rows else ""
 
     k_, R = cfg["k"], cfg["rounds"]
     cur = Plot(0, k_ * R, 0, min(world["bad"], k_ * R), xlabel=t["reviews"],
@@ -216,6 +274,7 @@ def render(res: dict, lang: str = "en") -> str:
 <section class="panel"><h2>{t['board']}</h2><div class="scroll"><table><thead><tr>{head}</tr>
 </thead><tbody>{''.join(rows)}</tbody></table></div>
 <p class="muted">{t['notes']} {t['perfect']}</p></section>
+{why_html}{ba_html}
 <section class="two"><div class="panel"><h2>{t['curves']}</h2>{cur.svg()}{_legend(rank)}</div>
 <div class="panel"><h2>{t['sweep']}</h2>{sw.svg()}{_legend(rank)}</div></section>
 <section class="panel"><h2>{t['rocpr']}</h2><div class="two"><div>{roc.svg()}</div>
