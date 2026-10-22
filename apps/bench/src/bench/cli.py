@@ -144,7 +144,13 @@ def _discover(args) -> int:
           f"({int(truth.stealth.sum())} stealth)")
     res = run_bench(world, truth, methods=args.methods, k=args.k, rounds=args.rounds,
                     sweep=args.sweep, draws=args.seed_draws, n_seeds=args.n_seeds,
-                    report_day=args.report_day, seed=args.seed, log=print)
+                    report_day=args.report_day, seed=args.seed, reviewer=args.reviewer,
+                    log=print)
+    if args.baseline:
+        base = json.loads(Path(args.baseline).read_text())
+        full = str(args.rounds)
+        res["baseline"] = {m: base["methods"][m]["by_budget"][full] for m in res["methods"]
+                           if full in base["methods"].get(m, {}).get("by_budget", {})}
     page = write(res, out, lang=args.lang)
     full = str(args.rounds)
     print(f"{'method':<13}{'found':>7}{'recall':>9}{'prec':>8}{'auc':>8}{'pr_auc':>8}"
@@ -226,6 +232,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     ds.add_argument("--n-seeds", type=int, default=5)
     ds.add_argument("--report-day", type=float, default=45.0,
                     help="seeds are bad users whose label is known by this day")
+    ds.add_argument("--reviewer", choices=("perfect", "noisy"), default="perfect",
+                    help="the stand-in analyst: perfect, or noisy (misses stealth members, "
+                    "flags promoters)")
+    ds.add_argument("--baseline", default=None, metavar="JSON",
+                    help="a discover.json from the same run with another reviewer, to compare")
     ds.add_argument("--out", required=True)
     ds.add_argument("--lang", choices=("zh", "en"), default="zh")
 

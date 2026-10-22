@@ -155,6 +155,7 @@ uv run bench discover --generate examples/ecommerce --profile bench --overlay bo
 uv run bench discover --run RUN_DIR --out OUT          # an existing run
     [--methods random,perfect,connection,...] [--k 50] [--rounds 10] [--sweep 0,2,5,10]
     [--seed-draws 5] [--n-seeds 5] [--report-day 45] [--set K=V]
+    [--reviewer perfect|noisy] [--baseline OTHER/discover.json]
 ```
 
 Outputs:
@@ -167,6 +168,12 @@ and retry, and zombies try an order under the referral minimum. Methods prefixed
 first explain why the known bad users are bad (`bench.discover.explain`: each user's anomalies
 against the population), then follow only that explanation. `anomaly` is the seedless
 baseline. `*_plain` methods are the versions without the explanation, kept for before/after.
+
+The reviewer is a stand-in analyst who reveals labels (`bench.discover.protocol.Reviewer`).
+`perfect` (the default) never errs. `noisy` misses 10% of visible and 30% of stealth ring
+members, and calls 1% of ordinary users and 10% of genuine promoters bad. Methods learn from
+those verdicts, while scores stay against the hidden truth. `--baseline` adds a table comparing
+each method with its result under the other reviewer.
 
 Methods see only a leak-free world (`bench.discover.world`):
 - every id is permuted;

@@ -7,7 +7,7 @@ import numpy as np
 import pytest
 
 from bench.discover.methods import METHODS, make
-from bench.discover.protocol import Oracle, draw_seeds, run_method
+from bench.discover.protocol import REVIEWERS, Oracle, Reviewer, draw_seeds, run_method
 
 pytest_plugins = ["discover_fixture"]
 METHODS_DIR = Path(__file__).resolve().parents[1] / "src" / "bench" / "discover" / "methods"
@@ -37,6 +37,58 @@ def test_oracle_charges_only_new_known_ids(world_truth):
     assert set(o.review([a, b])) == {a, b} and o.spent == 2
     assert o.review([a, -1]) == {} and o.spent == 2           # repeat and unknown are free
     assert len(o.review([int(x) for x in world.user_ids[2:6]])) == 1 and o.spent == 3
+
+
+def _everyone(world):
+    return [int(x) for x in world.user_ids]
+
+
+def test_the_default_reviewer_is_perfect(world_truth):
+    world, truth = world_truth
+    o = Oracle(truth, world, budget=len(world.user_ids))
+    got = o.review(_everyone(world))
+    assert np.array_equal(np.array([got[i] for i in _everyone(world)]), truth.bad.astype(int))
+    assert REVIEWERS["perfect"] == Reviewer()
+
+
+def test_an_imperfect_reviewer_misses_stealth_members_more_and_flags_promoters(world_truth):
+    world, truth = world_truth
+    r = Reviewer(miss=0.1, stealth_miss=0.5)
+    o = Oracle(truth, world, budget=len(world.user_ids), reviewer=r, seed=7)
+    got = o.review(_everyone(world))
+    said = np.array([got[i] for i in _everyone(world)])
+    st, vis = truth.bad & truth.stealth, truth.bad & ~truth.stealth
+    assert abs((said[st] == 0).mean() - 0.5) < 0.1
+    assert abs((said[vis] == 0).mean() - 0.1) < 0.05
+    assert said[(truth.cohort == "base") & ~truth.bad].sum() == 0
+    every = Oracle(truth, world, budget=len(world.user_ids), seed=7,
+                   reviewer=Reviewer(promoter_false_alarm=1.0)).review(_everyone(world))
+    flagged = {i for i, v in every.items() if v} - set(world.user_ids[truth.bad].tolist())
+    assert flagged == set(world.user_ids[truth.cohort == "promoter"].tolist()) != set()
+
+
+def test_a_reviewers_verdict_on_a_user_does_not_depend_on_review_order(world_truth):
+    world, truth = world_truth
+    r = REVIEWERS["noisy"]
+    ids = _everyone(world)
+    a = Oracle(truth, world, budget=len(ids), reviewer=r, seed=3).review(ids)
+    b = Oracle(truth, world, budget=len(ids), reviewer=r, seed=3).review(ids[::-1])
+    assert a == b
+    c = Oracle(truth, world, budget=len(ids), reviewer=r, seed=4).review(ids)
+    assert a != c
+
+
+def test_hits_count_truly_bad_users_and_the_trace_counts_wrong_labels(world_truth):
+    world, truth = world_truth
+    seeds = draw_seeds(truth, world, 5, t_report_days=40, rng=np.random.default_rng(1))
+    blind = Reviewer(miss=1.0, stealth_miss=1.0)
+    t = run_method(make("perfect", 0, truth), world, truth, seeds=seeds, k=10, rounds=3,
+                   reviewer=blind)
+    assert t.hits == [10, 10, 10] and t.wrong == [10, 10, 10]
+    assert all(t.known[i] == 0 for r in t.reviewed for i in r)
+    assert all(t.known[s] == 1 for s in seeds)                 # reports are not reviewed
+    ok = run_method(make("perfect", 0, truth), world, truth, seeds=seeds, k=10, rounds=3)
+    assert ok.wrong == [0, 0, 0]
 
 
 def test_perfect_finds_a_bad_user_with_every_review_and_random_rarely(world_truth):

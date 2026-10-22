@@ -43,7 +43,13 @@ TEXT = {
            "ba_lead": "Each anchored method next to the one it replaces, at the full budget. "
            "Reason precision is the share of a label set's unreviewed picks that carry the "
            "seeds' anomaly; it is computed from the world, not the truth.",
-           "pair": "before → after"},
+           "pair": "before → after",
+           "rv": "Perfect reviewer → {name} reviewer",
+           "rv_lead": "The same run with a reviewer who misses {miss:.0%} of visible and "
+           "{stealth_miss:.0%} of stealth ring members, and calls {false_alarm:.0%} of ordinary "
+           "and {promoter_false_alarm:.0%} of genuine promoters bad. Methods learn from those "
+           "verdicts; scores stay against the hidden truth.",
+           "wrong": "wrong verdicts"},
     "zh": {"title": "标签发现基准", "lead": "每个方法从相同的举报种子出发，审核预算相同；"
            "评分对照隐藏的团伙标签。",
            "board": "满预算排行榜", "curves": "每次审核找到的坏用户", "sweep": "不同审核轮数下的标签集召回",
@@ -64,7 +70,12 @@ TEXT = {
            "ba": "锚定种子异常前后对比",
            "ba_lead": "每个锚定方法与它替换的方法并列，取满预算。原因精确率 = 标签集中未审核用户里带有种子异常的比例，"
            "只用世界数据计算，不读真实标签。",
-           "pair": "之前 → 之后"},
+           "pair": "之前 → 之后",
+           "rv": "完美审核员 → {name} 审核员",
+           "rv_lead": "同一数据，换成会出错的审核员：漏判 {miss:.0%} 的可见团伙成员和 {stealth_miss:.0%} 的隐蔽成员，"
+           "把 {false_alarm:.0%} 的普通用户和 {promoter_false_alarm:.0%} 的真实推广者判为坏。方法从这些判定中学习；"
+           "评分仍对照隐藏真相。",
+           "wrong": "错误判定"},
 }
 
 CSS = """
@@ -218,6 +229,23 @@ def render(res: dict, lang: str = "en") -> str:
                f"<div class='scroll'><table><thead><tr>{ba_head}</tr></thead><tbody>{ba_rows}"
                f"</tbody></table></div></section>") if ba_rows else ""
 
+    base = res.get("baseline") or {}
+    rv = cfg.get("reviewer") or {"name": "perfect"}
+    rv_rows = "".join(
+        f"<tr><td><span class='sw' style='background:{COLORS.get(k, '#888')}'></span>{k}</td>"
+        f"<td>{arrow(base[k]['recall'], top[k]['recall'])}</td>"
+        f"<td>{arrow(base[k]['stealth_recall'], top[k]['stealth_recall'])}</td>"
+        f"<td>{arrow(base[k]['auc'], top[k]['auc'])}</td>"
+        f"<td>{arrow(base[k]['false_alarm'].get('promoter'), top[k]['false_alarm'].get('promoter'))}</td>"
+        f"<td>{_f(top[k].get('wrong_labels', {}).get('mean'), 1)}</td></tr>"
+        for k in rank if k in base)
+    rv_head = "".join(f"<th>{t[c]}</th>" for c in ("method", "rec", "stealth", "auc",
+                                                     "fa_prom", "wrong"))
+    rv_html = (f"<section class='panel'><h2>{html.escape(t['rv'].format(**rv))}</h2>"
+               f"<p class='muted'>{html.escape(t['rv_lead'].format(**rv))}</p>"
+               f"<div class='scroll'><table><thead><tr>{rv_head}</tr></thead><tbody>{rv_rows}"
+               f"</tbody></table></div></section>") if rv_rows else ""
+
     k_, R = cfg["k"], cfg["rounds"]
     cur = Plot(0, k_ * R, 0, min(world["bad"], k_ * R), xlabel=t["reviews"],
                ylabel=t["badfound"], xticks=[k_ * r for r in range(0, R + 1, max(R // 5, 1))])
@@ -264,7 +292,9 @@ def render(res: dict, lang: str = "en") -> str:
     chips = "".join(f"<span class='chip'>{html.escape(s)}</span>" for s in (
         f"{world['users']:,} users", f"{world['bad']} bad ({world['stealth']} stealth)",
         f"{cfg['n_seeds']} seeds by day {cfg['report_day']:g}",
-        f"{cfg['k']} reviews × {cfg['rounds']} rounds", f"{cfg['draws']} seed draws",
+        f"{cfg['k']} reviews × {cfg['rounds']} rounds",
+        f"reviewer: {(cfg.get('reviewer') or {}).get('name', 'perfect')}",
+        f"{cfg['draws']} seed draws",
         f"{to_find} to find"))
     return f"""<!doctype html><html lang="{'zh-CN' if lang == 'zh' else 'en'}"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -274,7 +304,7 @@ def render(res: dict, lang: str = "en") -> str:
 <section class="panel"><h2>{t['board']}</h2><div class="scroll"><table><thead><tr>{head}</tr>
 </thead><tbody>{''.join(rows)}</tbody></table></div>
 <p class="muted">{t['notes']} {t['perfect']}</p></section>
-{why_html}{ba_html}
+{rv_html}{why_html}{ba_html}
 <section class="two"><div class="panel"><h2>{t['curves']}</h2>{cur.svg()}{_legend(rank)}</div>
 <div class="panel"><h2>{t['sweep']}</h2>{sw.svg()}{_legend(rank)}</div></section>
 <section class="panel"><h2>{t['rocpr']}</h2><div class="two"><div>{roc.svg()}</div>

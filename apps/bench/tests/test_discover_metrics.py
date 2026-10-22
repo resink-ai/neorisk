@@ -85,3 +85,10 @@ def test_reason_precision_counts_unreviewed_picks_that_carry_the_seeds_anomaly()
     carries[[3]] = True
     assert reason_precision(t, IDS, 4, carries) == 0.0        # the one pick, 105, does not
     assert reason_precision(t, IDS, 5, carries) == 0.5        # then 103 (0.9), which does
+
+
+def test_summary_counts_the_reviewers_wrong_verdicts():
+    t, truth = _case()
+    assert summarize(t, IDS, truth)["wrong_labels"] == 0
+    t.wrong = [1, 2]
+    assert summarize(t, IDS, truth)["wrong_labels"] == 3

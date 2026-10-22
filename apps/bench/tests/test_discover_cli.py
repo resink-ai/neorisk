@@ -62,3 +62,30 @@ def test_unknown_method_is_a_usage_error(discover_run, tmp_path, capsys):
     except SystemExit as e:
         assert e.code == 2
     assert "unknown method" in capsys.readouterr().err
+
+
+def test_an_imperfect_reviewer_is_compared_with_the_perfect_one(discover_run, tmp_path):
+    common = ["discover", "--run", str(discover_run), "--methods", "rules,reason_sim",
+              "--k", "20", "--rounds", "2", "--sweep", "0", "--seed-draws", "1",
+              "--report-day", "40", "--lang", "en"]
+    assert main([*common, "--out", str(tmp_path / "perfect")]) == 0
+    assert main([*common, "--reviewer", "noisy", "--out", str(tmp_path / "noisy"),
+                 "--baseline", str(tmp_path / "perfect" / "discover.json")]) == 0
+    res = json.loads((tmp_path / "noisy" / "discover.json").read_text())
+    assert res["config"]["reviewer"]["name"] == "noisy"
+    assert res["config"]["reviewer"]["stealth_miss"] == 0.30
+    perfect = json.loads((tmp_path / "perfect" / "discover.json").read_text())
+    assert perfect["config"]["reviewer"]["name"] == "perfect"
+    assert perfect["methods"]["rules"]["by_budget"]["2"]["wrong_labels"]["mean"] == 0
+    assert set(res["baseline"]) == {"rules", "reason_sim"}
+    page = (tmp_path / "noisy" / "discover.html").read_text()
+    assert "Perfect reviewer → noisy reviewer" in page
+    assert re.search(r"rules</td>", page)
+
+
+def test_unknown_reviewer_is_a_usage_error(discover_run, tmp_path):
+    try:
+        main(["discover", "--run", str(discover_run), "--reviewer", "sloppy", "--out",
+              str(tmp_path)])
+    except SystemExit as e:
+        assert e.code == 2

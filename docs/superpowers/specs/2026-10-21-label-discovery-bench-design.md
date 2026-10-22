@@ -350,9 +350,54 @@ The seeds' top reasons in draw 1:
   because "carries any of the seeds' anomaly" is too loose a test. It needs a threshold, such as
   overlap ≥ half the seeds' weight, to say anything.
 
+## Imperfect reviewer (2026-10-22)
+
+The oracle used to be a perfect analyst. `--reviewer noisy` replaces it with one who errs:
+
+| Who is reviewed | Wrong verdict |
+|---|---|
+| Visible ring member | 10% called good |
+| Stealth ring member | 30% called good |
+| Ordinary good user | 1% called bad |
+| Genuine promoter (looks like the ring) | 10% called bad |
+
+- The rates were set before the first noisy run and are not tuned.
+- Each user's verdict is drawn once per seed draw. Every method that reviews that user hears
+  the same answer, so methods differ only in whom they review.
+- Seeds are reports, not reviews: they stay bad.
+- Methods learn from the verdicts. Scores stay against the hidden truth, and `found` counts
+  truly bad users reviewed. `wrong_labels` counts the wrong verdicts a method had to learn from.
+- `--baseline perfect/discover.json` adds a "perfect → noisy" table to the report.
+- With `--reviewer perfect` (the default) both datasets reproduce the earlier JSON exactly.
+
+### Results (seed 42, 5 seed draws, 500 reviews; label-set recall, perfect → noisy)
+
+| Method | `bench` | `probe` | Note |
+|---|---|---|---|
+| `perfect` (ceiling) | 1.00 → 0.89 | 1.00 → 0.89 | the reviewer's own misses |
+| `vote` | 0.68 → 0.63 | 0.77 → 0.67 | |
+| `vote_plain` | 0.76 → 0.65 | 0.76 → 0.68 | |
+| `reason_hop` | 0.63 → 0.59 | 0.67 → 0.63 | AUC unchanged (0.99); stealth unchanged on `probe` |
+| `reason_sim` | 0.54 → 0.49 | 0.58 → 0.54 | promoter false alarm stays ≤ 0.03 |
+| `pu_learn` | 0.56 → 0.47 | 0.62 → 0.51 | AUC 0.78 → 0.55, 0.85 → 0.70: hurt most |
+| `active` | 0.35 → 0.51 | 0.49 → 0.57 | rises: a bug, below |
+
+- **Methods that follow the seeds' anomaly lose least.** `reason_hop` and `reason_sim` lose
+  about 0.04–0.05, close to the share of their finds the reviewer misses. Their rankings are
+  barely changed (AUC fixed), because a wrong verdict changes the explanation little.
+- **Trained models lose most.** `pu_learn` with the anomaly profile drops 0.09–0.11 and its
+  AUC falls sharply: wrong labels go straight into its training set.
+- **`active` rises with noise, which exposed a bug.** Its graph features are personalised
+  PageRank from the known bad, so a known bad user scores far above every unreviewed user
+  (on `bench` draw 0, after one round: at least 719 for known bad users; median 0 for the
+  906 unreviewed bad users). The model learns that shortcut, and with a perfect reviewer its
+  round-2 picks in three of five draws are 50 ordinary users with 1 hit. Wrong verdicts break
+  the shortcut. The fix is out-of-fold graph features for training rows. It is not applied
+  yet, because it changes `active`'s numbers from the earlier sections.
+
 ## Out of scope
 
-- A noisy or biased reviewer, and an LLM reviewer (see above).
+- A biased reviewer beyond fixed error rates, and an LLM reviewer.
 - Several worlds, ring sizes or blur levels. One world, seed 42.
 - A second fraud pattern.
 - Training `bench compare` models on discovered labels. This is a natural follow-up: it measures

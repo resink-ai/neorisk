@@ -1,6 +1,7 @@
 """Score one trace against the hidden truth, and average traces across seed draws.
 
-- **Analyst cost:** bad users found per round of reviews, and recall at the full budget.
+- **Analyst cost:** bad users found per round of reviews, recall at the full budget, and the
+  reviewer's wrong verdicts the method had to learn from.
 - **Ranking:** ROC and PR over the users nobody reviewed.
 - **Label set:** the known bad plus the top-ranked unreviewed users, as many as there are bad
   users in truth, so every method's set has the same size.
@@ -74,6 +75,7 @@ def summarize(trace: Trace, user_ids: np.ndarray, truth: Truth,
         "found": [int(x) for x in found],
         "hit_rate": [h / len(r) if r else 0.0 for h, r in zip(trace.hits, trace.reviewed)],
         "recall_at_budget": (found[-1] if found else 0) / max(to_find, 1),
+        "wrong_labels": int(sum(trace.wrong)),
     }
     free = known < 0
     s = trace.scores
