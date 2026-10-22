@@ -1,10 +1,13 @@
 # bench
 
-Model benchmark runner for synthetic event datasets. Two commands:
+Model benchmark runner for synthetic event datasets. Three commands:
 
 - `bench compare`: five models on observable point-in-time features, written up as a single
   self-contained HTML report (plus optional JSON).
 - `bench run`: the original two-model raw-column baseline (and the `--oracle` ceiling).
+- `bench discover`: label discovery. It hides the ring labels, grows them back from a few
+  reported seeds with 11 methods at the same review budget, and scores each method against the
+  hidden truth.
 
 ## Data
 
@@ -143,3 +146,28 @@ and `*_id`).
 feature). The resulting model is a golden-feature ceiling, not a realistic upper bound for
 engineered features. In the legacy export `score` equals `label`, and `actor_role` and
 `invitee_is_zombie` are the overlay's ground truth, so the oracle is close to a label leak.
+
+## `bench discover`
+
+```
+uv run bench discover --generate examples/ecommerce --profile bench --overlay bounty_hunters \
+    --seed 42 --out OUT [--lang zh|en]                 # simulates into OUT/run first, ~40 s total
+uv run bench discover --run RUN_DIR --out OUT          # an existing run
+    [--methods random,perfect,connection,...] [--k 50] [--rounds 10] [--sweep 0,2,5,10]
+    [--seed-draws 5] [--n-seeds 5] [--report-day 45] [--set K=V]
+```
+
+Outputs:
+- `OUT/discover.json`: every metric, for each method, budget and seed draw (mean and spread).
+- `OUT/discover.html`: one page. It has the leaderboard, discovery curves, budget sweep, ROC and
+  PR side by side, stealth and visible recall, and approval rate against bad share.
+
+Methods see only a leak-free world (`bench.discover.world`):
+- every id is permuted;
+- `partition_id`, `action_id`, `cause_id` and `seq` are dropped;
+- labels and cases are hidden.
+
+A simulated reviewer (`Oracle`) reveals the true label of up to `k` users per round. Seeds are
+visible (non-stealth) ring members whose label is known by `--report-day`. Labels arrive 30 days
+after the act, so earlier days have few candidates. Design and results:
+`docs/superpowers/specs/2026-10-21-label-discovery-bench-design.md`.

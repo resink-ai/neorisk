@@ -161,6 +161,77 @@ The command writes the following to `DIR`:
   the risk view;
 - a console summary table.
 
+## Changes made during implementation
+
+- **Report day 45, not 30.** Labels become available 30 days after the act, so by day 30 there
+  are almost no seed candidates.
+- **Label model.** It is a two-class Dawid-Skene, initialised from the majority vote. The
+  one-coin version could not credit rules that only ever vote "bad", and its ranking came out
+  inverted (AUC 0.45). Found on the first scored run and fixed, with a test.
+- **`active`:**
+  - its graph features leave out each seed's own restart mass, which let it memorise the seeds;
+  - it uses `min_child_weight` 0.05, so 5 seeds can split a node.
+  Both were fixed before freezing.
+- **Leak test.** It covers id and row-order columns. Behaviour columns such as `acquisition`
+  are informative on purpose.
+- **Budget sweep.** One 10-round run per method with snapshots at 0, 2 and 5 rounds, rather than
+  separate runs.
+
+## Results (seed 42, `bench` profile, 5 seed draws)
+
+The world has 52,796 users and 931 bad (464 stealth). Each run starts from 5 seeds and has 926
+bad users to find with 500 reviews (50 × 10).
+
+"Label set" means the known bad plus the top-ranked unreviewed users: 931 users in total,
+so precision equals recall. ROC and PR are measured over unreviewed users.
+
+| method | found in 500 reviews | label-set recall | AUC | PR-AUC | visible recall | stealth recall | false alarm, promoters | false alarm, promoted friends |
+|---|---|---|---|---|---|---|---|---|
+| similarity | 445 ± 23 | 0.565 | 0.712 | 0.145 | 1.00 | 0.13 | 0.874 | 0.091 |
+| pu_learn | 466 ± 10 | 0.544 | 0.797 | 0.047 | 1.00 | 0.08 | 0.083 | 0.225 |
+| vote | 227 ± 7 | 0.536 | **0.867** | **0.281** | 0.71 | **0.36** | 0.215 | 0.234 |
+| rules | 413 ± 0 | 0.461 | 0.573 | 0.028 | 0.91 | 0.01 | 0.093 | 0.272 |
+| label_model | 413 ± 0 | 0.450 | 0.597 | 0.027 | 0.89 | 0.00 | 0.000 | 0.306 |
+| active | 186 ± 53 | 0.414 | 0.771 | 0.274 | 0.51 | 0.32 | 0.026 | 0.064 |
+| connection | 120 ± 7 | 0.146 | 0.506 | 0.028 | 0.15 | 0.15 | 0.010 | 0.000 |
+| money_flow | 120 ± 7 | 0.146 | 0.506 | 0.028 | 0.15 | 0.15 | 0.010 | 0.000 |
+| sync | 16 ± 5 | 0.045 | 0.505 | 0.018 | 0.05 | 0.04 | 0.016 | 0.015 |
+| random | 6 ± 2 | 0.030 | 0.501 | 0.018 | 0.03 | 0.03 | 0.018 | 0.019 |
+| perfect (truth) | 500 | 1.000 | 1.000 | 1.000 | 1.00 | 1.00 | 0 | 0 |
+
+**Label-set recall by budget (rounds 0 / 2 / 5 / 10):**
+- vote: 0.29 / 0.40 / 0.46 / 0.54
+- active: 0.21 / 0.06 / 0.32 / 0.41
+- similarity: 0.45 / 0.45 / 0.45 / 0.56
+- pu_learn: 0.52 / 0.54 / 0.53 / 0.54
+- rules and label_model: flat at 0.45
+
+**What it shows:**
+- **The visible half of the ring is easy; the stealth half is not.**
+  - Similarity, PU learning and the rules find almost every visible member without a single
+    review (label-set recall 0.45–0.52 at 0 rounds) and spend their reviews confirming them.
+  - None of them catches more than 13% of stealth members.
+- **Agreement finds stealth members best.**
+  - `vote` has the best ranking (AUC 0.867, PR-AUC 0.28) and the best stealth recall (0.36).
+  - `active` is second on stealth (0.32), but it is unstable: ± 0.17 recall across draws, and
+    it dips at 2 rounds while a few labels steer its trees.
+- **The promoters cost precision.**
+  - Similarity flags 87% of genuine promoters, because inviting many people looks like a hunter.
+  - The rules flag 27–31% of promoted friends, who share devices and open with the cheapest
+    qualifying order.
+  - The blur added in the scorer-labels work is doing its job.
+- **Graph expansion is exact but stuck.** Every ring is its own island:
+  - each holds the hunter and zombies only, with no device or invite links to other rings or to
+    ordinary users;
+  - so `connection` and `money_flow` find their seeds' rings at full precision, then fall back to
+    ID order (AUC 0.51).
+  - They tie with each other because both walk the same islands.
+  - This is a finding about the data: the world has no cross-ring bridges and no shared-device
+    hubs. That makes graph methods look worse at reach, and better at precision, than they
+    would be on real data.
+- **`sync` is near random.** Its 2-hour window is much tighter than the 0–2 day spread
+  between a hunter and its zombies. Its default was frozen before scoring, so it stays.
+
 ## Out of scope
 
 - A noisy or biased reviewer, and an LLM reviewer (see above).

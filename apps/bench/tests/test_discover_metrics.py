@@ -47,3 +47,11 @@ def test_aggregate_gives_mean_and_spread_across_seed_draws():
 def test_aggregate_averages_risk_points():
     a = aggregate([{"risk": [[0.9, 0.02]]}, {"risk": [[0.9, 0.04]]}])
     assert a["risk"]["mean"] == [[0.9, pytest.approx(0.03)]]
+
+
+def test_report_axes_label_only_values_they_reach():
+    from bench.discover.report import Plot
+    svg = Plot(0, 10, 0, 1, xticks=[0, 2, 5, 10]).svg()
+    assert ">5</text>" in svg and ">8</text>" not in svg and ">2.5" not in svg
+    small = Plot(0.9, 1, 0, 0.02, pct=True).svg()
+    assert ">0.5%</text>" in small and ">1.0%</text>" in small

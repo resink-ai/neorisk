@@ -79,19 +79,25 @@ def _ms(a: dict, d=3) -> str:
 class Plot:
     """A line chart in data coordinates."""
 
-    def __init__(self, x0, x1, y0, y1, w=480, h=300, xlabel="", ylabel="", pct=False):
+    def __init__(self, x0, x1, y0, y1, w=480, h=300, xlabel="", ylabel="", pct=False,
+                 xticks=None):
         self.x0, self.x1, self.y0, self.y1, self.w, self.h = x0, x1, y0, y1, w, h
         self.L, self.R, self.T, self.B = 52, w - 12, 12, h - 40
         self.parts: list[str] = []
+
+        def pc(v, span):
+            return f"{v:.1%}" if span < 0.1 else f"{v:.0%}"
+
         for i in range(5):
             yv = y0 + (y1 - y0) * i / 4
             y = self.Y(yv)
-            lab = f"{yv:.0%}" if pct else (f"{yv:.2f}" if y1 <= 1.5 else f"{yv:.0f}")
+            lab = pc(yv, y1 - y0) if pct else (f"{yv:.2f}" if y1 <= 1.5 else f"{yv:.0f}")
             self.parts.append(f"<line x1='{self.L}' x2='{self.R}' y1='{y:.1f}' y2='{y:.1f}' "
                               f"stroke='var(--line)'/><text x='{self.L - 6}' y='{y + 4:.1f}' "
                               f"text-anchor='end'>{lab}</text>")
-            xv = x0 + (x1 - x0) * i / 4
-            xl = f"{xv:.0%}" if pct else (f"{xv:.2f}" if x1 <= 1.5 else f"{xv:.0f}")
+        for xv in (xticks if xticks is not None else
+                   [x0 + (x1 - x0) * i / 4 for i in range(5)]):
+            xl = pc(xv, x1 - x0) if pct else (f"{xv:.2f}" if x1 <= 1.5 else f"{xv:g}")
             self.parts.append(f"<text x='{self.X(xv):.1f}' y='{self.B + 16}' "
                               f"text-anchor='middle'>{xl}</text>")
         self.parts.append(f"<text x='{(self.L + self.R) / 2}' y='{h - 6}' "
@@ -156,7 +162,7 @@ def render(res: dict, lang: str = "en") -> str:
 
     k_, R = cfg["k"], cfg["rounds"]
     cur = Plot(0, k_ * R, 0, min(world["bad"], k_ * R), xlabel=t["reviews"],
-               ylabel=t["badfound"])
+               ylabel=t["badfound"], xticks=[k_ * r for r in range(0, R + 1, max(R // 5, 1))])
     for k in rank:
         f = top[k]["found"]
         if isinstance(f, dict):
@@ -164,7 +170,7 @@ def render(res: dict, lang: str = "en") -> str:
                      COLORS.get(k, "#888"), dash=k in ("perfect", "random"))
 
     budgets = cfg["budgets"]
-    sw = Plot(0, max(budgets), 0, 1, xlabel=t["rounds"], ylabel=t["rec"])
+    sw = Plot(0, max(budgets), 0, 1, xlabel=t["rounds"], ylabel=t["rec"], xticks=budgets)
     for k in rank:
         sw.line([(b, methods[k]["by_budget"][str(b)]["recall"]["mean"]) for b in budgets],
                 COLORS.get(k, "#888"), dash=k in ("perfect", "random"))
