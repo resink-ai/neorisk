@@ -137,3 +137,34 @@ def test_stealth_ring_members_carry_the_stealth_variant():
     v = out.labels.filter(pl.col("target_table") == "users")["variant"]
     n = (v == "stealth").sum()
     assert 0 < n < v.len() and set(v.drop_nulls()) == {"stealth"}
+
+
+def test_probing_is_off_by_default():
+    out = _run(users=800)
+    assert out.events["verification_failed"].height == 0
+
+
+def test_probing_ring_members_fail_verification_and_test_the_threshold():
+    out = _run(users=3000, **{"verify_fail_p": 0.03, "bounty_hunters.probe_p": 1.0})
+    ring = out.labels.filter(pl.col("target_table") == "users")
+    ring_ids = set(ring["target_id"])
+    failed = set(out.events["verification_failed"]["user_id"])
+    base = set(out.entities["users"]["user_id"]) - ring_ids
+    assert len(failed & ring_ids) / len(ring_ids) > 0.9
+    assert 0 < len(failed & base) / len(base) < 0.06                   # genuine retries: rare
+    o = out.events["order_placed"].filter(pl.col("user_id").is_in(ring_ids))
+    lo = 3000
+    below = set(o.filter(pl.col("amount") < lo)["user_id"])
+    zombies = set(ring.filter(pl.col("role") == "zombie")["target_id"])
+    assert len(below & zombies) / len(zombies) > 0.8                   # tried under the minimum
+
+
+def test_stealth_members_probe_less():
+    out = _run(users=3000, **{"bounty_hunters.stealth_p": 0.5, "bounty_hunters.probe_p": 1.0,
+                              "bounty_hunters.stealth_probe_p": 0.2})
+    lab = out.labels.filter(pl.col("target_table") == "users").unique("target_id")
+    failed = set(out.events["verification_failed"]["user_id"])
+    rate = (lambda ids: len(set(ids) & failed) / max(len(ids), 1))
+    st = lab.filter(pl.col("variant") == "stealth")["target_id"].to_list()
+    vis = lab.filter(pl.col("variant").is_null())["target_id"].to_list()
+    assert rate(vis) > 0.9 and 0.05 < rate(st) < 0.4

@@ -7,7 +7,11 @@ commits all or releases all; reservations expire after a TTL. A referred shopper
 inviter's bonus, after a delay, from a monthly budget held by the `referral_pool` shard. The
 pool pays (or rejects) and credits the inviter by message.
 
-Extension points for overlays: `signup` (payload `devices` or `n_devices`), `checkout`
+Signing up runs an identity check; a genuine user occasionally fails it and retries
+(`verify_fail_p`, off by default).
+
+Extension points for overlays: `signup` (payload `devices` or `n_devices`, optional
+`verify_fails` = the reasons of failed checks before it passes), `checkout`
 (payload `device`, `lines` = [(sku, qty)], optional `amount`) and `bonus_credited` (a no-op
 for shoppers).
 """
@@ -33,6 +37,8 @@ CHANNELS = ("organic", "ads", "social", "invite")
 OSES = ("ios", "android", "windows", "macos")
 DEVICE_KINDS = ("phone", "tablet", "desktop")
 CATEGORIES = ("books", "electronics", "home", "fashion", "toys", "grocery")
+VERIFY_REASONS = ("id_mismatch", "selfie_timeout", "phone_reused", "device_limit")
+GENUINE_REASONS = VERIFY_REASONS[:2]
 
 
 @dataclass
@@ -59,6 +65,7 @@ class Config:
     stock_mean: int = 30              # target units per SKU
     restock_days: float = 1.0         # restock SKUs below a quarter of target this often
     reserve_ttl: float = 600.0
+    verify_fail_p: float = 0.0        # a genuine signup fails the identity check, then retries
 
 
 @dataclass
@@ -101,6 +108,9 @@ def define(p: Pack) -> None:
     p.event("user_signed_up", doc="A user creates an account", cols={
         "user_id": ref("users"), "device_id": ref("devices"),
         "invited_by": opt(ref("users")), "acquisition": cat(*CHANNELS)})
+    p.event("verification_failed", doc="An identity check at signup failed; it is retried",
+            cols={"user_id": ref("users"), "device_id": ref("devices"),
+                  "reason": cat(*VERIFY_REASONS)})
     p.event("session_started", cols={
         "user_id": ref("users"), "device_id": ref("devices"), "session_id": i64()})
     p.event("product_viewed", cols={
@@ -150,6 +160,11 @@ def define(p: Pack) -> None:
             s.devices = [ctx.insert("devices", user_id=s.uid, os=OSES[rng.integers(len(OSES))],
                                     kind=DEVICE_KINDS[rng.integers(len(DEVICE_KINDS))])
                          for _ in range(n)]
+        fails = cmd.payload.get("verify_fails")
+        if fails is None and cfg.verify_fail_p > 0 and rng.random() < cfg.verify_fail_p:
+            fails = [GENUINE_REASONS[rng.integers(len(GENUINE_REASONS))]]
+        for reason in fails or ():
+            ctx.emit("verification_failed", user_id=s.uid, device_id=s.devices[0], reason=reason)
         ctx.emit("user_signed_up", user_id=s.uid, device_id=s.devices[0],
                  invited_by=s.inviter, acquisition=s.acquisition)
 

@@ -26,3 +26,16 @@ def world_truth(discover_run):
     from bench.discover.world import load
 
     return load(discover_run, seed=3)
+
+
+@pytest.fixture(scope="session")
+def probe_world_truth(tmp_path_factory):
+    """The same run under the `probe` profile: ring members fail identity checks and retry."""
+    from bench.discover.world import load
+    from datagen.cli import main
+
+    run = tmp_path_factory.mktemp("discover-probe") / "run"
+    assert main(["run", str(ECOM), "--profile", "probe", "--overlay", "bounty_hunters",
+                 "--set", "users=4000", "--set", "run.days=40", "--seed", "3",
+                 "--out", str(run)]) == 0
+    return load(run, seed=3)

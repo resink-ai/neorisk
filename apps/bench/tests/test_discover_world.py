@@ -56,3 +56,15 @@ def test_no_id_or_time_column_scores_ring_auc_above_0_8(world_truth):
     for name, v in cols.items():
         auc = roc_auc_score(truth.bad, v)
         assert max(auc, 1 - auc) < 0.8, (name, auc)
+
+
+def test_failed_identity_checks_reach_the_world(world_truth, probe_world_truth):
+    world, _ = world_truth
+    assert world.verifications.height == 0                        # bench profile: no probing
+    world, truth = probe_world_truth
+    v = world.verifications
+    assert {"event_time", "user_id", "device_id", "reason"} <= set(v.columns)
+    assert not PROVENANCE & set(v.columns)
+    failed = np.isin(world.user_ids, v["user_id"].unique().to_numpy())
+    assert failed[truth.bad].mean() > 0.4
+    assert 0 < failed[~truth.bad].mean() < 0.1

@@ -15,6 +15,13 @@ Two knobs blur the line between the ring and everyone else (both off by default)
 - `promoters_share`: genuine users who invite many friends. Some friends share the promoter's
   device and open with the cheapest qualifying order, just like zombies; then they shop
   normally. Never labeled: the false alarms.
+
+A third knob gives the ring the anomaly an analyst looks for first (off by default):
+
+- `probe_p` (`stealth_probe_p` for stealth members): a ring member probes the defences. Its
+  identity checks fail and are retried (a zombie on the hunter's device trips the device and
+  phone checks), and a zombie first tries an order just under the referral minimum before the
+  one that qualifies. Genuine users fail a check now and then too (the pack's `verify_fail_p`).
 """
 
 from __future__ import annotations
@@ -30,7 +37,8 @@ CHANNELS = ("organic", "ads", "social")
 def apply(o: Overlay, share: float = 0.002, zombies_mean: float = 8.0,
           arrive_share: float = 0.8, label_delay_days: float = 30.0, stealth_p: float = 0.0,
           promoters_share: float = 0.0, friends_mean: float = 8.0,
-          friend_shared_device_p: float = 0.5, friend_cheap_p: float = 0.6) -> None:
+          friend_shared_device_p: float = 0.5, friend_cheap_p: float = 0.6,
+          probe_p: float = 0.0, stealth_probe_p: float = 0.0) -> None:
     o.cohort("bounty_hunter", kind="user", share=share, arrive_share=arrive_share,
              suppress=["shopper"], redirect={"bonus_credited": "cash_out"})
     o.cohort("zombie", kind="user", suppress=["shopper"],
@@ -56,6 +64,14 @@ def apply(o: Overlay, share: float = 0.002, zombies_mean: float = 8.0,
     def stealthy(ctx) -> bool:
         return stealth_p > 0 and ctx.rng.random() < stealth_p
 
+    def probes(ctx) -> bool:
+        p = stealth_probe_p if ctx.local.get("stealth") else probe_p
+        return p > 0 and ctx.rng.random() < p
+
+    def failed_checks(ctx, reasons: tuple[str, ...]) -> list[str]:
+        return [reasons[ctx.rng.integers(len(reasons))]
+                for _ in range(1 + int(ctx.rng.poisson(1.0)))]
+
     def variant(ctx) -> str | None:
         return "stealth" if ctx.local.get("stealth") else None
 
@@ -68,6 +84,10 @@ def apply(o: Overlay, share: float = 0.002, zombies_mean: float = 8.0,
         if stealthy(ctx):
             ctx.local["stealth"] = True
             ctx.after(ctx.rng.uniform(0.1, 1.0) * DAY, "session")
+        if (probe_p > 0 or stealth_probe_p > 0) and probes(ctx):   # re-verifies, and fails
+            for reason in failed_checks(ctx, ("id_mismatch", "phone_reused")):
+                ctx.emit("verification_failed", user_id=s.uid, device_id=s.devices[0],
+                         reason=reason)
         ctx.label(s.uid, "hunter", table="users", campaign_id=s.uid,
                   available_at=ctx.now + label_delay_days * DAY, variant=variant(ctx))
         for _ in range(1 + int(rng.poisson(zombies_mean - 1))):
@@ -95,10 +115,16 @@ def apply(o: Overlay, share: float = 0.002, zombies_mean: float = 8.0,
     @zombie.action
     def join(ctx, s, cmd):
         rng = ctx.rng
+        fails = None
+        if (probe_p > 0 or stealth_probe_p > 0) and probes(ctx):
+            ctx.local["probe"] = True
+            fails = (["phone_reused"] * (1 + int(rng.poisson(0.5))) if ctx.local.get("stealth")
+                     else failed_checks(ctx, ("device_limit", "phone_reused")))
         if ctx.local.get("stealth"):
-            ctx.call("signup", n_devices=1)
+            ctx.call("signup", n_devices=1, verify_fails=fails)
         else:
-            ctx.call("signup", devices=[s.devices[rng.integers(len(s.devices))]])
+            ctx.call("signup", devices=[s.devices[rng.integers(len(s.devices))]],
+                     verify_fails=fails)
         ctx.local["label_at"] = ctx.now + label_delay_days * DAY
         ctx.label(s.uid, "zombie", table="users", outcome="attempted", campaign_id=s.inviter,
                   available_at=ctx.local["label_at"], variant=variant(ctx))
@@ -106,6 +132,9 @@ def apply(o: Overlay, share: float = 0.002, zombies_mean: float = 8.0,
 
     @zombie.action
     def first_order(ctx, s, cmd):
+        if cmd.payload.get("qualify"):                     # the probe's follow-up order
+            return ctx.call("checkout", device=s.devices[0], lines=[(cmd.payload["qualify"], 1)],
+                            amount=ctx.cfg.min_order_cents + int(ctx.rng.integers(0, 150)))
         stealth = ctx.local.get("stealth", False)
         device = s.devices[0]
         sku = popular_qualifying_sku(ctx) if stealth else cheapest_qualifying_sku(ctx)
@@ -117,6 +146,11 @@ def apply(o: Overlay, share: float = 0.002, zombies_mean: float = 8.0,
         if stealth:                                        # list price, then browse on
             ctx.call("checkout", device=device, lines=[(sku, 1)])
             ctx.after(ctx.rng.uniform(1, 5) * DAY, "session")
+            return
+        if ctx.local.get("probe"):                         # just under the minimum first
+            ctx.call("checkout", device=device, lines=[(sku, 1)],
+                     amount=ctx.cfg.min_order_cents - int(ctx.rng.integers(100, 600)))
+            ctx.after(ctx.rng.uniform(0.02, 0.2) * DAY, "first_order", qualify=sku)
             return
         ctx.call("checkout", device=device, lines=[(sku, 1)],
                  amount=ctx.cfg.min_order_cents + int(ctx.rng.integers(0, 150)))

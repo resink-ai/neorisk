@@ -23,7 +23,14 @@ SOURCES = {"users": "users", "devices": "devices", "skus": "skus", "orders": "or
            "sessions": "session_started", "views": "product_viewed", "signups": "user_signed_up",
            "returns": "order_returned", "bonuses": "referral_bonus_paid",
            "addresses": "address_changed"}
+# tables older runs may lack: empty in the world when missing
+OPTIONAL = {"verifications": "verification_failed"}
 EXTRA_SPACES = {"session_id": "session"}          # plain i64 ids minted per partition
+
+
+def _no_verifications() -> pl.DataFrame:
+    return pl.DataFrame(schema={"event_time": pl.Datetime("us", "UTC"), "user_id": pl.Int64,
+                                "device_id": pl.Int64, "reason": pl.String})
 
 
 @dataclass(frozen=True)
@@ -40,6 +47,7 @@ class World:
     addresses: pl.DataFrame
     user_ids: np.ndarray          # world ids in `users` row order: the index of every score array
     min_order_cents: int = 3000   # the published referral rule: an invitee's qualifying order
+    verifications: pl.DataFrame = field(default_factory=_no_verifications)   # failed checks
     cache: dict = field(default_factory=dict, compare=False, repr=False)   # derived matrices
 
     def tables(self) -> dict[str, pl.DataFrame]:
@@ -96,6 +104,9 @@ def load(run: str | Path | RunData, seed: int) -> tuple[World, Truth]:
         if df is None:
             df = run.events[src]
         frames[name] = _sort(_public(df, schema[src], seed))
+    for name, src in OPTIONAL.items():
+        if src in schema and src in run.events:
+            frames[name] = _sort(_public(run.events[src], schema[src], seed))
     users = frames["users"].sort("created_at", "user_id")
     frames["users"] = users
     world = World(**frames, user_ids=users["user_id"].to_numpy(),
