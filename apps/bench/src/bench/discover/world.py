@@ -8,7 +8,7 @@ which only the oracle and the scorer read.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, fields
+from dataclasses import dataclass, field, fields
 from pathlib import Path
 
 import numpy as np
@@ -40,6 +40,7 @@ class World:
     addresses: pl.DataFrame
     user_ids: np.ndarray          # world ids in `users` row order: the index of every score array
     min_order_cents: int = 3000   # the published referral rule: an invitee's qualifying order
+    cache: dict = field(default_factory=dict, compare=False, repr=False)   # derived matrices
 
     def tables(self) -> dict[str, pl.DataFrame]:
         return {f.name: getattr(self, f.name) for f in fields(self)
@@ -47,16 +48,11 @@ class World:
 
     def index(self, ids) -> np.ndarray:
         """Positions in `user_ids` of world user ids (all must exist)."""
-        pos = np.searchsorted(self._sorted, ids)
-        return self._order[pos]
-
-    @property
-    def _sorted(self) -> np.ndarray:
-        return np.sort(self.user_ids)
-
-    @property
-    def _order(self) -> np.ndarray:
-        return np.argsort(self.user_ids, kind="stable")
+        if "order" not in self.cache:
+            order = np.argsort(self.user_ids, kind="stable")
+            self.cache["order"] = (order, self.user_ids[order])
+        order, sorted_ids = self.cache["order"]
+        return order[np.searchsorted(sorted_ids, ids)]
 
 
 @dataclass(frozen=True)

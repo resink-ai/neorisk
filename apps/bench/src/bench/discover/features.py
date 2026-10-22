@@ -11,7 +11,6 @@ NAMES = ["orders", "near_min_share", "cheapest_share", "views_per_order", "sessi
          "devices", "max_device_users", "invited", "invites_sent", "bonuses",
          "hours_to_first_order"]
 NEAR_MIN_CENTS = 500          # an order within this much above the minimum is "sized to qualify"
-_CACHE: dict[int, tuple[np.ndarray, list[str]]] = {}
 
 
 def cheapest_qualifying_sku(world: World) -> int:
@@ -31,9 +30,8 @@ def _join(base: pl.DataFrame, df: pl.DataFrame) -> pl.DataFrame:
 
 
 def user_matrix(world: World) -> tuple[np.ndarray, list[str]]:
-    key = id(world)
-    if key in _CACHE:
-        return _CACHE[key]
+    if "features" in world.cache:
+        return world.cache["features"]
     cheap = cheapest_qualifying_sku(world)
     lo = world.min_order_cents
     u = world.users.select("user_id", "created_at", (pl.col("acquisition") == "invite")
@@ -67,8 +65,8 @@ def user_matrix(world: World) -> tuple[np.ndarray, list[str]]:
         .fill_null(horizon).clip(0, None).alias("hours_to_first_order"))
     t = t.with_columns((pl.col("views") / pl.col("orders").clip(1, None)).alias("views_per_order"))
     x = t.select(NAMES).to_numpy().astype(float)
-    _CACHE[key] = (x, list(NAMES))
-    return _CACHE[key]
+    world.cache["features"] = (x, list(NAMES))
+    return world.cache["features"]
 
 
 def standardize(x: np.ndarray) -> np.ndarray:

@@ -81,3 +81,26 @@ def test_checkpoints_snapshot_the_trace_at_earlier_budgets(world_truth):
     assert set(t.snapshots) == {0, 2}
     assert t.snapshots[0].hits == [] and len(t.snapshots[0].known) == 5
     assert t.snapshots[2].hits == [10, 10] and len(t.snapshots[2].known) == 25
+
+
+@pytest.mark.parametrize("key", ["random", "pu_learn", "active"])
+def test_a_snapshot_equals_a_separate_shorter_run(world_truth, key):
+    world, truth = world_truth
+    seeds = draw_seeds(truth, world, 5, t_report_days=40, rng=np.random.default_rng(1))
+    long = run_method(make(key, 0, truth), world, truth, seeds=seeds, k=10, rounds=3,
+                      checkpoints=(0, 2))
+    short = run_method(make(key, 0, truth), world, truth, seeds=seeds, k=10, rounds=2)
+    plain = run_method(make(key, 0, truth), world, truth, seeds=seeds, k=10, rounds=3)
+    assert long.snapshots[2].reviewed == short.reviewed
+    assert np.array_equal(long.snapshots[2].scores, short.scores)
+    assert long.reviewed == plain.reviewed and np.array_equal(long.scores, plain.scores)
+
+
+def test_caches_live_on_the_world_they_describe():
+    from discover_toy import toy_world
+
+    from bench.discover.features import user_matrix
+    w = toy_world()
+    user_matrix(w)
+    assert "features" in w.cache
+    assert toy_world().cache == {}

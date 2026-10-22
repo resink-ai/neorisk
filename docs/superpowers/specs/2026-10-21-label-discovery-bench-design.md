@@ -62,8 +62,9 @@ Two problems block it as-is:
      - permute every id with the existing seeded Feistel map (`io/public_ids.py`);
      - drop `partition_id`, `action_id`, `cause_id` and `seq`;
      - drop `labels` and `cases`.
-   - A leak test checks that the user id and every remaining single column score a ring AUC
-     under 0.8, the same bar the scorer-labels design used.
+   - A leak test checks that the user id, the other id columns and row order each score a ring
+     AUC under 0.8, the same bar the scorer-labels design used. Behaviour columns are
+     informative on purpose and are not part of the test.
 
 ## Protocol
 
@@ -188,23 +189,27 @@ so precision equals recall. ROC and PR are measured over unreviewed users.
 | method | found in 500 reviews | label-set recall | AUC | PR-AUC | visible recall | stealth recall | false alarm, promoters | false alarm, promoted friends |
 |---|---|---|---|---|---|---|---|---|
 | similarity | 445 ± 23 | 0.565 | 0.712 | 0.145 | 1.00 | 0.13 | 0.874 | 0.091 |
-| pu_learn | 466 ± 10 | 0.544 | 0.797 | 0.047 | 1.00 | 0.08 | 0.083 | 0.225 |
+| pu_learn | 469 ± 9 | 0.556 | 0.812 | 0.061 | 1.00 | 0.11 | 0.155 | 0.211 |
 | vote | 227 ± 7 | 0.536 | **0.867** | **0.281** | 0.71 | **0.36** | 0.215 | 0.234 |
-| rules | 413 ± 0 | 0.461 | 0.573 | 0.028 | 0.91 | 0.01 | 0.093 | 0.272 |
+| rules | 413 ± 0 | 0.455 | 0.573 | 0.028 | 0.90 | 0.01 | 0.055 | 0.286 |
 | label_model | 413 ± 0 | 0.450 | 0.597 | 0.027 | 0.89 | 0.00 | 0.000 | 0.306 |
-| active | 186 ± 53 | 0.414 | 0.771 | 0.274 | 0.51 | 0.32 | 0.026 | 0.064 |
-| connection | 120 ± 7 | 0.146 | 0.506 | 0.028 | 0.15 | 0.15 | 0.010 | 0.000 |
-| money_flow | 120 ± 7 | 0.146 | 0.506 | 0.028 | 0.15 | 0.15 | 0.010 | 0.000 |
-| sync | 16 ± 5 | 0.045 | 0.505 | 0.018 | 0.05 | 0.04 | 0.016 | 0.015 |
-| random | 6 ± 2 | 0.030 | 0.501 | 0.018 | 0.03 | 0.03 | 0.018 | 0.019 |
+| active | 259 ± 69 | 0.410 | 0.666 | 0.190 | 0.48 | 0.33 | 0.010 | 0.040 |
+| connection | 120 ± 7 | 0.166 | 0.506 | 0.028 | 0.18 | 0.15 | 0.012 | 0.020 |
+| money_flow | 120 ± 7 | 0.166 | 0.506 | 0.028 | 0.18 | 0.15 | 0.012 | 0.020 |
+| sync | 16 ± 5 | 0.044 | 0.505 | 0.018 | 0.05 | 0.04 | 0.015 | 0.017 |
+| random | 10 ± 3 | 0.035 | 0.499 | 0.018 | 0.04 | 0.03 | 0.016 | 0.016 |
 | perfect (truth) | 500 | 1.000 | 1.000 | 1.000 | 1.00 | 1.00 | 0 | 0 |
 
 **Label-set recall by budget (rounds 0 / 2 / 5 / 10):**
 - vote: 0.29 / 0.40 / 0.46 / 0.54
-- active: 0.21 / 0.06 / 0.32 / 0.41
+- active: 0.19 / 0.30 / 0.35 / 0.41
 - similarity: 0.45 / 0.45 / 0.45 / 0.56
-- pu_learn: 0.52 / 0.54 / 0.53 / 0.54
+- pu_learn: 0.52 / 0.54 / 0.54 / 0.56
 - rules and label_model: flat at 0.45
+
+Score ties in the label set and the risk view go to the lower world id, which is random with
+respect to the ring. Each budget is a snapshot of one 10-round run, and a test checks that it
+equals a separate shorter run.
 
 **What it shows:**
 - **The visible half of the ring is easy; the stealth half is not.**
@@ -213,18 +218,20 @@ so precision equals recall. ROC and PR are measured over unreviewed users.
   - None of them catches more than 13% of stealth members.
 - **Agreement finds stealth members best.**
   - `vote` has the best ranking (AUC 0.867, PR-AUC 0.28) and the best stealth recall (0.36).
-  - `active` is second on stealth (0.32), but it is unstable: ± 0.17 recall across draws, and
-    it dips at 2 rounds while a few labels steer its trees.
+  - `active` is second on stealth (0.33) and improves with every round of reviews.
+  - But `active` is the least stable method: ± 0.19 recall and ± 69 users found across seed
+    draws. With a handful of labels, its trees fit whichever seeds they got.
 - **The promoters cost precision.**
   - Similarity flags 87% of genuine promoters, because inviting many people looks like a hunter.
-  - The rules flag 27–31% of promoted friends, who share devices and open with the cheapest
+  - The rules flag 29–31% of promoted friends, who share devices and open with the cheapest
     qualifying order.
   - The blur added in the scorer-labels work is doing its job.
 - **Graph expansion is exact but stuck.** Every ring is its own island:
   - each holds the hunter and zombies only, with no device or invite links to other rings or to
     ordinary users;
-  - so `connection` and `money_flow` find their seeds' rings at full precision, then fall back to
-    ID order (AUC 0.51).
+  - so `connection` and `money_flow` find their seeds' rings at full precision;
+  - after that every other user scores zero, and both proposals and the label set fall back to
+    world-id order, which is effectively random (AUC 0.51).
   - They tie with each other because both walk the same islands.
   - This is a finding about the data: the world has no cross-ring bridges and no shared-device
     hubs. That makes graph methods look worse at reach, and better at precision, than they

@@ -50,13 +50,11 @@ class PULearn(Ranker):
 
     def __init__(self, seed: int):
         self.seed = seed
-        self._round = 0
 
     def score(self, world: World, known: dict[int, int]) -> np.ndarray:
-        self._round += 1
         z = standardize(user_matrix(world)[0])
         bad, good = split(world, known)
-        rng = np.random.default_rng([self.seed, self._round])
+        rng = np.random.default_rng([self.seed, len(known)])     # same labels, same draw
         free = np.setdiff1d(np.arange(len(z)), np.concatenate([bad, good]))
         unl = rng.choice(free, size=min(len(free), PU_NEG_RATIO * len(bad)), replace=False)
         x = np.concatenate([z[bad], z[good], z[unl]])
@@ -84,14 +82,13 @@ class Sync(Ranker):
 
     def __init__(self, seed: int):
         self.seed = seed
-        self._m: tuple[int, dict[str, np.ndarray]] | None = None
 
     def _cols(self, world: World) -> dict[str, np.ndarray]:
-        if self._m is None or self._m[0] != id(world):
+        if "milestones" not in world.cache:
             m = milestones(world)
-            self._m = (id(world), {c: m[c].fill_null(np.nan).to_numpy().astype(float)
-                                   for c in ("t_signup", "t_order", "t_bonus", "sku_id")})
-        return self._m[1]
+            world.cache["milestones"] = {c: m[c].fill_null(np.nan).to_numpy().astype(float)
+                                         for c in ("t_signup", "t_order", "t_bonus", "sku_id")}
+        return world.cache["milestones"]
 
     def score(self, world: World, known: dict[int, int]) -> np.ndarray:
         c = self._cols(world)

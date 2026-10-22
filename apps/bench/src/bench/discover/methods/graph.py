@@ -13,7 +13,6 @@ from bench.discover.world import World
 # frozen defaults: set before the first scored run, never tuned on truth
 ALPHA = 0.15                  # restart probability
 ITERS = 30
-_CACHE: dict[tuple[int, str], sp.csr_matrix] = {}
 
 
 def _pairs(world: World, df: pl.DataFrame, a: str, b: str, w: np.ndarray, n: int):
@@ -37,8 +36,8 @@ def invite_edges(world: World) -> pl.DataFrame:
 
 def device_graph(world: World) -> sp.csr_matrix:
     """Users linked through each shared device (weight 1/log(1+users on it)) and by invites."""
-    key = (id(world), "device")
-    if key not in _CACHE:
+    key = "graph:device"
+    if key not in world.cache:
         n = len(world.user_ids)
         ud = user_devices(world)
         dev = ud["device_id"].unique().sort()
@@ -50,22 +49,22 @@ def device_graph(world: World) -> sp.csr_matrix:
         a = inc @ w @ inc.T
         inv = invite_edges(world)
         a = a + _pairs(world, inv, "user_id", "invited_by", np.ones(inv.height), n)
-        _CACHE[key] = _row_normalize(a)
-    return _CACHE[key]
+        world.cache[key] = _row_normalize(a)
+    return world.cache[key]
 
 
 def money_graph(world: World) -> sp.csr_matrix:
     """Inviter-invitee links weighted by 1 + the bonuses paid on them."""
-    key = (id(world), "money")
-    if key not in _CACHE:
+    key = "graph:money"
+    if key not in world.cache:
         n = len(world.user_ids)
         inv = invite_edges(world)
         paid = world.bonuses.group_by("user_id", "invitee_id").agg(pl.len().alias("b"))
         e = inv.join(paid, left_on=["invited_by", "user_id"], right_on=["user_id", "invitee_id"],
                      how="left").with_columns(pl.col("b").fill_null(0))
-        _CACHE[key] = _row_normalize(
+        world.cache[key] = _row_normalize(
             _pairs(world, e, "user_id", "invited_by", 1.0 + e["b"].to_numpy(), n))
-    return _CACHE[key]
+    return world.cache[key]
 
 
 def ppr(p: sp.csr_matrix, start: np.ndarray) -> np.ndarray:

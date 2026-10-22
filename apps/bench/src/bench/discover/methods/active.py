@@ -25,7 +25,6 @@ class Active(Ranker):
 
     def __init__(self, seed: int):
         self.seed = seed
-        self._round = 0
 
     def features(self, world: World, known: dict[int, int]) -> np.ndarray:
         start = known_bad(world, known)
@@ -39,10 +38,9 @@ class Active(Ranker):
                                 (v == 1).sum(axis=1), (v == 0).sum(axis=1)])
 
     def score(self, world: World, known: dict[int, int]) -> np.ndarray:
-        self._round += 1
         x = self.features(world, known)
         bad, good = split(world, known)
-        rng = np.random.default_rng([self.seed, self._round])
+        rng = np.random.default_rng([self.seed, len(known)])     # same labels, same draw
         free = np.setdiff1d(np.arange(len(x)), np.concatenate([bad, good]))
         soft = rng.choice(free, size=min(len(free), SOFT_NEG_RATIO * len(bad)), replace=False)
         rows = np.concatenate([bad, good, soft])

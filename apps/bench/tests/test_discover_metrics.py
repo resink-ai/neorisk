@@ -55,3 +55,17 @@ def test_report_axes_label_only_values_they_reach():
     assert ">5</text>" in svg and ">8</text>" not in svg and ">2.5" not in svg
     small = Plot(0.9, 1, 0, 0.02, pct=True).svg()
     assert ">0.5%</text>" in small and ">1.0%</text>" in small
+
+
+def test_summary_does_not_depend_on_user_row_order():
+    t, truth = _case()
+    t.scores[[7, 8, 9]] = 0.0                    # ties among unreviewed good users
+    t.scores[[3, 5]] = 0.0                       # every unreviewed user ties
+    perm = np.array([9, 3, 7, 0, 5, 1, 8, 2, 6, 4])
+    pt = Truth(bad=truth.bad[perm], stealth=truth.stealth[perm], cohort=truth.cohort[perm],
+               available_at=truth.available_at[perm])
+    t2 = Trace("m", t.seeds, t.reviewed, t.hits, t.known, t.scores[perm])
+    a = summarize(t, IDS, truth, block_shares=[0.4, 0.6])
+    b = summarize(t2, IDS[perm], pt, block_shares=[0.4, 0.6])
+    for k in ("precision", "recall", "stealth_recall", "risk", "false_alarm", "auc"):
+        assert a[k] == b[k], k

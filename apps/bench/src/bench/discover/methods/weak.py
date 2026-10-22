@@ -21,13 +21,11 @@ VIEWS_PCTL = 5
 EM_ITERS = 20
 LF_NAMES = ["min_order_on_cheapest", "one_order_then_silent", "inviter_device",
             "bonus_farm_inviter", "few_views", "repeat_buyer"]
-_CACHE: dict[int, np.ndarray] = {}
 
 
 def votes(world: World) -> np.ndarray:
-    key = id(world)
-    if key in _CACHE:
-        return _CACHE[key]
+    if "votes" in world.cache:
+        return world.cache["votes"]
     x, _ = user_matrix(world)
     col = {n: x[:, i] for i, n in enumerate(NAMES)}
     n = len(world.user_ids)
@@ -66,7 +64,7 @@ def votes(world: World) -> np.ndarray:
     # 6. benign: two or more orders off the qualifying minimum
     off_min = col["orders"] * (1 - col["near_min_share"])
     v[off_min >= 2, 5] = 0
-    _CACHE[key] = v
+    world.cache["votes"] = v
     return v
 
 

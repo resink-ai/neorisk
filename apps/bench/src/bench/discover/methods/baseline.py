@@ -13,11 +13,10 @@ class Random(Ranker):
 
     def __init__(self, seed: int):
         self.seed = seed
-        self._round = 0
 
     def score(self, world: World, known: dict[int, int]) -> np.ndarray:
-        self._round += 1
-        return np.random.default_rng([self.seed, self._round]).random(len(world.user_ids))
+        # drawn from what is known, so a scored snapshot does not shift later rounds
+        return np.random.default_rng([self.seed, len(known)]).random(len(world.user_ids))
 
 
 class Perfect(Ranker):

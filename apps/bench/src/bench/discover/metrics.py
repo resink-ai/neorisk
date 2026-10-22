@@ -64,7 +64,7 @@ def summarize(trace: Trace, user_ids: np.ndarray, truth: Truth,
 
     # one ranking of everyone: known bad, then unreviewed by score, then known good
     key = np.where(known == 1, np.inf, np.where(known == 0, -np.inf, s))
-    rank = np.lexsort((np.arange(n), -key))
+    rank = np.lexsort((user_ids, -key))      # ties: by world id, never row order
     size = int(bad.sum())
     chosen = np.zeros(n, bool)
     chosen[rank[:size]] = True
