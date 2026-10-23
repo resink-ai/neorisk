@@ -20,6 +20,30 @@ run = { days = 60.0 }
 config = { users = 2000 }
 run = { days = 30.0 }
 
+# `bench compare` with `export --legacy-fraud --labels xgb`: ~31k rows, ~10 s. Stock and
+# checkout_p are rescaled so a 50k-user run keeps every expectation in the brief; the referral
+# budget scales with users (10x), so claims are paid to the end of the run.
+[profiles.bench]
+config = { users = 50000, stock_mean = 500, checkout_p = 0.07, monthly_budget_cents = 20000000 }
+run = { days = 60.0, max_events = 10000000 }
+# blur the ring: half its members act like ordinary shoppers (labeled misses), and 0.4% of
+# users are genuine promoters whose invited friends look like zombies (unlabeled false alarms)
+[profiles.bench.overlays.bounty_hunters]
+stealth_p = 0.5
+promoters_share = 0.004
+
 [overlays.bounty_hunters]
 share = 0.002
 zombies_mean = 8.0
+
+# `bench discover` with probing: the bench run plus the anomaly an analyst looks for first.
+# Ring members fail identity checks and test the referral minimum (stealth ones rarely);
+# 3% of genuine users also fail a check once and retry.
+[profiles.probe]
+config = { users = 50000, stock_mean = 500, checkout_p = 0.07, monthly_budget_cents = 20000000, verify_fail_p = 0.03 }
+run = { days = 60.0, max_events = 10000000 }
+[profiles.probe.overlays.bounty_hunters]
+stealth_p = 0.5
+promoters_share = 0.004
+probe_p = 0.8
+stealth_probe_p = 0.15

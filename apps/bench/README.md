@@ -1,19 +1,29 @@
 # bench
 
-Model benchmark runner for synthetic event datasets. Two commands:
+Model benchmark runner for synthetic event datasets. Three commands:
 
 - `bench compare`: five models on observable point-in-time features, written up as a single
   self-contained HTML report (plus optional JSON).
 - `bench run`: the original two-model raw-column baseline (and the `--oracle` ceiling).
+- `bench discover`: label discovery. It hides the ring labels, grows them back from a few
+  reported seeds with 11 methods at the same review budget, and scores each method against the
+  hidden truth.
 
 ## Data
+
+Use scorer labels (`--labels xgb`) for model comparisons. The default role labels are noise-free,
+so every model scores AUC ≈ 1 on them. On the `bench` profile (50,000 users, 60 days, seed 42: 45.6k rows), XGB-scorer labels (2.0% bad)
+give test AUCs of 0.78–0.82, against a ceiling of 0.836: the AUC of the true probability `score` on
+the test split. The test split holds about 95 positives, so AUC differences under about 0.06 are
+noise. The profile also blurs the fraud ring (see below), so role labels are no longer trivial:
+AUC 0.91–0.94, PR-AUC 0.44–0.52.
 
 The benchmark data is a run of the e-commerce simulation (the `examples/ecommerce` pack with the `bounty_hunters` overlay), exported
 in the fraud dataset's shape (D87):
 
 ```
-uv run datagen run --users 5000 --days 60 --out data/legacy-run
-uv run datagen export data/legacy-run --legacy-fraud --out data/fraud
+uv run datagen run examples/ecommerce --profile bench --overlay bounty_hunters --out data/legacy-run   # ~10 s
+uv run datagen export data/legacy-run --legacy-fraud --labels xgb --out data/fraud
 ```
 
 ## Tests
@@ -136,3 +146,41 @@ and `*_id`).
 feature). The resulting model is a golden-feature ceiling, not a realistic upper bound for
 engineered features. In the legacy export `score` equals `label`, and `actor_role` and
 `invitee_is_zombie` are the overlay's ground truth, so the oracle is close to a label leak.
+
+## `bench discover`
+
+```
+uv run bench discover --generate examples/ecommerce --profile bench --overlay bounty_hunters \
+    --seed 42 --out OUT [--lang zh|en]                 # simulates into OUT/run first, ~40 s total
+uv run bench discover --run RUN_DIR --out OUT          # an existing run
+    [--methods random,perfect,connection,...] [--k 50] [--rounds 10] [--sweep 0,2,5,10]
+    [--seed-draws 5] [--n-seeds 5] [--report-day 45] [--set K=V]
+    [--reviewer perfect|noisy] [--baseline OTHER/discover.json]
+```
+
+Outputs:
+- `OUT/discover.json`: every metric, for each method, budget and seed draw (mean and spread).
+- `OUT/discover.html`: one page. It has the leaderboard, discovery curves, budget sweep, ROC and
+  PR side by side, stealth and visible recall, and approval rate against bad share.
+
+`--profile probe` adds the anomaly an analyst looks for first: ring members fail identity checks
+and retry, and zombies try an order under the referral minimum. Methods prefixed `reason_`
+first explain why the known bad users are bad (`bench.discover.explain`: each user's anomalies
+against the population), then follow only that explanation. `anomaly` is the seedless
+baseline. `*_plain` methods are the versions without the explanation, kept for before/after.
+
+The reviewer is a stand-in analyst who reveals labels (`bench.discover.protocol.Reviewer`).
+`perfect` (the default) never errs. `noisy` misses 10% of visible and 30% of stealth ring
+members, and calls 1% of ordinary users and 10% of genuine promoters bad. Methods learn from
+those verdicts, while scores stay against the hidden truth. `--baseline` adds a table comparing
+each method with its result under the other reviewer.
+
+Methods see only a leak-free world (`bench.discover.world`):
+- every id is permuted;
+- `partition_id`, `action_id`, `cause_id` and `seq` are dropped;
+- labels and cases are hidden.
+
+A simulated reviewer (`Oracle`) reveals the true label of up to `k` users per round. Seeds are
+visible (non-stealth) ring members whose label is known by `--report-day`. Labels arrive 30 days
+after the act, so earlier days have few candidates. Design and results:
+`docs/superpowers/specs/2026-10-21-label-discovery-bench-design.md`.

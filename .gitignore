@@ -12,3 +12,6 @@ data/
 reports/
 .superpowers/
 benchmarks/results/
+learn/
+modelcraft/
+.playwright-mcp/

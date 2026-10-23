@@ -3,7 +3,7 @@
     datagen validate PROJECT [--overlay NAME]...
     datagen run PROJECT [--profile P] [--overlay NAME]... [--set K=V]... [--seed S]
                         [--out DIR] [--force] [--debug]
-    datagen export RUN_DIR (--legacy-fraud --out DIR | --single-file FILE | --public-ids --out DIR)
+    datagen export RUN_DIR (--legacy-fraud [--labels roles|xgb|mlp] --out DIR | --single-file FILE | --public-ids --out DIR)
 
 Exit codes: 0 success, 1 the run or a required check failed, 2 usage error or refusal.
 """
@@ -49,6 +49,10 @@ def build_parser() -> argparse.ArgumentParser:
                    help="every event in one canonically ordered parquet file")
     e.add_argument("--public-ids", action="store_true",
                    help="a copy whose ids are a seeded Feistel permutation (refs consistent)")
+    e.add_argument("--labels", choices=("roles", "xgb", "mlp"), default="roles",
+                   help="--legacy-fraud labels: ring roles, or sampled from a scorer")
+    e.add_argument("--bad-rate", type=float, default=0.02,
+                   help="target bad rate for scorer labels (default 0.02)")
     e.add_argument("--out", default=None)
     from datagen import check_cmd, replay_cmd, schema_cmd
     check_cmd.add_parser(sub)
@@ -136,7 +140,9 @@ def cmd_export(args) -> int:
     if not args.out:
         return _err("export --legacy-fraud needs --out")
     from neorisk_simkit.export import export
-    from neorisk_simkit.io.legacy import legacy_fraud
+    from neorisk_simkit.io.legacy import legacy_fraud, rescore
+    if args.labels != "roles" and not 0 < args.bad_rate < 1:
+        return _err("export: --bad-rate must be in (0, 1)")
     run = read(args.run_dir)
     m = run.manifest
     meta = {"seed": m["seed"],
@@ -144,7 +150,10 @@ def cmd_export(args) -> int:
                        "profile": m["provenance"].get("profile"),
                        "pack_revision": m["provenance"].get("pack_revision"),
                        "overlays": m["overlays"], "config": m["config"]}}
-    export(legacy_fraud(run, meta), args.out)
+    ds = legacy_fraud(run, meta)
+    if args.labels != "roles":
+        ds = rescore(ds, args.labels, args.bad_rate, seed=m["seed"])
+    export(ds, args.out)
     return 0
 
 

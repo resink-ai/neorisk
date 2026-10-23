@@ -25,9 +25,9 @@ cd apps/<app> && uv add --workspace neorisk-<name> # app depends on a lib
 ## Synthetic event data + benchmark
 
 ```sh
-uv run datagen run examples/ecommerce --profile legacy --overlay bounty_hunters --out data/legacy-run
+uv run datagen run examples/ecommerce --profile bench --overlay bounty_hunters --out data/legacy-run   # ~10 s
 uv run datagen check data/legacy-run --project examples/ecommerce   # laws, expectations, report.html
-uv run datagen export data/legacy-run --legacy-fraud --out data/fraud
+uv run datagen export data/legacy-run --legacy-fraud --labels xgb --out data/fraud   # scorer labels, 2% bad
 uv run bench run data/fraud --oracle
 
 # five-model comparison report (single self-contained HTML, zh or en)
