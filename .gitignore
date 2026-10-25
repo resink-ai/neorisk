@@ -15,3 +15,5 @@ benchmarks/results/
 learn/
 modelcraft/
 .playwright-mcp/
+
+.forget-archive/
