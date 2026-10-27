@@ -56,3 +56,25 @@ Note: `--oracle` trains XGBoost on the raw numeric columns plus all golden colum
 `score` (which stays in `golden.parquet` but is not trained on). The golden columns include the
 overlay's ground truth (`actor_role`, `invitee_is_zombie`), so it is a ceiling, not a realistic
 "best feature engineering" model.
+
+## Ethereum data collection
+
+```sh
+uv run eth-collect labels            # every public label source -> data/eth/labels/
+uv run eth-collect sample toy        # ~1,000 addresses (seeded + random), latest 5 transfers each
+uv run eth-collect status            # last runs, table sizes, toy-sample checks
+```
+
+One connector per source in [`apps/ethcollect`](apps/ethcollect/README.md); agents drive it through
+the `eth-collect` skill (`.claude/skills/eth-collect/`). Without keys, address history comes
+from whole-day scans of the AWS public dataset; a free `ETHERSCAN_API_KEY` gives full histories.
+
+## Ethereum bad-address model (v0)
+
+```sh
+uv run ethmodel pretrain && uv run ethmodel embed   # pre-train the encoder, embed every address
+uv run ethmodel expand                              # recall on held-out labels + candidates.csv
+```
+
+A small transformer pre-trained on transfers, a positive-unlabeled head and label expansion,
+in [`apps/ethmodel`](apps/ethmodel/README.md). It reads the toy sample above.
