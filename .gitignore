@@ -17,3 +17,6 @@ modelcraft/
 .playwright-mcp/
 
 .forget-archive/
+
+.credentials/
+
