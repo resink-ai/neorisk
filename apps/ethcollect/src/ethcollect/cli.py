@@ -28,7 +28,7 @@ def make_context(source: str, args) -> Context:
     since = args.since or (until - timedelta(days=args.window_days))
     rate = args.rate or getattr(connectors.load(source), "DEFAULT_RATE", 2.0)
     return Context(out=args.out, source=source, since=since, until=until,
-                   refresh=args.refresh, rate=rate)
+                   refresh=args.refresh, rate=rate, rate_given=args.rate is not None)
 
 
 def run_connector(source: str, args) -> bool:

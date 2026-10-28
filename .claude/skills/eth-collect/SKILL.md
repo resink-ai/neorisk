@@ -34,7 +34,10 @@ roughly how many calls and minutes it will take; the numbers are in each source'
 1. Run the command. Each run prints `ok`/`FAILED`, its row counts and the run record path.
 2. On `FAILED`, read the run record (`data/eth/runs/<source>-<time>.json`: `error`,
    `warnings`, `failed_addresses`) and the source's reference for known failure modes. Common:
-   - `ETHERSCAN_API_KEY is not set` → ask the user for a key (see references/etherscan.md).
+   - `ETHERSCAN_API_KEY is not set` → it lives in the repo's `.env`: run with
+     `uv run --env-file .env eth-collect ...`; if `.env` has none, ask the user for a key.
+   - `NOTOK: Max calls per sec rate limit reached` after retries → lower `ETHERSCAN_RATE` in
+     `.env` (or pass `--rate 1`); the key's quota may be shared with another machine.
    - `rate limited by eth.blockscout.com for N more minutes` → keyless Blockscout allows about
      10 calls per half hour; switch to etherscan, or wait.
    - a parse error after a format change → open the cached raw file in `data/eth/raw/<source>/`,
