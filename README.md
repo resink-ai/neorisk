@@ -12,7 +12,7 @@ Apps consume libs from the local workspace — no PyPI involved.
 ## Common tasks
 
 ```sh
-uv sync                              # install everything into the root .venv
+uv sync --all-packages               # install every app and lib into the root .venv
 uv run --package hello hello         # run an app
 uv run pytest                        # run all tests
 uv run ruff check . && uv run ruff format .

@@ -29,6 +29,7 @@ class Context:
     until: date
     refresh: bool = False  # True: ignore the cache and fetch again
     rate: float = 2.0  # calls per second for this source
+    rate_given: bool = False  # True: --rate was passed, so no env setting overrides it
     record: dict = field(default_factory=dict)
     _last: float = 0.0
 

@@ -3,11 +3,16 @@
 Both speak `?module=...&action=...` and answer `{"status", "message", "result"}`. Blockscout
 needs no key; Etherscan V2 needs `apikey` and `chainid`. Responses go through the raw cache,
 keyed without the API key.
+
+Etherscan calls are paced at ETHERSCAN_RATE calls per second (your plan's limit; default 2,
+under the free tier's 3) unless `--rate` is given, and its per-second rate-limit answers are
+retried with back-off.
 """
 
 from __future__ import annotations
 
 import json
+import time
 import zlib
 from datetime import UTC, date, datetime
 
@@ -17,6 +22,27 @@ from ethcollect.tables import STABLECOINS, norm
 ETHERSCAN = "https://api.etherscan.io/v2/api"
 BLOCKSCOUT = "https://eth.blockscout.com/api"
 NO_RESULTS = ("no transactions found", "no records found", "no logs found", "no token transfers")
+ETHERSCAN_RATE = 2.0  # calls per second when ETHERSCAN_RATE is unset
+RATE_TRIES = 6  # tries per call while Etherscan answers "Max calls per sec rate limit reached"
+
+
+def etherscan_rate() -> float:
+    """Calls per second for Etherscan: $ETHERSCAN_RATE (e.g. 1 on a shared key, 5 on a paid
+    plan), else ETHERSCAN_RATE."""
+    v = env("ETHERSCAN_RATE")
+    try:
+        rate = float(v) if v else ETHERSCAN_RATE
+    except ValueError:
+        raise SystemExit(f"ETHERSCAN_RATE must be a number of calls per second, not {v!r}")
+    if rate <= 0:
+        raise SystemExit(f"ETHERSCAN_RATE must be above 0, not {v!r}")
+    return rate
+
+
+def per_second_limit(msg: str) -> bool:
+    """Etherscan's per-second limit, which a short wait clears (the daily one does not)."""
+    m = msg.lower()
+    return "rate limit" in m and "daily" not in m
 
 
 def history_source(choice: str = "auto") -> str:
@@ -38,19 +64,26 @@ def pick(ctx: Context, choice: str = "auto") -> Explorer:
 class Explorer:
     def __init__(self, ctx: Context, base: str, apikey: str | None = None):
         self.ctx, self.base, self.apikey = ctx, base, apikey
+        if base == ETHERSCAN and not ctx.rate_given:
+            ctx.rate = etherscan_rate()
 
     def call(self, **params) -> list | dict | str:
         if self.base == ETHERSCAN:
             params = {"chainid": 1, **params, "apikey": self.apikey}
-        body = json.loads(self.ctx.get(self.base, params=params, suffix=".json"))
-        result = body.get("result")
-        if str(body.get("status")) == "0" and not isinstance(result, list):
+        for attempt in range(RATE_TRIES):
+            body = json.loads(self.ctx.get(self.base, params=params, suffix=".json"))
+            result = body.get("result")
+            if str(body.get("status")) != "0" or isinstance(result, list):
+                return result if result is not None else []
             msg = f"{body.get('message')}: {result}"
             if any(m in msg.lower() for m in NO_RESULTS):
                 return []
             self.ctx.forget(self.base, params, ".json")
-            raise FetchError(msg)
-        return result if result is not None else []
+            if not per_second_limit(msg) or attempt == RATE_TRIES - 1:
+                raise FetchError(msg)
+            self.ctx.count("retries")
+            time.sleep(2**attempt)  # 1, 2, 4, 8, 16 s
+        raise AssertionError("unreachable")
 
     def block_at(self, day: date, closest: str = "before") -> int:
         ts = int(datetime(day.year, day.month, day.day, tzinfo=UTC).timestamp())

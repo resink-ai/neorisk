@@ -6,7 +6,7 @@ from ethcollect.context import env
 
 KIND = "chain"
 SUMMARY = "address history (normal, internal, ERC-20) from Etherscan V2; needs ETHERSCAN_API_KEY"
-DEFAULT_RATE = 3.0  # free tier: 3 calls/s, 100k/day
+DEFAULT_RATE = 2.0  # replaced by $ETHERSCAN_RATE unless --rate is given (see explorer.py)
 
 
 def add_arguments(p) -> None:

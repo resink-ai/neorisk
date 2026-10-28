@@ -215,3 +215,49 @@ def test_seed_preference_reorders_within_a_kind_but_kinds_still_alternate():
     got = seed_candidates(tables.frame("labels", rows), random.Random(0),
                           prefer=lambda a: a not in busy)
     assert got == [B, C, A]  # busy B first among frozen, then phishing takes its turn
+
+
+class ScriptedContext(Context):
+    """Answers `get` from a list of bodies, one per call."""
+
+    def __init__(self, tmp_path, bodies, **kw):
+        super().__init__(out=tmp_path, source="t", since=date(2025, 1, 1),
+                         until=date(2026, 1, 1), **kw)
+        self.bodies = [json.dumps(b).encode() for b in bodies]
+
+    def get(self, url, *, params=None, suffix=""):
+        return self.bodies.pop(0)
+
+
+PER_SEC = {"status": "0", "message": "NOTOK",
+           "result": "Max calls per sec rate limit reached (3/sec)"}
+
+
+def test_etherscan_per_second_limit_is_retried(tmp_path, monkeypatch):
+    monkeypatch.setattr(explorer.time, "sleep", lambda s: None)
+    ctx = ScriptedContext(tmp_path, [PER_SEC, PER_SEC, {"status": "1", "result": [TXLIST]}])
+    ex = explorer.Explorer(ctx, explorer.ETHERSCAN, apikey="k")
+    assert ex.call(module="account", action="txlist") == [TXLIST]
+    assert ctx.record["retries"] == 2
+
+
+def test_etherscan_daily_limit_and_bad_key_are_not_retried(tmp_path, monkeypatch):
+    monkeypatch.setattr(explorer.time, "sleep", lambda s: None)
+    for result in ("Max daily rate limit reached", "Invalid API Key"):
+        ctx = ScriptedContext(tmp_path, [{"status": "0", "message": "NOTOK", "result": result}])
+        with pytest.raises(FetchError, match=result):
+            explorer.Explorer(ctx, explorer.ETHERSCAN, apikey="k").call(action="txlist")
+        assert "retries" not in ctx.record
+
+
+def test_etherscan_rate_comes_from_env_unless_rate_is_given(tmp_path, monkeypatch):
+    monkeypatch.delenv("ETHERSCAN_RATE", raising=False)
+    assert explorer.Explorer(_ctx(tmp_path), explorer.ETHERSCAN, "k").ctx.rate == 2.0
+    monkeypatch.setenv("ETHERSCAN_RATE", "5")
+    assert explorer.Explorer(_ctx(tmp_path), explorer.ETHERSCAN, "k").ctx.rate == 5.0
+    given = _ctx(tmp_path, rate=0.5, rate_given=True)
+    assert explorer.Explorer(given, explorer.ETHERSCAN, "k").ctx.rate == 0.5
+    assert explorer.Explorer(_ctx(tmp_path), explorer.BLOCKSCOUT).ctx.rate == 2.0
+    monkeypatch.setenv("ETHERSCAN_RATE", "fast")
+    with pytest.raises(SystemExit):
+        explorer.Explorer(_ctx(tmp_path), explorer.ETHERSCAN, "k")

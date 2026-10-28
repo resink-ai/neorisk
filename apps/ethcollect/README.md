@@ -28,4 +28,6 @@ Layout of `data/eth/`:
 | `samples/toy/` | the capped toy set + `manifest.json`, what the modeling side reads |
 
 Secrets come only from the environment (`ETHERSCAN_API_KEY`, `ETH_RPC_URL`) and are stripped
-from cache keys and run records.
+from cache keys and run records. Keep them in the git-ignored `.env` and run
+`uv run --env-file .env eth-collect ...`; `ETHERSCAN_RATE` there sets Etherscan's calls per
+second (default 2).
