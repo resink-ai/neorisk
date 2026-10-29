@@ -24,6 +24,8 @@ BLOCKSCOUT = "https://eth.blockscout.com/api"
 NO_RESULTS = ("no transactions found", "no records found", "no logs found", "no token transfers")
 ETHERSCAN_RATE = 2.0  # calls per second when ETHERSCAN_RATE is unset
 RATE_TRIES = 6  # tries per call while Etherscan answers "Max calls per sec rate limit reached"
+DAILY_LIMIT = ("daily", "per day", "day limit")
+LATEST_BLOCK = 99_999_999
 
 
 def etherscan_rate() -> float:
@@ -43,6 +45,10 @@ def per_second_limit(msg: str) -> bool:
     """Etherscan's per-second limit, which a short wait clears (the daily one does not)."""
     m = msg.lower()
     return "rate limit" in m and "daily" not in m
+
+
+class DailyLimit(FetchError):
+    """The key's calls for the day are used up; waiting seconds will not help."""
 
 
 def history_source(choice: str = "auto") -> str:
@@ -67,10 +73,13 @@ class Explorer:
         if base == ETHERSCAN and not ctx.rate_given:
             ctx.rate = etherscan_rate()
 
-    def call(self, **params) -> list | dict | str:
+    def call(self, *, fresh: bool = False, **params) -> list | dict | str:
+        """`fresh`: skip the cache, for answers that change (balances)."""
         if self.base == ETHERSCAN:
             params = {"chainid": 1, **params, "apikey": self.apikey}
         for attempt in range(RATE_TRIES):
+            if fresh:
+                self.ctx.forget(self.base, params, ".json")
             body = json.loads(self.ctx.get(self.base, params=params, suffix=".json"))
             result = body.get("result")
             if str(body.get("status")) != "0" or isinstance(result, list):
@@ -79,6 +88,8 @@ class Explorer:
             if any(m in msg.lower() for m in NO_RESULTS):
                 return []
             self.ctx.forget(self.base, params, ".json")
+            if any(m in msg.lower() for m in DAILY_LIMIT):
+                raise DailyLimit(msg)
             if not per_second_limit(msg) or attempt == RATE_TRIES - 1:
                 raise FetchError(msg)
             self.ctx.count("retries")
@@ -106,6 +117,38 @@ class Explorer:
                 if row:
                     rows.append(row)
         return rows
+
+    def first_funding(self, address: str, look: int = 10) -> tuple[dict | None, list[dict]]:
+        """Who first sent `address` ETH: the oldest successful incoming normal or internal
+        transfer with value among the oldest `look` of each. Returns it (or None) and every
+        transfer row read."""
+        rows: list[dict] = []
+        for action, parse in (("txlist", _external), ("txlistinternal", _internal)):
+            got = self.call(module="account", action=action, address=address, startblock=0,
+                            endblock=LATEST_BLOCK, page=1, offset=look, sort="asc")
+            for i, item in enumerate(got if isinstance(got, list) else []):
+                row = parse(item, i)
+                if row:
+                    rows.append(row)
+        funded = [r for r in rows
+                  if r["to_address"] == address and r["amount"] > 0 and r["status"] == 1]
+        return min(funded, key=lambda r: r["block_number"], default=None), rows
+
+    def nft_history(self, address: str, start: int, end: int, per_kind: int) -> list[dict]:
+        """The latest `per_kind` ERC-721 and ERC-1155 transfers of one address."""
+        rows: list[dict] = []
+        for action, standard in (("tokennfttx", "erc721"), ("token1155tx", "erc1155")):
+            got = self.call(module="account", action=action, address=address, startblock=start,
+                            endblock=end, page=1, offset=per_kind, sort="desc")
+            rows += [_nft(item, standard) for item in (got if isinstance(got, list) else [])]
+        return rows
+
+    def balances(self, addresses: list[str]) -> list[tuple[str, float]]:
+        """Current ETH balances, up to 20 addresses per call; never cached."""
+        got = self.call(fresh=True, module="account", action="balancemulti",
+                        address=",".join(addresses), tag="latest")
+        return [(norm(r["account"]), int(r["balance"]) / 1e18)
+                for r in (got if isinstance(got, list) else [])]
 
     def logs(self, address: str, topic0: str, start: int, end: int, step: int = 1_000_000):
         """All logs of one event between two blocks, walking the range in steps."""
@@ -159,6 +202,22 @@ def _internal(item: dict, i: int) -> dict:
     row = _base(item, "internal", idx)
     return {**row, "asset": "ETH", "asset_symbol": "ETH", "decimals": 18,
             "amount": int(item.get("value") or 0) / 1e18, "usd_approx": None, "method_id": None}
+
+
+def _nft(item: dict, standard: str) -> dict:
+    value = str(item.get("tokenValue") or "")
+    return {
+        "tx_hash": (item.get("hash") or "").lower(),
+        "block_number": int(item["blockNumber"]),
+        "ts": _ts(item["timeStamp"]),
+        "from_address": norm(item.get("from")),
+        "to_address": norm(item.get("to")),
+        "standard": standard,
+        "contract": norm(item.get("contractAddress")),
+        "token_name": item.get("tokenName"),
+        "token_id": str(item.get("tokenID") or ""),
+        "amount": float(value) if value.isdigit() else 1.0,
+    }
 
 
 def _erc20(item: dict, i: int) -> dict:

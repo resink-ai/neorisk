@@ -6,7 +6,7 @@ import argparse
 from pathlib import Path
 
 from ethcollect import tables
-from ethcollect.connectors.explorer import Explorer
+from ethcollect.connectors.explorer import DailyLimit, Explorer
 from ethcollect.context import Context, FetchError
 
 
@@ -43,17 +43,22 @@ def run(ctx: Context, args, explorer: Explorer) -> None:
         raise SystemExit("give --address or --addresses")
     start, end = explorer.block_at(ctx.since, "after"), explorer.block_at(ctx.until, "before")
     ctx.note("blocks", [start, end])
-    rows, failed = [], []
+    rows, failed, stopped = [], [], None
     for i, a in enumerate(addresses, 1):
         try:
             rows += explorer.history(a, start, end, args.per_kind)
+        except DailyLimit as e:
+            stopped = e
+            break
         except FetchError as e:
             failed.append(a)
             ctx.warn(f"{a}: {e}")
         if i % 50 == 0:
-            print(f"  {i}/{len(addresses)} addresses, {len(rows)} transfers")
+            print(f"  {i}/{len(addresses)} addresses, {len(rows)} transfers", flush=True)
     df = tables.frame("transfers", [{**r, "source": ctx.source} for r in rows])
     tables.append(ctx.out, "transfers", ctx.source, df)
     ctx.note("addresses", len(addresses))
     ctx.note("failed_addresses", failed)
     ctx.note("transfers", df.height)
+    if stopped:  # rows so far are saved; a rerun replays them from the cache
+        raise FetchError(f"stopped at the daily call limit: {stopped}")

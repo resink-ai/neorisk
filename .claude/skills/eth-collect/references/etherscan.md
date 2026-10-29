@@ -47,3 +47,24 @@ window's blocks (`getblocknobytime` twice per run, cached). 3 calls per address.
   the cap does not bite. For full histories, walk `startblock` forward instead of paging.
 - Blockscout's `txlistinternal` may answer `"Some internal transactions within this block range
   have not yet been processed"` with a partial list; it is kept.
+
+## etherscan-extras: balance, first funder, NFT transfers
+
+`uv run eth-collect etherscan-extras --addresses <file> [--parts balance,funder,nft]`. Parts run
+in that order; each writes its own table when it finishes.
+
+| part | calls | table | notes |
+| --- | --- | --- | --- |
+| balance | `balancemulti`, 20 addresses per call | `balances` (address, balance_eth, as_of) | never cached: always the current balance |
+| funder | `txlist` + `txlistinternal`, `sort=asc`, oldest `--funder-look` (10) | `funders` (address, funder, tx_hash, ts, amount_eth, via); the rows read also go to `transfers` | funder = oldest successful incoming ETH with value > 0, normal or internal (Tornado and exchange withdrawals arrive as internal). Null when none is among the oldest 10, typically contracts or token-only addresses |
+| nft | `tokennfttx` + `token1155tx`, newest `--per-kind` (50) in the window | `nft_transfers` (standard erc721/erc1155, contract, token_name, token_id, amount) | no `logIndex` in these answers, so the key is (tx, contract, token, from, to, standard) |
+
+Kept out of `transfers` on purpose: the model's tokenizer knows only external, internal, erc20.
+
+Calls for N addresses: N/20 + 4N, about 99,000 for 24,416 addresses, about 9 hours at 3/s.
+That is the free daily quota (resets at 00:00 UTC). On `Max daily rate limit` the client raises
+`DailyLimit`: the run saves the parts it finished (and the current part's rows so far) and fails
+with a "rerun tomorrow" error; a rerun replays every answer from the cache.
+
+Scam NFTs: phishing addresses receive many "airdrop" NFTs named after phishing domains
+(`eth2win.org`); `token_name` keeps them.

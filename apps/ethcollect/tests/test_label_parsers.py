@@ -35,6 +35,10 @@ def test_ofac_one_address_per_line_is_sanctioned_high_trust():
 def test_scamsniffer_json_list_is_phishing():
     rows = scamsniffer.parse(json.dumps([A, "not-an-address"]).encode())
     assert [(r["address"], r["label_kind"]) for r in rows] == [(A, "phishing")]
+    rows = scamsniffer.parse(json.dumps({"address": [A], "domains": ["x.io"]}).encode())
+    assert [r["address"] for r in rows] == [A]
+    rows = scamsniffer.parse(json.dumps({"claim-x.io": [B]}).encode())
+    assert [(r["address"], r["source_ref"]) for r in rows] == [(B, "scamsniffer drainer for claim-x.io")]
 
 
 def test_mew_darklist_keeps_its_date_and_comment():
@@ -117,3 +121,44 @@ def test_freeze_address_comes_from_data_for_usdt_and_topic1_for_usdc():
 def test_unknown_label_kind_is_refused():
     with pytest.raises(ValueError):
         tables.label_rows([A], kind="suspicious", source="x", trust="low")
+
+
+def test_defihacklabs_keeps_ethereum_attackers_not_victims_or_other_chains():
+    from ethcollect.connectors.defihacklabs import connector as dhl
+
+    tree = json.dumps({"tree": [{"path": "src/test/2024-02/Foo_exp.sol"},
+                                {"path": "src/test/interface.sol"}]}).encode()
+    assert dhl.incidents(tree) == [("src/test/2024-02/Foo_exp.sol", date(2024, 2, 1))]
+    C = "0x" + "ef" * 20
+    body = (f"// @KeyInfo -- Total Lost : ~20 ETH\n"
+            f"// Attacker : https://etherscan.io/address/{A.upper().replace('X', 'x')}\n"
+            f"// Attack Contract : https://etherscan.io/address/{B}#code\n"
+            f"// Vulnerable Contract : https://etherscan.io/address/{C}\n"
+            f"// Attacker : https://bscscan.com/address/{C}\n").encode()
+    rows = dhl.parse(body, path="src/test/2024-02/Foo_exp.sol", month=date(2024, 2, 1))
+    assert [r["address"] for r in rows] == [A, B]
+    assert {r["label_kind"] for r in rows} == {"hack"}
+    assert all(r["observed_at"] == date(2024, 2, 1) and r["date_known"] for r in rows)
+
+
+def test_lazarus_keeps_attacker_lines_and_drops_victims_services_and_other_chains():
+    from ethcollect.connectors.lazarus import connector as lz
+
+    tree = json.dumps({"tree": [
+        {"path": "hacks-and-thefts/2025-06-21_viking.md"}, {"path": "hacks-and-thefts/bybit.md"},
+        {"path": "more-hacks-and-thefts/pulsex-provex-richard-heart.md"},
+        {"path": "pdfs/x.pdf"}]}).encode()
+    assert lz.incidents(tree) == [("hacks-and-thefts/2025-06-21_viking.md", date(2025, 6, 21)),
+                                  ("hacks-and-thefts/bybit.md", None)]
+    C, D, E, F = ("0x" + h * 20 for h in ("ef", "12", "34", "56"))
+    body = (f"# Bybit\n## Onchain\n"
+            f"- {A} - Exploiter\n"
+            f"- {B}\n"
+            f"- {C} - \"Bybit Cold Wallet 1\" (Safe)\n"
+            f"- BNB {D}  Theft 1 BSC\n"
+            f"- {E} - eXch Depo (Dec 12)\n"
+            f"- https://etherscan.io/tx/0x{'ab' * 32}\n"
+            f"## The 5233 Theft Addresses + Amt Stolen\n- ETH {F} $3,604\n").encode()
+    rows = lz.parse(body, path="hacks-and-thefts/bybit.md", when=None)
+    assert [(r["address"], r["trust"]) for r in rows] == [(A, 0.6), (B, 0.3)]
+    assert {r["label_kind"] for r in rows} == {"hack"} and not any(r["date_known"] for r in rows)

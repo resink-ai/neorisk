@@ -12,6 +12,8 @@ from pathlib import Path
 from ethcollect import connectors
 from ethcollect.context import Context, FetchError, default_window
 
+COUNTS = ("labels", "transfers", "addresses", "nft_transfers", "funders", "balances")
+
 
 def _shared(p: argparse.ArgumentParser) -> None:
     p.add_argument("--out", type=Path, default=Path("data/eth"), help="default data/eth")
@@ -47,7 +49,7 @@ def run_connector(source: str, args) -> bool:
     ctx.note("ok", ok)
     ctx.note("seconds", round(time.monotonic() - t0, 1))
     record = ctx.save_record({k: v for k, v in vars(args).items() if k != "func"})
-    counts = {k: ctx.record[k] for k in ("labels", "transfers", "addresses") if k in ctx.record}
+    counts = {k: ctx.record[k] for k in COUNTS if k in ctx.record}
     print(f"  {'ok' if ok else 'FAILED'} {counts} in {ctx.record['seconds']}s -> {record}")
     return ok
 

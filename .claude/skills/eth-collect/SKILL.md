@@ -20,6 +20,7 @@ what went wrong. Read `references/contract.md` once before changing any connecto
 | `--sample toy`, "build the toy set" | `uv run eth-collect sample toy` (add `--skip-labels` if labels are fresh) |
 | `--status`, "what do we have" | `uv run eth-collect status` |
 | `--new-source <name>` | `uv run eth-collect new-source <name> --kind label\|chain`, then see "Adding a source" |
+| "balances / first funders / NFT transfers of these addresses" | `uv run eth-collect etherscan-extras --addresses <file> [--parts balance,funder,nft]` |
 | "history of these addresses" | `uv run eth-collect etherscan --addresses <file>`; with no key, only day snapshots: `aws-public --mode scan` (watches risk labels) |
 
 `uv run eth-collect <name> --help` lists a connector's own options. Shared options on every

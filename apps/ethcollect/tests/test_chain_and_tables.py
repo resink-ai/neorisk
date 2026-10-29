@@ -261,3 +261,51 @@ def test_etherscan_rate_comes_from_env_unless_rate_is_given(tmp_path, monkeypatc
     monkeypatch.setenv("ETHERSCAN_RATE", "fast")
     with pytest.raises(SystemExit):
         explorer.Explorer(_ctx(tmp_path), explorer.ETHERSCAN, "k")
+
+
+def test_first_funder_is_the_oldest_incoming_eth_with_value(tmp_path):
+    me, f1, f2 = "0x" + "11" * 20, "0x" + "22" * 20, "0x" + "33" * 20
+    tx = {"timeStamp": "1700000000", "isError": "0"}
+    pages = {
+        "txlist": [{**tx, "hash": "0x1", "blockNumber": "5", "from": f1, "to": me, "value": "0"},
+                   {**tx, "hash": "0x2", "blockNumber": "9", "from": f1, "to": me,
+                    "value": "10"}],
+        "txlistinternal": [{**tx, "hash": "0x3", "blockNumber": "7", "from": f2, "to": me,
+                            "value": "5", "index": "0"}],
+    }
+    ex = FakeExplorer(_ctx(tmp_path), pages)
+    funding, read = ex.first_funding(me)
+    assert (funding["from_address"], funding["kind"], funding["block_number"]) == (f2, "internal", 7)
+    assert len(read) == 3 and {c["sort"] for c in ex.calls} == {"asc"}
+    assert ex.first_funding("0x" + "44" * 20)[0] is None
+
+
+def test_nft_rows_carry_standard_token_and_amount():
+    item = {"blockNumber": "1", "timeStamp": "1700000000", "hash": "0xAB", "from": A,
+            "to": B, "contractAddress": C, "tokenID": "7", "tokenName": "X"}
+    one = explorer._nft(item, "erc721")
+    many = explorer._nft({**item, "tokenValue": "3"}, "erc1155")
+    assert (one["tx_hash"], one["token_id"], one["amount"]) == ("0xab", "7", 1.0)
+    assert many["amount"] == 3.0
+    df = tables.frame("nft_transfers", [{**r, "source": "t"} for r in (one, many, one)])
+    assert df.height == 2
+
+
+def test_daily_limit_stops_at_once_and_balances_skip_the_cache(tmp_path, monkeypatch):
+    ctx = Context(out=tmp_path, source="etherscan", since=None, until=None, rate=1000)
+    calls = []
+
+    def http(url, **kw):
+        calls.append(url)
+        return replies.pop(0)
+
+    monkeypatch.setattr(ctx, "http", http)
+    ex = explorer.Explorer(ctx, explorer.ETHERSCAN, "k")
+    replies = [json.dumps({"status": "0", "message": "NOTOK",
+                           "result": "Max daily rate limit reached"}).encode()]
+    with pytest.raises(explorer.DailyLimit):
+        ex.call(module="account", action="txlist")
+    ok = json.dumps({"status": "1", "result": [{"account": A, "balance": "2" + "0" * 18}]})
+    replies = [ok.encode(), ok.encode()]
+    assert ex.balances([A]) == ex.balances([A]) == [(A, 2.0)]
+    assert len(calls) == 3

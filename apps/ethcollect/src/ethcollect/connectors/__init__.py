@@ -17,6 +17,7 @@ SOURCES = {
     "aws-public": "aws_public",
     "blockscout": "blockscout",
     "etherscan": "etherscan",
+    "etherscan-extras": "etherscan_extras",
     "rpc": "rpc",
     # labels
     "ofac": "ofac",
@@ -27,6 +28,8 @@ SOURCES = {
     "mew-darklist": "mew_darklist",
     "cryptoscamdb": "cryptoscamdb",
     "huione": "huione",
+    "defihacklabs": "defihacklabs",
+    "lazarus": "lazarus",
 }
 
 
