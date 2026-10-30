@@ -1,0 +1,13 @@
+# Delivery Center: a Brazilian food and goods delivery hub operator, Jan-Apr 2021 (Kaggle,
+# "Data files © Original Authors"; fictitious and anonymised).
+file = "delivery_center.sqlite"
+note = "Moments are 'M/D/YYYY h:mm:ss AM' text in UTC. Payments and deliveries have no time."
+
+[tables]
+channels = ["channel_id"]
+drivers = ["driver_id"]
+deliveries = ["delivery_id"]
+hubs = ["hub_id"]
+payments = ["payment_id"]
+stores = ["store_id"]
+orders = ["order_id"]
