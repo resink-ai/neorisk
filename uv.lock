@@ -208,6 +208,7 @@ dependencies = [
     { name = "numpy" },
     { name = "polars" },
     { name = "pyarrow" },
+    { name = "scipy" },
     { name = "torch" },
 ]
 
@@ -216,6 +217,7 @@ requires-dist = [
     { name = "numpy", specifier = ">=1.26" },
     { name = "polars", specifier = ">=1.0" },
     { name = "pyarrow", specifier = ">=15" },
+    { name = "scipy", specifier = ">=1.11" },
     { name = "torch", specifier = ">=2.4" },
 ]
 
