@@ -83,3 +83,17 @@ def test_missing_block_named(shop, tmp_path):
     (proj / "specs" / "ingest.sql").write_text(sql.split("-- event: order_paid")[0])
     with pytest.raises(IngestError, match="order_paid"):
         ingest(proj, db, tmp_path / "ds")
+
+
+def test_entity_ref_mapped(shop, tmp_path):
+    proj, db = shop
+    pack = (proj / "specs" / "pack.py").read_text()
+    (proj / "specs" / "pack.py").write_text(pack + (
+        '    p.entity("cards", key="card_id",\n'
+        '             cols={"ext_id": text(), "customer_id": ref("customers")})\n'))
+    sql = (proj / "specs" / "ingest.sql").read_text()
+    (proj / "specs" / "ingest.sql").write_text(
+        sql + "-- entity: cards\nSELECT 'k' || cid AS ext_id, cid AS customer_id "
+              "FROM customers ORDER BY cid;\n")
+    cards = read(ingest(proj, db, tmp_path / "ds")).entities["cards"]
+    assert cards["customer_id"].to_list() == [1, 2]

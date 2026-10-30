@@ -10,7 +10,7 @@ Rules (the dataset contract `rebuild` and `datagen check` rely on):
    event time. The key is the 1-based row number in `ext_id` order.
 3. An event block yields `event_time`, the event's pack columns and, with `ord=<col>`, that
    column; `owner=<col>` is required. A `ref(T)` column yields the source id, mapped through
-   `T.ext_id` to T's key; an unmatched id is an error.
+   `T.ext_id` to T's key (entity blocks too); an unmatched id is an error.
 4. `ts` columns are ISO text `YYYY-MM-DD HH:MM:SS[.ffffff]`, read as UTC; `amount`, `i64` and
    `i32` columns are integers (minor units for money); a null in a non-`opt` column is an error.
 5. Events sort stably by (event_time, ord or 0, block position, owner, block row). `seq` is the
@@ -159,6 +159,10 @@ def ingest(project: Path, db: Path, out: Path, *, force: bool = False) -> Path:
         keymaps[name] = {ext[i]: k for k, i in enumerate(order, 1)}
         ent_cols[name] = {c: [data[c][i] for i in order] for c in data}
         ent_cols[name]["ext_id"] = [ext[i] for i in order]
+    for name, data in ent_cols.items():              # refs between entities, once keys exist
+        for c, lt in plan.entities[name].cols.items():
+            if lt.kind == "ref":
+                data[c] = _map_refs(raw_ent[name][0], c, data[c], keymaps[lt.target])
 
     # events
     frames: dict[str, pl.DataFrame] = {}
