@@ -17,7 +17,8 @@ Rules (the dataset contract `rebuild` and `datagen check` rely on):
    1-based position, `event_id = seq`, `partition_id` the dense rank of (owner column, owner
    value), `cause_id` null and `action_id` 0.
 6. The dataset holds events/, entities/, empty labels/ and cases/, schema/schema.json and a
-   manifest whose provenance is {"source": "ingest", "file", "sha256"}.
+   manifest whose provenance is {"source": "ingest", "file", "sha256", "project",
+   "pack_revision"} (so `datagen check` can tell the specs changed since).
 7. Every pack table has exactly one block, and every block a pack table.
 """
 
@@ -242,7 +243,8 @@ def ingest(project: Path, db: Path, out: Path, *, force: bool = False) -> Path:
     days = max((last - first).total_seconds() / 86400, 1e-6)
     manifest = {
         "pack": plan.name, "schema_version": plan.pack.schema_version, "overlays": {},
-        "provenance": {"source": "ingest", "file": src.file, "sha256": _file_sha(db)},
+        "provenance": {"source": "ingest", "file": src.file, "sha256": _file_sha(db),
+                       "project": pr.name, "pack_revision": pr.revision()},
         "seed": 0, "config": {},
         "run": {"start": first.isoformat(), "days": days, "seed": 0},
         "writer": WRITER,

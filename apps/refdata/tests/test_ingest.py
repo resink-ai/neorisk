@@ -97,3 +97,10 @@ def test_entity_ref_mapped(shop, tmp_path):
               "FROM customers ORDER BY cid;\n")
     cards = read(ingest(proj, db, tmp_path / "ds")).entities["cards"]
     assert cards["customer_id"].to_list() == [1, 2]
+
+
+def test_manifest_anchors_the_pack(shop, tmp_path):
+    from neorisk_simkit.project import load_project
+    proj, db = shop
+    run = read(ingest(proj, db, tmp_path / "ds"))
+    assert run.manifest["provenance"]["pack_revision"] == load_project(proj).revision()
