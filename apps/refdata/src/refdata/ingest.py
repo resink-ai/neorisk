@@ -122,8 +122,11 @@ def ingest(project: Path, db: Path, out: Path, *, force: bool = False) -> Path:
     project, db, out = Path(project), Path(db), Path(out)
     if not db.exists():
         raise FileNotFoundError(f"{db} not found; run: uv run refdata fetch")
-    if out.exists() and any(out.iterdir()) and not force:
-        raise FileExistsError(f"{out} exists; pass --force to overwrite")
+    if out.exists() and (not out.is_dir() or any(out.iterdir())):
+        if not force:
+            raise FileExistsError(f"{out} exists; pass --force to overwrite")
+        if not _is_ingested(out):
+            raise FileExistsError(f"{out} is not a refdata dataset; refusing to delete it")
     src = load_source(project)
     pr = load_project(project)
     plan = pr.plan(pr.settings(None, [], []).overlays)
@@ -255,6 +258,14 @@ def ingest(project: Path, db: Path, out: Path, *, force: bool = False) -> Path:
     }
     (out / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
     return out
+
+
+def _is_ingested(out: Path) -> bool:
+    try:
+        m = json.loads((out / "manifest.json").read_text())
+    except (OSError, ValueError):
+        return False
+    return m.get("provenance", {}).get("source") == "ingest"
 
 
 def _file_sha(path: Path) -> str:

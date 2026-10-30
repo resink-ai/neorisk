@@ -3,6 +3,7 @@
 Every Parquet file of the dataset is a DuckDB view named after its file (`order_placed`,
 `customers`, ...). Each `-- table: <name>` block yields one source table with exactly the
 source's columns; the result is written to a SQLite file created with the source's own DDL.
+DuckDB runs in UTC, so `ts - INTERVAL` never crosses the host's daylight-saving shifts.
 """
 
 from __future__ import annotations
@@ -48,6 +49,7 @@ def rebuild(dataset: Path, project: Path, src_db: Path, out: Path, *,
         raise ValueError(f"tables not in {src_db.name}: {sorted(set(src.tables) - set(ddl))}")
 
     duck = duckdb.connect()
+    duck.execute("SET TimeZone = 'UTC'")           # interval arithmetic never in host time
     for group in ("events", "entities"):
         for f in sorted((dataset / group).glob("*.parquet")):
             duck.execute(f"CREATE VIEW \"{f.stem}\" AS SELECT * FROM read_parquet('{f}')")

@@ -102,3 +102,19 @@ def test_queries_run_on_indexed_copies(tmp_path):
     assert idx == [('CREATE INDEX "refdata_t" ON "t" ("k")',)]
     con.execute("INSERT INTO t VALUES ('b', 2)")                  # a copy, not the file
     assert sqlite3.connect(src).execute("SELECT count(*) FROM t").fetchone() == (1,)
+
+
+def test_extra_rebuilt_column_fails(tmp_path):
+    src = _db(tmp_path / "a", [("a", 1)])
+    con = sqlite3.connect(tmp_path / "b")
+    con.execute("CREATE TABLE t (k TEXT, x, extra)")
+    con.execute("INSERT INTO t VALUES ('a', 1, 'boo')")
+    con.commit()
+    con.close()
+    assert not compare(src, tmp_path / "b", _project(tmp_path)).ok
+
+
+def test_big_ints_stay_exact(tmp_path):
+    r = compare(_db(tmp_path / "a", [("a", 2**53 + 1)]), _db(tmp_path / "b", [("a", 2**53)]),
+                _project(tmp_path))
+    assert not r.ok

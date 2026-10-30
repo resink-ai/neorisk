@@ -68,8 +68,8 @@ class Report:
 def norm(v):
     if isinstance(v, bool):
         return v
-    if isinstance(v, (int, float)):
-        return float(v)
+    if isinstance(v, float) and v.is_integer():
+        return int(v)                                # 62.0 == 62, ints above 2**53 stay exact
     return v
 
 
@@ -82,6 +82,10 @@ def _sample(c: Counter, key_idx: list[int]) -> list[tuple]:
 def _table(name: str, key: list[str], a: sqlite3.Connection,
            b: sqlite3.Connection) -> TableDiff:
     cols = [r[1] for r in a.execute(f'PRAGMA table_info("{name}")')]
+    got = [r[1] for r in b.execute(f'PRAGMA table_info("{name}")')]
+    if got and got != cols:
+        n = a.execute(f'SELECT count(*) FROM "{name}"').fetchone()[0]
+        return TableDiff(name, n, 0, [(f"rebuilt columns {got} != source {cols}",)])
     sel = ", ".join(f'"{c}"' for c in cols)
     ca = Counter(tuple(norm(v) for v in r) for r in a.execute(f'SELECT {sel} FROM "{name}"'))
     try:

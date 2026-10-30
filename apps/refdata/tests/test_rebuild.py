@@ -60,3 +60,15 @@ def test_refuses_existing_out(shop, tmp_path):
     args = ["rebuild", str(ds), "--project", str(proj), "--db", str(db), "--out", str(out)]
     assert cli.main(args) == 2
     assert cli.main([*args, "--force"]) == 0
+
+
+def test_views_run_in_utc_whatever_the_host(shop, tmp_path, monkeypatch):
+    monkeypatch.setenv("TZ", "Australia/Sydney")
+    proj, db = shop
+    ds = ingest(proj, db, tmp_path / "ds")
+    views = (proj / "specs" / "views.sql").read_text()
+    (proj / "specs" / "views.sql").write_text(
+        views.replace("SELECT ext_id AS cid, city FROM customers;",
+                      "SELECT ext_id AS cid, current_setting('TimeZone') AS city FROM customers;"))
+    out = rebuild(ds, proj, db, tmp_path / "rebuilt.sqlite")
+    assert {r[0] for r in _rows(out, "SELECT city FROM customers")} == {"UTC"}

@@ -104,3 +104,13 @@ def test_manifest_anchors_the_pack(shop, tmp_path):
     proj, db = shop
     run = read(ingest(proj, db, tmp_path / "ds"))
     assert run.manifest["provenance"]["pack_revision"] == load_project(proj).revision()
+
+
+def test_force_never_deletes_a_non_dataset(shop, tmp_path):
+    proj, db = shop
+    precious = tmp_path / "precious"
+    precious.mkdir()
+    (precious / "notes.txt").write_text("keep me")
+    with pytest.raises(FileExistsError, match="not a refdata dataset"):
+        ingest(proj, db, precious, force=True)
+    assert (precious / "notes.txt").read_text() == "keep me"
