@@ -1,0 +1,17 @@
+# Olist Brazilian e-commerce (real, anonymised; CC BY-NC-SA 4.0) with its seller-acquisition
+# funnel: Spider2's E_commerce copy (Brazilian_E_Commerce and electronic_sales hold the same rows).
+file = "E_commerce.sqlite"
+note = "Times are São Paulo wall clock (with DST), stored as if UTC. Money is exact cents."
+
+[tables]
+product_category_name_translation = ["product_category_name"]
+sellers = ["seller_id"]
+customers = ["customer_id"]
+geolocation = []
+order_items = ["order_id", "order_item_id"]
+order_payments = ["order_id", "payment_sequential"]
+order_reviews = ["review_id", "order_id"]
+orders = ["order_id"]
+products = ["product_id"]
+leads_qualified = ["mql_id"]
+leads_closed = ["mql_id"]
