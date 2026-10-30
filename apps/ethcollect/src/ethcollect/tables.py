@@ -51,12 +51,50 @@ LABELS = {
     "date_known": pl.Boolean,  # False: observed_at is the fetch date
 }
 
-SCHEMAS = {"transfers": TRANSFERS, "addresses": ADDRESSES, "labels": LABELS}
+# Kept out of `transfers`: the model reads that table and knows only its three kinds.
+NFT_TRANSFERS = {
+    "tx_hash": pl.String,
+    "block_number": pl.Int64,
+    "ts": pl.Datetime("us", "UTC"),
+    "from_address": pl.String,
+    "to_address": pl.String,
+    "standard": pl.String,  # erc721 | erc1155
+    "contract": pl.String,
+    "token_name": pl.String,
+    "token_id": pl.String,  # a uint256, so text
+    "amount": pl.Float64,  # 1 for ERC-721, tokenValue for ERC-1155
+    "source": pl.String,
+}
+
+FUNDERS = {  # who first sent the address ETH; funder null: none among the oldest rows read
+    "address": pl.String,
+    "funder": pl.String,
+    "tx_hash": pl.String,
+    "ts": pl.Datetime("us", "UTC"),
+    "amount_eth": pl.Float64,
+    "via": pl.String,  # external | internal
+    "source": pl.String,
+}
+
+BALANCES = {
+    "address": pl.String,
+    "balance_eth": pl.Float64,
+    "as_of": pl.Datetime("us", "UTC"),
+    "source": pl.String,
+}
+
+SCHEMAS = {"transfers": TRANSFERS, "addresses": ADDRESSES, "labels": LABELS,
+           "nft_transfers": NFT_TRANSFERS, "funders": FUNDERS, "balances": BALANCES}
 KEYS = {
     # block_number because aws-public token rows have no tx_hash; (block, log_index) is unique
     "transfers": ["tx_hash", "block_number", "log_index", "kind"],
     "addresses": ["address"],
     "labels": ["address", "label_kind", "source"],
+    # Etherscan gives NFT rows no log index
+    "nft_transfers": ["tx_hash", "contract", "token_id", "from_address", "to_address",
+                      "standard"],
+    "funders": ["address"],
+    "balances": ["address"],
 }
 
 TRUST = {"high": 0.9, "medium": 0.6, "low": 0.3}

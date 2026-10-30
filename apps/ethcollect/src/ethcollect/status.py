@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 
 from ethcollect import connectors, tables
+from ethcollect.cli import COUNTS
 
 
 def last_runs(root: Path) -> dict[str, dict]:
@@ -26,16 +27,15 @@ def report(root: Path) -> str:
         if r is None:
             state = "never run"
         else:
-            counts = ", ".join(f"{k} {r[k]}" for k in ("labels", "transfers", "addresses")
-                               if k in r)
+            counts = ", ".join(f"{k} {r[k]}" for k in COUNTS if k in r)
             state = f"{'ok' if r.get('ok') else 'FAILED'} {counts} ({r.get('seconds')}s)"
             if r.get("error"):
                 state += f" error: {r['error'][:80]}"
         lines.append(f"  {source:<20}{m.KIND:<7}{state}")
 
     lines += ["", "tables (all sources, de-duplicated):"]
-    for t in ("labels", "transfers", "addresses"):
-        lines.append(f"  {t:<10}{tables.load(root, t).height:>9} rows")
+    for t in tables.SCHEMAS:
+        lines.append(f"  {t:<14}{tables.load(root, t).height:>9} rows")
     labels = tables.load(root, "labels")
     if labels.height:
         lines += ["", "labels by kind and source:"]
