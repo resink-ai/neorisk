@@ -1,0 +1,15 @@
+# Postgres Pro "demo" airline database, small edition: a generated snapshot at
+# N = 2017-08-15 18:00+03 (flights from N-30 d to N+30 d). passenger_name and contact_data
+# were dropped by Spider2.
+file = "Airlines.sqlite"
+note = "Times are '+03' wall clock, stored as if UTC; '\\N' text stands for a missing time."
+
+[tables]
+aircrafts_data = ["aircraft_code"]
+airports_data = ["airport_code"]
+boarding_passes = ["ticket_no", "flight_id"]
+bookings = ["book_ref"]
+flights = ["flight_id"]
+seats = ["aircraft_code", "seat_no"]
+ticket_flights = ["ticket_no", "flight_id"]
+tickets = ["ticket_no"]
