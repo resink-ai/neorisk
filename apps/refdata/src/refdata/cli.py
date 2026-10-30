@@ -2,6 +2,7 @@
 
     refdata fetch [--dest DIR] [--force]
     refdata ingest PROJECT [--db SRC] [--out DIR] [--force]
+    refdata rebuild DATASET --project P [--db SRC] [--out FILE] [--force]
 
 Exit codes: 0 success, 1 a round trip or comparison differs, 2 usage error, missing source or
 refusal.
@@ -34,6 +35,12 @@ def build_parser() -> argparse.ArgumentParser:
     i.add_argument("--db", default=None, help="default: data/spider2/<source.toml file>")
     i.add_argument("--out", default=None, help="default: data/ref/<project>")
     i.add_argument("--force", action="store_true", help="overwrite an existing dataset")
+    r = sub.add_parser("rebuild", help="a dataset → the source tables (specs/views.sql)")
+    r.add_argument("dataset")
+    r.add_argument("--project", required=True)
+    r.add_argument("--db", default=None, help="source, for its DDL; default: data/spider2/...")
+    r.add_argument("--out", default=None, help="default: data/ref/<project>.rebuilt.sqlite")
+    r.add_argument("--force", action="store_true", help="overwrite an existing file")
     return parser
 
 
@@ -68,9 +75,23 @@ def _fetch(args) -> int:
     return 0
 
 
+def _rebuild(args) -> int:
+    from refdata.rebuild import rebuild
+    project = Path(args.project)
+    out = Path(args.out) if args.out else REF / f"{project.name}.rebuilt.sqlite"
+    try:
+        rebuild(Path(args.dataset), project, _db(project, args.db), out, force=args.force)
+    except (FileNotFoundError, FileExistsError) as e:
+        return _err(str(e))
+    except ValueError as e:
+        return _err(str(e), 1)
+    print(json.dumps({"rebuilt": str(out)}))
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
-    return {"fetch": _fetch, "ingest": _ingest}[args.cmd](args)
+    return {"fetch": _fetch, "ingest": _ingest, "rebuild": _rebuild}[args.cmd](args)
 
 
 if __name__ == "__main__":
