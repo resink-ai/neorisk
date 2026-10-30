@@ -1,0 +1,5 @@
+# Clique Bait (Spider2 bank_sales_trading). Stage 1 is a schema-only pack: the event log comes
+# from `uv run refdata ingest examples/cliquebait`, not from `datagen run`.
+[run]
+seed = 7
+days = 152.0

@@ -1,0 +1,10 @@
+# Clique Bait: 8 Week SQL Challenge case #6, one group of tables in Spider2's bank_sales_trading.
+file = "bank_sales_trading.sqlite"
+note = "Event times are UTC wall clock with microseconds; the source strips trailing zeros."
+
+[tables]
+shopping_cart_users = ["cookie_id"]
+shopping_cart_events = ["visit_id", "sequence_number"]
+shopping_cart_page_hierarchy = ["page_id"]
+shopping_cart_event_identifier = ["event_type"]
+shopping_cart_campaign_identifier = ["campaign_id"]
