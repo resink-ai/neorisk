@@ -92,3 +92,13 @@ def test_roundtrip_fixture_exit_0(shop, tmp_path, capsys):
     (proj / "specs" / "views.sql").write_text(views.replace("p.total / 100.0", "p.total / 10.0"))
     assert cli.main([*args, "--force"]) == 1
     assert "orders" in json.loads(capsys.readouterr().out.strip().splitlines()[-1])["failed"]
+
+
+def test_queries_run_on_indexed_copies(tmp_path):
+    from refdata.compare import open_indexed
+    src = _db(tmp_path / "a", [("a", 1)])
+    con = open_indexed(src, {"t": ["k"]})
+    idx = con.execute("SELECT sql FROM sqlite_master WHERE type = 'index'").fetchall()
+    assert idx == [('CREATE INDEX "refdata_t" ON "t" ("k")',)]
+    con.execute("INSERT INTO t VALUES ('b', 2)")                  # a copy, not the file
+    assert sqlite3.connect(src).execute("SELECT count(*) FROM t").fetchone() == (1,)

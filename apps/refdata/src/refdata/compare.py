@@ -4,7 +4,8 @@ Tables: each source table (from source.toml) must equal the rebuilt one as a mul
 rows. INTEGER and REAL compare by numeric value; text, blobs and NULL compare exactly (so
 NULL, '' and '\\N' are three values). No tolerance.
 
-Queries: every `specs/queries/*.sql` runs on both files. Results compare as lists when the
+Queries: every `specs/queries/*.sql` runs on in-memory copies of both files, indexed on
+the source.toml keys. Results compare as lists when the
 query has a top-level ORDER BY, else as multisets; float cells compare with relative
 tolerance 1e-9, since a different row order may change a float sum in its last bits.
 """
@@ -130,14 +131,36 @@ def _query(name: str, sql: str, a: sqlite3.Connection, b: sqlite3.Connection) ->
                                   f"({len(rb)} rows)")
 
 
+def open_indexed(db: Path, keys: dict[str, list[str]]) -> sqlite3.Connection:
+    """An in-memory copy of `db` with an index on each table's key columns, so saved queries
+    with correlated subqueries run fast. Indexes never change a result set."""
+    disk = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
+    mem = sqlite3.connect(":memory:")
+    disk.backup(mem)
+    disk.close()
+    for t, cols in keys.items():
+        if cols:
+            mem.execute(f'CREATE INDEX "refdata_{t}" ON "{t}" ('
+                        + ", ".join(f'"{c}"' for c in cols) + ")")
+    return mem
+
+
 def compare(src_db: Path, rebuilt_db: Path, project: Path) -> Report:
     src = load_source(Path(project))
     a = sqlite3.connect(f"file:{src_db}?mode=ro", uri=True)
     b = sqlite3.connect(f"file:{rebuilt_db}?mode=ro", uri=True)
     try:
         tables = [_table(n, k, a, b) for n, k in src.tables.items()]
-        qdir = Path(project) / "specs" / "queries"
-        queries = [_query(f.stem, f.read_text(), a, b) for f in sorted(qdir.glob("*.sql"))]
+    finally:
+        a.close()
+        b.close()
+    qfiles = sorted((Path(project) / "specs" / "queries").glob("*.sql"))
+    if not qfiles:
+        return Report(tables, [])
+    keys = {n: k for n, k in src.tables.items()}
+    a, b = open_indexed(src_db, keys), open_indexed(rebuilt_db, keys)
+    try:
+        queries = [_query(f.stem, f.read_text(), a, b) for f in qfiles]
     finally:
         a.close()
         b.close()
