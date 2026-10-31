@@ -1,0 +1,8 @@
+# Bitcoin trading: Danny Ma's crypto case, the bitcoin_* tables of Spider2's bank_sales_trading.
+file = "bank_sales_trading.sqlite"
+note = "Trade times are UTC to the millisecond; price bars are dates, read as midnight UTC."
+
+[tables]
+bitcoin_members = ["member_id"]
+bitcoin_transactions = ["txn_id"]
+bitcoin_prices = ["ticker", "market_date"]
