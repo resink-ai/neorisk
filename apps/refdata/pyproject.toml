@@ -1,0 +1,17 @@
+[project]
+name = "refdata"
+version = "0.1.0"
+description = "Reference datasets: real tables as simkit event logs, rebuilt and compared exactly"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = ["neorisk-simkit", "polars>=1.0", "duckdb>=1.1"]
+
+[project.scripts]
+refdata = "refdata.cli:main"
+
+[build-system]
+requires = ["uv_build>=0.11.26,<0.12.0"]
+build-backend = "uv_build"
+
+[tool.uv.sources]
+neorisk-simkit = { workspace = true }

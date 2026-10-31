@@ -1,0 +1,8 @@
+# Data Bank: 8 Week SQL Challenge case #4, one group of tables in Spider2's bank_sales_trading.
+file = "bank_sales_trading.sqlite"
+note = "Dates only; read as midnight UTC. Transactions within a day keep the source rowid order."
+
+[tables]
+customer_regions = ["region_id"]
+customer_nodes = ["customer_id", "start_date"]
+customer_transactions = ["customer_id", "txn_date"]
