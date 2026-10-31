@@ -1,0 +1,15 @@
+# Oracle Sales History: Oracle's SH sample schema 23.1 (MIT), Spider2's complex_oracle.
+file = "complex_oracle.sqlite"
+note = "Dates only, read as midnight UTC. currency is a rule; the 3 SQLite views are not data."
+
+[tables]
+countries = ["country_id"]
+customers = ["cust_id"]
+promotions = ["promo_id"]
+products = ["prod_id"]
+times = ["time_id"]
+channels = ["channel_id"]
+sales = ["prod_id", "cust_id", "time_id", "channel_id", "promo_id"]
+costs = ["prod_id", "time_id", "promo_id", "channel_id"]
+supplementary_demographics = ["cust_id"]
+currency = ["country", "year", "month"]

@@ -1,0 +1,43 @@
+access_log                   source   30  rebuilt   30  equal True
+action_log                   source  120  rebuilt  120  equal True
+action_log_with_ip           source   12  rebuilt   12  equal True
+action_log_with_noise        source    0  rebuilt    0  equal True
+activity_log                 source  244  rebuilt  244  equal True
+app1_mst_users               source    2  rebuilt    2  equal True
+app2_mst_users               source    2  rebuilt    2  equal True
+dup_action_log               source   11  rebuilt   11  equal True
+form_error_log               source    8  rebuilt    8  equal True
+form_log                     source   45  rebuilt   45  equal True
+invalid_action_log           source    7  rebuilt    7  equal True
+mst_categories               source    8  rebuilt    8  equal True
+mst_products_20161201        source    6  rebuilt    6  equal True
+mst_products_20170101        source    6  rebuilt    6  equal True
+mst_users                    source  320  rebuilt  320  equal True
+mst_users_with_card_number   source    3  rebuilt    3  equal True
+product_sales                source   10  rebuilt   10  equal True
+purchase_log                 source    5  rebuilt    5  equal True
+read_log                     source   15  rebuilt   15  equal True
+ALL EQUAL True
+
+event  access_logged              30
+event  action_logged             120
+event  action_with_ip_logged      12
+event  activity_logged           244
+event  category_named              8
+event  dup_action_logged          11
+event  form_error_logged           8
+event  form_viewed                45
+event  invalid_action_logged       7
+event  noisy_action_logged         0
+event  product_deleted             1
+event  product_updated             8
+event  purchase_logged             5
+event  read_logged                15
+event  user_registered           320
+entity app1_users                  2
+entity app2_users                  2
+entity product_sales              10
+entity user_cards                  3
+events 834 in 15 types; entity rows 17 in 4 tables
+event_time range 2016-01-01 10:00:00 2017-03-02 10:00:00 | N = 2017-03-02 10:00:00 | any > N: False
+rule times: invalid null stamp -> ['2016-11-04 13:00:00'] | product_deleted -> [('B001', '2016-12-01 00:00:00')]

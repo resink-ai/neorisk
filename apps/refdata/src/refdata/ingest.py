@@ -222,6 +222,10 @@ def ingest(project: Path, db: Path, out: Path, *, force: bool = False) -> Path:
         df = pl.DataFrame([pl.Series(t.key, range(1, n + 1), dtype=pl.Int64), created]
                           + [_series(name, c, lt, data[c]) for c, lt in t.cols.items()])
         entities[name] = df
+    # the run window spans every time in the dataset, entity creations included
+    times = [t for df in entities.values() for t in (df["created_at"].min(),
+                                                     df["created_at"].max()) if t is not None]
+    first, last = min([first, *times]), max([last, *times])
 
     # write
     if out.exists():

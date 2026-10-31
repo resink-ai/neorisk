@@ -1,0 +1,23 @@
+## sales: upstream 918843 rows, sqlite 918843 rows; equal after normalisation: True; only-upstream 0, only-sqlite 0
+   col amount_sold: upstream empty 0, upstream padded 918843; sqlite NULL 0, sqlite '' 0
+   rows in the same position as the CSV: 918843/918843
+## costs: upstream 82112 rows, sqlite 82112 rows; equal after normalisation: True; only-upstream 0, only-sqlite 0
+   rows in the same position as the CSV: 82112/82112
+## times: upstream 1826 rows, sqlite 1826 rows; equal after normalisation: True; only-upstream 0, only-sqlite 0
+   rows in the same position as the CSV: 1826/1826
+## customers: upstream 55500 rows, sqlite 55500 rows; equal after normalisation: True; only-upstream 0, only-sqlite 0
+   col cust_marital_status: upstream empty 17506, upstream padded 0; sqlite NULL 17506, sqlite '' 0
+   col cust_income_level: upstream empty 41, upstream padded 0; sqlite NULL 41, sqlite '' 0
+   col cust_src_id: upstream empty 55500, upstream padded 0; sqlite NULL 55500, sqlite '' None
+   col cust_eff_to: upstream empty 55500, upstream padded 0; sqlite NULL 55500, sqlite '' None
+   rows in the same position as the CSV: 5/55500
+## promotions: upstream 503 rows, sqlite 503 rows; equal after normalisation: True; only-upstream 0, only-sqlite 0
+   rows in the same position as the CSV: 0/503
+## supplementary_demographics: upstream 4500 rows, sqlite 4500 rows; equal after normalisation: True; only-upstream 0, only-sqlite 0
+   col comments: upstream empty 205, upstream padded 0; sqlite NULL 205, sqlite '' 0
+   rows in the same position as the CSV: 0/4500
+## products: upstream 72, sqlite 24; in both 21; sqlite-only [49, 50, 51]; upstream-only 51
+   name/desc differ on shared ids: []
+   upstream insert order of the sqlite ids: ['14', '21', '22', '46', '47', '127', '128', '129', '130', '19', '23', '28', '30', '31', '40', '41', '42', '43', '44', '45', '48']
+## countries: upstream 35, sqlite 35, equal (id, iso, name): True
+## channels upstream: [('3', 'Direct Sales'), ('9', 'Tele Sales'), ('5', 'Catalog'), ('4', 'Internet'), ('2', 'Partners')]

@@ -1,0 +1,125 @@
+### row_counts  (10 rows, 0.0s)
+t | count(*)
+sales | 918843
+costs | 82112
+times | 1826
+products | 24
+customers | 55500
+promotions | 503
+channels | 5
+countries | 35
+currency | 1260
+supplementary_demographics | 4500
+
+### pk_unique  (8 rows, 0.0s)
+t | count(*) | count(distinct time_id)
+times | 1826 | 1826
+products | 24 | 24
+customers | 55500 | 55500
+promotions | 503 | 503
+channels | 5 | 5
+countries | 35 | 35
+supp_demo | 4500 | 4500
+currency(country,year,month) | 1260 | 1260
+
+### sales_key_dups  (1 rows, 0.5s)
+n_rows | n_keys | n_distinct_rows
+918843 | 918843 | 918843
+
+### sales_key_multiplicity  (1 rows, 0.1s)
+k | n_keys | n_rows
+1 | 918843 | 918843
+
+### sales_exact_dup_multiplicity  (1 rows, 0.5s)
+k | n_groups | n_rows
+1 | 918843 | 918843
+
+### dup_key_same_amount  (1 rows, 0.3s)
+all_equal | differ | count(*)
+None | None | 0
+
+### costs_key_dups  (1 rows, 0.0s)
+n_rows | n_keys | n_distinct
+82112 | 82112 | 82112
+
+### costs_key_multiplicity  (1 rows, 0.0s)
+k | count(*)
+1 | 82112
+
+### fk_coverage  (11 rows, 0.2s)
+fk | count(*) | sum(p.prod_id is not null)
+sales.prod->products | 918843 | 304780
+sales.cust->customers | 918843 | 918843
+sales.time->times | 918843 | 918843
+sales.channel->channels | 918843 | 918843
+sales.promo->promotions | 918843 | 918843
+costs.prod->products | 82112 | 25792
+costs.time->times | 82112 | 82112
+costs.channel->channels | 82112 | 82112
+costs.promo->promotions | 82112 | 82112
+customers.country->countries | 55500 | 55500
+supp_demo.cust->customers | 4500 | 4500
+
+### reverse_coverage  (9 rows, 8.5s)
+x | count(*) | sum(exists(select 1 from sales s where s.prod_id=p.prod_id))
+products sold | 24 | 21
+customers with sales | 55500 | 7059
+times with sales | 1826 | 1459
+times with costs | 1826 | 1459
+promos in sales | 503 | 4
+promos in costs | 503 | 3
+channels in sales | 5 | 4
+countries with customers | 35 | 19
+customers with supp_demo | 55500 | 4500
+
+### sales_to_costs  (1 rows, 0.2s)
+n | matched
+918843 | 916039
+
+### costs_to_sales  (1 rows, 8.6s)
+n | matched
+82112 | 82112
+
+### typeofs  (16 rows, 0.4s)
+c | typeof(time_id) | count(*)
+sales.time_id | text | 918843
+sales.amount_sold | real | 918843
+sales.quantity_sold | integer | 918843
+costs.unit_cost | real | 82112
+costs.unit_price | real | 82112
+costs.time_id | text | 82112
+times.time_id | text | 1826
+currency.to_us | real | 1260
+customers.cust_credit_limit | real | 55500
+customers.cust_eff_from | text | 55500
+customers.cust_eff_to | null | 55500
+products.prod_eff_from | text | 24
+products.prod_eff_to | text | 24
+promotions.promo_begin_date | text | 503
+products.prod_list_price | real | 24
+promotions.promo_cost | real | 503
+
+### time_ranges  (9 rows, 0.1s)
+t | min(time_id) | max(time_id) | count(distinct time_id)
+sales | 2019-01-01 | 2022-12-31 | 1459
+costs | 2019-01-01 | 2022-12-31 | 1459
+times | 2019-01-01 | 2023-12-31 | 1826
+promo_begin | 2019-06-01 | 9999-01-01 | 192
+promo_end | 2019-08-01 | 9999-01-01 | 191
+cust_eff_from | 2019-01-01 | 2019-01-01 | 1
+cust_eff_to | None | None | 0
+prod_eff_from | 2019-01-01 00:00:00 | 2019-01-01 00:00:00 | 1
+prod_eff_to |  |  | 1
+
+### time_text_formats  (9 rows, 0.1s)
+c | l | min(time_id) | count(*)
+sales.time_id | 10 | 2019-01-01 | 918843
+costs.time_id | 10 | 2019-01-01 | 82112
+times.time_id | 10 | 2019-01-01 | 1826
+times.week_ending_day | 10 | 2019-01-06 | 1826
+cust_eff_from | 10 | 2019-01-01 | 55500
+cust_eff_to | None | None | 55500
+prod_eff_from | 19 | 2019-01-01 00:00:00 | 24
+prod_eff_to | 0 |  | 24
+promo_begin | 10 | 2019-06-01 | 503
+

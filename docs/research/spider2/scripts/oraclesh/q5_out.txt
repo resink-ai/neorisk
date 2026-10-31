@@ -1,0 +1,223 @@
+### amount_ne_price_where  (1 rows, 1.0s)
+rows_in_multi_keys | ne_in_multi_keys | ne_total
+1097 | 1097 | 1097
+
+### multi_amount_keys  (12 rows, 0.4s)
+prod_id | time_id | channel_id | promo_id | group_concat(distinct amount_sold) | count(*) | up
+14 | 2021-01-10 | 3 | 999 | 1202.08,1296.74 | 16 | 1208.0
+14 | 2021-01-21 | 3 | 999 | 1197.89,1296.74 | 32 | 1207.16
+14 | 2021-02-21 | 3 | 999 | 1197.89,1296.74 | 27 | 1216.2
+14 | 2021-02-25 | 3 | 999 | 1214.66,1296.74 | 23 | 1218.23
+14 | 2021-03-10 | 3 | 999 | 1214.66,1296.74 | 16 | 1224.92
+20 | 2021-07-07 | 2 | 999 | 668.56,661.64 | 12 | 663.95
+20 | 2021-07-23 | 3 | 999 | 593.99,668.56 | 48 | 595.54
+20 | 2021-07-30 | 2 | 999 | 659.33,668.56 | 6 | 667.02
+20 | 2021-08-10 | 2 | 999 | 668.56,659.33 | 6 | 667.02
+20 | 2021-08-13 | 2 | 999 | 668.56,659.33 | 8 | 667.41
+20 | 2021-09-26 | 3 | 999 | 522.71,580.21 | 48 | 525.11
+20 | 2021-10-07 | 3 | 999 | 593.99,602.31 | 12 | 594.68
+
+### ne_by_key_amounts  (1 rows, 0.5s)
+na | keys_ | rows_ | has_price_amount
+2 | 48 | 1097 | 0
+
+### ne_timing  (10 rows, 0.2s)
+m | count(*)
+2019-12 | 333
+2021-03 | 130
+2021-07 | 66
+2021-04 | 66
+2021-11 | 63
+2021-12 | 62
+2020-06 | 60
+2021-10 | 56
+2021-06 | 56
+2021-02 | 50
+
+### negative_costs  (1 rows, 0.0s)
+count(*) | sum(unit_cost < 0) | sum(unit_cost = 0) | sum(unit_cost > unit_price) | min(time_id) | max(time_id)
+82112 | 102 | 0 | 243 | 2019-01-01 | 2022-12-31
+
+### negative_costs_detail  (3 rows, 0.0s)
+prod_id | channel_id | promo_id | count(*) | min(unit_cost) | min(time_id) | max(time_id)
+120 | 2 | 999 | 33 | -23.46 | 2021-11-01 | 2021-12-29
+120 | 3 | 999 | 40 | -23.32 | 2021-11-01 | 2021-12-30
+120 | 4 | 999 | 29 | -23.74 | 2021-11-01 | 2021-12-29
+
+### cost_gt_price_detail  (10 rows, 0.0s)
+prod_id | promo_id | channel_id | count(*) | min(time_id) | max(time_id)
+25 | 999 | 3 | 16 | 2021-11-08 | 2021-12-30
+26 | 999 | 3 | 16 | 2021-11-08 | 2021-12-30
+48 | 999 | 4 | 16 | 2022-02-04 | 2022-02-28
+30 | 999 | 4 | 14 | 2022-02-02 | 2022-02-28
+145 | 999 | 4 | 13 | 2022-07-02 | 2022-08-28
+129 | 999 | 4 | 12 | 2022-02-03 | 2022-02-27
+130 | 999 | 4 | 12 | 2022-02-03 | 2022-02-27
+20 | 999 | 3 | 11 | 2021-11-26 | 2021-12-27
+31 | 999 | 4 | 10 | 2021-01-04 | 2021-06-03
+39 | 999 | 4 | 10 | 2022-02-04 | 2022-02-28
+
+### margin_quantiles_input  (0 rows, 0.0s)
+m | count(*)
+
+### customers_constants  (1 rows, 0.0s)
+count(distinct cust_eff_from) | count(distinct cust_total) | count(distinct cust_total_id) | group_concat(distinct cust_valid) | sum(cust_src_id is null) | sum(cust_eff_to is null)
+1 | 1 | 1 | I,A | 55500 | 55500
+
+### cust_valid_mix  (2 rows, 0.0s)
+cust_valid | count(*) | buyers
+A | 10621 | 7059
+I | 44879 | 0
+
+### customers_types  (1 rows, 0.0s)
+typeof(cust_postal_code) | typeof(cust_year_of_birth) | typeof(cust_credit_limit) | typeof(cust_main_phone_number) | count(*)
+text | integer | real | text | 55500
+
+### customers_fd  (8 rows, 0.1s)
+fd | count(*) | sum(n>1)
+city_id -> city | 620 | 0
+city -> city_id | 620 | 0
+city_id -> state_id | 620 | 0
+state_id -> state | 145 | 0
+state_id -> country | 145 | 0
+city_id -> country | 620 | 0
+(last,first) dup | 5608 | 4397
+email dup | 1706 | 701
+
+### customers_mix  (30 rows, 0.0s)
+k | v | count(*)
+gender | F | 18325
+gender | M | 37175
+marital | NULL | 17506
+marital | divorced | 765
+marital | married | 16287
+marital | never married | 1503
+marital | separated | 134
+marital | single | 19094
+marital | widowed | 211
+income | A: Below 30,000 | 2630
+income | B: 30,000 - 49,999 | 2764
+income | C: 50,000 - 69,999 | 4255
+income | D: 70,000 - 89,999 | 5217
+income | E: 90,000 - 109,999 | 7936
+income | F: 110,000 - 129,999 | 10537
+income | G: 130,000 - 149,999 | 5465
+income | H: 150,000 - 169,999 | 5465
+income | I: 170,000 - 189,999 | 4566
+income | J: 190,000 - 249,999 | 3006
+income | K: 250,000 - 299,999 | 1934
+income | L: 300,000 and above | 1684
+income | NULL | 41
+credit | 1500.0 | 11334
+credit | 3000.0 | 7975
+credit | 5000.0 | 7724
+credit | 7000.0 | 8634
+credit | 9000.0 | 9093
+credit | 10000.0 | 5935
+credit | 11000.0 | 2935
+credit | 15000.0 | 1870
+
+### yob  (1 rows, 0.0s)
+min(cust_year_of_birth) | max(cust_year_of_birth) | avg(cust_year_of_birth)
+1924 | 2001 | 1968.4041261261261
+
+### cust_id_ranges  (1 rows, 0.0s)
+min(cust_id) | max(cust_id) | count(*) | (select min(cust_id) from supplementary_demographics) | (select max(cust_id) from supplementary_demographics) | demo_buyers
+1 | 104500 | 55500 | 100001 | 104500 | 940
+
+### buyers_cust_id_range  (1 rows, 0.0s)
+min(cust_id) | max(cust_id) | count(distinct cust_id)
+2 | 101000 | 7059
+
+### supp_demo_mix  (40 rows, 0.0s)
+k | v | count(*)
+education | 10th | 122
+education | 11th | 121
+education | 12th | 52
+education | 1st-4th | 17
+education | 5th-6th | 39
+education | 7th-8th | 87
+education | 9th | 76
+education | < Bach. | 1041
+education | Assoc-A | 172
+education | Assoc-V | 196
+education | Bach. | 779
+education | HS-grad | 1462
+education | Masters | 190
+education | PhD | 49
+education | Presch. | 3
+education | Profsc | 94
+household | 1 | 692
+household | 2 | 1149
+household | 3 | 1787
+household | 4-5 | 219
+household | 6-8 | 148
+household | 9+ | 505
+affinity | 0 | 3428
+affinity | 1 | 1072
+yrs_res | 0 | 48
+yrs_res | 1 | 276
+yrs_res | 2 | 625
+yrs_res | 3 | 961
+yrs_res | 4 | 937
+yrs_res | 5 | 757
+yrs_res | 6 | 473
+yrs_res | 7 | 231
+yrs_res | 8 | 101
+yrs_res | 9 | 49
+yrs_res | 10 | 25
+yrs_res | 11 | 9
+yrs_res | 12 | 3
+yrs_res | 13 | 2
+yrs_res | 14 | 3
+typeof household | text | 4500
+
+### supp_comments_crlf  (1 rows, 0.0s)
+sum(comments like '%'||char(13)||'%') | sum(comments like '%'||char(10)||'%') | sum(comments <> trim(comments)) | count(distinct comments)
+0 | 0 | 0 | 44
+
+### promotions_mix  (9 rows, 0.0s)
+promo_category | count(*) | min(promo_begin_date) | max(promo_end_date) | avg(promo_cost)
+NO PROMOTION | 1 | 9999-01-01 | 9999-01-01 | 0.0
+TV | 115 | 2019-06-02 | 2022-01-23 | 46260.86956521739
+ad news | 2 | 2019-06-01 | 2020-01-01 | 0.0
+flyer | 40 | 2019-06-01 | 2022-01-28 | 54085.0
+internet | 85 | 2019-06-02 | 2022-01-28 | 50072.94117647059
+magazine | 65 | 2019-07-04 | 2022-01-28 | 52349.230769230766
+newspaper | 110 | 2019-06-03 | 2022-01-27 | 51640.90909090909
+post | 65 | 2019-06-13 | 2022-01-20 | 50970.769230769234
+radio | 20 | 2019-07-01 | 2022-01-30 | 54750.0
+
+### promo_durations  (8 rows, 0.0s)
+d | count(*)
+61.0 | 127
+31.0 | 118
+91.0 | 84
+92.0 | 83
+28.0 | 41
+62.0 | 40
+30.0 | 7
+214.0 | 2
+
+### sales_in_promo_window  (4 rows, 0.2s)
+promo_id | count(*) | in_window | min(s.time_id) | max(s.time_id) | promo_begin_date | promo_end_date
+33 | 2074 | 407 | 2019-03-31 | 2019-12-31 | 2019-09-15 | 2019-11-15
+350 | 18022 | 0 | 2019-08-01 | 2022-08-27 | 2020-01-27 | 2020-04-27
+351 | 10910 | 0 | 2022-02-01 | 2022-12-31 | 2021-02-12 | 2021-03-12
+999 | 887837 | 0 | 2019-01-01 | 2022-12-31 | 9999-01-01 | 9999-01-01
+
+### products_text_quirks  (1 rows, 0.0s)
+sum(prod_eff_to = '') | sum(prod_src_id is null) | sum(prod_src_id = '') | typeof(prod_src_id) | count(*)
+24 | 0 | 24 | text | 24
+
+### countries_quirk  (1 rows, 0.0s)
+country_id | country_name | country_subregion_id | country_region | country_region_id
+52795 | Chile | 52798 | Americas | 52798
+
+### text_trailing_spaces  (4 rows, 0.0s)
+t | sum(cust_first_name <> trim(cust_first_name) or cust_last_name <> trim(cust_last_name) or cust_street_address <> trim(cust_street_address) or cust_city <> trim(cust_city))
+customers | 0
+promotions | 0
+products | 0
+countries | 0
+

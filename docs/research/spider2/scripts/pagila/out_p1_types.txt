@@ -1,0 +1,124 @@
+== actor (200 rows)
+  actor_id               numeric                types={'integer': 200} null=0 empty=0 bsN=0 distinct=200 min=1 max=200
+  first_name             VARCHAR(45)            types={'text': 200} null=0 empty=0 bsN=0 distinct=128 min='ADAM' max='ZERO'
+  last_name              VARCHAR(45)            types={'text': 200} null=0 empty=0 bsN=0 distinct=121 min='AKROYD' max='ZELLWEGER'
+  last_update            TIMESTAMP              types={'text': 200} null=0 empty=0 bsN=0 distinct=2 min='2021-03-06 15:51:59' max='2021-03-06 15:52:00'
+    shapes: {'9999-99-99 99:99:99': 200}
+== address (603 rows)
+  address_id             INT                    types={'integer': 603} null=0 empty=0 bsN=0 distinct=603 min=1 max=605
+  address                VARCHAR(50)            types={'text': 603} null=0 empty=0 bsN=0 distinct=603 min='1 Valle de Santiago Avenue' max='999 Sanaa Loop'
+  address2               VARCHAR(50)            types={'null': 603} null=603 empty=None bsN=None distinct=0 min=None max=None
+  district               VARCHAR(20)            types={'text': 603} null=0 empty=0 bsN=0 distinct=1 min=' ' max=' '
+  city_id                INT                    types={'integer': 603} null=0 empty=0 bsN=0 distinct=599 min=1 max=600
+  postal_code            VARCHAR(10)            types={'null': 4, 'text': 599} null=4 empty=0 bsN=0 distinct=596 min='1027' max='99865'
+  phone                  VARCHAR(20)            types={'text': 603} null=0 empty=0 bsN=0 distinct=1 min=' ' max=' '
+  last_update            TIMESTAMP              types={'text': 603} null=0 empty=0 bsN=0 distinct=6 min='2021-03-06 15:51:54' max='2021-03-06 15:51:59'
+    shapes: {'9999-99-99 99:99:99': 603}
+== category (16 rows)
+  category_id            SMALLINT               types={'integer': 16} null=0 empty=0 bsN=0 distinct=16 min=1 max=16
+  name                   VARCHAR(25)            types={'text': 16} null=0 empty=0 bsN=0 distinct=16 min='Action' max='Travel'
+  last_update            TIMESTAMP              types={'text': 16} null=0 empty=0 bsN=0 distinct=1 min='2021-03-06 15:52:00' max='2021-03-06 15:52:00'
+    shapes: {'9999-99-99 99:99:99': 16}
+== city (600 rows)
+  city_id                INT                    types={'integer': 600} null=0 empty=0 bsN=0 distinct=600 min=1 max=600
+  city                   VARCHAR(50)            types={'text': 600} null=0 empty=0 bsN=0 distinct=599 min='A Corua (La Corua)' max='s-Hertogenbosch'
+  country_id             SMALLINT               types={'integer': 600} null=0 empty=0 bsN=0 distinct=109 min=1 max=109
+  last_update            TIMESTAMP              types={'text': 600} null=0 empty=0 bsN=0 distinct=6 min='2021-03-06 15:51:49' max='2021-03-06 15:51:54'
+    shapes: {'9999-99-99 99:99:99': 600}
+== country (109 rows)
+  country_id             SMALLINT               types={'integer': 109} null=0 empty=0 bsN=0 distinct=109 min=1 max=109
+  country                VARCHAR(50)            types={'text': 109} null=0 empty=0 bsN=0 distinct=109 min='Afghanistan' max='Zambia'
+  last_update            TIMESTAMP              types={'text': 109} null=0 empty=0 bsN=0 distinct=1 min='2021-03-06 15:51:49' max='2021-03-06 15:51:49'
+    shapes: {'9999-99-99 99:99:99': 109}
+== customer (599 rows)
+  customer_id            INT                    types={'integer': 599} null=0 empty=0 bsN=0 distinct=599 min=1 max=599
+  store_id               INT                    types={'integer': 599} null=0 empty=0 bsN=0 distinct=2 min=1 max=2
+  first_name             VARCHAR(45)            types={'text': 599} null=0 empty=0 bsN=0 distinct=591 min='AARON' max='ZACHARY'
+  last_name              VARCHAR(45)            types={'text': 599} null=0 empty=0 bsN=0 distinct=599 min='ABNEY' max='YOUNG'
+  email                  VARCHAR(50)            types={'text': 599} null=0 empty=0 bsN=0 distinct=599 min='AARON.SELBY@sakilacustomer.org' max='ZACHARY.HITE@sakilacustomer.org'
+  address_id             INT                    types={'integer': 599} null=0 empty=0 bsN=0 distinct=599 min=5 max=605
+  active                 CHAR(1)                types={'text': 599} null=0 empty=0 bsN=0 distinct=2 min='0' max='1'
+  create_date            TIMESTAMP              types={'text': 599} null=0 empty=0 bsN=0 distinct=2 min='2006-02-14 22:04:36.000' max='2006-02-14 22:04:37.000'
+    shapes: {'9999-99-99 99:99:99.999': 599}
+  last_update            TIMESTAMP              types={'text': 599} null=0 empty=0 bsN=0 distinct=6 min='2021-03-06 15:53:36' max='2021-03-06 15:53:41'
+    shapes: {'9999-99-99 99:99:99': 599}
+== film (1000 rows)
+  film_id                INT                    types={'integer': 1000} null=0 empty=0 bsN=0 distinct=1000 min=1 max=1000
+  title                  VARCHAR(255)           types={'text': 1000} null=0 empty=0 bsN=0 distinct=1000 min='ACADEMY DINOSAUR' max='ZORRO ARK'
+  description            BLOB SUB_TYPE TEXT     types={'text': 1000} null=0 empty=0 bsN=0 distinct=1000 min='A Action-Packed Character Study of a As max='A Unbelieveable Yarn of a Student And a
+  release_year           VARCHAR(4)             types={'text': 1000} null=0 empty=0 bsN=0 distinct=1 min='2006' max='2006'
+  language_id            SMALLINT               types={'integer': 1000} null=0 empty=0 bsN=0 distinct=1 min=1 max=1
+  original_language_id   SMALLINT               types={'null': 1000} null=1000 empty=None bsN=None distinct=0 min=None max=None
+  rental_duration        SMALLINT               types={'integer': 1000} null=0 empty=0 bsN=0 distinct=5 min=3 max=7
+  rental_rate            DECIMAL(4,2)           types={'real': 1000} null=0 empty=0 bsN=0 distinct=3 min=0.99 max=4.99
+  length                 SMALLINT               types={'integer': 1000} null=0 empty=0 bsN=0 distinct=140 min=46 max=185
+  replacement_cost       DECIMAL(5,2)           types={'real': 1000} null=0 empty=0 bsN=0 distinct=21 min=9.99 max=29.99
+  rating                 VARCHAR(10)            types={'text': 1000} null=0 empty=0 bsN=0 distinct=5 min='G' max='R'
+  special_features       VARCHAR(100)           types={'text': 1000} null=0 empty=0 bsN=0 distinct=15 min='Behind the Scenes' max='Trailers,Deleted Scenes,Behind the Scen
+  last_update            TIMESTAMP              types={'text': 1000} null=0 empty=0 bsN=0 distinct=9 min='2021-03-06 15:52:00' max='2021-03-06 15:52:08'
+    shapes: {'9999-99-99 99:99:99': 1000}
+== film_actor (5462 rows)
+  actor_id               INT                    types={'integer': 5462} null=0 empty=0 bsN=0 distinct=200 min=1 max=200
+  film_id                INT                    types={'integer': 5462} null=0 empty=0 bsN=0 distinct=997 min=1 max=1000
+  last_update            TIMESTAMP              types={'text': 5462} null=0 empty=0 bsN=0 distinct=44 min='2021-03-06 15:52:45' max='2021-03-06 15:53:28'
+    shapes: {'9999-99-99 99:99:99': 5462}
+== film_category (1000 rows)
+  film_id                INT                    types={'integer': 1000} null=0 empty=0 bsN=0 distinct=1000 min=1 max=1000
+  category_id            SMALLINT               types={'integer': 1000} null=0 empty=0 bsN=0 distinct=16 min=1 max=16
+  last_update            TIMESTAMP              types={'text': 1000} null=0 empty=0 bsN=0 distinct=9 min='2021-03-06 15:53:28' max='2021-03-06 15:53:36'
+    shapes: {'9999-99-99 99:99:99': 1000}
+== film_text (0 rows)
+  film_id                SMALLINT               types={} null=None empty=None bsN=None distinct=0 min=None max=None
+  title                  VARCHAR(255)           types={} null=None empty=None bsN=None distinct=0 min=None max=None
+  description            BLOB SUB_TYPE TEXT     types={} null=None empty=None bsN=None distinct=0 min=None max=None
+== inventory (4581 rows)
+  inventory_id           INT                    types={'integer': 4581} null=0 empty=0 bsN=0 distinct=4581 min=1 max=4581
+  film_id                INT                    types={'integer': 4581} null=0 empty=0 bsN=0 distinct=958 min=1 max=1000
+  store_id               INT                    types={'integer': 4581} null=0 empty=0 bsN=0 distinct=2 min=1 max=2
+  last_update            TIMESTAMP              types={'text': 4581} null=0 empty=0 bsN=0 distinct=38 min='2021-03-06 15:52:08' max='2021-03-06 15:52:45'
+    shapes: {'9999-99-99 99:99:99': 4581}
+== language (6 rows)
+  language_id            SMALLINT               types={'integer': 6} null=0 empty=0 bsN=0 distinct=6 min=1 max=6
+  name                   CHAR(20)               types={'text': 6} null=0 empty=0 bsN=0 distinct=6 min='English' max='Mandarin'
+  last_update            TIMESTAMP              types={'text': 6} null=0 empty=0 bsN=0 distinct=1 min='2021-03-06 15:51:48' max='2021-03-06 15:51:48'
+    shapes: {'9999-99-99 99:99:99': 6}
+== payment (16049 rows)
+  payment_id             INT                    types={'integer': 16049} null=0 empty=0 bsN=0 distinct=16049 min=1 max=16049
+  customer_id            INT                    types={'integer': 16049} null=0 empty=0 bsN=0 distinct=599 min=1 max=599
+  staff_id               SMALLINT               types={'integer': 16049} null=0 empty=0 bsN=0 distinct=2 min=1 max=2
+  rental_id              INT                    types={'integer': 16044, 'null': 5} null=5 empty=0 bsN=0 distinct=16044 min=1 max=16049
+  amount                 DECIMAL(5,2)           types={'integer': 24, 'real': 16025} null=0 empty=0 bsN=0 distinct=19 min=0 max=11.99
+  payment_date           TIMESTAMP              types={'text': 16049} null=0 empty=0 bsN=0 distinct=15819 min='2005-05-24 22:53:30.000' max='2006-02-14 15:16:03.000'
+    shapes: {'9999-99-99 99:99:99.999': 16049}
+  last_update            TIMESTAMP              types={'text': 16049} null=0 empty=0 bsN=0 distinct=133 min='2021-03-06 15:55:57' max='2021-03-06 15:58:09'
+    shapes: {'9999-99-99 99:99:99': 16049}
+== rental (16044 rows)
+  rental_id              INT                    types={'integer': 16044} null=0 empty=0 bsN=0 distinct=16044 min=1 max=16049
+  rental_date            TIMESTAMP              types={'text': 16044} null=0 empty=0 bsN=0 distinct=15815 min='2005-05-24 22:53:30.000' max='2006-02-14 15:16:03.000'
+    shapes: {'9999-99-99 99:99:99.999': 16044}
+  inventory_id           INT                    types={'integer': 16044} null=0 empty=0 bsN=0 distinct=4580 min=1 max=4581
+  customer_id            INT                    types={'integer': 16044} null=0 empty=0 bsN=0 distinct=599 min=1 max=599
+  return_date            TIMESTAMP              types={'null': 183, 'text': 15861} null=183 empty=0 bsN=0 distinct=15836 min='2005-05-25 23:55:21.000' max='2005-09-02 02:35:22.000'
+    shapes: {'9999-99-99 99:99:99.999': 15861, 'None': 183}
+  staff_id               SMALLINT               types={'integer': 16044} null=0 empty=0 bsN=0 distinct=2 min=1 max=2
+  last_update            TIMESTAMP              types={'text': 16044} null=0 empty=0 bsN=0 distinct=137 min='2021-03-06 15:53:41' max='2021-03-06 15:55:57'
+    shapes: {'9999-99-99 99:99:99': 16044}
+== staff (2 rows)
+  staff_id               SMALLINT               types={'integer': 2} null=0 empty=0 bsN=0 distinct=2 min=1 max=2
+  first_name             VARCHAR(45)            types={'text': 2} null=0 empty=0 bsN=0 distinct=2 min='Jon' max='Mike'
+  last_name              VARCHAR(45)            types={'text': 2} null=0 empty=0 bsN=0 distinct=2 min='Hillyer' max='Stephens'
+  address_id             INT                    types={'integer': 2} null=0 empty=0 bsN=0 distinct=2 min=3 max=4
+  picture                BLOB                   types={'null': 2} null=2 empty=None bsN=None distinct=0
+  email                  VARCHAR(50)            types={'text': 2} null=0 empty=0 bsN=0 distinct=2 min='Jon.Stephens@sakilastaff.com' max='Mike.Hillyer@sakilastaff.com'
+  store_id               INT                    types={'integer': 2} null=0 empty=0 bsN=0 distinct=2 min=1 max=2
+  active                 SMALLINT               types={'integer': 2} null=0 empty=0 bsN=0 distinct=1 min=1 max=1
+  username               VARCHAR(16)            types={'text': 2} null=0 empty=0 bsN=0 distinct=2 min='Jon' max='Mike'
+  password               VARCHAR(40)            types={'text': 2} null=0 empty=0 bsN=0 distinct=1 min='8cb2237d0679ca88db6464eac60da9634551396 max='8cb2237d0679ca88db6464eac60da9634551396
+  last_update            TIMESTAMP              types={'text': 2} null=0 empty=0 bsN=0 distinct=1 min='2021-03-06 15:52:00' max='2021-03-06 15:52:00'
+    shapes: {'9999-99-99 99:99:99': 2}
+== store (2 rows)
+  store_id               INT                    types={'integer': 2} null=0 empty=0 bsN=0 distinct=2 min=1 max=2
+  manager_staff_id       SMALLINT               types={'integer': 2} null=0 empty=0 bsN=0 distinct=2 min=1 max=2
+  address_id             INT                    types={'integer': 2} null=0 empty=0 bsN=0 distinct=2 min=1 max=2
+  last_update            TIMESTAMP              types={'text': 2} null=0 empty=0 bsN=0 distinct=1 min='2021-03-06 15:52:00' max='2021-03-06 15:52:00'
+    shapes: {'9999-99-99 99:99:99': 2}

@@ -1,0 +1,15 @@
+# Pizza Runner: 8 Week SQL Challenge case #2, the pizza_* tables of Spider2's modern_data.
+file = "modern_data.sqlite"
+note = "Times to the second, read as UTC. Delivery and cancellation times are rules."
+
+[tables]
+pizza_names = ["pizza_id"]
+pizza_recipes = ["pizza_id"]
+pizza_toppings = ["topping_id"]
+pizza_runners = ["runner_id"]
+pizza_customer_orders = ["order_id", "pizza_id"]
+pizza_clean_customer_orders = ["order_id", "pizza_id"]
+pizza_runner_orders = ["order_id"]
+pizza_clean_runner_orders = ["order_id"]
+pizza_get_extras = ["order_id", "row_id"]
+pizza_get_exclusions = ["order_id", "row_id"]

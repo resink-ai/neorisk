@@ -114,3 +114,37 @@ def test_force_never_deletes_a_non_dataset(shop, tmp_path):
     with pytest.raises(FileExistsError, match="not a refdata dataset"):
         ingest(proj, db, precious, force=True)
     assert (precious / "notes.txt").read_text() == "keep me"
+
+
+def test_run_window_covers_late_entity(shop, tmp_path):
+    """An entity created after the last event (Pizza Runner's runner 4) stays inside the run."""
+    proj, db = shop
+    sql = (proj / "specs" / "ingest.sql").read_text()
+    (proj / "specs" / "ingest.sql").write_text(sql.replace(
+        "SELECT cid AS ext_id, city FROM customers ORDER BY cid;",
+        "SELECT cid AS ext_id, city, '2021-02-01 00:00:00' AS created_at FROM customers "
+        "ORDER BY cid;"))
+    run = read(ingest(proj, db, tmp_path / "ds"))
+    start = datetime.fromisoformat(run.manifest["run"]["start"])
+    end = start.timestamp() + run.manifest["run"]["days"] * 86400
+    assert end >= datetime(2021, 2, 1, tzinfo=UTC).timestamp()
+    assert failed(run_checks(run)) == []
+
+
+def test_empty_block_writes_typed_empty_table(shop, tmp_path):
+    """A block with no rows (Sakila film_text, weblog's noise log) is an empty, typed table."""
+    from refdata.rebuild import rebuild
+    proj, db = shop
+    sql = (proj / "specs" / "ingest.sql").read_text()
+    (proj / "specs" / "ingest.sql").write_text(sql.replace("WHERE paid IS NOT NULL",
+                                                           "WHERE paid IS NOT NULL AND 0"))
+    run = read(ingest(proj, db, tmp_path / "ds"))
+    paid = run.events["order_paid"]
+    assert paid.height == 0
+    assert dict(paid.schema)["customer_id"] == run.events["order_placed"].schema["customer_id"]
+    assert failed(run_checks(run)) == []
+    out = rebuild(tmp_path / "ds", proj, db, tmp_path / "rebuilt.sqlite")
+    import sqlite3
+    con = sqlite3.connect(out)
+    assert con.execute("SELECT count(*) FROM orders WHERE paid IS NULL").fetchone() == (3,)
+    con.close()

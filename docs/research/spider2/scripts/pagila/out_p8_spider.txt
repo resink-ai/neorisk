@@ -1,0 +1,72 @@
+### local038_gold  (1 rows, 0.00s)
+full_name
+HELEN VOIGHT
+
+### local038_top_ties  (5 rows, 0.00s)
+n | c
+HELEN VOIGHT | 3
+BELA WALKEN | 2
+ALAN DREYFUSS | 2
+GROUCHO WILLIAMS | 2
+WILL WILSON | 2
+
+### local039_gold  (1 rows, 0.02s)
+name
+Sports
+
+### local039_hours  (3 rows, 0.01s)
+name | hours
+Sports | 16858.166666574776
+Action | 15194.88333330676
+Sci-Fi | 15074.283333331347
+
+### local197_gold  (1 rows, 0.01s)
+month | max_diff
+07 | 77.83
+
+### local197_mine  (3 rows, 0.01s)
+customer_id | c.first_name||' '||c.last_name | ym | round(diff,2)
+148 | ELEANOR HUNT | 2005-07 | 77.83
+137 | RHONDA KENNEDY | 2005-07 | 76.85
+144 | CLARA SHAW | 2005-07 | 70.88
+
+### local199_gold  (2 rows, 0.01s)
+STORE_ID | YEAR | RENTAL_MONTH | total_rentals
+1 | 2005 | 07 | 3342
+2 | 2005 | 07 | 3367
+
+### local056_mine  (3 rows, 0.01s)
+c.first_name||' '||c.last_name | a
+STEPHEN QUALLS | 58.885
+PEDRO CHESTNUT | 55.89500000000001
+WADE DELVALLE | 55.370000000000005
+
+### local193_mine  (1 rows, 0.01s)
+pct7 | pct30 | avg_ltv
+9.379642980279428 | 24.75879625951153 | 112.54843071786313
+
+### local194_mine  (9 rows, 0.02s)
+actor_id | title | round(rev,2) | round(share,4) | avg_share
+1 | GLEAMING JAWBREAKER | 136.7 | 17.0875 | 15.08338
+1 | ANGELS LIFE | 119.78 | 13.3089 | 15.08338
+1 | LADY STAGE | 118.83 | 14.8537 | 15.08338
+2 | GOODFELLAS SALUTE | 209.69 | 26.2112 | 30.949028
+2 | APACHE DIVINE | 178.69 | 44.6725 | 30.949028
+2 | LIAISONS SWEET | 131.78 | 21.9633 | 30.949028
+3 | WHALE BIKINI | 134.82 | 26.964 | 17.393758
+3 | SPICE SORORITY | 115.8 | 10.5273 | 17.393758
+3 | FRENCH HOLIDAY | 102.83 | 14.69 | 17.393758
+
+### local195_mine  (2 rows, 0.02s)
+k | count(distinct r.customer_id) | 100.0*count(distinct r.customer_id)/(select count(*) from customer)
+by revenue | 595 | 99.3322203672788
+by rentals | 595 | 99.3322203672788
+
+### local196_mine  (5 rows, 0.01s)
+rating | avg(tot.s) | avg(cnt.n - 1.0)
+G | 110.65990384615385 | 25.298076923076923
+NC-17 | 111.941452991453 | 25.358974358974358
+PG | 112.67066037735849 | 26.264150943396228
+PG-13 | 115.23639455782313 | 26.38095238095238
+R | 111.42312000000001 | 25.48
+

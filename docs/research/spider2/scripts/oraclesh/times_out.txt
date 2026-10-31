@@ -1,0 +1,48 @@
+## calendar formulas (matches / 1826)
+day_name                      1826  
+day_number_in_week            1826  
+day_number_in_month           1826  
+calendar_week_number          1826  
+week_ending_day               1826  
+calendar_month_number         1826  
+calendar_month_desc           1826  
+days_in_cal_month             1826  
+end_of_cal_month              1826  
+calendar_month_name           1826  
+calendar_quarter_desc         1826  
+calendar_quarter_number       1826  
+days_in_cal_quarter           1645  [('2020-03-25', 90, 91), ('2020-03-26', 90, 91), ('2020-03-27', 90, 91), ('2020-03-28', 90, 91)]
+end_of_cal_quarter            1826  
+calendar_year                 1826  
+days_in_cal_year              1826  
+end_of_cal_year               1826  
+fiscal_week_number            1826  
+## id columns as linear functions
+calendar_month_id      60 groups, 48 equal base+rank (base 1672); first break at ('2023-01', 1812)
+fiscal_month_id        61 groups, 49 equal base+rank (base 1720); first break at ('2023-02', 1846)
+calendar_quarter_id    20 groups, 16 equal base+rank (base 1769); first break at ('2023-01', 1814)
+fiscal_quarter_id      21 groups, 17 equal base+rank (base 1785); first break at ('2023-02', 1925)
+calendar_year_id       5 groups, 4 equal base+rank (base 1802); first break at (2023, 1813)
+fiscal_year_id         6 groups, 5 equal base+rank (base 1806); first break at (2024, 2259)
+## fiscal columns derived from (fiscal_year, fiscal_month_number) of each day
+fiscal_month_desc = YYYY-MM of fiscal     1826 / 1826
+fiscal_month_name = name(fiscal_month)    1826 / 1826
+fiscal_quarter_number = ceil(m/3)         1826 / 1826
+fiscal_quarter_desc = YYYY-0Q             1826 / 1826
+end_of_fis_month = last day in group      1824 / 1826
+days_in_fis_month = group size            1768 / 1826
+days_in_fis_quarter = group size          1551 / 1826
+end_of_fis_quarter = last day in group    1733 / 1826
+days_in_fis_year = group size             1089 / 1826
+end_of_fis_year = last day in group       1824 / 1826
+fiscal_week_number = calendar_week_number  1826 / 1826
+fiscal month lengths in days: [25, 28, 35, 28, 35, 28, 28, 35, 28, 28, 35, 28, 35, 29, 28, 28, 35, 28, 28, 35, 28, 35, 28, 28, 35, 28, 27, 35, 28, 28, 35, 28, 28, 35, 28, 35, 28, 28, 28, 35, 28, 28, 35, 28, 35, 28, 28, 35, 28, 28, 35, 28, 28, 35, 28, 28, 35, 28, 28, 35, 2]
+weekday of the last day of each fiscal month: {'Fri': 47, 'Sat': 13, 'Sun': 1}
+## week_ending_day_id vs weeks ending on each weekday
+week ending on isoweekday 1: 261 weeks, 261 with >1 id
+week ending on isoweekday 2: 262 weeks, 261 with >1 id
+week ending on isoweekday 3: 262 weeks, 261 with >1 id
+week ending on isoweekday 4: 262 weeks, 261 with >1 id
+week ending on isoweekday 5: 262 weeks, 53 with >1 id
+week ending on isoweekday 6: 262 weeks, 208 with >1 id
+week ending on isoweekday 7: 261 weeks, 261 with >1 id

@@ -27,6 +27,14 @@ These projects model real tables from the Spider 2.0 text-to-SQL benchmark. Thei
 | `airlines` | Airlines: Postgres Pro demo flights, bookings, boarding passes | generated | demo database |
 | `databank` | bank_sales_trading: Data Bank nodes and ledger | synthetic course data | course material |
 | `cliquebait` | bank_sales_trading: Clique Bait click log | synthetic course data | course material |
+| `sakila` | sqlite-sakila (= Pagila): DVD rentals, returns, payments | generated sample | BSD |
+| `bitcoin` | bank_sales_trading: `bitcoin_*` members, trades, daily prices | generated trades, real prices | course material |
+| `weblog` | log: web and app logs, user and product masters | textbook sample | book sample data |
+| `pizzarunner` | modern_data: `pizza_*` orders, pickups, deliveries | synthetic course data | course material |
+| `chinook` | chinook: music store invoices over a track catalog | generated sample | MIT |
+| `northwind` | northwind: orders, lines, shipments | generated sample | MIT (Microsoft) |
+| `oraclesh` | complex_oracle: Oracle Sales History unit sales and quotes | generated sample | MIT (Oracle) |
+| `adventureworks` | AdventureWorks: sales orders, quotas, currency rates | generated sample | MIT (Microsoft) |
 
 ```bash
 uv run refdata fetch                          # once: the Spider2 SQLite files → data/spider2/

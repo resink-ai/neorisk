@@ -1,0 +1,3 @@
+upstream invoices 412 lines 2240
+same customer 412 same total 412 year shift (years, same month-day-time): {(12, True): 412}
+invoice lines identical: 2240 of 2240

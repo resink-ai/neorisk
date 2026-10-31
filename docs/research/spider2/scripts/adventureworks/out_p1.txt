@@ -1,0 +1,133 @@
+## SalesPersonQuotaHistory  rows=163
+  BusinessEntityID             INTEGER      {'integer': 163}  null=0 empty=0 \N=0 distinct=17 min=274 max=290
+  QuotaDate                    TEXT         {'text': 163}  null=0 empty=0 \N=0 distinct=12 min='2011-05-31 00:00:00' max='2014-03-01 00:00:00'
+  SalesQuota                   REAL         {'real': 163}  null=0 empty=0 \N=0 distinct=154 min=1000.0 max=1898000.0
+  rowguid                      TEXT         {'text': 163}  null=0 empty=0 \N=0 distinct=163 min='{00F2F9F8-5158-4436-B134-7E0C462289E5}' max='{FCEF2AF1-6183-41B3-A04F-2EAD88389267}'
+  ModifiedDate                 TEXT         {'text': 163}  null=0 empty=0 \N=0 distinct=12 min='2011-04-16 00:00:00' max='2014-01-15 00:00:00'
+## countryregioncurrency  rows=109
+  countryregioncode            TEXT         {'text': 109}  null=0 empty=0 \N=0 distinct=96 min='AE' max='ZW'
+  currencycode                 TEXT         {'text': 109}  null=0 empty=0 \N=0 distinct=97 min='AED' max='ZWD'
+  modifieddate                 DATE         {'text': 109}  null=0 empty=0 \N=0 distinct=2 min='2008-04-30 00:00:00' max='2014-02-08 10:17:21.51'
+## currencyrate  rows=13532
+  currencyrateid               INTEGER      {'integer': 13532}  null=0 empty=0 \N=0 distinct=13532 min=1 max=13532
+  currencyratedate             DATE         {'text': 13532}  null=0 empty=0 \N=0 distinct=1097 min='2011-05-31 00:00:00' max='2014-05-31 00:00:00'
+  fromcurrencycode             TEXT         {'text': 13532}  null=0 empty=0 \N=0 distinct=1 min='USD' max='USD'
+  tocurrencycode               TEXT         {'text': 13532}  null=0 empty=0 \N=0 distinct=14 min='ARS' max='VEB'
+  averagerate                  FLOAT        {'real': 13532}  null=0 empty=0 \N=0 distinct=6127 min=0.6046 max=1500.0
+  endofdayrate                 FLOAT        {'real': 13532}  null=0 empty=0 \N=0 distinct=7232 min=0.6041 max=1499.95
+  modifieddate                 DATE         {'text': 13532}  null=0 empty=0 \N=0 distinct=1098 min='2011-05-31 00:00:00' max='2014-05-31 00:00:00'
+## product  rows=504
+  productid                    INTEGER      {'integer': 504}  null=0 empty=0 \N=0 distinct=504 min=1 max=999
+  NAME                         TEXT         {'text': 504}  null=0 empty=0 \N=0 distinct=504 min='AWC Logo Cap' max="Women's Tights, S"
+  productnumber                TEXT         {'text': 504}  null=0 empty=0 \N=0 distinct=504 min='AR-5381' max='WB-H098'
+  makeflag                     BOOLEAN      {'text': 504}  null=0 empty=0 \N=0 distinct=2 min='f' max='t'
+  finishedgoodsflag            BOOLEAN      {'text': 504}  null=0 empty=0 \N=0 distinct=2 min='f' max='t'
+  color                        TEXT         {'text': 504}  null=0 empty=248 \N=0 distinct=10 min='' max='Yellow'
+  safetystocklevel             INTEGER      {'integer': 504}  null=0 empty=0 \N=0 distinct=6 min=4 max=1000
+  reorderpoint                 INTEGER      {'integer': 504}  null=0 empty=0 \N=0 distinct=6 min=3 max=750
+  standardcost                 FLOAT        {'real': 504}  null=0 empty=0 \N=0 distinct=114 min=0.0 max=2171.2942
+  listprice                    FLOAT        {'real': 504}  null=0 empty=0 \N=0 distinct=103 min=0.0 max=3578.27
+  size                         TEXT         {'text': 504}  null=0 empty=293 \N=0 distinct=19 min='' max='XL'
+  sizeunitmeasurecode          TEXT         {'text': 504}  null=0 empty=328 \N=0 distinct=2 min='' max='CM '
+  weightunitmeasurecode        TEXT         {'text': 504}  null=0 empty=299 \N=0 distinct=3 min='' max='LB '
+  weight                       FLOAT        {'real': 205, 'text': 299}  null=0 empty=299 \N=0 distinct=128 min=2.12 max=''
+  daystomanufacture            INTEGER      {'integer': 504}  null=0 empty=0 \N=0 distinct=4 min=0 max=4
+  productline                  TEXT         {'text': 504}  null=0 empty=226 \N=0 distinct=5 min='' max='T '
+  class                        TEXT         {'text': 504}  null=0 empty=257 \N=0 distinct=4 min='' max='M '
+  style                        TEXT         {'text': 504}  null=0 empty=293 \N=0 distinct=4 min='' max='W '
+  productsubcategoryid         INTEGER      {'integer': 295, 'text': 209}  null=0 empty=209 \N=0 distinct=38 min=1 max=''
+  productmodelid               INTEGER      {'integer': 295, 'text': 209}  null=0 empty=209 \N=0 distinct=120 min=1 max=''
+  sellstartdate                DATE         {'text': 504}  null=0 empty=0 \N=0 distinct=4 min='2008-04-30 00:00:00' max='2013-05-30 00:00:00'
+  sellenddate                  DATE         {'text': 504}  null=0 empty=406 \N=0 distinct=3 min='' max='2013-05-29 00:00:00'
+  discontinueddate             DATE         {'text': 504}  null=0 empty=504 \N=0 distinct=1 min='' max=''
+  rowguid                      TEXT         {'text': 504}  null=0 empty=0 \N=0 distinct=504 min='01a8c3fc-ed52-458e-a634-d5b6e2accfed' max='fe0678ed-aef2-4c58-a450-8151cc24ddd8'
+  modifieddate                 DATE         {'text': 504}  null=0 empty=0 \N=0 distinct=2 min='2014-02-08 10:01:36.827' max='2014-02-08 10:03:55.51'
+## productcategory  rows=4
+  productcategoryid            INTEGER      {'integer': 4}  null=0 empty=0 \N=0 distinct=4 min=1 max=4
+  name                         TEXT         {'text': 4}  null=0 empty=0 \N=0 distinct=4 min='Accessories' max='Components'
+  rowguid                      TEXT         {'text': 4}  null=0 empty=0 \N=0 distinct=4 min='10a7c342-ca82-48d4-8a38-46a2eb089b74' max='cfbda25c-df71-47a7-b81b-64ee161aa37c'
+  modifieddate                 DATE         {'text': 4}  null=0 empty=0 \N=0 distinct=1 min='2008-04-30 00:00:00' max='2008-04-30 00:00:00'
+## productdescription  rows=762
+  productdescriptionid         INTEGER      {'integer': 762}  null=0 empty=0 \N=0 distinct=762 min=3 max=2010
+  description                  TEXT         {'text': 762}  null=0 empty=0 \N=0 distinct=733 min='10-speed aluminum derailleur with seale max='高质量的一英寸无螺纹车头碗组具有油口，可确保快速润滑。'
+  rowguid                      TEXT         {'text': 762}  null=0 empty=0 \N=0 distinct=762 min='00ffdfac-0207-4df0-8051-7d3c884816f3' max='ffc3d488-a805-49f9-956c-e6f2f6e1734f'
+  modifieddate                 DATE         {'text': 762}  null=0 empty=0 \N=0 distinct=2 min='2013-04-30 00:00:00' max='2014-02-08 10:32:17.973'
+## productmodelproductdescriptionculture  rows=762
+  productmodelid               INTEGER      {'integer': 762}  null=0 empty=0 \N=0 distinct=127 min=1 max=127
+  productdescriptionid         INTEGER      {'integer': 762}  null=0 empty=0 \N=0 distinct=762 min=3 max=2010
+  cultureid                    TEXT         {'text': 762}  null=0 empty=0 \N=0 distinct=6 min='ar' max='zh-cht'
+  modifieddate                 DATE         {'text': 762}  null=0 empty=0 \N=0 distinct=1 min='2013-04-30 00:00:00' max='2013-04-30 00:00:00'
+## productreview  rows=4
+  productreviewid              INTEGER      {'integer': 4}  null=0 empty=0 \N=0 distinct=4 min=1 max=4
+  productid                    INTEGER      {'integer': 4}  null=0 empty=0 \N=0 distinct=3 min=709 max=937
+  reviewername                 TEXT         {'text': 4}  null=0 empty=0 \N=0 distinct=4 min='David' max='Laura Norman'
+  reviewdate                   DATE         {'text': 4}  null=0 empty=0 \N=0 distinct=3 min='2013-09-18 00:00:00' max='2013-11-15 00:00:00'
+  emailaddress                 TEXT         {'text': 4}  null=0 empty=0 \N=0 distinct=4 min='david@graphicdesigninstitute.com' max='laura@treyresearch.net'
+  rating                       INTEGER      {'integer': 4}  null=0 empty=0 \N=0 distinct=3 min=2 max=5
+  comments                     TEXT         {'text': 4}  null=0 empty=0 \N=0 distinct=4 min="A little on the heavy side, but overall max="The Road-550-W from Adventure Works Cyc
+  modifeddate                  DATE         {'null': 4}  null=4 empty=None \N=None distinct=0 min=None max=None
+  modifieddate                 VARCHAR(19)  {'text': 4}  null=0 empty=0 \N=0 distinct=3 min='2013-09-18 00:00:00' max='2013-11-15 00:00:00'
+## productsubcategory  rows=37
+  productsubcategoryid         INTEGER      {'integer': 37}  null=0 empty=0 \N=0 distinct=37 min=1 max=37
+  productcategoryid            INTEGER      {'integer': 37}  null=0 empty=0 \N=0 distinct=4 min=1 max=4
+  name                         TEXT         {'text': 37}  null=0 empty=0 \N=0 distinct=37 min='Bib-Shorts' max='Wheels'
+  rowguid                      TEXT         {'text': 37}  null=0 empty=0 \N=0 distinct=37 min='000310c0-bcc8-42c4-b0c3-45ae611af06b' max='fe4d46f2-c87c-48c5-a4a1-3f55712d80b1'
+  modifieddate                 DATE         {'text': 37}  null=0 empty=0 \N=0 distinct=1 min='2008-04-30 00:00:00' max='2008-04-30 00:00:00'
+## salesorderdetail  rows=121317
+  salesorderid                 INTEGER      {'integer': 121317}  null=0 empty=0 \N=0 distinct=31465 min=43659 max=75123
+  salesorderdetailid           INTEGER      {'integer': 121317}  null=0 empty=0 \N=0 distinct=121317 min=1 max=121317
+  carriertrackingnumber        TEXT         {'text': 121317}  null=0 empty=60398 \N=0 distinct=3807 min='' max='FFF9-4C3E-A9'
+  orderqty                     INTEGER      {'integer': 121317}  null=0 empty=0 \N=0 distinct=41 min=1 max=44
+  productid                    INTEGER      {'integer': 121317}  null=0 empty=0 \N=0 distinct=266 min=707 max=999
+  specialofferid               INTEGER      {'integer': 121317}  null=0 empty=0 \N=0 distinct=12 min=1 max=16
+  unitprice                    FLOAT        {'real': 121317}  null=0 empty=0 \N=0 distinct=287 min=1.3282 max=3578.27
+  unitpricediscount            FLOAT        {'real': 121317}  null=0 empty=0 \N=0 distinct=9 min=0.0 max=0.4
+  rowguid                      TEXT         {'text': 121317}  null=0 empty=0 \N=0 distinct=121317 min='0000c99c-2b71-4885-b976-c1ccae896ef2' max='ffff365b-8bac-4a28-b3a3-35c17bcffa01'
+  modifieddate                 DATE         {'text': 121317}  null=0 empty=0 \N=0 distinct=1124 min='2011-05-31 00:00:00' max='2014-06-30 00:00:00'
+## salesorderheader  rows=31465
+  salesorderid                 INTEGER      {'integer': 31465}  null=0 empty=0 \N=0 distinct=31465 min=43659 max=75123
+  revisionnumber               INTEGER      {'integer': 31465}  null=0 empty=0 \N=0 distinct=2 min=8 max=9
+  orderdate                    DATE         {'text': 31465}  null=0 empty=0 \N=0 distinct=1124 min='2011-05-31 00:00:00' max='2014-06-30 00:00:00'
+  duedate                      DATE         {'text': 31465}  null=0 empty=0 \N=0 distinct=1124 min='2011-06-12 00:00:00' max='2014-07-12 00:00:00'
+  shipdate                     DATE         {'text': 31465}  null=0 empty=0 \N=0 distinct=1124 min='2011-06-07 00:00:00' max='2014-07-07 00:00:00'
+  STATUS                       TEXT         {'text': 31465}  null=0 empty=0 \N=0 distinct=1 min='5' max='5'
+  onlineorderflag              BOOLEAN      {'text': 31465}  null=0 empty=0 \N=0 distinct=2 min='f' max='t'
+  purchaseordernumber          TEXT         {'text': 31465}  null=0 empty=27659 \N=0 distinct=3807 min='' max='PO9976195169'
+  accountnumber                TEXT         {'text': 31465}  null=0 empty=0 \N=0 distinct=19119 min='10-4020-000001' max='10-4030-029483'
+  customerid                   INTEGER      {'integer': 31465}  null=0 empty=0 \N=0 distinct=19119 min=11000 max=30118
+  salespersonid                INTEGER      {'integer': 3806, 'text': 27659}  null=0 empty=27659 \N=0 distinct=18 min=274 max=''
+  territoryid                  INTEGER      {'integer': 31465}  null=0 empty=0 \N=0 distinct=10 min=1 max=10
+  billtoaddressid              INTEGER      {'integer': 31465}  null=0 empty=0 \N=0 distinct=19119 min=405 max=29883
+  shiptoaddressid              INTEGER      {'integer': 31465}  null=0 empty=0 \N=0 distinct=19119 min=9 max=29883
+  shipmethodid                 INTEGER      {'integer': 31465}  null=0 empty=0 \N=0 distinct=2 min=1 max=5
+  creditcardid                 INTEGER      {'integer': 30334, 'text': 1131}  null=0 empty=1131 \N=0 distinct=18385 min=1 max=''
+  creditcardapprovalcode       TEXT         {'text': 31465}  null=0 empty=1131 \N=0 distinct=30335 min='' max='98795Vi7192'
+  currencyrateid               INTEGER      {'integer': 13976, 'text': 17489}  null=0 empty=17489 \N=0 distinct=2515 min=2 max=''
+  subtotal                     FLOAT        {'real': 31465}  null=0 empty=0 \N=0 distinct=4747 min=1.374 max=163930.3943
+  taxamt                       FLOAT        {'real': 31465}  null=0 empty=0 \N=0 distinct=4745 min=0.1099 max=17948.5186
+  freight                      FLOAT        {'real': 31465}  null=0 empty=0 \N=0 distinct=4744 min=0.0344 max=5608.9121
+  totaldue                     FLOAT        {'real': 31465}  null=0 empty=0 \N=0 distinct=4754 min=1.5183 max=187487.825
+  comment                      TEXT         {'text': 31465}  null=0 empty=31465 \N=0 distinct=1 min='' max=''
+  rowguid                      TEXT         {'text': 31465}  null=0 empty=0 \N=0 distinct=31465 min='0000de87-ab3f-4920-ac46-c404834241a0' max='fffe293d-6cc6-445b-876d-955d4dbc5986'
+  modifieddate                 DATE         {'text': 31465}  null=0 empty=0 \N=0 distinct=1124 min='2011-06-07 00:00:00' max='2014-07-07 00:00:00'
+## salesperson  rows=17
+  businessentityid             INTEGER      {'integer': 17}  null=0 empty=0 \N=0 distinct=17 min=274 max=290
+  territoryid                  INTEGER      {'integer': 14, 'text': 3}  null=0 empty=3 \N=0 distinct=11 min=1 max=''
+  salesquota                   INTEGER      {'integer': 14, 'text': 3}  null=0 empty=3 \N=0 distinct=3 min=250000 max=''
+  bonus                        INTEGER      {'integer': 17}  null=0 empty=0 \N=0 distinct=14 min=0 max=6700
+  commissionpct                FLOAT        {'real': 17}  null=0 empty=0 \N=0 distinct=8 min=0.0 max=0.02
+  salesytd                     FLOAT        {'real': 17}  null=0 empty=0 \N=0 distinct=17 min=172524.4512 max=4251368.5497
+  saleslastyear                FLOAT        {'real': 17}  null=0 empty=0 \N=0 distinct=14 min=0.0 max=2396539.7601
+  rowguid                      TEXT         {'text': 17}  null=0 empty=0 \N=0 distinct=17 min='1dd1f689-df74-4149-8600-59555eef154b' max='f509e3d4-76c8-42aa-b353-90b7b8db08de'
+  modifieddate                 DATE         {'text': 17}  null=0 empty=0 \N=0 distinct=7 min='2010-12-28 00:00:00' max='2013-05-23 00:00:00'
+## salesterritory  rows=10
+  territoryid                  INTEGER      {'integer': 10}  null=0 empty=0 \N=0 distinct=10 min=1 max=10
+  name                         TEXT         {'text': 10}  null=0 empty=0 \N=0 distinct=10 min='Australia' max='United Kingdom'
+  countryregioncode            TEXT         {'text': 10}  null=0 empty=0 \N=0 distinct=6 min='AU' max='US'
+  group                        TEXT         {'text': 10}  null=0 empty=0 \N=0 distinct=3 min='Europe' max='Pacific'
+  salesytd                     FLOAT        {'real': 10}  null=0 empty=0 \N=0 distinct=10 min=2402176.8476 max=10510853.8739
+  saleslastyear                FLOAT        {'real': 10}  null=0 empty=0 \N=0 distinct=10 min=1307949.7917 max=5693988.86
+  costytd                      FLOAT        {'real': 10}  null=0 empty=0 \N=0 distinct=1 min=0.0 max=0.0
+  costlastyear                 FLOAT        {'real': 10}  null=0 empty=0 \N=0 distinct=1 min=0.0 max=0.0
+  rowguid                      TEXT         {'text': 10}  null=0 empty=0 \N=0 distinct=10 min='00fb7309-96cc-49e2-8363-0a1ba72486f2' max='df6e7fd8-1a8d-468c-b103-ed8addb452c1'
+  modifieddate                 DATE         {'text': 10}  null=0 empty=0 \N=0 distinct=1 min='2008-04-30 00:00:00' max='2008-04-30 00:00:00'

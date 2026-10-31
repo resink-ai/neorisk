@@ -1,0 +1,164 @@
+### rows_and_distinct  (19 rows)
+t | n | n_distinct
+'access_log' | 30 | 30
+'action_log' | 120 | 16
+'action_log_with_ip' | 12 | 12
+'action_log_with_noise' | 0 | 0
+'activity_log' | 244 | 68
+'app1_mst_users' | 2 | 2
+'app2_mst_users' | 2 | 2
+'dup_action_log' | 11 | 11
+'form_error_log' | 8 | 8
+'form_log' | 45 | 15
+'invalid_action_log' | 7 | 7
+'mst_categories' | 8 | 8
+'mst_products_20161201' | 6 | 6
+'mst_products_20170101' | 6 | 6
+'mst_users' | 320 | 57
+'mst_users_with_card_number' | 3 | 3
+'product_sales' | 10 | 10
+'purchase_log' | 5 | 5
+'read_log' | 15 | 15
+
+### total_rows  (1 rows)
+total
+854
+
+### candidate_keys  (14 rows)
+k | n | d
+'purchase_log.purchase_id' | 5 | 5
+'mst_users.user_id' | 320 | 30
+'mst_categories.id' | 8 | 7
+'mst_categories.(id,stamp)' | 8 | 8
+'mst_products_20161201.product_id' | 6 | 6
+'mst_products_20170101.product_id' | 6 | 6
+'product_sales.product_id' | 10 | 10
+'app1_mst_users.user_id' | 2 | 2
+'app2_mst_users.user_id' | 2 | 2
+'card.user_id' | 3 | 3
+'read_log.(session,action)' | 15 | 15
+'form_error_log.(session,stamp,field)' | 8 | 8
+'dup_action_log.(session,stamp)' | 11 | 11
+'action_log_with_ip.session' | 12 | 12
+
+### mst_users_versions_per_user  (30 rows)
+user_id | n_rows | n_versions | register_dates
+'U001' | 16 | 1 | '2016-10-01'
+'U002' | 16 | 1 | '2016-10-01'
+'U003' | 16 | 1 | '2016-10-01'
+'U004' | 16 | 2 | '2016-10-05,2016-10-01'
+'U005' | 16 | 2 | '2016-10-05,2016-10-01'
+'U006' | 16 | 2 | '2016-10-10,2016-10-01'
+'U007' | 16 | 2 | '2016-10-10,2016-10-01'
+'U008' | 16 | 2 | '2016-10-10,2016-10-01'
+'U009' | 16 | 2 | '2016-10-15,2016-10-01'
+'U010' | 16 | 2 | '2016-10-16,2016-10-01'
+'U011' | 8 | 2 | '2016-10-18,2016-10-01'
+'U012' | 8 | 2 | '2016-10-18,2016-10-01'
+'U013' | 8 | 2 | '2016-10-20,2016-10-01'
+'U014' | 8 | 2 | '2016-10-25,2016-10-01'
+'U015' | 8 | 2 | '2016-11-01,2016-10-01'
+'U016' | 8 | 2 | '2016-11-01,2016-10-01'
+'U017' | 8 | 2 | '2016-11-01,2016-10-01'
+'U018' | 8 | 2 | '2016-11-01,2016-10-01'
+'U019' | 8 | 2 | '2016-11-01,2016-10-01'
+'U020' | 8 | 2 | '2016-11-03,2016-10-02'
+'U021' | 8 | 2 | '2016-11-03,2016-10-02'
+'U022' | 8 | 2 | '2016-11-03,2016-10-02'
+'U023' | 8 | 2 | '2016-11-04,2016-10-02'
+'U024' | 8 | 2 | '2016-11-05,2016-10-02'
+'U025' | 8 | 2 | '2016-11-05,2016-10-02'
+'U026' | 8 | 2 | '2016-11-10,2016-10-02'
+'U027' | 8 | 2 | '2016-11-10,2016-10-02'
+'U028' | 8 | 2 | '2016-11-15,2016-10-02'
+'U029' | 8 | 2 | '2016-11-28,2016-10-02'
+'U030' | 8 | 2 | '2016-11-28,2016-10-02'
+
+### null_and_empty_counts  (13 rows)
+c | nulls | empties
+'action_log.category' | 6 | 0
+'action_log.products' | 6 | 0
+'action_log.amount' | 90 | 0
+'activity_log.path' | 0 | 12
+'activity_log.search_type' | 0 | 164
+'form_log.status' | 0 | 30
+'form_error_log.value' | 0 | 3
+'invalid_action_log.stamp' | 1 | 0
+'invalid_action_log.category' | 1 | 0
+'invalid_action_log.products' | 2 | 0
+'invalid_action_log.amount' | 4 | 0
+'mst_users.withdraw_date' | 288 | 0
+'card.card_number' | 1 | 0
+
+### backslash_N_anywhere  (18 rows)
+t | backslash_n | untrimmed | non_ascii | non_null
+'access_log' | 0 | 0 | 0 | 120
+'action_log' | 0 | 0 | 0 | 468
+'activity_log' | 0 | 0 | 0 | 976
+'app1' | 0 | 0 | 0 | 2
+'app2' | 0 | 0 | 0 | 2
+'card' | 0 | 0 | 0 | 2
+'dup' | 0 | 0 | 0 | 11
+'form_error_log' | 0 | 0 | 1 | 8
+'form_log' | 0 | 0 | 0 | 90
+'invalid' | 0 | 0 | 0 | 11
+'ip' | 0 | 0 | 0 | 12
+'mst_categories' | 0 | 0 | 0 | 8
+'mst_products_20161201' | 0 | 0 | 0 | 6
+'mst_products_20170101' | 0 | 0 | 0 | 6
+'mst_users' | 0 | 0 | 0 | 672
+'product_sales' | 0 | 0 | 0 | 10
+'purchase_log' | 0 | 0 | 0 | 5
+'read_log' | 0 | 0 | 0 | 30
+
+### time_shapes  (17 rows)
+t | iso_sec | iso_date | other | nulls | mn | mx | nonzero_seconds
+'access_log.session' | 19 | 0 | 11 | 0 | '2016-10-01 12:00:00' | '2016-10-03 15:00:00' | 0
+'access_log.stamp' | 11 | 0 | 19 | 0 | '2016-01-01 18:00:00' | '2016-01-11 15:00:00' | 0
+'action_log.stamp' | 120 | 0 | 0 | 0 | '2016-11-03 18:00:00' | '2016-11-04 15:00:00' | 0
+'action_log_with_ip.stamp' | 12 | 0 | 0 | 0 | '2016-11-03 18:00:00' | '2016-11-04 22:00:00' | 0
+'activity_log.stamp' | 244 | 0 | 0 | 0 | '2017-01-09 12:18:43' | '2017-01-09 12:25:25' | 239
+'dup_action_log.stamp' | 11 | 0 | 0 | 0 | '2016-11-03 18:00:00' | '2016-11-04 22:00:10' | 1
+'form_error_log.stamp' | 8 | 0 | 0 | 0 | '2016-12-30 00:56:08' | '2016-12-30 00:57:21' | 8
+'form_log.stamp' | 45 | 0 | 0 | 0 | '2016-12-30 00:56:08' | '2016-12-30 01:00:19' | 45
+'invalid_action_log.stamp' | 6 | 0 | 0 | 1 | '2016-11-03 18:00:00' | '2016-11-04 13:00:00' | 0
+'mst_categories.stamp' | 8 | 0 | 0 | 0 | '2016-01-01 10:00:00' | '2016-02-01 10:00:00' | 0
+'mst_products_20161201.updated_at' | 6 | 0 | 0 | 0 | '2016-11-03 18:00:00' | '2016-11-04 19:00:00' | 0
+'mst_products_20170101.updated_at' | 6 | 0 | 0 | 0 | '2016-11-03 18:00:00' | '2016-12-04 19:00:00' | 0
+'mst_users.birth_date' | 0 | 320 | 0 | 0 | '1950-01-21' | '2009-10-12' | 0
+'mst_users.register_date' | 0 | 320 | 0 | 0 | '2016-10-01' | '2016-11-28' | 0
+'mst_users.withdraw_date' | 0 | 32 | 0 | 288 | '2016-10-10' | '2016-10-10' | 0
+'purchase_log.stamp' | 5 | 0 | 0 | 0 | '2017-01-30 10:00:00' | '2017-03-02 10:00:00' | 0
+'read_log.stamp' | 15 | 0 | 0 | 0 | '2016-12-29 21:45:47' | '2016-12-29 21:46:25' | 15
+
+### access_log_shift  (19 rows)
+rowid | stamp_like | session_like | user_like | path_like | session_is_time | len_user_col
+12 | '2016-10-01 12:00:00' | '0CVKaz' | '1CwlSX' | '/detail' | 1 | 6
+13 | '2016-10-01 13:00:00' | '0CVKaz' | '1CwlSX' | '/detail' | 1 | 6
+14 | '2016-10-01 13:00:00' | '1QceiB' | '3JMO2k' | '/search' | 1 | 6
+15 | '2016-10-01 14:00:00' | '1QceiB' | '3JMO2k' | '/detail' | 1 | 6
+16 | '2016-10-01 15:00:00' | '1hI43A' | '6SN6DD' | '/search' | 1 | 6
+17 | '2016-10-01 16:00:00' | '1hI43A' | '6SN6DD' | '/detail' | 1 | 6
+18 | '2016-10-01 17:00:00' | '2bGs3i' | '1CwlSX' | '/top' | 1 | 6
+19 | '2016-10-01 18:00:00' | '2is8PX' | '7Dn99b' | '/search' | 1 | 6
+20 | '2016-10-02 12:00:00' | '2mmGwD' | 'EFnoNR' | '/top' | 1 | 6
+21 | '2016-10-02 13:00:00' | '2mmGwD' | 'EFnoNR' | '/detail' | 1 | 6
+22 | '2016-10-02 14:00:00' | '3CEHe1' | 'FGkTe9' | '/search' | 1 | 6
+23 | '2016-10-02 15:00:00' | '3Gv8vO' | '1CwlSX' | '/detail' | 1 | 6
+24 | '2016-10-02 16:00:00' | '3cv4gm' | 'KBlKgT' | '/top' | 1 | 6
+25 | '2016-10-02 17:00:00' | '3cv4gm' | 'KBlKgT' | '/search' | 1 | 6
+26 | '2016-10-02 18:00:00' | '690mvB' | 'FGkTe9' | '/top' | 1 | 6
+27 | '2016-10-03 12:00:00' | '6oABhM' | '3JMO2k' | '/detail' | 1 | 6
+28 | '2016-10-03 13:00:00' | '7jjxQX' | 'KKTw9P' | '/top' | 1 | 6
+29 | '2016-10-03 14:00:00' | 'AAuoEU' | '6SN6DD' | '/top' | 1 | 6
+30 | '2016-10-03 15:00:00' | 'AAuoEU' | '6SN6DD' | '/search' | 1 | 6
+
+### access_log_shift_summary  (2 rows)
+stamp_ok | n | session_is_time | actions | r0 | r1
+0 | 19 | 19 | '1CwlSX,3JMO2k,6SN6DD,7Dn99b,EFnoNR,FGkTe9,KBlKgT,KKTw9P' | 12 | 30
+1 | 11 | 0 | 'view' | 1 | 11
+
+### global_time_range  (1 rows)
+first_time | last_time
+'2016-01-01 10:00:00' | '2017-03-02 10:00:00'
+

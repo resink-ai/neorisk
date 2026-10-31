@@ -1,0 +1,5 @@
+# Oracle Sales History (Spider2 complex_oracle). Stage 1 is a schema-only pack: the event log
+# comes from `uv run refdata ingest examples/oraclesh`, not from `datagen run`.
+[run]
+seed = 7
+days = 1460.0

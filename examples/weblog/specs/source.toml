@@ -1,0 +1,24 @@
+# Web and app logs: sample data of a SQL-recipes book, Spider2's log catalog (19 tables).
+file = "log.sqlite"
+note = "Times to the second, read as UTC. Rule times: shifted access rows, 1 NULL stamp, 1 deletion, untimed masters."
+
+[tables]
+mst_users = ["user_id", "register_date"]
+action_log = ["session", "stamp"]
+activity_log = ["session", "stamp"]
+read_log = ["session", "stamp"]
+form_log = ["session", "stamp"]
+form_error_log = ["session", "stamp"]
+action_log_with_ip = ["session", "stamp"]
+access_log = ["session", "stamp"]
+action_log_with_noise = ["session", "stamp"]
+invalid_action_log = ["session", "stamp"]
+mst_categories = ["id", "stamp"]
+dup_action_log = ["session", "stamp"]
+mst_products_20161201 = ["product_id"]
+mst_products_20170101 = ["product_id"]
+app1_mst_users = ["user_id"]
+app2_mst_users = ["user_id"]
+mst_users_with_card_number = ["user_id"]
+purchase_log = ["purchase_id"]
+product_sales = ["product_id"]

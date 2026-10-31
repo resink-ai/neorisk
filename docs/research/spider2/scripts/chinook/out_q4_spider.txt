@@ -1,0 +1,36 @@
+### local198_median_country_sales  (1 rows, 0.00s)
+median_total_sales | totals
+249.52999999999997 | 195.1,303.96
+
+### local054_best_artist_under_1  (5 rows, 0.00s)
+FirstName | spent | artist
+Eduardo | 0.99 | 90
+Edward | 0.99 | 90
+Hugh | 0.99 | 90
+Ladislav | 0.99 | 90
+Stanisław | 0.99 | 90
+
+### local054_top_artists  (4 rows, 0.00s)
+Name | ArtistId | s | lines
+Iron Maiden | 90 | 138.6 | 140
+U2 | 150 | 105.93 | 107
+Metallica | 50 | 90.09 | 91
+Led Zeppelin | 22 | 86.13 | 87
+
+### local055_reading_a  (1 rows, 0.00s)
+top_artist | bottom_artist | avg_top | avg_bot | diff
+Iron Maiden | Academy of St. Martin in the Fields & Sir Neville Marriner | 5.133333333333333 | 0.99 | 4.143333333333333
+
+### local055_reading_b  (1 rows, 0.00s)
+top_artist | bottom_artist | avg_top | avg_bot | diff | artists_with_zero_sales
+Iron Maiden | A Cor Do Som | 5.133333333333333 | 0 | 5.133333333333333 | 110
+
+### local055_bottom_ties  (6 rows, 0.00s)
+Name | round(s,2) | n
+Academy of St. Martin in the Fields & Sir Neville Marriner | 0.99 | 1
+Academy of St. Martin in the Fields, John Birch, Sir Neville Marriner & Sylvia McNair | 0.99 | 1
+Adrian Leaper & Doreen de Feis | 0.99 | 1
+Antal Doráti & London Symphony Orchestra | 0.99 | 1
+Berliner Philharmoniker & Hans Rosbaud | 0.99 | 1
+Calexico | 0.99 | 1
+

@@ -42,9 +42,9 @@ An ingested dataset has simkit's layout, so `neorisk_simkit.io.read`, `datagen c
 
 A round trip passes when every source table equals the rebuilt one as a **multiset of rows**. INTEGER and REAL compare by value; NULL, `''` and `'\N'` are three different values. No tolerance applies to tables. Saved queries run on in-memory copies of both files, indexed on the `source.toml` keys. They compare as lists when the query has a top-level ORDER BY, otherwise as multisets, and float cells use a relative tolerance of 1e-9.
 
-## The five datasets
+## The datasets
 
-Measured on an Apple-silicon laptop on 2026-10-30.
+Measured on an Apple-silicon laptop: batch 1 on 2026-10-30, batch 2 on 2026-10-31.
 
 | Project | Source | Tables | Rows | Events | Queries | `roundtrip` |
 |---|---|---:|---:|---:|---:|---:|
@@ -53,15 +53,32 @@ Measured on an Apple-silicon laptop on 2026-10-30.
 | `olist` | E_commerce | 11 | 1,559,764 | 918,549 | 12 | 41 s |
 | `delivery_center` | delivery_center | 7 | 1,154,523 | 3,944,085 | 3 | 36 s |
 | `airlines` | Airlines | 8 | 2,289,506 | 2,339,321 | 2 | 22 s |
+| `sakila` | sqlite-sakila (= Pagila) | 16 | 46,273 | 47,954 | 9 | 3 s |
+| `bitcoin` | bank_sales_trading (`bitcoin_*`) | 3 | 26,336 | 26,322 | 2 | 21 s |
+| `weblog` | log | 19 | 854 | 834 | 5 | < 1 s |
+| `pizzarunner` | modern_data (`pizza_*`) | 10 | 78 | 32 | 3 | 1 s |
+| `chinook` | chinook | 11 | 15,607 | 2,652 | 3 | < 1 s |
+| `northwind` | northwind | 15 | 3,366 | 3,794 | 2 | 1 s |
+| `oraclesh` | complex_oracle | 10 | 1,064,608 | 1,000,955 | 6 | 19 s |
+| `adventureworks` | AdventureWorks | 13 | 168,686 | 197,946 | 1 | 3 s |
 
-Every table of every project round-trips exactly, and every saved query agrees.
+Every table of every project round-trips exactly, and every saved query agrees. Most of `bitcoin`'s time is local157's correlated subquery.
+
+Values that are neither text nor exact cents are rebuilt from integers by a rule, never by float arithmetic whose order could change:
+- Northwind's float4 money: cents, printed with `%.9g`.
+- Chinook's invoice totals: line cents / 100.
+- AdventureWorks' 4-decimal money: integers of 1e-4.
 
 ## Laws on real data
 
-Run `datagen check --skip-stats` on each ingested dataset. All seven structural checks pass on all five: types, required, unique ids, references, ordering, leakage, anchored. The packs have no laws yet. Stage 2's laws must also pass on these datasets. The research already knows facts that rule out some tempting laws:
+Run `datagen check --skip-stats` on each ingested dataset. All seven structural checks pass on all thirteen: types, required, unique ids, references, ordering, leakage, anchored. The packs have no laws yet. Stage 2's laws must also pass on these datasets. The research already knows facts that rule out some tempting laws:
 - Olist has 1,359 carrier handoffs before approval.
 - delivery_center has negative metrics and moments out of order.
 - Data Bank customers overdraw: 56.8% end below zero.
+- Bitcoin prices break OHLC containment on 2 bars.
+- Oracle SH has negative unit costs.
+- Pizza Runner order 8 averages 93.6 km/h.
+- Sakila customers are created after all their rentals.
 
 A law that real data breaks is wrong, not the data.
 
@@ -78,5 +95,12 @@ Stage 1 is exact on table contents. For rows with no source time, the time comes
 | Airlines | flight scheduling and cancellation | 30 days before departure |
 | Airlines | tickets | the booking time |
 | Airlines | check-ins | 130–90 minutes before departure, in boarding order |
+| Pizza Runner | deliveries | pickup + duration minutes |
+| Pizza Runner | cancellations | the order's time |
+| weblog | 19 column-shifted `access_log` rows | the time held in their `session` column |
+| weblog | the NULL `invalid_action_log` stamp | the latest earlier stamp in its session |
+| weblog | product B001's deletion | the first snapshot's cut, 2016-12-01 |
+| weblog | untimed masters (app users, cards, product sales) | 2016-01-01 |
+| Chinook, Northwind | customer creation | the first order or invoice (Northwind: N for the 2 with none) |
 
 Every invented time is capped at the snapshot time N.

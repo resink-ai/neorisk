@@ -1,0 +1,9 @@
+returned rentals with payment: 15861
+  floor(days)                        exact= 12142  residuals={0.0: 12142, 1.0: 3719}
+  ceil(days)                         exact= 11471  residuals={-1.0: 4390, 0.0: 11471}
+  round(days)                        exact= 14853  residuals={-1.0: 463, 0.0: 14853, 1.0: 545}
+  calendar days (date(e)-date(s))    exact= 15861  residuals={0.0: 15861}
+calendar-day rule failures: 0
+days late (calendar rule): {0: 8592, 1: 1782, 2: 1833, 3: 1439, 4: 1077, 5: 734, 6: 379, 7: 25}
+open rentals with payment: 183
+  amount / rental_rate: {0.0: 24, 1.0: 135, 1.198: 5, 1.331: 3, 2.0: 3, 2.669: 5, 3.0: 1, 4.02: 5, 4.03: 1, 6.04: 1}

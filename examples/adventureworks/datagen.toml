@@ -1,0 +1,5 @@
+# AdventureWorks sales (Spider2 AdventureWorks, a subset of Microsoft's sample). Stage 1 is a
+# schema-only pack: the event log comes from `uv run refdata ingest examples/adventureworks`.
+[run]
+seed = 7
+days = 1133.0

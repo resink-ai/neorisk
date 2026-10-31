@@ -1,0 +1,20 @@
+# Northwind: Microsoft's 1996–98 sample (MIT), via the PostgreSQL port pthom/northwind_psql.
+file = "northwind.sqlite"
+note = "Dates only, read as midnight UTC. float4 money (freight, prices, discount) is rebuilt from cents."
+
+[tables]
+categories = ["categoryid"]
+customercustomerdemo = ["customerid", "customertypeid"]
+customerdemographics = ["customertypeid"]
+customers = ["customerid"]
+employees = ["employeeid"]
+employeeterritories = ["employeeid", "territoryid"]
+order_details = ["orderid", "productid"]
+orders = ["orderid"]
+products = ["productid"]
+region = ["regionid"]
+shippers = ["shipperid"]
+suppliers = ["supplierid"]
+territories = ["territoryid"]
+usstates = ["stateid"]
+customergroupthreshold = ["groupname"]

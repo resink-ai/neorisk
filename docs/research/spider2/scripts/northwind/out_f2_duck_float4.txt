@@ -1,0 +1,4 @@
+orders.freight: n=830 printf_9g_rule=830 plain_float_widening=31
+order_details.unitprice: n=2155 printf_9g_rule=2155 plain_float_widening=1286
+order_details.discount: n=2155 printf_9g_rule=2155 plain_float_widening=1471
+products.unitprice: n=77 printf_9g_rule=77 plain_float_widening=60

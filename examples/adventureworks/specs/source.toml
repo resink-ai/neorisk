@@ -1,0 +1,18 @@
+# AdventureWorks: a 13-table subset of Microsoft's sample (MIT), 2011–2014, via a Postgres port.
+file = "AdventureWorks.sqlite"
+note = "Times are midnights, read as UTC. Order money is rebuilt from 1e-4 integers."
+
+[tables]
+salesperson = ["businessentityid"]
+product = ["productid"]
+productmodelproductdescriptionculture = ["productdescriptionid"]
+productdescription = ["productdescriptionid"]
+productreview = ["productreviewid"]
+productcategory = ["productcategoryid"]
+productsubcategory = ["productsubcategoryid"]
+salesorderdetail = ["salesorderdetailid"]
+salesorderheader = ["salesorderid"]
+salesterritory = ["territoryid"]
+countryregioncurrency = ["countryregioncode", "currencycode"]
+currencyrate = ["currencyrateid"]
+SalesPersonQuotaHistory = ["BusinessEntityID", "QuotaDate"]

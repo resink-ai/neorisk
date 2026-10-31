@@ -1,0 +1,184 @@
+### modifieddate_formats  (11 rows, 0.0s)
+c | len | n | min(modifieddate) | max(modifieddate)
+product.modifieddate | 22 | 1 | 2014-02-08 10:03:55.51 | 2014-02-08 10:03:55.51
+product.modifieddate | 23 | 503 | 2014-02-08 10:01:36.827 | 2014-02-08 10:01:36.827
+productdescription.modifieddate | 19 | 636 | 2013-04-30 00:00:00 | 2013-04-30 00:00:00
+productdescription.modifieddate | 23 | 126 | 2014-02-08 10:32:17.973 | 2014-02-08 10:32:17.973
+countryregioncurrency.modifieddate | 19 | 10 | 2008-04-30 00:00:00 | 2008-04-30 00:00:00
+countryregioncurrency.modifieddate | 22 | 99 | 2014-02-08 10:17:21.51 | 2014-02-08 10:17:21.51
+currencyrate.modifieddate | 19 | 12435 | 2011-05-31 00:00:00 | 2014-05-31 00:00:00
+currencyrate.modifieddate | 22 | 1097 | 2014-01-02 17:39:45.26 | 2014-01-02 17:39:45.26
+salesperson.modifieddate | 19 | 17 | 2010-12-28 00:00:00 | 2013-05-23 00:00:00
+product.sellstartdate | 19 | 504 | 2008-04-30 00:00:00 | 2013-05-30 00:00:00
+productreview.modifieddate | 19 | 4 | 2013-09-18 00:00:00 | 2013-11-15 00:00:00
+
+### rowguid_shapes  (9 rows, 0.0s)
+t | len | lower_n | count(*)
+header | 36 | 31465 | 31465
+detail | 36 | 121317 | 121317
+product | 36 | 504 | 504
+quota | 38 | 163 | 163
+uuid v4 nibble in header | 4 | 0 | 31465
+variant nibble in header | 8 | 0 | 7854
+variant nibble in header | 9 | 0 | 7755
+variant nibble in header | a | 0 | 7832
+variant nibble in header | b | 0 | 8024
+
+### trailing_spaces  (18 rows, 0.0s)
+c | v | count(*)
+product.class |  | 257
+product.class | H  | 82
+product.class | L  | 97
+product.class | M  | 68
+product.productline |  | 226
+product.productline | M  | 91
+product.productline | R  | 100
+product.productline | S  | 35
+product.productline | T  | 52
+product.sizeunitmeasurecode |  | 328
+product.sizeunitmeasurecode | CM  | 176
+product.style |  | 293
+product.style | M  | 7
+product.style | U  | 176
+product.style | W  | 28
+product.weightunitmeasurecode |  | 299
+product.weightunitmeasurecode | G   | 29
+product.weightunitmeasurecode | LB  | 176
+
+### mixed_storage_classes  (15 rows, 0.0s)
+c | t | count(*)
+product.weight | real | 205
+product.weight | text | 299
+product.productsubcategoryid | integer | 295
+product.productsubcategoryid | text | 209
+header.salespersonid | integer | 3806
+header.salespersonid | text | 27659
+header.creditcardid | integer | 30334
+header.creditcardid | text | 1131
+header.currencyrateid | integer | 13976
+header.currencyrateid | text | 17489
+salesperson.territoryid | integer | 14
+salesperson.territoryid | text | 3
+salesperson.salesquota | integer | 14
+salesperson.salesquota | text | 3
+header.STATUS | text | 31465
+
+### newlines_in_text  (3 rows, 0.0s)
+c | lf | cr | count(*)
+productreview.comments | 4 | 0 | 4
+productdescription.description | 0 | 0 | 762
+productdescription non-ascii | 622 | 0 | 762
+
+### productdescription_duplicates  (8 rows, 0.0s)
+description | n | group_concat(productdescriptionid)
+高性能的山地车备用轮。 | 2 | 1893,1998
+适用于入门级骑乘者的备用山地车轮。 | 2 | 1891,1986
+适用于入门级骑乘者的公路型备用前轮。 | 2 | 1894,2004
+适用于一般和高级骑乘者的备用山地车轮。 | 2 | 1892,1992
+宽连杆设计。 | 2 | 1882,2010
+ล้ออะไหล่จักรยานภูเขาสำหรับนักปั่นสมัครเล่นไปจนถึงมืออาชีพ | 2 | 1642,1990
+ล้ออะไหล่จักรยานภูเขาสำหรับนักปั่นระดับเริ่มต้น | 2 | 1641,1984
+ล้ออะไหล่จักรยานภูเขาประสิทธิภาพสูง | 2 | 1643,1996
+
+### product_dates  (7 rows, 0.0s)
+sellstartdate | sellenddate | count(*) | fg
+2008-04-30 00:00:00 |  | 211 | 2
+2011-05-31 00:00:00 |  | 25 | 25
+2011-05-31 00:00:00 | 2012-05-29 00:00:00 | 29 | 29
+2011-05-31 00:00:00 | 2013-05-29 00:00:00 | 18 | 18
+2012-05-30 00:00:00 |  | 34 | 34
+2012-05-30 00:00:00 | 2013-05-29 00:00:00 | 51 | 51
+2013-05-30 00:00:00 |  | 136 | 136
+
+### product_modifieddate  (2 rows, 0.0s)
+modifieddate | count(*)
+2014-02-08 10:01:36.827 | 503
+2014-02-08 10:03:55.51 | 1
+
+### product_sold_outside_sell_window  (1 rows, 0.0s)
+lines | before_start | after_end
+121317 | 0 | 64
+
+### unitprice_vs_listprice_by_channel  (2 rows, 0.0s)
+onlineorderflag | eq_list | n
+f | 0 | 60919
+t | 57949 | 60398
+
+### online_price_history  (2 rows, 0.0s)
+np | products
+1 | 102
+2 | 28
+
+### lines_with_zero_discount_special_offer  (3 rows, 0.0s)
+specialofferid | unitpricediscount | count(*)
+2 | 0.0 | 2118
+13 | 0.0 | 20
+14 | 0.0 | 13
+
+### productreview_columns  (4 rows, 0.0s)
+productreviewid | typo_col_null | modifieddate | reviewdate | same
+1 | 1 | 2013-09-18 00:00:00 | 2013-09-18 00:00:00 | 1
+2 | 1 | 2013-11-13 00:00:00 | 2013-11-13 00:00:00 | 1
+3 | 1 | 2013-11-15 00:00:00 | 2013-11-15 00:00:00 | 1
+4 | 1 | 2013-11-15 00:00:00 | 2013-11-15 00:00:00 | 1
+
+### reseller_orders_per_month  (34 rows, 0.0s)
+m | orders | days | customers
+2011-05 | 38 | 1 | 38
+2011-07 | 75 | 1 | 75
+2011-08 | 100 | 2 | 100
+2011-10 | 153 | 2 | 153
+2011-12 | 40 | 1 | 40
+2012-01 | 143 | 2 | 143
+2012-02 | 37 | 1 | 37
+2012-03 | 85 | 1 | 85
+2012-04 | 68 | 1 | 68
+2012-05 | 72 | 1 | 72
+2012-06 | 139 | 1 | 139
+2012-07 | 111 | 1 | 111
+2012-08 | 73 | 1 | 73
+2012-09 | 133 | 1 | 133
+2012-10 | 114 | 1 | 114
+2012-11 | 65 | 1 | 65
+2012-12 | 132 | 1 | 132
+2013-01 | 106 | 1 | 106
+2013-02 | 74 | 1 | 74
+2013-03 | 134 | 1 | 134
+2013-04 | 102 | 1 | 102
+2013-05 | 95 | 1 | 93
+2013-06 | 186 | 1 | 183
+2013-07 | 176 | 1 | 174
+2013-08 | 99 | 1 | 96
+2013-09 | 179 | 1 | 177
+2013-10 | 176 | 1 | 174
+2013-11 | 96 | 1 | 93
+2013-12 | 175 | 1 | 174
+2014-01 | 175 | 2 | 173
+2014-02 | 3 | 1 | 3
+2014-03 | 271 | 3 | 270
+2014-04 | 2 | 1 | 2
+2014-05 | 179 | 1 | 179
+
+### reseller_customers_order_once_per_month  (1 rows, 0.0s)
+max(n)
+2
+
+### online_orders_per_day  (4 rows, 0.0s)
+y | orders | days | per_day
+2011 | 1201 | 212 | 5.67
+2012 | 2743 | 366 | 7.49
+2013 | 12584 | 365 | 34.48
+2014 | 11131 | 181 | 61.5
+
+### online_daily_gap_days  (1 rows, 0.0s)
+missing_days
+3.0
+
+### comment_column  (1 rows, 0.0s)
+comment | count(*)
+ | 31465
+
+### territory_cost_cols  (1 rows, 0.0s)
+sum(costytd=0 and costlastyear=0) | count(*)
+10 | 10
+

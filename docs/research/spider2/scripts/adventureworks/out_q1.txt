@@ -1,0 +1,104 @@
+### pk_uniqueness  (20 rows, 0.2s)
+k | n | d
+salesorderheader(salesorderid) | 31465 | 31465
+salesorderdetail(salesorderdetailid) | 121317 | 121317
+salesorderdetail(salesorderid,productid,specialofferid) | 121317 | 121317
+salesorderdetail(salesorderid,productid) | 121317 | 121317
+product(productid) | 504 | 504
+product(name) | 504 | 504
+product(productnumber) | 504 | 504
+productcategory | 4 | 4
+productsubcategory | 37 | 37
+productdescription | 762 | 762
+pmpdc(model,culture) | 762 | 762
+pmpdc(descriptionid) | 762 | 762
+productreview | 4 | 4
+salesperson | 17 | 17
+salesterritory | 10 | 10
+countryregioncurrency(country,currency) | 109 | 109
+currencyrate(id) | 13532 | 13532
+currencyrate(date,from,to) | 13532 | 13532
+quota(entity,date) | 163 | 163
+all rowguids (lower, no braces) across 9 tables | 154279 | 154279
+
+### fk_coverage  (21 rows, 0.0s)
+fk | n | ok
+detail.salesorderid -> header | 121317 | 121317
+header with >=1 detail | 31465 | 31465
+detail.productid -> product | 121317 | 121317
+product sold at least once | 504 | 266
+finished goods sold at least once | 295 | 266
+header.salespersonid (non-empty) -> salesperson | 3806 | 3806
+salesperson with >=1 order | 17 | 17
+header.territoryid -> territory | 31465 | 31465
+header.currencyrateid (non-empty) -> currencyrate | 13976 | 13976
+salesperson.territoryid (non-empty) -> territory | 14 | 14
+product.subcategory (non-empty) -> productsubcategory | 295 | 295
+subcategory -> category | 37 | 37
+pmpdc.descriptionid -> productdescription | 762 | 762
+productdescription used by pmpdc | 762 | 762
+pmpdc models present in product.productmodelid | 127 | 118
+product models (non-empty) with descriptions | 119 | 118
+review.productid -> product | 4 | 4
+quota.BusinessEntityID -> salesperson | 163 | 163
+salesperson with quota history | 17 | 17
+territory.countryregioncode in countryregioncurrency | 10 | 10
+currencyrate.tocurrencycode in countryregioncurrency | 14 | 14
+
+### missing_dimension_tables  (12 rows, 0.1s)
+c | count(distinct customerid)
+customerid | 19119
+billtoaddressid | 19119
+shiptoaddressid | 19119
+billto<>shipto | 99
+shipmethodid | 2
+creditcardid | 18384
+specialofferid | 12
+customers with >1 accountnumber | 0
+customers with >1 territory | 0
+customers with >1 billto | 0
+customers with both online and offline orders | 0
+customers with >1 salesperson | 210
+
+### pmpdc_cultures  (6 rows, 0.0s)
+cultureid | count(*) | count(distinct productmodelid)
+ar | 127 | 127
+en | 127 | 127
+fr | 127 | 127
+he | 127 | 127
+th | 127 | 127
+zh-cht | 127 | 127
+
+### product_classes  (4 rows, 0.0s)
+finishedgoodsflag | makeflag | no_subcat | n | sold
+f | f | 1 | 182 | 0
+f | t | 1 | 27 | 0
+t | f | 0 | 83 | 76
+t | t | 0 | 212 | 190
+
+### sold_vs_sellenddate  (3 rows, 0.0s)
+sellenddate | n | sold
+ | 197 | 183
+2012-05-29 00:00:00 | 29 | 25
+2013-05-29 00:00:00 | 69 | 58
+
+### detail_rowid_order  (1 rows, 0.0s)
+rowid_eq_detailid | n
+121317 | 121317
+
+### detailid_contiguous_by_order  (1 rows, 0.0s)
+orders | contiguous | in_header_order
+31465 | 31465 | 31465
+
+### header_rowid_order  (1 rows, 0.0s)
+id_eq_rowid | n
+31465 | 31465
+
+### header_id_vs_orderdate  (1 rows, 0.0s)
+pairs | nondecreasing
+31464 | 31464
+
+### detail_id_gaps  (1 rows, 0.0s)
+min(salesorderdetailid) | max(salesorderdetailid) | count(*)
+1 | 121317 | 121317
+
