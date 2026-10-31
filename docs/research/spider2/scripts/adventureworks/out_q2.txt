@@ -1,0 +1,42 @@
+## money columns on the 1e-4 grid (and on the 1e-2 cent grid)
+  salesorderheader.subtotal: n=31465 on_1e-4=31465 on_1e-2=25531 max_decimals=4
+  salesorderheader.taxamt: n=31465 on_1e-4=31465 on_1e-2=267 max_decimals=4
+  salesorderheader.freight: n=31465 on_1e-4=31465 on_1e-2=107 max_decimals=4
+  salesorderheader.totaldue: n=31465 on_1e-4=31465 on_1e-2=99 max_decimals=4
+  salesorderdetail.unitprice: n=121317 on_1e-4=121317 on_1e-2=66023 max_decimals=4
+  salesorderdetail.unitpricediscount: n=121317 on_1e-4=121317 on_1e-2=121317 max_decimals=2
+  product.listprice: n=504 on_1e-4=504 on_1e-2=494 max_decimals=3
+  product.standardcost: n=504 on_1e-4=504 on_1e-2=217 max_decimals=4
+  salesperson.salesytd: n=17 on_1e-4=17 on_1e-2=0 max_decimals=4
+  salesperson.saleslastyear: n=17 on_1e-4=17 on_1e-2=4 max_decimals=4
+  salesperson.commissionpct: n=17 on_1e-4=17 on_1e-2=8 max_decimals=3
+  salesterritory.salesytd: n=10 on_1e-4=10 on_1e-2=0 max_decimals=4
+  salesterritory.saleslastyear: n=10 on_1e-4=10 on_1e-2=1 max_decimals=4
+  SalesPersonQuotaHistory.SalesQuota: n=163 on_1e-4=163 on_1e-2=163 max_decimals=1
+  currencyrate.averagerate: n=13532 on_1e-4=13532 on_1e-2=3134 max_decimals=4
+  currencyrate.endofdayrate: n=13532 on_1e-4=13532 on_1e-2=2094 max_decimals=4
+
+## subtotal vs the lines
+  orders=31465 subtotal == sum(up*(1-disc)*qty) exactly: 30770
+  subtotal == round4_half_up(sum line totals): 31465
+  subtotal == round4(sum line totals): 31437; == sum(round4(line totals)): 31271
+  top differences subtotal - sum(lines): [('0.000000', 30770), ('-0.000025', 67), ('0.000008', 64), ('0.000050', 63), ('0.000025', 58), ('0.000024', 53), ('-0.000008', 51), ('-0.000024', 32)]
+  orders whose line totals need >4 decimals: 4590
+
+## taxamt and freight as rates of subtotal
+  taxamt == round4(subtotal*0.08, ROUND_HALF_EVEN): 27685/31465
+  taxamt == round4(subtotal*0.08, ROUND_HALF_UP): 27685/31465
+  taxamt/subtotal ratios (4 dp): [('0.0800', 27686), ('0.0960', 800), ('0.0987', 364), ('0.0959', 222), ('0.0961', 203), ('0.0962', 176)]
+  first mismatches: [(43659, 20565.6206, 1971.5149), (43660, 1294.2529, 124.2483), (43661, 32726.4786, 3153.7696), (43662, 28832.5289, 2775.1646), (43663, 419.4589, 40.2681)]
+  freight == round4(subtotal*0.025, ROUND_HALF_EVEN): 23128/31465
+  freight == round4(subtotal*0.025, ROUND_HALF_UP): 27685/31465
+  freight/subtotal ratios (4 dp): [('0.0250', 27688), ('0.0300', 1253), ('0.0301', 427), ('0.0308', 393), ('0.0299', 325), ('0.0302', 218)]
+  first mismatches: [(43659, 20565.6206, 616.0984), (43660, 1294.2529, 38.8276), (43661, 32726.4786, 985.553), (43662, 28832.5289, 867.2389), (43663, 419.4589, 12.5838)]
+
+## totaldue
+  totaldue == subtotal+taxamt+freight in decimal: 31465/31465; as float addition: 20033/31465
+  float-sum mismatch examples: [(43659, 20565.6206, 1971.5149, 616.0984, 23153.2339, 23153.233899999996), (43663, 419.4589, 40.2681, 12.5838, 472.3108, 472.31080000000003), (43664, 24432.6088, 2344.9921, 732.81, 27510.4109, 27510.410900000003)]
+
+## unitprice vs product listprice and discount
+  unitprice/listprice (4 dp): [('1.0000', 57949), ('0.6000', 43553), ('0.5357', 5650), ('0.5769', 4272), ('0.5455', 3435), ('0.8929', 2449), ('0.5800', 1152), ('0.5296', 664), ('0.4500', 590), ('0.5500', 562)]  distinct=24
+  discount by specialofferid: [((1, 0.0), 115884), ((2, 0.0), 2118), ((2, 0.02), 1310), ((3, 0.05), 606), ((4, 0.1), 80), ((5, 0.15), 2), ((7, 0.35), 137), ((8, 0.1), 98), ((9, 0.3), 61), ((11, 0.15), 84), ((13, 0.0), 20), ((13, 0.15), 504), ((14, 0.0), 13), ((14, 0.2), 231), ((16, 0.4), 169)]

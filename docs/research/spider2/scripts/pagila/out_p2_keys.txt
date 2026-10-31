@@ -1,0 +1,161 @@
+### pk_unique  (18 rows, 0.01s)
+t | n | k
+actor | 200 | 200
+address | 603 | 603
+category | 16 | 16
+city | 600 | 600
+country | 109 | 109
+customer | 599 | 599
+film | 1000 | 1000
+film_actor | 5462 | 5462
+film_category | 1000 | 1000
+film_category film_id | 1000 | 1000
+inventory | 4581 | 4581
+language | 6 | 6
+payment | 16049 | 16049
+payment rental_id (non-null) | 16044 | 16044
+rental | 16044 | 16044
+rental (date,inv,cust) | 16044 | 16044
+staff | 2 | 2
+store | 2 | 2
+
+### id_gaps  (3 rows, 0.00s)
+t | lo | hi | n
+address | 1 | 605 | 603
+rental | 1 | 16049 | 16044
+payment | 1 | 16049 | 16049
+
+### missing_ids  (7 rows, 0.00s)
+t | i
+rental | 321
+rental | 2247
+rental | 6579
+rental | 9426
+rental | 15592
+address | 257
+address | 518
+
+### fk_coverage  (21 rows, 0.01s)
+fk | n | ok
+city.country_id->country | 600 | 600
+address.city_id->city | 603 | 603
+customer.address_id->address | 599 | 599
+customer.store_id->store | 599 | 599
+staff.address_id->address | 2 | 2
+staff.store_id->store | 2 | 2
+store.manager_staff_id->staff | 2 | 2
+store.address_id->address | 2 | 2
+film.language_id->language | 1000 | 1000
+film_actor.actor_id->actor | 5462 | 5462
+film_actor.film_id->film | 5462 | 5462
+film_category.film_id->film | 1000 | 1000
+film_category.category_id->category | 1000 | 1000
+inventory.film_id->film | 4581 | 4581
+inventory.store_id->store | 4581 | 4581
+rental.inventory_id->inventory | 16044 | 16044
+rental.customer_id->customer | 16044 | 16044
+rental.staff_id->staff | 16044 | 16044
+payment.customer_id->customer | 16049 | 16049
+payment.staff_id->staff | 16049 | 16049
+payment.rental_id(non-null)->rental | 16044 | 16044
+
+### reverse_coverage  (11 rows, 2.30s)
+t | n | k
+films with inventory | 1000 | 958
+films with actors | 1000 | 997
+actors with films | 200 | 200
+inventory ever rented | 4581 | 4580
+rentals with payment | 16044 | 16044
+customers with rental | 599 | 599
+addresses used by customer/staff/store | 603 | 603
+cities with address | 600 | 599
+countries with city | 109 | 109
+categories with film | 16 | 16
+languages used by film | 6 | 1
+
+### never_rented_inventory  (1 rows, 0.00s)
+inventory_id | film_id | store_id | last_update | title
+5 | 1 | 2 | 2021-03-06 15:52:08 | ACADEMY DINOSAUR
+
+### unused_addresses  (0 rows, 0.00s)
+address_id | address | address2 | district | city_id | postal_code | phone | last_update
+
+### payments_without_rental  (5 rows, 0.00s)
+payment_id | customer_id | staff_id | rental_id | amount | payment_date | last_update
+424 | 16 | 1 | None | 1.99 | 2005-06-18 04:56:12.000 | 2021-03-06 15:56:00
+7011 | 259 | 2 | None | 1.99 | 2005-08-23 06:13:16.000 | 2021-03-06 15:56:55
+10840 | 401 | 1 | None | 0.99 | 2005-07-12 06:26:10.000 | 2021-03-06 15:57:27
+14675 | 546 | 1 | None | 3.99 | 2005-07-30 21:16:20.000 | 2021-03-06 15:57:58
+15458 | 577 | 2 | None | 0.99 | 2005-05-27 00:46:39.000 | 2021-03-06 15:58:04
+
+### payments_without_rental_context  (5 rows, 0.00s)
+payment_id | customer_id | amount | payment_date | cust_payments | cust_last_rental_payment | cust_open_rentals
+424 | 16 | 1.99 | 2005-06-18 04:56:12.000 | 29 | 2005-08-21 14:45:34.000 | 0
+7011 | 259 | 1.99 | 2005-08-23 06:13:16.000 | 33 | 2005-08-23 09:52:55.000 | 0
+10840 | 401 | 0.99 | 2005-07-12 06:26:10.000 | 22 | 2005-08-23 18:23:11.000 | 0
+14675 | 546 | 3.99 | 2005-07-30 21:16:20.000 | 26 | 2005-08-23 05:13:09.000 | 0
+15458 | 577 | 0.99 | 2005-05-27 00:46:39.000 | 28 | 2005-08-23 20:47:28.000 | 0
+
+### rentals_without_payment  (0 rows, 2.32s)
+rental_id | rental_date | inventory_id | customer_id | return_date | staff_id | last_update | cust_null_payments
+
+### payment_customer_vs_rental_customer  (1 rows, 0.01s)
+n | same_customer | same_staff
+16044 | 16044 | 7966
+
+### city_dup_name  (1 rows, 0.00s)
+city | count(*) | group_concat(city_id)
+London | 2 | 312,313
+
+### city_multi_address  (4 rows, 0.00s)
+city_id | count(*)
+42 | 2
+300 | 2
+312 | 2
+576 | 2
+
+### staff_store  (2 rows, 0.00s)
+staff_id | store_id | store_id | manager_staff_id | address_id | address_id
+1 | 1 | 1 | 1 | 3 | 1
+2 | 2 | 2 | 2 | 4 | 2
+
+### rental_staff_vs_inventory_store  (4 rows, 0.01s)
+inv_store | staff_store | count(*)
+1 | 1 | 3991
+1 | 2 | 3932
+2 | 1 | 4049
+2 | 2 | 4072
+
+### rental_customer_store_vs_inventory_store  (4 rows, 0.01s)
+cust_store | inv_store | count(*)
+1 | 1 | 4326
+1 | 2 | 4421
+2 | 1 | 3597
+2 | 2 | 3700
+
+### payment_staff_vs_rental_staff  (4 rows, 0.01s)
+rental_staff | pay_staff | count(*)
+1 | 1 | 4008
+1 | 2 | 4032
+2 | 1 | 4046
+2 | 2 | 3958
+
+### film_category_per_film  (1 rows, 0.00s)
+n | count(*)
+1 | 1000
+
+### films_without_actors  (3 rows, 0.00s)
+film_id | title
+257 | DRUMLINE CYCLONE
+323 | FLIGHT LIES
+803 | SLACKER LIAISONS
+
+### london_countries  (2 rows, 0.00s)
+city_id | city | country
+312 | London | United Kingdom
+313 | London | Canada
+
+### trigger_count  (1 rows, 0.00s)
+count(*)
+30
+

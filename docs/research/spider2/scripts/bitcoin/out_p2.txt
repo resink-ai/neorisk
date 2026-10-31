@@ -1,0 +1,65 @@
+## md5 fingerprint: member_id == md5(str(rowid))[:6]
+  matches: 14 / 14
+  any txn ids that are md5 too? n/a (txn_id is an integer)
+
+## body = 22890 transactions after the 28 opening buys
+## global inter-arrival gaps (s)
+  n=22889 mean=6416.4 sd=6331.2 cv=0.987 p50=4488 p90=14767 max=61823
+  KS vs Exp(mean): D=0.0070 p=0.214
+  rate = 13.47 per day over 1699.8 days
+  per-day counts: days=1700 mean=13.465 var=13.672 (Poisson: var=mean)
+
+## quantity (body): Uniform(0,10)?
+  BTC BUY: n=10426 mean=5.0403 sd=2.8776 (U(0,10) sd=2.8868) KS D=0.0086 p=0.421
+  BTC SELL: n=2044 mean=5.0888 sd=2.8633 (U(0,10) sd=2.8868) KS D=0.0321 p=0.029
+  ETH BUY: n=8427 mean=4.9720 sd=2.8891 (U(0,10) sd=2.8868) KS D=0.0093 p=0.462
+  ETH SELL: n=1993 mean=4.9163 sd=2.8785 (U(0,10) sd=2.8868) KS D=0.0219 p=0.29
+  quantity == round(quantity, 9): 22890/22890
+
+## fee: 0.3 w.p. ~0.70, else uniform on {0.00..0.29}?
+  P(0.3)=0.7054; low-fee counts min=114 max=255; chi2 uniform p=4.61e-07
+  fee 0.00 count=114 (lowest bucket), 0.01..0.29 mean=228.9
+  chi2 uniform over 0.01..0.29 p=0.596
+  min(round(U(0,1),2),0.3): expected 0.00=114.6 each low=229.2 0.30=16157.2; observed 0.00=114 0.30=16166; chi2 p=0.697
+  body BTC share=0.5448, SELL share=0.1764
+
+## member choice: uniform over 14?
+  counts min=1265 max=2159; chi2 uniform p=3.7e-107
+
+## per-member mixes (body)
+  c4ca42 Danny    n= 2159 share=0.0943 btc_share=0.489 sell_share=0.193
+  c81e72 Vipul    n= 1831 share=0.0800 btc_share=0.378 sell_share=0.192
+  eccbc8 Charlie  n= 1265 share=0.0553 btc_share=0.480 sell_share=0.165
+  a87ff6 Nandita  n= 1945 share=0.0850 btc_share=0.576 sell_share=0.122
+  e4da3b Rowan    n= 1446 share=0.0632 btc_share=0.638 sell_share=0.221
+  167909 Ayush    n= 1339 share=0.0585 btc_share=0.727 sell_share=0.179
+  8f14e4 Alex     n= 1403 share=0.0613 btc_share=0.440 sell_share=0.157
+  c9f0f8 Abe      n= 1570 share=0.0686 btc_share=0.682 sell_share=0.140
+  45c48c Ben      n= 1695 share=0.0740 btc_share=0.457 sell_share=0.048
+  d3d944 Enoch    n= 1524 share=0.0666 btc_share=0.633 sell_share=0.233
+  6512bd Vikram   n= 1686 share=0.0737 btc_share=0.537 sell_share=0.189
+  c20ad4 Leah     n= 1722 share=0.0752 btc_share=0.675 sell_share=0.177
+  c51ce4 Pavan    n= 1398 share=0.0611 btc_share=0.516 sell_share=0.295
+  aab323 Sonia    n= 1907 share=0.0833 btc_share=0.463 sell_share=0.185
+  overall ticker×side table [[10426, 2044], [8427, 1993]] chi2 independence p=7.05e-08
+
+## do trades react to prices? (body, per ticker-day)
+  BTC: corr(change, n_trades)=-0.0094 corr(change, sell share)=0.0291
+       corr(close price, mean qty)=-0.0029  -> the notional per trade scales with price
+       notional per trade at close (USD): p10=5,416 p50=36,310 p90=148,570 max=594,223
+  ETH: corr(change, n_trades)=-0.0149 corr(change, sell share)=0.0001
+       corr(close price, mean qty)=-0.0117  -> the notional per trade scales with price
+       notional per trade at close (USD): p10=144 p50=1,227 p90=6,891 max=38,491
+
+## holdings at the end (units) and sells relative to holdings
+  min final holding=412.735 max=4225.639; sell/holding p50=0.0040 p99=0.1086 max=0.2626
+
+## daily prices: log returns (close to close)
+  BTC: n=1701 mean=0.00228 sd=0.04329 skew=-0.896 ex_kurt=12.48 min=-0.4973 max=0.2276 first=995.4 last=48255.0
+       log10 volume: p10=4.82 p50=5.34 p90=6.05
+       (high-low)/close: p50=0.0473 p90=0.1117
+       median volume by year: {'2017': '89,720', '2018': '232,480', '2019': '663,380', '2020': '523,615', '2021': '109,020'}
+  ETH: n=1701 mean=0.00350 sd=0.05797 skew=-0.623 ex_kurt=9.02 min=-0.5896 max=0.2586 first=8.2 last=3177.84
+       log10 volume: p10=5.67 p50=6.49 p90=7.21
+       (high-low)/close: p50=0.0632 p90=0.1466
+       median volume by year: {'2017': '515,565', '2018': '1,520,000', '2019': '9,650,000', '2020': '11,340,000', '2021': '1,730,000'}

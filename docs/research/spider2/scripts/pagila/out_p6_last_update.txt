@@ -1,0 +1,88 @@
+### load_window_per_table  (15 rows, 0.00s)
+t | lo | hi | secs | n
+language | 2021-03-06 15:51:48 | 2021-03-06 15:51:48 | 1 | 6
+country | 2021-03-06 15:51:49 | 2021-03-06 15:51:49 | 1 | 109
+city | 2021-03-06 15:51:49 | 2021-03-06 15:51:54 | 6 | 600
+address | 2021-03-06 15:51:54 | 2021-03-06 15:51:59 | 6 | 603
+actor | 2021-03-06 15:51:59 | 2021-03-06 15:52:00 | 2 | 200
+category | 2021-03-06 15:52:00 | 2021-03-06 15:52:00 | 1 | 16
+staff | 2021-03-06 15:52:00 | 2021-03-06 15:52:00 | 1 | 2
+store | 2021-03-06 15:52:00 | 2021-03-06 15:52:00 | 1 | 2
+film | 2021-03-06 15:52:00 | 2021-03-06 15:52:08 | 9 | 1000
+inventory | 2021-03-06 15:52:08 | 2021-03-06 15:52:45 | 38 | 4581
+film_actor | 2021-03-06 15:52:45 | 2021-03-06 15:53:28 | 44 | 5462
+film_category | 2021-03-06 15:53:28 | 2021-03-06 15:53:36 | 9 | 1000
+customer | 2021-03-06 15:53:36 | 2021-03-06 15:53:41 | 6 | 599
+rental | 2021-03-06 15:53:41 | 2021-03-06 15:55:57 | 137 | 16044
+payment | 2021-03-06 15:55:57 | 2021-03-06 15:58:09 | 133 | 16049
+
+### monotone_in_rowid  (10 rows, 0.00s)
+t | pairs | nondecr
+actor | 199 | 199
+address | 602 | 602
+city | 599 | 599
+film | 999 | 999
+inventory | 4580 | 4580
+film_actor | 5461 | 5461
+film_category | 999 | 999
+customer | 598 | 598
+rental | 16043 | 16043
+payment | 16048 | 16048
+
+### rowid_order_keys  (8 rows, 0.00s)
+t | n | rowid_eq_key
+actor | 200 | 200
+address | 603 | 256
+city | 600 | 600
+country | 109 | 109
+customer | 599 | 599
+film | 1000 | 1000
+inventory | 4581 | 4581
+payment | 16049 | 16049
+
+### rowid_order_composite  (4 rows, 0.00s)
+t | pairs | in_key_order
+film_actor (actor,film) | 5461 | 5461
+film_category (film) | 999 | 999
+rental (rental_id) | 16043 | 16043
+address (address_id) | 602 | 602
+
+### rows_per_second_payment  (10 rows, 0.00s)
+last_update | count(*)
+2021-03-06 15:55:57 | 83
+2021-03-06 15:55:58 | 113
+2021-03-06 15:55:59 | 113
+2021-03-06 15:56:00 | 117
+2021-03-06 15:56:01 | 111
+2021-03-06 15:56:02 | 94
+2021-03-06 15:56:03 | 109
+2021-03-06 15:56:04 | 107
+2021-03-06 15:56:05 | 114
+2021-03-06 15:56:06 | 112
+
+### rows_per_second_stats  (4 rows, 0.00s)
+t | min(c) | max(c) | avg(c)
+film_actor | 16 | 139 | 124.13636363636364
+inventory | 14 | 136 | 120.55263157894737
+payment | 3 | 133 | 120.66917293233082
+rental | 30 | 133 | 117.1094890510949
+
+### customer_create_date  (2 rows, 0.00s)
+create_date | count(*) | min(customer_id) | max(customer_id)
+2006-02-14 22:04:36.000 | 271 | 1 | 271
+2006-02-14 22:04:37.000 | 328 | 272 | 599
+
+### customer_create_vs_first_rental  (1 rows, 0.00s)
+n | created_before_first_rental
+599 | 0
+
+### rental_last_update_vs_return  (2 rows, 0.00s)
+open_ | min(last_update) | max(last_update) | count(*)
+0 | 2021-03-06 15:53:41 | 2021-03-06 15:55:57 | 15861
+1 | 2021-03-06 15:55:15 | 2021-03-06 15:55:56 | 183
+
+### payment_2006_last_update  (2 rows, 0.00s)
+y | count(*) | min(last_update) | max(last_update)
+2005 | 15867 | 2021-03-06 15:55:57 | 2021-03-06 15:58:09
+2006 | 182 | 2021-03-06 15:55:58 | 2021-03-06 15:58:08
+

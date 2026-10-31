@@ -1,0 +1,426 @@
+### sales_prod_ids  (72 rows, 0.1s)
+prod_id | n | in_products | min(time_id) | max(time_id)
+13 | 6002 | 0 | 2019-01-10 | 2022-12-30
+14 | 6010 | 1 | 2019-01-03 | 2022-12-31
+15 | 5766 | 0 | 2019-01-02 | 2022-12-29
+16 | 6929 | 0 | 2019-03-31 | 2022-12-31
+17 | 6160 | 0 | 2019-01-05 | 2022-12-25
+18 | 9591 | 0 | 2019-01-03 | 2022-12-28
+19 | 10430 | 1 | 2019-01-10 | 2022-12-29
+20 | 10903 | 0 | 2019-01-07 | 2022-12-31
+21 | 5205 | 1 | 2019-01-02 | 2022-12-31
+22 | 3441 | 1 | 2019-01-02 | 2022-12-31
+23 | 19642 | 1 | 2019-01-02 | 2022-12-31
+24 | 20948 | 0 | 2019-01-02 | 2022-12-31
+25 | 19557 | 0 | 2019-01-02 | 2022-12-31
+26 | 15950 | 0 | 2019-01-02 | 2022-12-31
+27 | 12163 | 0 | 2019-01-08 | 2022-12-29
+28 | 16796 | 1 | 2019-01-07 | 2022-12-31
+29 | 7197 | 0 | 2019-01-02 | 2022-12-31
+30 | 29282 | 1 | 2019-01-02 | 2022-12-31
+31 | 23108 | 1 | 2019-01-02 | 2022-12-31
+32 | 11253 | 0 | 2019-01-07 | 2022-12-31
+33 | 22768 | 0 | 2019-01-02 | 2022-12-31
+34 | 13043 | 0 | 2019-01-02 | 2022-12-31
+35 | 16494 | 0 | 2019-01-02 | 2022-12-31
+36 | 13008 | 0 | 2019-01-02 | 2022-12-31
+37 | 17430 | 0 | 2019-01-01 | 2022-12-31
+38 | 9523 | 0 | 2019-01-01 | 2022-12-31
+39 | 13319 | 0 | 2019-01-01 | 2022-12-31
+40 | 27114 | 1 | 2019-01-01 | 2022-12-31
+41 | 12429 | 1 | 2019-01-01 | 2022-12-31
+42 | 12116 | 1 | 2019-01-01 | 2022-12-31
+43 | 8340 | 1 | 2019-01-01 | 2022-12-31
+44 | 6113 | 1 | 2019-01-01 | 2022-12-31
+45 | 10742 | 1 | 2019-01-01 | 2022-12-31
+46 | 10156 | 1 | 2019-01-07 | 2022-12-31
+47 | 12837 | 1 | 2019-01-01 | 2022-12-31
+48 | 27755 | 1 | 2019-01-01 | 2022-12-31
+113 | 15084 | 0 | 2019-01-02 | 2022-12-31
+114 | 14315 | 0 | 2019-01-01 | 2022-12-31
+115 | 10823 | 0 | 2019-01-01 | 2022-12-31
+116 | 17389 | 0 | 2019-01-01 | 2022-12-31
+117 | 17152 | 0 | 2019-01-01 | 2022-12-31
+118 | 14381 | 0 | 2019-01-01 | 2022-12-31
+119 | 22189 | 0 | 2019-01-01 | 2022-12-31
+120 | 19403 | 0 | 2019-01-02 | 2022-12-30
+121 | 9885 | 0 | 2020-01-02 | 2022-12-31
+122 | 4019 | 0 | 2020-01-11 | 2022-12-29
+123 | 13919 | 0 | 2019-01-01 | 2022-12-29
+124 | 15305 | 0 | 2019-01-31 | 2022-12-29
+125 | 15318 | 0 | 2019-01-01 | 2022-12-29
+126 | 12292 | 0 | 2019-01-01 | 2022-12-29
+127 | 15984 | 1 | 2019-01-01 | 2022-12-29
+128 | 19233 | 1 | 2019-01-01 | 2022-12-29
+129 | 7557 | 1 | 2019-01-01 | 2022-12-29
+130 | 20490 | 1 | 2019-01-01 | 2022-12-30
+131 | 15910 | 0 | 2019-01-04 | 2022-12-30
+132 | 14183 | 0 | 2019-01-04 | 2022-12-30
+133 | 16732 | 0 | 2019-01-04 | 2022-12-30
+134 | 8990 | 0 | 2020-01-04 | 2022-12-30
+135 | 11056 | 0 | 2020-01-01 | 2022-12-30
+136 | 710 | 0 | 2019-03-11 | 2021-06-24
+137 | 10225 | 0 | 2020-01-06 | 2022-12-28
+138 | 5541 | 0 | 2020-01-02 | 2022-12-28
+139 | 11574 | 0 | 2020-01-03 | 2022-12-28
+140 | 14769 | 0 | 2019-01-02 | 2022-12-28
+141 | 7844 | 0 | 2020-01-02 | 2022-12-28
+142 | 6711 | 0 | 2020-01-02 | 2022-12-28
+143 | 4572 | 0 | 2020-01-02 | 2022-12-28
+144 | 4091 | 0 | 2020-01-10 | 2022-12-31
+145 | 6168 | 0 | 2020-01-06 | 2022-12-28
+146 | 12742 | 0 | 2019-01-02 | 2022-12-28
+147 | 7576 | 0 | 2019-03-31 | 2022-12-28
+148 | 15191 | 0 | 2019-01-02 | 2022-12-28
+
+### costs_prod_ids  (72 rows, 0.0s)
+prod_id | n | in_products
+13 | 788 | 0
+14 | 1056 | 1
+15 | 874 | 0
+16 | 676 | 0
+17 | 698 | 0
+18 | 1381 | 0
+19 | 819 | 1
+20 | 732 | 0
+21 | 1152 | 1
+22 | 1221 | 1
+23 | 1827 | 1
+24 | 2064 | 0
+25 | 1781 | 0
+26 | 1634 | 0
+27 | 986 | 0
+28 | 1202 | 1
+29 | 1511 | 0
+30 | 1238 | 1
+31 | 1528 | 1
+32 | 634 | 0
+33 | 1093 | 0
+34 | 1219 | 0
+35 | 1402 | 0
+36 | 1857 | 0
+37 | 1464 | 0
+38 | 1221 | 0
+39 | 1283 | 0
+40 | 1410 | 1
+41 | 1241 | 1
+42 | 1227 | 1
+43 | 1151 | 1
+44 | 980 | 1
+45 | 1090 | 1
+46 | 602 | 1
+47 | 1293 | 1
+48 | 1356 | 1
+113 | 1589 | 0
+114 | 1851 | 0
+115 | 1628 | 0
+116 | 1935 | 0
+117 | 2026 | 0
+118 | 2213 | 0
+119 | 2045 | 0
+120 | 1974 | 0
+121 | 1216 | 0
+122 | 599 | 0
+123 | 1324 | 0
+124 | 1073 | 0
+125 | 1365 | 0
+126 | 1304 | 0
+127 | 1538 | 1
+128 | 1405 | 1
+129 | 1272 | 1
+130 | 1184 | 1
+131 | 789 | 0
+132 | 779 | 0
+133 | 795 | 0
+134 | 670 | 0
+135 | 630 | 0
+136 | 54 | 0
+137 | 611 | 0
+138 | 619 | 0
+139 | 579 | 0
+140 | 717 | 0
+141 | 572 | 0
+142 | 558 | 0
+143 | 508 | 0
+144 | 638 | 0
+145 | 465 | 0
+146 | 693 | 0
+147 | 483 | 0
+148 | 720 | 0
+
+### products_all  (24 rows, 0.0s)
+prod_id | prod_name | prod_subcategory | prod_subcategory_id | prod_category | prod_category_id | prod_weight_class | prod_unit_of_measure | prod_pack_size | supplier_id | prod_status | prod_list_price | prod_min_price | prod_total | prod_total_id | prod_src_id | prod_eff_from | quote(prod_eff_to) | prod_valid
+14 | Pitching Machine and Batting Cage Combo | Training Aids and Equipment | 2035 | Baseball | 203 | 1 | U | P | 1 | STATUS | 999.99 | 999.99 | TOTAL | 1 |  | 2019-01-01 00:00:00 | '' | A
+19 | Cricket Bat Bag | Cricket Bat | 2051 | Cricket | 205 | 1 | U | P | 1 | STATUS | 55.99 | 55.99 | TOTAL | 1 |  | 2019-01-01 00:00:00 | '' | A
+21 | Speed Trainer Bats and Training Program | Training Aids and Equipment | 2035 | Baseball | 203 | 1 | U | P | 1 | STATUS | 899.99 | 899.99 | TOTAL | 1 |  | 2019-01-01 00:00:00 | '' | A
+22 | MLB Official Game Baseball w/ Display Case | Baseballs | 2031 | Baseball | 203 | 1 | U | P | 1 | STATUS | 24.99 | 24.99 | TOTAL | 1 |  | 2019-01-01 00:00:00 | '' | A
+23 | Plastic Cricket Bat | Cricket Bat | 2051 | Cricket | 205 | 1 | U | P | 1 | STATUS | 21.99 | 21.99 | TOTAL | 1 |  | 2019-01-01 00:00:00 | '' | A
+28 | English Willow Cricket Bat | Cricket Bat | 2051 | Cricket | 205 | 1 | U | P | 1 | STATUS | 199.99 | 199.99 | TOTAL | 1 |  | 2019-01-01 00:00:00 | '' | A
+30 | Linseed Oil | Cricket Bat | 2051 | Cricket | 205 | 1 | U | P | 1 | STATUS | 9.99 | 9.99 | TOTAL | 1 |  | 2019-01-01 00:00:00 | '' | A
+31 | Fiber Tape | Cricket Bat | 2051 | Cricket | 205 | 1 | U | P | 1 | STATUS | 8.99 | 8.99 | TOTAL | 1 |  | 2019-01-01 00:00:00 | '' | A
+40 | Team shirt | Cricket Fan Gear | 2054 | Cricket | 205 | 1 | U | P | 1 | STATUS | 44.99 | 44.99 | TOTAL | 1 |  | 2019-01-01 00:00:00 | '' | A
+41 | Team shirt | Cricket Fan Gear | 2054 | Cricket | 205 | 1 | U | P | 1 | STATUS | 44.99 | 44.99 | TOTAL | 1 |  | 2019-01-01 00:00:00 | '' | A
+42 | Team shirt | Cricket Fan Gear | 2054 | Cricket | 205 | 1 | U | P | 1 | STATUS | 44.99 | 44.99 | TOTAL | 1 |  | 2019-01-01 00:00:00 | '' | A
+43 | Team shirt | Cricket Fan Gear | 2054 | Cricket | 205 | 1 | U | P | 1 | STATUS | 44.99 | 44.99 | TOTAL | 1 |  | 2019-01-01 00:00:00 | '' | A
+44 | Team shirt | Cricket Fan Gear | 2054 | Cricket | 205 | 1 | U | P | 1 | STATUS | 44.99 | 44.99 | TOTAL | 1 |  | 2019-01-01 00:00:00 | '' | A
+45 | Team shirt | Cricket Fan Gear | 2054 | Cricket | 205 | 1 | U | P | 1 | STATUS | 44.99 | 44.99 | TOTAL | 1 |  | 2019-01-01 00:00:00 | '' | A
+46 | 2 Competition Grade NFHS Baseballs | Baseballs | 2031 | Baseball | 203 | 1 | U | P | 1 | STATUS | 22.99 | 22.99 | TOTAL | 1 |  | 2019-01-01 00:00:00 | '' | A
+47 | 6 Gallon Empty Ball Bucket | Baseballs | 2031 | Baseball | 203 | 1 | U | P | 1 | STATUS | 28.99 | 28.99 | TOTAL | 1 |  | 2019-01-01 00:00:00 | '' | A
+48 | Indoor Cricket Ball | Cricket | 2055 | Cricket | 205 | 1 | U | P | 1 | STATUS | 11.99 | 11.99 | TOTAL | 1 |  | 2019-01-01 00:00:00 | '' | A
+49 | Outdoor Cricket Ball | Cricket | 2055 | Cricket | 205 | 1 | U | P | 1 | STATUS | 15.99 | 15.99 | TOTAL | 1 |  | 2019-01-01 00:00:00 | '' | A
+50 | Cricket Gloves | Cricket | 2055 | Cricket | 205 | 1 | U | P | 1 | STATUS | 19.99 | 19.99 | TOTAL | 1 |  | 2019-01-01 00:00:00 | '' | A
+51 | Cricket Bat Pad | Cricket | 2055 | Cricket | 205 | 1 | U | P | 1 | STATUS | 29.99 | 29.99 | TOTAL | 1 |  | 2019-01-01 00:00:00 | '' | A
+127 | Genuine Series MIX Wood Bat | Bats | 2036 | Baseball | 203 | 1 | U | P | 1 | STATUS | 36.99 | 36.99 | TOTAL | 1 |  | 2019-01-01 00:00:00 | '' | A
+128 | Slugger Youth Series Maple Bat | Bats | 2036 | Baseball | 203 | 1 | U | P | 1 | STATUS | 27.99 | 27.99 | TOTAL | 1 |  | 2019-01-01 00:00:00 | '' | A
+129 | Pro Maple Bat | Bats | 2036 | Baseball | 203 | 1 | U | P | 1 | STATUS | 192.99 | 192.99 | TOTAL | 1 |  | 2019-01-01 00:00:00 | '' | A
+130 | Pro Maple Youth Bat | Bats | 2036 | Baseball | 203 | 1 | U | P | 1 | STATUS | 89.99 | 89.99 | TOTAL | 1 |  | 2019-01-01 00:00:00 | '' | A
+
+### channels_all  (5 rows, 0.0s)
+channel_id | channel_desc | channel_class | channel_class_id | channel_total | channel_total_id
+2 | Partners | Others | 14 | Channel total | 1
+3 | Direct Sales | Direct | 12 | Channel total | 1
+4 | Internet | Indirect | 13 | Channel total | 1
+5 | Catalog | Indirect | 13 | Channel total | 1
+9 | Tele Sales | Direct | 12 | Channel total | 1
+
+### sales_by_channel  (4 rows, 0.1s)
+channel_id | count(*) | sum(amount_sold) | sum(quantity_sold)
+2 | 258025 | 26346342.32 | 258025
+3 | 540328 | 57875260.6 | 540328
+4 | 118416 | 13706802.03 | 118416
+9 | 2074 | 277426.26 | 2074
+
+### sales_by_promo  (4 rows, 0.1s)
+promo_id | count(*) | sum(amount_sold)
+33 | 2074 | 277426.26
+350 | 18022 | 2199380.9
+351 | 10910 | 1224503.26
+999 | 887837 | 94504520.79
+
+### costs_by_promo_channel  (8 rows, 0.0s)
+promo_id | channel_id | count(*)
+350 | 2 | 531
+350 | 3 | 679
+350 | 4 | 295
+351 | 3 | 2170
+351 | 4 | 12
+999 | 2 | 27104
+999 | 3 | 32255
+999 | 4 | 19066
+
+### promos_used  (4 rows, 0.0s)
+promo_id | promo_name | promo_subcategory | promo_subcategory_id | promo_category | promo_category_id | promo_cost | promo_begin_date | promo_end_date | promo_total | promo_total_id
+33 | post promotion #20-33 | downtown billboard | 20 | post | 9 | 77200.0 | 2019-09-15 | 2019-11-15 | Promotion total | 1
+350 | internet promotion #29-350 | online discount | 29 | internet | 6 | 10700.0 | 2020-01-27 | 2020-04-27 | Promotion total | 1
+351 | TV promotion #13-351 | TV program sponsorship | 13 | TV | 3 | 59200.0 | 2021-02-12 | 2021-03-12 | Promotion total | 1
+999 | NO PROMOTION # | NO PROMOTION | 11 | NO PROMOTION | 2 | 0.0 | 9999-01-01 | 9999-01-01 | Promotion total | 1
+
+### countries_all  (35 rows, 1.0s)
+country_id | country_iso_code | country_name | country_subregion | country_subregion_id | country_region | country_region_id | country_total | country_total_id | n_cust | n_buyers
+52769 | SG | Singapore | Asia | 52793 | Asia | 52802 | World total | 52806 | 597 | 102
+52770 | IT | Italy | Western Europe | 52799 | Europe | 52803 | World total | 52806 | 7780 | 354
+52771 | CN | China | Asia | 52793 | Asia | 52802 | World total | 52806 | 712 | 7
+52772 | CA | Canada | Northern America | 52797 | Americas | 52801 | World total | 52806 | 2010 | 109
+52773 | AR | Argentina | Southern America | 52798 | Americas | 52801 | World total | 52806 | 403 | 26
+52774 | AU | Australia | Australia | 52794 | Oceania | 52805 | World total | 52806 | 831 | 200
+52775 | BR | Brazil | Southern America | 52798 | Americas | 52801 | World total | 52806 | 832 | 24
+52776 | DE | Germany | Western Europe | 52799 | Europe | 52803 | World total | 52806 | 8173 | 745
+52777 | DK | Denmark | Western Europe | 52799 | Europe | 52803 | World total | 52806 | 383 | 102
+52778 | ES | Spain | Western Europe | 52799 | Europe | 52803 | World total | 52806 | 2039 | 106
+52779 | FR | France | Western Europe | 52799 | Europe | 52803 | World total | 52806 | 3833 | 309
+52780 | IE | Ireland | Western Europe | 52799 | Europe | 52803 | World total | 52806 | 0 | 0
+52781 | IN | India | Asia | 52793 | Asia | 52802 | World total | 52806 | 0 | 0
+52782 | JP | Japan | Asia | 52793 | Asia | 52802 | World total | 52806 | 624 | 345
+52783 | MY | Malaysia | Asia | 52793 | Asia | 52802 | World total | 52806 | 0 | 0
+52784 | NL | Netherlands | Western Europe | 52799 | Europe | 52803 | World total | 52806 | 0 | 0
+52785 | NZ | New Zealand | Australia | 52794 | Oceania | 52805 | World total | 52806 | 244 | 3
+52786 | PL | Poland | Eastern Europe | 52795 | Europe | 52803 | World total | 52806 | 708 | 7
+52787 | SA | Saudi Arabia | Middle East | 52796 | Middle East | 52804 | World total | 52806 | 75 | 3
+52788 | TR | Turkey | Western Europe | 52799 | Europe | 52803 | World total | 52806 | 91 | 2
+52789 | GB | United Kingdom | Western Europe | 52799 | Europe | 52803 | World total | 52806 | 7557 | 519
+52790 | US | United States of America | Northern America | 52797 | Americas | 52801 | World total | 52806 | 18520 | 4096
+52791 | ZA | South Africa | Africa | 52792 | Africa | 52800 | World total | 52806 | 88 | 0
+52792 | MX | Mexico | Northern America | 52797 | Americas | 52801 | World total | 52806 | 0 | 0
+52793 | SE | Sweden | Western Europe | 52799 | Europe | 52803 | World total | 52806 | 0 | 0
+52794 | CH | Switzerland | Western Europe | 52799 | Europe | 52803 | World total | 52806 | 0 | 0
+52795 | CL | Chile | Southern America | 52798 | Americas | 52798 | World total | 52806 | 0 | 0
+52796 | TH | Thailand | Asia | 52793 | Asia | 52802 | World total | 52806 | 0 | 0
+52797 | NG | Nigeria | Africa | 52792 | Africa | 52800 | World total | 52806 | 0 | 0
+52798 | EG | Egypt | Middle East | 52796 | Middle East | 52804 | World total | 52806 | 0 | 0
+52799 | ZW | Zimbabwe | Africa | 52792 | Africa | 52800 | World total | 52806 | 0 | 0
+52800 | KW | Kuwait | Middle East | 52796 | Middle East | 52804 | World total | 52806 | 0 | 0
+52801 | IL | Israel | Middle East | 52796 | Middle East | 52804 | World total | 52806 | 0 | 0
+52802 | RO | Romania | Eastern Europe | 52795 | Europe | 52803 | World total | 52806 | 0 | 0
+52803 | HU | Hungary | Eastern Europe | 52795 | Europe | 52803 | World total | 52806 | 0 | 0
+
+### currency_countries  (35 rows, 0.0s)
+country | count(*) | min(year) | max(year) | min(month) | max(month) | min(to_us) | max(to_us) | count(distinct to_us)
+Argentina | 36 | 2019 | 2021 | 1 | 12 | 1.0 | 1.0 | 1
+Australia | 36 | 2019 | 2021 | 1 | 12 | 1.0 | 1.0 | 1
+Brazil | 36 | 2019 | 2021 | 1 | 12 | 1.0 | 1.0 | 1
+Canada | 36 | 2019 | 2021 | 1 | 12 | 0.74 | 0.74 | 1
+Chile | 36 | 2019 | 2021 | 1 | 12 | 1.0 | 1.0 | 1
+China | 36 | 2019 | 2021 | 1 | 12 | 1.0 | 1.0 | 1
+Denmark | 36 | 2019 | 2021 | 1 | 12 | 1.0 | 1.0 | 1
+Egypt | 36 | 2019 | 2021 | 1 | 12 | 1.0 | 1.0 | 1
+France | 36 | 2019 | 2021 | 1 | 12 | 1.0 | 1.0 | 1
+Germany | 36 | 2019 | 2021 | 1 | 12 | 1.0 | 1.0 | 1
+Hungary | 36 | 2019 | 2021 | 1 | 12 | 1.0 | 1.0 | 1
+India | 36 | 2019 | 2021 | 1 | 12 | 1.0 | 1.0 | 1
+Ireland | 36 | 2019 | 2021 | 1 | 12 | 1.0 | 1.0 | 1
+Israel | 36 | 2019 | 2021 | 1 | 12 | 1.0 | 1.0 | 1
+Italy | 36 | 2019 | 2021 | 1 | 12 | 1.0 | 1.0 | 1
+Japan | 36 | 2019 | 2021 | 1 | 12 | 1.0 | 1.0 | 1
+Kuwait | 36 | 2019 | 2021 | 1 | 12 | 1.0 | 1.0 | 1
+Malaysia | 36 | 2019 | 2021 | 1 | 12 | 1.0 | 1.0 | 1
+Mexico | 36 | 2019 | 2021 | 1 | 12 | 1.0 | 1.0 | 1
+Netherlands | 36 | 2019 | 2021 | 1 | 12 | 1.0 | 1.0 | 1
+New Zealand | 36 | 2019 | 2021 | 1 | 12 | 1.0 | 1.0 | 1
+Nigeria | 36 | 2019 | 2021 | 1 | 12 | 1.0 | 1.0 | 1
+Poland | 36 | 2019 | 2021 | 1 | 12 | 1.0 | 1.0 | 1
+Romania | 36 | 2019 | 2021 | 1 | 12 | 1.0 | 1.0 | 1
+Saudi Arabia | 36 | 2019 | 2021 | 1 | 12 | 1.0 | 1.0 | 1
+Singapore | 36 | 2019 | 2021 | 1 | 12 | 1.0 | 1.0 | 1
+South Africa | 36 | 2019 | 2021 | 1 | 12 | 1.0 | 1.0 | 1
+Spain | 36 | 2019 | 2021 | 1 | 12 | 1.0 | 1.0 | 1
+Sweden | 36 | 2019 | 2021 | 1 | 12 | 1.0 | 1.0 | 1
+Switzerland | 36 | 2019 | 2021 | 1 | 12 | 1.0 | 1.0 | 1
+Thailand | 36 | 2019 | 2021 | 1 | 12 | 1.0 | 1.0 | 1
+Turkey | 36 | 2019 | 2021 | 1 | 12 | 1.0 | 1.0 | 1
+United Kingdom | 36 | 2019 | 2021 | 1 | 12 | 1.0 | 1.0 | 1
+United States of Ame | 36 | 2019 | 2021 | 1 | 12 | 1.0 | 1.0 | 1
+Zimbabwe | 36 | 2019 | 2021 | 1 | 12 | 1.0 | 1.0 | 1
+
+### currency_vs_countries  (35 rows, 0.0s)
+country | in_countries
+Singapore | 1
+Italy | 1
+China | 1
+Canada | 1
+Argentina | 1
+Australia | 1
+Brazil | 1
+Germany | 1
+Denmark | 1
+Spain | 1
+France | 1
+Ireland | 1
+India | 1
+Japan | 1
+Malaysia | 1
+Netherlands | 1
+New Zealand | 1
+Poland | 1
+Saudi Arabia | 1
+Turkey | 1
+United Kingdom | 1
+United States of Ame | 0
+South Africa | 1
+Mexico | 1
+Sweden | 1
+Switzerland | 1
+Chile | 1
+Thailand | 1
+Nigeria | 1
+Egypt | 1
+Zimbabwe | 1
+Kuwait | 1
+Israel | 1
+Romania | 1
+Hungary | 1
+
+### currency_sample  (27 rows, 0.0s)
+country | year | month | to_us
+France | 2019 | 1 | 1.0
+France | 2019 | 6 | 1.0
+France | 2019 | 12 | 1.0
+France | 2020 | 1 | 1.0
+France | 2020 | 6 | 1.0
+France | 2020 | 12 | 1.0
+France | 2021 | 1 | 1.0
+France | 2021 | 6 | 1.0
+France | 2021 | 12 | 1.0
+Italy | 2019 | 1 | 1.0
+Italy | 2019 | 6 | 1.0
+Italy | 2019 | 12 | 1.0
+Italy | 2020 | 1 | 1.0
+Italy | 2020 | 6 | 1.0
+Italy | 2020 | 12 | 1.0
+Italy | 2021 | 1 | 1.0
+Italy | 2021 | 6 | 1.0
+Italy | 2021 | 12 | 1.0
+Japan | 2019 | 1 | 1.0
+Japan | 2019 | 6 | 1.0
+Japan | 2019 | 12 | 1.0
+Japan | 2020 | 1 | 1.0
+Japan | 2020 | 6 | 1.0
+Japan | 2020 | 12 | 1.0
+Japan | 2021 | 1 | 1.0
+Japan | 2021 | 6 | 1.0
+Japan | 2021 | 12 | 1.0
+
+### currency_constant_over_months  (40 rows, 0.0s)
+country | year | n_rates
+Argentina | 2019 | 1
+Argentina | 2020 | 1
+Argentina | 2021 | 1
+Australia | 2019 | 1
+Australia | 2020 | 1
+Australia | 2021 | 1
+Brazil | 2019 | 1
+Brazil | 2020 | 1
+Brazil | 2021 | 1
+Canada | 2019 | 1
+Canada | 2020 | 1
+Canada | 2021 | 1
+Chile | 2019 | 1
+Chile | 2020 | 1
+Chile | 2021 | 1
+China | 2019 | 1
+China | 2020 | 1
+China | 2021 | 1
+Denmark | 2019 | 1
+Denmark | 2020 | 1
+Denmark | 2021 | 1
+Egypt | 2019 | 1
+Egypt | 2020 | 1
+Egypt | 2021 | 1
+France | 2019 | 1
+France | 2020 | 1
+France | 2021 | 1
+Germany | 2019 | 1
+Germany | 2020 | 1
+Germany | 2021 | 1
+Hungary | 2019 | 1
+Hungary | 2020 | 1
+Hungary | 2021 | 1
+India | 2019 | 1
+India | 2020 | 1
+India | 2021 | 1
+Ireland | 2019 | 1
+Ireland | 2020 | 1
+Ireland | 2021 | 1
+Israel | 2019 | 1
+
+### currency_typeof  (1 rows, 0.0s)
+typeof(country) | typeof(year) | typeof(month) | typeof(to_us) | count(*)
+text | integer | integer | real | 1260
+
+### currency_rowid_order  (15 rows, 0.0s)
+rowid | country | year | month | to_us
+1 | Singapore | 2019 | 5 | 1.0
+2 | Singapore | 2019 | 6 | 1.0
+3 | Singapore | 2019 | 7 | 1.0
+4 | Singapore | 2019 | 1 | 1.0
+5 | Singapore | 2019 | 2 | 1.0
+6 | Singapore | 2019 | 3 | 1.0
+7 | Singapore | 2019 | 4 | 1.0
+8 | Singapore | 2019 | 8 | 1.0
+9 | Singapore | 2019 | 9 | 1.0
+10 | Singapore | 2020 | 3 | 1.0
+11 | Singapore | 2020 | 4 | 1.0
+12 | Singapore | 2019 | 10 | 1.0
+13 | Singapore | 2019 | 11 | 1.0
+14 | Singapore | 2019 | 12 | 1.0
+15 | Singapore | 2020 | 1 | 1.0
+

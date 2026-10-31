@@ -1,0 +1,338 @@
+### millis_always_zero  (4 rows, 0.00s)
+c | nonzero_ms | n
+rental_date | 0 | 16044
+return_date | 0 | 15861
+payment_date | 0 | 16049
+create_date | 0 | 599
+
+### rental_id_order_breaks  (12 rows, 0.00s)
+rental_id | rental_date | rental_id | rental_date
+11496 | 2006-02-14 15:16:03.000 | 11497 | 2005-08-16 22:52:30.000
+11541 | 2006-02-14 15:16:03.000 | 11542 | 2005-08-17 00:51:32.000
+11563 | 2006-02-14 15:16:03.000 | 11564 | 2005-08-17 01:27:49.000
+11577 | 2006-02-14 15:16:03.000 | 11578 | 2005-08-17 01:54:13.000
+11593 | 2006-02-14 15:16:03.000 | 11594 | 2005-08-17 02:47:02.000
+11611 | 2006-02-14 15:16:03.000 | 11612 | 2005-08-17 03:48:51.000
+11646 | 2006-02-14 15:16:03.000 | 11647 | 2005-08-17 04:54:14.000
+11652 | 2006-02-14 15:16:03.000 | 11653 | 2005-08-17 05:06:10.000
+11657 | 2006-02-14 15:16:03.000 | 11658 | 2005-08-17 05:19:17.000
+11672 | 2006-02-14 15:16:03.000 | 11673 | 2005-08-17 05:54:15.000
+11676 | 2006-02-14 15:16:03.000 | 11677 | 2005-08-17 06:06:26.000
+11709 | 2006-02-14 15:16:03.000 | 11710 | 2005-08-17 07:29:44.000
+
+### rental_id_order_breaks_by_kind  (1 rows, 0.00s)
+next_is_2006 | prev_is_2006 | count(*)
+0 | 1 | 175
+
+### rental_id_order_without_2006  (1 rows, 0.01s)
+count(*) | sum(rental_date >= prev) | sum(rental_date < prev)
+15861 | 15861 | 0
+
+### rental_2006_ids  (1 rows, 0.00s)
+min(rental_id) | max(rental_id) | count(*)
+11496 | 15966 | 182
+
+### same_timestamp_rentals  (10 rows, 0.00s)
+rental_date | count(*)
+2006-02-14 15:16:03.000 | 182
+2005-05-30 14:47:31.000 | 2
+2005-06-20 10:10:29.000 | 2
+2005-06-21 09:04:50.000 | 2
+2005-07-09 14:55:07.000 | 2
+2005-07-10 20:41:41.000 | 2
+2005-07-12 14:22:08.000 | 2
+2005-07-27 08:14:34.000 | 2
+2005-07-27 12:39:48.000 | 2
+2005-07-27 15:18:42.000 | 2
+
+### same_timestamp_rentals_count  (1 rows, 0.00s)
+rows_in_shared | groups
+96 | 48
+
+### same_timestamp_returns  (1 rows, 0.00s)
+groups | rows_
+25 | 50
+
+### return_seconds_equal_rental_seconds  (1 rows, 0.00s)
+n | same_ss | same_mmss
+15861 | 15861 | 260
+
+### return_minus_rental_whole_minutes  (1 rows, 0.00s)
+n | whole_minutes
+15861 | 15861
+
+### daily_counts  (41 rows, 0.00s)
+d | n
+2005-05-24 | 8
+2005-05-25 | 137
+2005-05-26 | 174
+2005-05-27 | 166
+2005-05-28 | 196
+2005-05-29 | 154
+2005-05-30 | 158
+2005-05-31 | 163
+2005-06-14 | 16
+2005-06-15 | 348
+2005-06-16 | 324
+2005-06-17 | 325
+2005-06-18 | 344
+2005-06-19 | 348
+2005-06-20 | 331
+2005-06-21 | 275
+2005-07-05 | 27
+2005-07-06 | 504
+2005-07-07 | 461
+2005-07-08 | 512
+2005-07-09 | 513
+2005-07-10 | 480
+2005-07-11 | 461
+2005-07-12 | 495
+2005-07-26 | 33
+2005-07-27 | 649
+2005-07-28 | 620
+2005-07-29 | 641
+2005-07-30 | 634
+2005-07-31 | 679
+2005-08-01 | 671
+2005-08-02 | 643
+2005-08-16 | 23
+2005-08-17 | 593
+2005-08-18 | 621
+2005-08-19 | 628
+2005-08-20 | 624
+2005-08-21 | 659
+2005-08-22 | 626
+2005-08-23 | 598
+2006-02-14 | 182
+
+### hour_mix  (24 rows, 0.00s)
+h | n | sum(return_date is not null)
+0 | 694 | 693
+1 | 649 | 649
+2 | 630 | 630
+3 | 684 | 684
+4 | 681 | 681
+5 | 648 | 648
+6 | 647 | 647
+7 | 667 | 667
+8 | 696 | 696
+9 | 652 | 652
+10 | 673 | 673
+11 | 663 | 663
+12 | 632 | 632
+13 | 645 | 645
+14 | 653 | 653
+15 | 705 | 705
+16 | 664 | 664
+17 | 634 | 634
+18 | 688 | 688
+19 | 676 | 676
+20 | 658 | 658
+21 | 671 | 671
+22 | 610 | 610
+23 | 642 | 642
+
+### return_hour_mix  (24 rows, 0.00s)
+h | n
+0 | 706
+1 | 668
+2 | 649
+3 | 644
+4 | 677
+5 | 683
+6 | 676
+7 | 685
+8 | 641
+9 | 666
+10 | 653
+11 | 659
+12 | 624
+13 | 614
+14 | 637
+15 | 661
+16 | 688
+17 | 633
+18 | 688
+19 | 682
+20 | 663
+21 | 664
+22 | 647
+23 | 653
+
+### weekday_mix  (7 rows, 0.00s)
+dow | count(*)
+0 | 2320
+1 | 2247
+2 | 2281
+3 | 2231
+4 | 2200
+5 | 2272
+6 | 2311
+
+### rentals_per_customer_per_window  (5 rows, 0.00s)
+m | customers | rentals
+2005-05 | 520 | 1156
+2005-06 | 590 | 2311
+2005-07 | 599 | 6709
+2005-08 | 599 | 5686
+2006-02 | 158 | 182
+
+### open_2006_rows_detail  (1 rows, 0.00s)
+n | customers | items | staff1
+182 | 158 | 182 | 85
+
+### inventory_out_at_2006  (1 rows, 0.00s)
+n | item_free
+182 | 182
+
+### open_2005_rental_item_later  (5 rows, 0.00s)
+rental_id | rental_date | inventory_id | customer_id | return_date | staff_id | last_update
+361 | 2005-05-27 07:03:28.000 | 6 | 587 | 2005-05-31 08:01:28.000 | 1 | 2021-03-06 15:53:43
+3201 | 2005-06-21 00:30:26.000 | 6 | 597 | 2005-06-28 03:42:26.000 | 1 | 2021-03-06 15:54:07
+4390 | 2005-07-07 20:59:06.000 | 6 | 44 | 2005-07-09 00:04:06.000 | 2 | 2021-03-06 15:54:16
+7168 | 2005-07-27 07:51:11.000 | 6 | 252 | 2005-08-01 04:08:11.000 | 2 | 2021-03-06 15:54:39
+14098 | 2005-08-21 00:30:32.000 | 6 | 554 | None | 2 | 2021-03-06 15:55:38
+
+### staff_payment_vs_rental_staff_2006  (4 rows, 0.01s)
+staff_id | staff_id | count(*)
+1 | 1 | 46
+1 | 2 | 39
+2 | 1 | 49
+2 | 2 | 48
+
+### address_text_fields  (1 rows, 0.00s)
+district | phone | count(*) | sum(postal_code is null) | sum(address2 is null)
+  |   | 603 | 4 | 603
+
+### address_null_postal  (4 rows, 0.00s)
+address_id | address | address2 | district | city_id | postal_code | phone | last_update
+1 | 47 MySakila Drive | None |   | 300 | None |   | 2021-03-06 15:51:54
+2 | 28 MySQL Boulevard | None |   | 576 | None |   | 2021-03-06 15:51:54
+3 | 23 Workhaven Lane | None |   | 300 | None |   | 2021-03-06 15:51:54
+4 | 1411 Lillydale Drive | None |   | 576 | None |   | 2021-03-06 15:51:54
+
+### address_trailing_space  (1 rows, 0.00s)
+sum(address <> trim(address)) | sum(city_id is null)
+0 | 0
+
+### names_upper  (2 rows, 0.00s)
+t | not_upper | count(*)
+actor | 0 | 200
+customer | 0 | 599
+
+### email_rule  (1 rows, 0.00s)
+n | rule_ok
+599 | 599
+
+### title_description_shape  (1 rows, 0.00s)
+n | starts_a | title_upper
+1000 | 1000 | 1000
+
+### city_nonascii  (1 rows, 0.00s)
+count(*)
+0
+
+### city_odd  (10 rows, 0.00s)
+city_id | city
+1 | A Corua (La Corua)
+12 | al-Ayn
+13 | al-Hawiya
+14 | al-Manama
+15 | al-Qadarif
+16 | al-Qatif
+18 | Allappuzha (Alleppey)
+71 | Berhampore (Baharampur)
+144 | Dhule (Dhulia)
+190 | guas Lindas de Gois
+
+### film_last_update_vs_film_id  (1 rows, 0.00s)
+count(*)
+0
+
+### language_rows  (6 rows, 0.00s)
+language_id | name | last_update
+1 | English | 2021-03-06 15:51:48
+2 | Italian | 2021-03-06 15:51:48
+3 | Japanese | 2021-03-06 15:51:48
+4 | Mandarin | 2021-03-06 15:51:48
+5 | French | 2021-03-06 15:51:48
+6 | German | 2021-03-06 15:51:48
+
+### staff_rows  (2 rows, 0.00s)
+staff_id | first_name | last_name | address_id | typeof(picture) | email | store_id | active | username | password | last_update
+1 | Mike | Hillyer | 3 | null | Mike.Hillyer@sakilastaff.com | 1 | 1 | Mike | 8cb2237d0679ca88db6464eac60da96345513964 | 2021-03-06 15:52:00
+2 | Jon | Stephens | 4 | null | Jon.Stephens@sakilastaff.com | 2 | 1 | Jon | 8cb2237d0679ca88db6464eac60da96345513964 | 2021-03-06 15:52:00
+
+### store_rows  (2 rows, 0.00s)
+store_id | manager_staff_id | address_id | last_update
+1 | 1 | 1 | 2021-03-06 15:52:00
+2 | 2 | 2 | 2021-03-06 15:52:00
+
+### category_rows  (16 rows, 0.00s)
+category_id | name | last_update
+1 | Action | 2021-03-06 15:52:00
+2 | Animation | 2021-03-06 15:52:00
+3 | Children | 2021-03-06 15:52:00
+4 | Classics | 2021-03-06 15:52:00
+5 | Comedy | 2021-03-06 15:52:00
+6 | Documentary | 2021-03-06 15:52:00
+7 | Drama | 2021-03-06 15:52:00
+8 | Family | 2021-03-06 15:52:00
+9 | Foreign | 2021-03-06 15:52:00
+10 | Games | 2021-03-06 15:52:00
+11 | Horror | 2021-03-06 15:52:00
+12 | Music | 2021-03-06 15:52:00
+13 | New | 2021-03-06 15:52:00
+14 | Sci-Fi | 2021-03-06 15:52:00
+15 | Sports | 2021-03-06 15:52:00
+16 | Travel | 2021-03-06 15:52:00
+
+### affinity_trap  (1 rows, 0.00s)
+lt_2006_bare | lt_2006_full | gt_int
+0 | 15862 | 16044
+
+### windows  (5 rows, 0.02s)
+win | first_ | last_ | n | span_days | start_gap_days
+0 | 2005-05-24 22:53:30.000 | 2005-05-31 22:47:45.000 | 1156 | 6.996 | None
+1 | 2005-06-14 22:53:33.000 | 2005-06-21 22:48:59.000 | 2311 | 6.997 | 21.0
+2 | 2005-07-05 22:49:24.000 | 2005-07-12 22:40:48.000 | 3453 | 6.994 | 20.997
+3 | 2005-07-26 22:51:53.000 | 2005-08-02 22:51:23.000 | 4570 | 7.0 | 21.002
+4 | 2005-08-16 22:51:20.000 | 2005-08-23 22:50:12.000 | 4372 | 6.999 | 21.0
+
+### window_boundary_rental_ids  (5 rows, 0.02s)
+win | min(rental_id) | max(rental_id) | count(*)
+0 | 1 | 1157 | 1156
+1 | 1158 | 3469 | 2311
+2 | 3470 | 6923 | 3453
+3 | 6924 | 11494 | 4570
+4 | 11495 | 16049 | 4372
+
+### rentals_2006_by_window_id_range  (1 rows, 0.00s)
+count(*)
+182
+
+### item_rentals_per_window  (1 rows, 0.01s)
+n | count(*)
+1 | 16044
+
+### windows_per_item  (6 rows, 0.01s)
+win | items | rentals
+0 | 1156 | 1156
+1 | 2311 | 2311
+2 | 3453 | 3453
+3 | 4570 | 4570
+4 | 4372 | 4372
+5 | 182 | 182
+
+### idle_gap_short  (1 rows, 0.01s)
+min_idle_h | count(*)
+120.66527776792645 | 76
+
+### items_2006_also_in_window4  (1 rows, 0.00s)
+items_2006 | also_rented_aug16_23
+182 | 0
+
+### window4_plus_2006_items  (1 rows, 0.00s)
+count(distinct inventory_id)
+4554
+

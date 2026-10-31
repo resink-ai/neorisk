@@ -1,0 +1,28 @@
+salesperson.territoryid (INTEGER): rows=17 value+typeof mismatches after text insert = 0
+salesperson.salesquota (INTEGER): rows=17 value+typeof mismatches after text insert = 0
+product.weight (FLOAT): rows=504 value+typeof mismatches after text insert = 0
+product.productsubcategoryid (INTEGER): rows=504 value+typeof mismatches after text insert = 0
+product.productmodelid (INTEGER): rows=504 value+typeof mismatches after text insert = 0
+salesorderheader.salespersonid (INTEGER): rows=31465 value+typeof mismatches after text insert = 0
+salesorderheader.creditcardid (INTEGER): rows=31465 value+typeof mismatches after text insert = 0
+salesorderheader.currencyrateid (INTEGER): rows=31465 value+typeof mismatches after text insert = 0
+REAL via text salesperson.commissionpct: 0/17 differ
+REAL via text salesperson.salesytd: 0/17 differ
+REAL via text salesperson.saleslastyear: 0/17 differ
+REAL via text product.standardcost: 0/504 differ
+REAL via text product.listprice: 0/504 differ
+REAL via text product.weight: 0/205 differ
+REAL via text salesorderdetail.unitprice: 0/121317 differ
+REAL via text salesorderdetail.unitpricediscount: 0/121317 differ
+REAL via text salesorderheader.subtotal: 0/31465 differ
+REAL via text salesorderheader.taxamt: 0/31465 differ
+REAL via text salesorderheader.freight: 0/31465 differ
+REAL via text salesorderheader.totaldue: 0/31465 differ
+REAL via text salesterritory.salesytd: 0/10 differ
+REAL via text salesterritory.saleslastyear: 0/10 differ
+REAL via text salesterritory.costytd: 0/10 differ
+REAL via text salesterritory.costlastyear: 0/10 differ
+REAL via text currencyrate.averagerate: 0/13532 differ
+REAL via text currencyrate.endofdayrate: 0/13532 differ
+REAL via text SalesPersonQuotaHistory.SalesQuota: 0/163 differ
+total mismatches in mixed columns: 0

@@ -1,0 +1,20 @@
+data/spider2/Pagila.sqlite dbca3837b9965d75fbc2b4af1b2daec57d841f95942e656cea44db997e05da88
+data/spider2/sqlite-sakila.sqlite dbca3837b9965d75fbc2b4af1b2daec57d841f95942e656cea44db997e05da88
+schema objects: 91 91 identical: True
+table                      rows A   rows B   A-B   B-A rowid mism
+actor                         200      200     0     0          0
+address                       603      603     0     0          0
+category                       16       16     0     0          0
+city                          600      600     0     0          0
+country                       109      109     0     0          0
+customer                      599      599     0     0          0
+film                         1000     1000     0     0          0
+film_actor                   5462     5462     0     0          0
+film_category                1000     1000     0     0          0
+film_text                       0        0     0     0          0
+inventory                    4581     4581     0     0          0
+language                        6        6     0     0          0
+payment                     16049    16049     0     0          0
+rental                      16044    16044     0     0          0
+staff                           2        2     0     0          0
+store                           2        2     0     0          0

@@ -1,0 +1,16 @@
+## insert order: source rowid
+  local330_natural: [('/detail/', 9), ('/search_list/', 7), ('/', 2), ('/complete', 2), ('/search_input/', 2)]
+  local331_natural: [('/detail', 33), ('/', 2), ('/detail/', 1)]
+  local360_sessions: ['/detail/', 9]
+## insert order: seq = (event_time, src_rowid)
+  local330_natural: [('/detail/', 9), ('/search_list/', 7), ('/', 2), ('/complete', 2), ('/search_input/', 2)]
+  local331_natural: [('/detail', 33), ('/', 2), ('/detail/', 1)]
+  local360_sessions: ['/detail/', 9]
+## insert order: (event_time, session, src_rowid)
+  local330_natural: [('/detail/', 9), ('/search_list/', 7), ('/', 2), ('/complete', 2), ('/search_input/', 2)]
+  local331_natural: [('/detail', 33), ('/', 2), ('/detail/', 1)]
+  local360_sessions: ['/detail/', 9]
+## insert order: reverse rowid
+  local330_natural: [('/detail', 9), ('/search_list', 7), ('/', 2), ('/complete', 2), ('/search_input', 2)]
+  local331_natural: [('/detail', 33), ('/detail/', 11)]
+  local360_sessions: ['/detail', 9]

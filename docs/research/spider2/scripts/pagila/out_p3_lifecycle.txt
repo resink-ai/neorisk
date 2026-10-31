@@ -1,0 +1,120 @@
+### missing_rental_neighbours  (5 rows, 0.00s)
+missing_id | prev_date | next_date | null_payment_in_gap
+321 | 2005-05-27 00:09:24.000 | 2005-05-27 00:47:35.000 | 15458:577@2005-05-27 00:46:39.000
+2247 | 2005-06-18 04:54:29.000 | 2005-06-18 04:59:48.000 | 424:16@2005-06-18 04:56:12.000
+6579 | 2005-07-12 06:15:41.000 | 2005-07-12 06:26:10.000 | 10840:401@2005-07-12 06:26:10.000
+9426 | 2005-07-30 21:11:21.000 | 2005-07-30 21:16:33.000 | 14675:546@2005-07-30 21:16:20.000
+15592 | 2005-08-23 06:11:52.000 | 2005-08-23 06:15:09.000 | 7011:259@2005-08-23 06:13:16.000
+
+### rental_id_vs_date_order  (1 rows, 0.00s)
+pairs | nondecreasing | increasing
+16043 | 15868 | 15813
+
+### rental_rowid_vs_id  (1 rows, 0.00s)
+n | rowid_eq_id
+16044 | 320
+
+### payment_id_order  (1 rows, 0.00s)
+pairs | cust_then_date | same_customer | cust_decrease
+16048 | 16048 | 15450 | 0
+
+### payment_order_violations  (0 rows, 0.00s)
+payment_id | customer_id | payment_date | payment_id | customer_id | payment_date
+
+### payment_date_vs_rental_date  (1 rows, 0.01s)
+n | equal | after | before
+16044 | 16044 | 0 | 0
+
+### payment_after_rental_detail  (0 rows, 0.01s)
+payment_id | rental_id | rental_date | payment_date | return_date | amount | gap_h
+
+### payment_date_neq_rental_by_month  (5 rows, 0.01s)
+m | n | neq
+2005-05 | 1156 | 0
+2005-06 | 2311 | 0
+2005-07 | 6709 | 0
+2005-08 | 5686 | 0
+2006-02 | 182 | 0
+
+### return_null_by_month  (5 rows, 0.00s)
+m | n | open_ | min(rental_date) | max(rental_date)
+2005-05 | 1156 | 0 | 2005-05-24 22:53:30.000 | 2005-05-31 22:47:45.000
+2005-06 | 2311 | 0 | 2005-06-14 22:53:33.000 | 2005-06-21 22:48:59.000
+2005-07 | 6709 | 0 | 2005-07-05 22:49:24.000 | 2005-07-31 23:57:43.000
+2005-08 | 5686 | 1 | 2005-08-01 00:00:44.000 | 2005-08-23 22:50:12.000
+2006-02 | 182 | 182 | 2006-02-14 15:16:03.000 | 2006-02-14 15:16:03.000
+
+### return_null_by_day_2006  (1 rows, 0.00s)
+d | count(*) | sum(return_date is null)
+2006-02-14 | 182 | 182
+
+### open_rentals_before_2006  (1 rows, 0.00s)
+rental_id | rental_date | inventory_id | customer_id | return_date | staff_id | last_update | rental_duration
+14098 | 2005-08-21 00:30:32.000 | 6 | 554 | None | 2 | 2021-03-06 15:55:38 | 6
+
+### open_rentals_split  (2 rows, 0.00s)
+pre2006 | count(*)
+0 | 182
+1 | 1
+
+### return_before_rental  (1 rows, 0.00s)
+count(*)
+0
+
+### rental_days_hist  (10 rows, 0.00s)
+d | count(*)
+0 | 846
+1 | 1829
+2 | 1713
+3 | 1694
+4 | 1757
+5 | 1767
+6 | 1758
+7 | 1832
+8 | 1771
+9 | 894
+
+### rental_hours_quantiles  (1 rows, 0.01s)
+min(h) | max(h) | avg(h) | p05 | p25 | p50 | p75 | p95
+18.0 | 221.98333333432674 | 120.60792825167464 | 23.66666666418314 | 68.84999999776483 | 120.56666666641831 | 171.46666667237878 | 216.65000000596046
+
+### overlap_same_inventory  (1 rows, 0.01s)
+consecutive_pairs | next_before_return | open_then_rented
+11464 | 0 | 0
+
+### overlap_examples  (0 rows, 0.01s)
+rental_id | inventory_id | rental_date | return_date | next_rental | next_id
+
+### idle_gap_hist  (3 rows, 0.02s)
+b | count(*)
+3-7d | 76
+30d+ | 195
+7-30d | 11193
+
+### customer_concurrent_out  (16 rows, 0.09s)
+k | count(*)
+1 | 3344
+2 | 3188
+3 | 2804
+4 | 2376
+5 | 1716
+6 | 1148
+7 | 696
+8 | 382
+9 | 209
+10 | 111
+11 | 37
+12 | 21
+13 | 8
+14 | 2
+15 | 1
+16 | 1
+
+### return_vs_rental_duration  (5 rows, 0.01s)
+rental_duration | n | late | avg_days
+3 | 3366 | 2426 | 5.025
+4 | 3213 | 1987 | 5.057
+5 | 3132 | 1572 | 4.983
+6 | 3352 | 1323 | 5.026
+7 | 2798 | 813 | 5.036
+

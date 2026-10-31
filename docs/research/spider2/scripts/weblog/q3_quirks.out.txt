@@ -1,0 +1,245 @@
+### activity_variant_counts  (3 rows)
+v | n | trailing_slash | empty_path | root_path | sessions | paths
+'A' | 64 | 56 | 0 | 8 | 16 | '/search_list/,/search_input/,/detail/,/'
+'B' | 108 | 0 | 12 | 0 | 16 | '/search_list,/search_input,/detail,,/input,/confirm,/complete'
+'C' | 72 | 0 | 0 | 8 | 16 | '/search_list,/search_input,/detail,/,/input,/confirm,/complete'
+
+### activity_A_vs_B_normalised  (1 rows)
+n_a | n_b | common | only_a | only_b
+32 | 36 | 30 | '9afaf87c 2017-01-09 12:21:39 /detail; 9afaf87c 2017-01-09 12:22:52 /search_list' | '8cc03a54 2017-01-09 12:18:44 /input Area-L; 8cc03a54 2017-01-09 12:18:45 /confirm Area-L; 8cc03a54 2017-01-09 12:18:46 /complete Area-L; 9afaf87c 2017-01-09 12:21:39 /input ; 9afaf87c 2017-01-09 12:22:52 /confirm ; 9afaf87c 2017-01-09 12:23:00 /complete '
+
+### activity_B_vs_C  (1 rows)
+b_not_c | c_not_b
+0 | 0
+
+### rowid_time_descents  (7 rows)
+t | n | same_session_pairs | descents_within_session | descents_at_session_change
+'access_log(ok)' | 11 | 7 | 0 | 0
+'action_log' | 120 | 96 | 6 | 5
+'activity_log' | 244 | 132 | 0 | 47
+'dup_action_log' | 11 | 1 | 0 | 0
+'form_error_log' | 8 | 3 | 0 | 2
+'form_log' | 45 | 24 | 0 | 8
+'read_log' | 15 | 9 | 0 | 3
+
+### action_log_block_order  (20 rows)
+rowid | session | action | products | stamp
+1 | '989004ea' | 'purchase' | 'D001,D002' | '2016-11-03 18:10:00'
+2 | '989004ea' | 'view' | None | '2016-11-03 18:00:00'
+3 | '989004ea' | 'favorite' | 'D001' | '2016-11-03 18:00:00'
+4 | '989004ea' | 'review' | 'D001' | '2016-11-03 18:00:00'
+5 | '989004ea' | 'add_cart' | 'D001' | '2016-11-03 18:00:00'
+6 | '989004ea' | 'add_cart' | 'D001' | '2016-11-03 18:00:00'
+7 | '989004ea' | 'add_cart' | 'D001' | '2016-11-03 18:00:00'
+8 | '989004ea' | 'add_cart' | 'D001' | '2016-11-03 18:00:00'
+9 | '989004ea' | 'add_cart' | 'D001' | '2016-11-03 18:00:00'
+10 | '989004ea' | 'add_cart' | 'D002' | '2016-11-03 18:01:00'
+11 | '989004ea' | 'add_cart' | 'D001,D002' | '2016-11-03 18:02:00'
+12 | '989004ea' | 'purchase' | 'D001,D002' | '2016-11-03 18:10:00'
+13 | '47db0370' | 'add_cart' | 'D001' | '2016-11-03 19:00:00'
+14 | '47db0370' | 'purchase' | 'D001' | '2016-11-03 20:00:00'
+15 | '47db0370' | 'add_cart' | 'D002' | '2016-11-03 20:30:00'
+16 | '87b5725f' | 'add_cart' | 'A004' | '2016-11-04 12:00:00'
+17 | '87b5725f' | 'add_cart' | 'A005' | '2016-11-04 12:00:00'
+18 | '87b5725f' | 'add_cart' | 'A006' | '2016-11-04 12:00:00'
+19 | '9afaf87c' | 'purchase' | 'D002' | '2016-11-04 13:00:00'
+20 | '9afaf87c' | 'purchase' | 'A005,A006' | '2016-11-04 15:00:00'
+
+### ties_within_session  (4 rows)
+t | groups | tied_groups | rows_in_ties | ties_with_different_content
+'action_log' | 10 | 10 | 120 | 2
+'activity_log' | 36 | 36 | 244 | 32
+'form_error_log' | 7 | 1 | 2 | 1
+'form_log' | 15 | 15 | 45 | 0
+
+### ties_within_session_one_copy  (3 rows)
+t | groups | tied_groups | rows_in_ties
+'action_log 1-20' | 10 | 3 | 13
+'activity_log B' | 36 | 0 | None
+'form_log 1-15' | 15 | 0 | None
+
+### activity_session_starts  (3 rows)
+v | sessions | start_at_121843
+'A' | 16 | 16
+'B' | 16 | 16
+'C' | 16 | 16
+
+### activity_gaps  (18 rows)
+gap_s | n
+1.0 | 3
+8.0 | 1
+21.0 | 1
+24.0 | 1
+28.0 | 1
+36.0 | 1
+40.0 | 1
+44.0 | 1
+59.0 | 1
+64.0 | 1
+66.0 | 1
+72.0 | 1
+73.0 | 1
+81.0 | 1
+82.0 | 1
+85.0 | 1
+95.0 | 1
+99.0 | 1
+
+### activity_events_per_session_B  (6 rows)
+n | sessions
+1 | 9
+2 | 2
+3 | 1
+4 | 2
+5 | 1
+7 | 1
+
+### activity_vocab  (29 rows)
+option | path | search_type | n
+'detail' | '/detail' | '' | 55
+'page' | '/search_input' | '' | 25
+'detail' | '/detail/' | '' | 24
+'page' | '/' | '' | 16
+'page' | '' | '' | 12
+'page' | '/search_input/' | '' | 10
+'search' | '/search_list' | 'Area-S' | 10
+'search' | '/search_list' | 'Pref' | 10
+'page' | '/complete' | '' | 5
+'page' | '/complete' | 'Area-L' | 5
+'page' | '/confirm' | '' | 5
+'page' | '/confirm' | 'Area-L' | 5
+'page' | '/input' | '' | 5
+'page' | '/input' | 'Area-L' | 5
+'search' | '/search_list' | '' | 5
+'search' | '/search_list' | 'Area-L' | 5
+'search' | '/search_list' | 'Area-L-with-Job' | 5
+'search' | '/search_list' | 'Line' | 5
+'search' | '/search_list' | 'Pref-with-Job' | 5
+'search' | '/search_list' | 'Station-with-Job' | 5
+'search' | '/search_list/' | 'Area-S' | 4
+'search' | '/search_list/' | 'Pref' | 4
+'search' | '/search_list/' | '' | 2
+'search' | '/search_list/' | 'Area-L' | 2
+'search' | '/search_list/' | 'Area-L-with-Job' | 2
+'search' | '/search_list/' | 'Line' | 2
+'search' | '/search_list/' | 'Line-with-Job' | 2
+'search' | '/search_list/' | 'Pref-with-Job' | 2
+'search' | '/search_list/' | 'Station-with-Job' | 2
+
+### action_log_vocab  (13 rows)
+action | category | products | amount | n
+'add_cart' | 'drama' | 'D001' | None | 36
+'add_cart' | 'drama' | 'D002' | None | 12
+'purchase' | 'drama' | 'D001,D002' | 2000 | 12
+'add_cart' | 'action' | 'A004' | None | 6
+'add_cart' | 'action' | 'A005' | None | 6
+'add_cart' | 'action' | 'A006' | None | 6
+'add_cart' | 'drama' | 'D001,D002' | None | 6
+'favorite' | 'drama' | 'D001' | None | 6
+'purchase' | 'action' | 'A005,A006' | 1000 | 6
+'purchase' | 'drama' | 'D001' | 1000 | 6
+'purchase' | 'drama' | 'D002' | 1000 | 6
+'review' | 'drama' | 'D001' | None | 6
+'view' | None | None | None | 6
+
+### purchase_amount_vs_products  (4 rows)
+products | amount | n_products | n
+'A005,A006' | 1000 | 2 | 6
+'D001' | 1000 | 1 | 6
+'D001,D002' | 2000 | 2 | 12
+'D002' | 1000 | 1 | 6
+
+### form_log_flow  (7 rows)
+session | flow
+'647219c7' | '00:56:08 /regist/input'
+'9b5f320f' | '00:56:08 /cart/input > 00:57:04 /regist/confirm[error] > 00:57:56 /regist/confirm[error] > 00:58:50 /regist/confirm[error] > 01:00:19 /regist/confirm[error]'
+'8e9afadc' | '00:56:08 /contact/input'
+'46b4c72c' | '00:56:08 /regist/input > 00:57:31 /regist/confirm'
+'539eb753' | '00:56:08 /contact/input'
+'42532886' | '00:56:08 /contact/input'
+'b2dbcc54' | '00:56:08 /contact/input > 00:57:48 /contact/confirm[error] > 00:58:58 /contact/confirm > 01:00:06 /contact/complete'
+
+### form_status_counts  (2 rows)
+status | n
+'' | 30
+'error' | 15
+
+### form_error_vocab  (7 rows)
+form | field | error_type | value | n
+'cart' | 'email' | 'format_error' | 'xxx---.co.jp' | 1
+'cart' | 'tel' | 'format_error' | '03-99999999' | 1
+'regist' | 'email' | 'format_error' | 'xxx@---cojp' | 1
+'regist' | 'email' | 'require' | '' | 1
+'regist' | 'kana' | 'not_kana' | '山田 太郎' | 1
+'regist' | 'kana' | 'require' | '' | 2
+'regist' | 'zip' | 'format_error' | '101-' | 1
+
+### read_log_flow  (6 rows)
+session | url | steps | n | span_s
+'afbd3d09' | 'http://www.example.com/article?id=news341' | 'view@45:47' | 1 | 0.0
+'df6eb25d' | 'http://www.example.com/article?id=news731' | 'view@45:47 read-20%@45:56 read-40%@46:05 read-60%@46:13 read-80%@46:22 read-100%@46:25' | 6 | 37.999995052814484
+'77d477cc' | 'http://www.example.com/article?id=it605' | 'view@45:47 read-20%@45:49' | 2 | 2.0000293850898743
+'a80ded24' | 'http://www.example.com/article?id=trend925' | 'view@45:47' | 1 | 0.0
+'76c67c39' | 'http://www.example.com/article?id=trend925' | 'view@45:47 read-20%@45:54 read-40%@45:59 read-60%@46:08' | 4 | 21.000006794929504
+'08962ace' | 'http://www.example.com/article?id=trend132' | 'view@45:47' | 1 | 0.0
+
+### read_depth_distribution  (4 rows)
+max_depth | sessions
+0 | 3
+20 | 1
+60 | 1
+100 | 1
+
+### mst_users_mix_variant  (12 rows)
+v | sex | register_device | n
+'V1' | 'F' | 'app' | 6
+'V1' | 'F' | 'pc' | 6
+'V1' | 'F' | 'sp' | 3
+'V1' | 'M' | 'app' | 5
+'V1' | 'M' | 'pc' | 5
+'V1' | 'M' | 'sp' | 5
+'V2' | 'F' | 'app' | 6
+'V2' | 'F' | 'pc' | 6
+'V2' | 'F' | 'sp' | 3
+'V2' | 'M' | 'app' | 5
+'V2' | 'M' | 'pc' | 5
+'V2' | 'M' | 'sp' | 5
+
+### mst_users_withdraw  (3 rows)
+user_id | register_date | withdraw_date | n
+'U002' | '2016-10-01' | '2016-10-10' | 16
+'U006' | '2016-10-01' | '2016-10-10' | 7
+'U006' | '2016-10-10' | '2016-10-10' | 9
+
+### mst_users_register_by_month_V1  (2 rows)
+m | n
+'2016-10' | 14
+'2016-11' | 16
+
+### birth_year_hist  (6 rows)
+decade | users
+'1950s' | 8
+'1960s' | 4
+'1970s' | 4
+'1980s' | 3
+'1990s' | 6
+'2000s' | 5
+
+### activity_B_option_mix  (3 rows)
+option | n
+'detail' | 11
+'page' | 15
+'search' | 10
+
+### action_log_one_copy_mix  (5 rows)
+action | n
+'add_cart' | 12
+'favorite' | 1
+'purchase' | 5
+'review' | 1
+'view' | 1
+
+### activity_gap_median  (1 rows)
+n | median_s
+20 | 51.5
+

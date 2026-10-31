@@ -1,0 +1,18 @@
+sql/local141.sql: HTTP 404, 14 bytes
+exec_result/local141_a.csv: HTTP 200, 1771 bytes
+exec_result/local141_b.csv: HTTP 200, 2915 bytes
+local141 rows: 58
+gold rows: b=58 a=62
+gold_b keys not in inner-join answer: []
+inner-join answer matches local141_b.csv on the shared keys: 58/58
+   (274, 2011, 32567.9155, 126000.0, -93432.0845)
+   (274, 2012, 516197.368, 471000.0, 45197.36800000002)
+   (274, 2013, 485880.642, 521000.0, -35119.35800000001)
+   (274, 2014, 201288.5196, 187000.0, 14288.5196)
+   (290, 2013, 2987333.7048, 3430000.0, -442666.29520000005)
+   (290, 2014, 977724.7663, 908000.0, 69724.76630000002)
+salesperson-years with sales but no quota row: 0
+local141_a rows per key > 1: {}
+local141_a keys: 62
+local141_a salesperson keys whose difference matches the totaldue answer: 58/58
+local141_a rows with an empty salesperson (year, gold, sum(totaldue) of orders without one): [('2011', 4268747.9012, 4268747.9012, True), ('2012', 7061613.0707, 7061613.0707, True), ('2013', 11859001.0301, 11859001.0301, True), ('2014', 9251977.1208, 9251977.1208, True)]

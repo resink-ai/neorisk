@@ -1,0 +1,85 @@
+### local329  (1 rows)
+n
+1
+
+### local330_natural  (5 rows)
+path | n
+'/detail/' | 9
+'/search_list/' | 7
+'/' | 2
+'/complete' | 2
+'/search_input/' | 2
+
+### local330_rowid_asc  (5 rows)
+path | n
+'/detail/' | 9
+'/search_list/' | 7
+'/' | 2
+'/complete' | 2
+'/search_input/' | 2
+
+### local330_strict_order  (8 rows)
+path | n
+'/detail/' | 8
+'/detail' | 7
+'/search_list/' | 7
+'/search_list' | 3
+'/' | 2
+'/complete' | 2
+'/search_input' | 2
+'/search_input/' | 1
+
+### local331_natural  (3 rows)
+third_page | n
+'/detail' | 33
+'/' | 2
+'/detail/' | 1
+
+### local331_rowid_desc  (2 rows)
+third_page | n
+'/detail' | 33
+'/detail/' | 11
+
+### local331_dedup  (0 rows)
+third_page | n
+
+### local358_by_reference_year  (10 rows)
+ref | s20 | s30 | s40 | s50 | others
+2016 | 88 | 24 | 24 | 56 | 128
+2017 | 56 | 40 | 40 | 48 | 136
+2018 | 48 | 48 | 40 | 40 | 144
+2019 | 48 | 40 | 40 | 40 | 152
+2020 | 48 | 40 | 40 | 40 | 152
+2021 | 48 | 48 | 40 | 40 | 144
+2022 | 48 | 56 | 32 | 40 | 144
+2023 | 32 | 72 | 32 | 40 | 144
+2024 | 32 | 88 | 32 | 32 | 136
+2025 | 32 | 88 | 32 | 16 | 152
+
+### local358_exact_age_on_date  (5 rows)
+ref | s20 | s30 | s40 | s50 | others
+'2017-01-01' | 88 | 24 | 24 | 56 | 128
+'2024-01-01' | 32 | 72 | 32 | 40 | 144
+'2024-06-30' | 16 | 88 | 32 | 32 | 152
+'2024-10-01' | 16 | 88 | 32 | 32 | 152
+'2025-01-01' | 32 | 88 | 32 | 32 | 136
+
+### local360_sessions  (9 rows)
+session | n_pre | path | search_type
+'1cf7678e' | 0 | '/detail/' | ''
+'3efe001c' | 0 | '/detail/' | ''
+'5d5b0997' | 0 | '/detail/' | ''
+'5eb2e107' | 0 | '/detail/' | ''
+'87b5725f' | 0 | '/detail/' | ''
+'9afaf87c' | 0 | '/detail/' | ''
+'d45ec190' | 0 | '/detail/' | ''
+'eee2bb21' | 0 | '/detail/' | ''
+'fe05e1d8' | 0 | '/detail/' | ''
+
+### local331_norm_slash  (4 rows)
+third_page | n
+'/detail' | 57
+'/' | 2
+'/input' | 1
+'/search_list' | 1
+

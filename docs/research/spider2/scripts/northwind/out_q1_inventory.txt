@@ -1,0 +1,165 @@
+### row_counts  (15 rows, 0.00s)
+t | n
+categories | 8
+customercustomerdemo | 0
+customerdemographics | 0
+customers | 91
+employees | 9
+employeeterritories | 49
+order_details | 2155
+orders | 830
+products | 77
+region | 4
+shippers | 6
+suppliers | 29
+territories | 53
+usstates | 51
+customergroupthreshold | 4
+
+### sqlite_master  (15 rows, 0.00s)
+type | name
+table | categories
+table | customercustomerdemo
+table | customerdemographics
+table | customers
+table | employees
+table | employeeterritories
+table | order_details
+table | orders
+table | products
+table | region
+table | shippers
+table | suppliers
+table | territories
+table | usstates
+table | customergroupthreshold
+
+### key_uniqueness  (15 rows, 0.00s)
+k | n | d
+categories.categoryid | 8 | 8
+customers.customerid | 91 | 91
+employees.employeeid | 9 | 9
+employeeterritories(e,t) | 49 | 49
+employeeterritories.territoryid | 49 | 49
+order_details(o,p) | 2155 | 2155
+orders.orderid | 830 | 830
+products.productid | 77 | 77
+region.regionid | 4 | 4
+shippers.shipperid | 6 | 6
+suppliers.supplierid | 29 | 29
+territories.territoryid | 53 | 53
+usstates.stateid | 51 | 51
+usstates.stateabbr | 51 | 51
+customergroupthreshold.groupname | 4 | 4
+
+### id_ranges  (6 rows, 0.00s)
+t | min(orderid) | max(orderid) | count(*)
+orders | 10248 | 11077 | 830
+products | 1 | 77 | 77
+employees | 1 | 9 | 9
+suppliers | 1 | 29 | 29
+shippers | 1 | 6 | 6
+usstates | 1 | 51 | 51
+
+### rowid_order  (4 rows, 0.00s)
+t | pairs | incr
+orders by orderid | 829 | 829
+order_details by (o,p) | 2154 | 2154
+customers by id | 90 | 90
+territories by id | 52 | 52
+
+### typeof_columns  (23 rows, 0.00s)
+c | t | count(*)
+orders.orderdate | text | 830
+orders.requireddate | text | 830
+orders.shippeddate | null | 21
+orders.shippeddate | text | 809
+orders.freight | real | 830
+orders.shipvia | integer | 830
+orders.employeeid | integer | 830
+orders.shipregion | null | 507
+orders.shipregion | text | 323
+orders.shippostalcode | null | 19
+orders.shippostalcode | text | 811
+order_details.unitprice | real | 2155
+order_details.discount | real | 2155
+order_details.quantity | integer | 2155
+products.unitprice | real | 77
+categories.picture | text | 8
+employees.photo | text | 9
+employees.birthdate | text | 9
+employees.reportsto | integer | 8
+employees.reportsto | null | 1
+customergroupthreshold.rangebottom | integer | 4
+customergroupthreshold.rangetop | real | 4
+territories.territoryid | text | 53
+
+### date_formats  (6 rows, 0.00s)
+c | len | count(*)
+orderdate | 10 | 830
+requireddate | 10 | 830
+shippeddate | None | 21
+shippeddate | 10 | 809
+birthdate | 10 | 9
+hiredate | 10 | 9
+
+### null_vs_empty  (14 rows, 0.00s)
+c | nulls | empties
+orders.shipregion | 507 | 0
+orders.shippostalcode | 19 | 0
+orders.shippeddate | 21 | 0
+orders.customerid | 0 | 0
+customers.region | 60 | 0
+customers.fax | 22 | 0
+customers.postalcode | 1 | 0
+suppliers.region | 20 | 0
+suppliers.fax | 16 | 0
+suppliers.homepage | 24 | 0
+employees.region | 4 | 0
+employees.reportsto | 1 | 0
+usstates.stateregion | 0 | 0
+categories.description | 0 | 0
+
+### blobs  (2 rows, 0.00s)
+c | len | h | count(*)
+categories.picture | 2 | 5C78 | 8
+employees.photo | 2 | 5C78 | 9
+
+### whitespace  (5 rows, 0.00s)
+c | trailing | maxlen
+territories.territorydescription | 0 | 16
+region.regiondescription | 0 | 8
+employees.notes | 0 | 448
+customers.* | 0 | 0
+orders.ship* | 0 | 0
+
+### territory_desc_truncation  (12 rows, 0.00s)
+territoryid | d | length(territorydescription)
+48304 | [Bloomfield Hills] | 16
+80909 | [Colorado Springs] | 16
+60179 | [Hoffman Estates] | 15
+94105 | [San Francisco] | 13
+19428 | [Philadelphia] | 12
+90405 | [Santa Monica] | 12
+55439 | [Minneapolis] | 11
+72716 | [Bentonville] | 11
+95054 | [Santa Clara] | 11
+02903 | [Providence] | 10
+03801 | [Portsmouth] | 10
+07960 | [Morristown] | 10
+
+### region_desc  (4 rows, 0.00s)
+regionid | '[' || regiondescription || ']' | length(regiondescription)
+1 | [Eastern] | 7
+2 | [Western] | 7
+3 | [Northern] | 8
+4 | [Southern] | 8
+
+### photopath_typo  (5 rows, 0.00s)
+photopath | count(*)
+http://accweb/emmployees/buchanan.bmp | 1
+http://accweb/emmployees/davolio.bmp | 5
+http://accweb/emmployees/fuller.bmp | 1
+http://accweb/emmployees/leverling.bmp | 1
+http://accweb/emmployees/peacock.bmp | 1
+

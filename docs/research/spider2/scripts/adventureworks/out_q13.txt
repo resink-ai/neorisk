@@ -1,0 +1,13 @@
+  31465/31465   subtotal = (sum(up4*qty*(100-disc100)) + 50) div 100, / 1e4
+  31465/31465   totaldue = (subtotal4 + taxamt4 + freight4) / 1e4
+  27659/27659   online taxamt = round_half_up(subtotal4 * 8 / 100)
+  27659/27659   online freight = round_half_up(taxamt4 * 5 / 16)
+  31465/31465   duedate = shipdate + 5 d
+  31465/31465   header.modifieddate = shipdate
+  31465/31465   status = '5' (text)
+  31465/31465   comment = ''
+ 121317/121317  detail.modifieddate = header.orderdate
+  31465/31465   salesorderid = 43658 + rank(orderdate, id)
+    163/163     quota ModifiedDate = QuotaDate - 45 d
+  13532/13532   rate modifieddate = currencyratedate, except USD = '2014-01-02 17:39:45.26'
+      4/4       review modifieddate = reviewdate, modifeddate NULL

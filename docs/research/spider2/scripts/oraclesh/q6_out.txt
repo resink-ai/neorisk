@@ -1,0 +1,57 @@
+### rule_vs_table  (1 rows, 0.0s)
+n_rule | n_table | rule_minus_table | table_minus_rule
+1260 | 1260 | 0 | 0
+
+### rowid_order_groups  (8 rows, 0.0s)
+country | first_rowid | last_rowid
+Singapore | 1 | 36
+Italy | 37 | 72
+China | 73 | 108
+Canada | 109 | 144
+Argentina | 145 | 180
+Australia | 181 | 216
+Brazil | 217 | 252
+Germany | 253 | 288
+
+### rowid_country_contiguous  (1 rows, 0.0s)
+n_countries | contiguous
+35 | 35
+
+### country_order_vs_id  (35 rows, 0.0s)
+country | country_id | first_rowid
+Singapore | 52769 | 1
+Italy | 52770 | 37
+China | 52771 | 73
+Canada | 52772 | 109
+Argentina | 52773 | 145
+Australia | 52774 | 181
+Brazil | 52775 | 217
+Germany | 52776 | 253
+Denmark | 52777 | 289
+Spain | 52778 | 325
+France | 52779 | 361
+Ireland | 52780 | 397
+India | 52781 | 433
+Japan | 52782 | 469
+Malaysia | 52783 | 505
+Netherlands | 52784 | 541
+New Zealand | 52785 | 577
+Poland | 52786 | 613
+Saudi Arabia | 52787 | 649
+Turkey | 52788 | 685
+United Kingdom | 52789 | 721
+United States of Ame | 52790 | 757
+South Africa | 52791 | 793
+Mexico | 52792 | 829
+Sweden | 52793 | 865
+Switzerland | 52794 | 901
+Chile | 52795 | 937
+Thailand | 52796 | 973
+Nigeria | 52797 | 1009
+Egypt | 52798 | 1045
+Zimbabwe | 52799 | 1081
+Kuwait | 52800 | 1117
+Israel | 52801 | 1153
+Romania | 52802 | 1189
+Hungary | 52803 | 1225
+

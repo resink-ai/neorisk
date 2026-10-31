@@ -1,0 +1,7 @@
+orders.freight: n=830 float4_9g_fixpoint=830 plain_decimal_double=38 rebuilt_from_int_units(scale 100)=830 sig_digits={2: 6, 3: 11, 4: 17, 5: 4, 8: 10, 9: 782}
+order_details.unitprice: n=2155 float4_9g_fixpoint=2155 plain_decimal_double=1286 rebuilt_from_int_units(scale 100)=2155 sig_digits={2: 189, 3: 1024, 4: 73, 8: 41, 9: 828}
+order_details.discount: n=2155 float4_9g_fixpoint=2155 plain_decimal_double=1471 rebuilt_from_int_units(scale 100)=2155 sig_digits={0: 1317, 2: 154, 9: 684}
+products.unitprice: n=77 float4_9g_fixpoint=77 plain_decimal_double=60 rebuilt_from_int_units(scale 100)=77 sig_digits={2: 7, 3: 47, 4: 6, 9: 17}
+customergroupthreshold.rangetop: n=4 float4_9g_fixpoint=0 plain_decimal_double=1 rebuilt_from_int_units(scale 10000)=0 sig_digits={7: 1, 8: 2, 16: 1}
+freight examples (float64 repr): [(10248, '32.3800011', 32.38), (10249, '11.6099997', 11.61), (10250, '65.8300018', 65.83), (10251, '41.3400002', 41.34), (10252, '51.2999992', 51.3)]
+order_details: line net on cent grid as stored floats=870/2155; with exact cents and pct=2074/2155

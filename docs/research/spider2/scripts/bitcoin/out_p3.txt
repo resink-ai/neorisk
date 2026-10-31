@@ -1,0 +1,8 @@
+local156_a.csv   vs local156_no_fee    rows mine=20 gold=20 match=True
+local156_d.csv   vs local156_no_fee    rows mine=20 gold=20 match=True
+local156_b.csv   vs local156_with_fee  rows mine=20 gold=20 match=True
+local156_c.csv   vs local156_with_fee  rows mine=20 gold=20 match=True
+local156_b.csv   vs local156_no_fee    rows mine=20 gold=20 match=False
+local157_c.csv   vs local157           rows mine=20 gold=20 match=True
+local157_a.csv   vs local157 (08-01 null) rows mine=20 gold=20 match=True
+local157_b.csv   vs local157 (no 08-01) rows mine=18 gold=18 match=True

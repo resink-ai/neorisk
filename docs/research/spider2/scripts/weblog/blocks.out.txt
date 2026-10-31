@@ -1,0 +1,98 @@
+access_log: 30 rows, no repeated block
+action_log: 120 rows: rows 1-4 once; rows 5-9 = 5 x block of 1; rows 10-20 once; rows 21-120 = 5 x block of 20
+action_log_with_ip: 12 rows, no repeated block
+action_log_with_noise: 0 rows, no repeated block
+activity_log: 244 rows: rows 1-64 = 2 x block of 32; rows 65-172 = 3 x block of 36; rows 173-244 = 2 x block of 36
+app1_mst_users: 2 rows, no repeated block
+app2_mst_users: 2 rows, no repeated block
+dup_action_log: 11 rows, no repeated block
+form_error_log: 8 rows, no repeated block
+form_log: 45 rows: rows 1-45 = 3 x block of 15
+invalid_action_log: 7 rows, no repeated block
+mst_categories: 8 rows, no repeated block
+mst_products_20161201: 6 rows, no repeated block
+mst_products_20170101: 6 rows, no repeated block
+mst_users: 320 rows: rows 1-80 = 8 x block of 10; rows 81-100 once; rows 101-310 = 7 x block of 30; rows 311-320 once
+mst_users_with_card_number: 3 rows, no repeated block
+product_sales: 10 rows, no repeated block
+purchase_log: 5 rows, no repeated block
+read_log: 15 rows, no repeated block
+
+## near-copy diffs (offset within block, column, first block value, second block value)
+action_log rows 1.. vs 21..: 1 differing cells
+   (19, 'user_id', 'U001', 'U002')
+activity_log rows 1.. vs 65..: 53 differing cells
+   (0, 'path', '/search_list/', '/search_list')
+   (1, 'path', '/search_input/', '/search_input')
+   (2, 'path', '/search_list/', '/search_list')
+   (3, 'path', '/search_list/', '/search_list')
+   (4, 'path', '/detail/', '/detail')
+   (5, 'path', '/', '')
+   (6, 'path', '/detail/', '/detail')
+   (7, 'path', '/detail/', '/detail')
+   (8, 'path', '/detail/', '/detail')
+   (9, 'path', '/search_list/', '/search_list')
+   (10, 'path', '/', '')
+   (11, 'path', '/search_input/', '/search_input')
+   (12, 'path', '/search_list/', '/search_list')
+   (13, 'path', '/detail/', '/detail')
+   (14, 'path', '/', '')
+   (15, 'path', '/detail/', '/detail')
+   (16, 'path', '/detail/', '/detail')
+   (17, 'path', '/search_list/', '/search_list')
+   (18, 'path', '/search_input/', '/search_input')
+   (19, 'path', '/', '')
+   (20, 'path', '/search_input/', '/search_input')
+   (21, 'path', '/detail/', '/detail')
+   (22, 'path', '/search_list/', '/search_list')
+   (23, 'path', '/detail/', '/detail')
+   (24, 'option', 'detail', 'page')
+   (24, 'path', '/detail/', '/input')
+   (25, 'option', 'search', 'page')
+   (25, 'path', '/search_list/', '/confirm')
+   (25, 'search_type', 'Line-with-Job', '')
+   (26, 'stamp', '2017-01-09 12:18:43', '2017-01-09 12:23:00')
+   (26, 'session', 'd45ec190', '9afaf87c')
+   (26, 'option', 'detail', 'page')
+   (26, 'path', '/detail/', '/complete')
+   (27, 'session', '0fe39581', 'd45ec190')
+   (27, 'option', 'search', 'detail')
+   (27, 'path', '/search_list/', '/detail')
+   (27, 'search_type', 'Area-S', '')
+   (28, 'session', '36dd0df7', '0fe39581')
+   (28, 'path', '/search_list/', '/search_list')
+   (28, 'search_type', 'Pref-with-Job', 'Area-S')
+activity_log rows 65.. vs 173..: 4 differing cells
+   (5, 'path', '', '/')
+   (10, 'path', '', '/')
+   (14, 'path', '', '/')
+   (19, 'path', '', '/')
+mst_users rows 71.. vs 101..: 27 differing cells
+   (3, 'register_date', '2016-10-05', '2016-10-01')
+   (4, 'register_date', '2016-10-05', '2016-10-01')
+   (5, 'register_date', '2016-10-10', '2016-10-01')
+   (6, 'register_date', '2016-10-10', '2016-10-01')
+   (7, 'register_date', '2016-10-10', '2016-10-01')
+   (8, 'register_date', '2016-10-15', '2016-10-01')
+   (9, 'register_date', '2016-10-16', '2016-10-01')
+   (10, 'register_date', '2016-10-18', '2016-10-01')
+   (11, 'register_date', '2016-10-18', '2016-10-01')
+   (12, 'register_date', '2016-10-20', '2016-10-01')
+   (13, 'register_date', '2016-10-25', '2016-10-01')
+   (14, 'register_date', '2016-11-01', '2016-10-01')
+   (15, 'register_date', '2016-11-01', '2016-10-01')
+   (16, 'register_date', '2016-11-01', '2016-10-01')
+   (17, 'register_date', '2016-11-01', '2016-10-01')
+   (18, 'register_date', '2016-11-01', '2016-10-01')
+   (19, 'register_date', '2016-11-03', '2016-10-02')
+   (20, 'register_date', '2016-11-03', '2016-10-02')
+   (21, 'register_date', '2016-11-03', '2016-10-02')
+   (22, 'register_date', '2016-11-04', '2016-10-02')
+   (23, 'register_date', '2016-11-05', '2016-10-02')
+   (24, 'register_date', '2016-11-05', '2016-10-02')
+   (25, 'register_date', '2016-11-10', '2016-10-02')
+   (26, 'register_date', '2016-11-10', '2016-10-02')
+   (27, 'register_date', '2016-11-15', '2016-10-02')
+   (28, 'register_date', '2016-11-28', '2016-10-02')
+   (29, 'register_date', '2016-11-28', '2016-10-02')
+mst_users rows 1.. vs 311..: 0 differing cells

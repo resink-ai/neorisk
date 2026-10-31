@@ -1,0 +1,125 @@
+### time_of_day  (6 rows, 0.0s)
+c | tod | count(*)
+orderdate |  00:00:00 | 31465
+duedate |  00:00:00 | 31465
+shipdate |  00:00:00 | 31465
+header.modifieddate |  00:00:00 | 31465
+detail.modifieddate |  00:00:00 | 121317
+currencyratedate |  00:00:00 | 13532
+
+### lead_times_by_channel  (3 rows, 0.0s)
+onlineorderflag | due_d | ship_d | count(*)
+f | 12.0 | 7.0 | 3797
+f | 13.0 | 8.0 | 9
+t | 12.0 | 7.0 | 27659
+
+### status_revision  (3 rows, 0.0s)
+STATUS | revisionnumber | onlineorderflag | count(*)
+5 | 8 | f | 3776
+5 | 8 | t | 27659
+5 | 9 | f | 30
+
+### revision9_orders  (1 rows, 0.0s)
+min(orderdate) | max(orderdate) | count(*) | group_concat(salesorderid)
+2013-05-30 00:00:00 | 2014-04-30 00:00:00 | 30 | 51125,51171,51172,51695,51750,51869,53604,53609,55272,55320,55321,57020,57066,57182,59052,59053,61176,61197,61262,61265,63166,65089,65090,67202,67203,67204,69309,69310,71691,71692
+
+### header_modifieddate_vs_shipdate  (1 rows, 0.0s)
+eq_ship | eq_order | n
+31465 | 0 | 31465
+
+### detail_modifieddate_vs_header  (1 rows, 0.0s)
+eq_orderdate | eq_ship | n
+121317 | 0 | 121317
+
+### snapshot_bounds  (1 rows, 0.0s)
+last_order | last_ship | last_due | last_mod | shipped_after_last_order | last_rate | last_quota | last_sp_mod
+2014-06-30 00:00:00 | 2014-07-07 00:00:00 | 2014-07-12 00:00:00 | 2014-07-07 00:00:00 | 211 | 2014-05-31 00:00:00 | 2014-03-01 00:00:00 | 2013-05-23 00:00:00
+
+### shipmethod_by_channel  (2 rows, 0.0s)
+onlineorderflag | shipmethodid | count(*)
+f | 5 | 3806
+t | 1 | 27659
+
+### channel_columns  (2 rows, 0.0s)
+onlineorderflag | n | no_sp | no_po | no_cc | no_rate | bill_ne_ship
+f | 3806 | 0 | 0 | 7 | 2629 | 69
+t | 27659 | 27659 | 27659 | 1124 | 14860 | 30
+
+### carriertracking_by_channel  (2 rows, 0.0s)
+onlineorderflag | lines | empty_ctn | distinct_ctn
+f | 60919 | 0 | 3806
+t | 60398 | 60398 | 1
+
+### carriertracking_one_per_order  (1 rows, 0.0s)
+offline_orders | one_ctn | distinct_ctn_total
+3806 | 3806 | 3806
+
+### accountnumber_format  (1 rows, 0.0s)
+a4020_custid | like4020 | like4030 | like4030_online | like4020_offline | a4030_custid | n
+0 | 3806 | 27659 | 27659 | 3806 | 27659 | 31465
+
+### accountnumber_vs_customer_ids  (2 rows, 0.0s)
+onlineorderflag | min(customerid) | max(customerid) | min(cast(substr(accountnumber,9) as int)) | max(cast(substr(accountnumber,9) as int))
+f | 29484 | 30118 | 1 | 701
+t | 11000 | 29483 | 11000 | 29483
+
+### approvalcode_format  (7 rows, 0.0s)
+mid | len | count(*)
+Vi | 13 | 19639
+Vi | 14 | 5829
+Vi | 12 | 4361
+Vi | 11 | 430
+Vi | 10 | 51
+Vi | 9 | 23
+Vi | 15 | 1
+
+### po_format  (4 rows, 0.0s)
+len | count(*)
+10 | 6
+11 | 149
+12 | 1726
+13 | 1925
+
+### rate_vs_order  (1 rows, 0.0s)
+with_rate | rate_date_eq_orderdate | currency_matches_territory_country
+13976 | 13976 | 13933
+
+### rate_presence_by_territory  (20 rows, 0.0s)
+name | countryregioncode | onlineorderflag | n | with_rate | currencies
+Australia | AU | f | 125 | 125 | AUD
+Australia | AU | t | 6718 | 6550 | AUD
+Canada | CA | f | 692 | 692 | CAD
+Canada | CA | t | 3375 | 3126 | CAD
+Central | US | f | 376 | 0 | None
+Central | US | t | 9 | 0 | None
+France | FR | f | 188 | 34 | EUR
+France | FR | t | 2484 | 81 | FRF,GBP
+Germany | DE | f | 139 | 138 | EUR
+Germany | DE | t | 2484 | 76 | DEM
+Northeast | US | f | 342 | 0 | None
+Northeast | US | t | 10 | 0 | None
+Northwest | US | f | 536 | 0 | None
+Northwest | US | t | 4058 | 10 | CAD
+Southeast | US | f | 469 | 0 | None
+Southeast | US | t | 17 | 0 | None
+Southwest | US | f | 751 | 0 | None
+Southwest | US | t | 5473 | 11 | CAD
+United Kingdom | GB | f | 188 | 188 | GBP
+United Kingdom | GB | t | 3031 | 2945 | GBP
+
+### rate_rule_check  (1 rows, 0.0s)
+n | rate_iff_non_us
+31465 | 25975
+
+### creditcard_reuse  (1 rows, 0.0s)
+cards | reused | max(n)
+18384 | 7187 | 28
+
+### creditcard_shared_by_customers  (1 rows, 0.0s)
+count(*)
+0
+
+### approvalcode_unique  (1 rows, 0.0s)
+count(*) | count(distinct creditcardapprovalcode)
+30334 | 30334
+

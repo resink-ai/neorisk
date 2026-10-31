@@ -1,0 +1,303 @@
+### multi_address_customer  (2 rows, 0.00s)
+customerid | shipname | shipaddress | shipcity | count(*)
+ALFKI | Alfred's Futterkiste | Obere Str. 57 | Berlin | 5
+ALFKI | Alfreds Futterkiste | Obere Str. 57 | Berlin | 1
+
+### discount_values  (11 rows, 0.00s)
+discount | exact | count(*)
+0.0 | 0 | 1317
+0.00999999978 | 0.009999999779999999 | 1
+0.0199999996 | 0.0199999996 | 2
+0.0299999993 | 0.0299999993 | 3
+0.0399999991 | 0.0399999991 | 1
+0.0500000007 | 0.0500000007 | 185
+0.0599999987 | 0.0599999987 | 1
+0.100000001 | 0.100000001 | 173
+0.150000006 | 0.150000006 | 157
+0.200000003 | 0.200000003 | 161
+0.25 | 0.25 | 154
+
+### quantity_dist  (7 rows, 0.00s)
+b | count(*) | min(quantity) | max(quantity)
+1-5 | 237 | 1 | 5
+6-10 | 371 | 6 | 10
+11-20 | 636 | 11 | 20
+21-30 | 414 | 21 | 30
+31-50 | 338 | 32 | 50
+51-80 | 129 | 52 | 80
+81+ | 30 | 84 | 130
+
+### lines_per_order  (7 rows, 0.00s)
+k | orders
+1 | 137
+2 | 283
+3 | 248
+4 | 125
+5 | 33
+6 | 3
+25 | 1
+
+### line_price_vs_list_price  (3 rows, 0.00s)
+k | n | min(o.orderdate) | max(o.orderdate)
+0.8 x list | 470 | 1996-07-05 | 1997-04-04
+equal list | 1493 | 1996-07-04 | 1998-05-06
+other | 192 | 1996-07-04 | 1997-09-04
+
+### price_change_date  (1 rows, 0.00s)
+products_with_two_prices | min(first_new) | max(first_new) | min(last_old) | max(last_old)
+75 | 1996-07-04 | 1997-11-25 | 1996-08-19 | 1997-09-04
+
+### prices_per_product  (2 rows, 0.00s)
+k | products
+2 | 75
+3 | 2
+
+### price_switch_by_orderid  (1 rows, 0.00s)
+first_order_all_list | last_order_old_price
+10248 | 10657
+
+### freight_stats  (1 rows, 0.00s)
+min(freight) | max(freight) | round(avg(freight),2) | zero
+0.0199999996 | 1007.64001 | 78.24 | 0
+
+### products_stock  (1 rows, 0.00s)
+discontinued | out_of_stock | on_order | need_reorder | min(unitprice) | max(unitprice)
+10 | 5 | 17 | 2 | 2.5 | 263.5
+
+### discontinued_last_order  (10 rows, 0.00s)
+productid | discontinued | last_order
+1 | 1 | 1998-05-05
+2 | 1 | 1998-05-06
+5 | 1 | 1998-04-24
+9 | 1 | 1998-01-23
+17 | 1 | 1998-05-01
+24 | 1 | 1998-05-05
+28 | 1 | 1998-05-04
+29 | 1 | 1998-04-17
+42 | 1 | 1998-04-20
+53 | 1 | 1998-05-01
+
+### thresholds  (4 rows, 0.00s)
+groupname | rangebottom | typeof(rangebottom) | top | typeof(rangetop)
+Low | 0 | integer | 999.9999 | real
+Medium | 1000 | integer | 4999.9999 | real
+High | 5000 | integer | 9999.999900000001 | real
+Very High | 10000 | integer | 922337203685477.6 | real
+
+### usstates_regions  (5 rows, 0.00s)
+stateregion | count(*)
+east | 13
+midwest | 12
+north | 5
+south | 9
+west | 12
+
+### customer_countries  (8 rows, 0.00s)
+country | count(*)
+USA | 13
+Germany | 11
+France | 11
+Brazil | 9
+UK | 7
+Spain | 5
+Mexico | 5
+Venezuela | 4
+
+### orders_per_customer  (21 rows, 0.00s)
+k | customers
+1 | 1
+2 | 2
+3 | 7
+4 | 6
+5 | 10
+6 | 8
+7 | 7
+8 | 4
+9 | 5
+10 | 11
+11 | 4
+12 | 3
+13 | 3
+14 | 6
+15 | 3
+17 | 1
+18 | 3
+19 | 2
+28 | 1
+30 | 1
+31 | 1
+
+### employees_hire_vs_first_order  (9 rows, 0.00s)
+employeeid | hiredate | first_order
+1 | 1992-05-01 | 1996-07-17
+2 | 1992-08-14 | 1996-07-25
+3 | 1992-04-01 | 1996-07-08
+4 | 1993-05-03 | 1996-07-08
+5 | 1993-10-17 | 1996-07-04
+6 | 1993-10-17 | 1996-07-05
+7 | 1994-01-02 | 1996-08-26
+8 | 1994-03-05 | 1996-07-22
+9 | 1994-11-15 | 1996-07-12
+
+### local081_groups  (4 rows, 0.00s)
+groupname | customer_count | pct
+Low | 20 | 24.69
+Medium | 36 | 44.44
+High | 12 | 14.81
+Very High | 13 | 16.05
+
+### local081_gap_check  (1 rows, 0.00s)
+customers_1998 | in_gap
+81 | 0
+
+### local085_late  (3 rows, 0.00s)
+employeeid | late | pct
+4 | 10 | 6.410256
+7 | 4 | 5.555556
+8 | 5 | 4.807692
+
+### other_price_ratio  (8 rows, 0.00s)
+ratio | n | products
+0.8 | 499 | 63
+0.799 | 54 | 4
+0.798 | 36 | 3
+0.797 | 33 | 3
+0.792 | 15 | 1
+0.793 | 13 | 1
+1.192 | 4 | 1
+0.796 | 4 | 1
+
+### old_price_per_product_constant  (1 rows, 0.00s)
+products | one_old_price
+77 | 74
+
+### three_price_products  (6 rows, 0.00s)
+productid | unitprice | min(orderid) | max(orderid) | count(*)
+11 | 14.0 | 10248 | 10248 | 1
+11 | 16.7999992 | 10296 | 10489 | 11
+11 | 21.0 | 10528 | 11073 | 26
+42 | 9.80000019 | 10248 | 10248 | 1
+42 | 11.1999998 | 10309 | 10492 | 7
+42 | 14.0 | 10498 | 11035 | 22
+
+### price_regime_by_orderid  (1 rows, 0.03s)
+products | products_with_old_after_new
+77 | 1
+
+### order_25_lines  (1 rows, 0.03s)
+orderid | customerid | orderdate | n
+11077 | RATTC | 1998-05-06 | 25
+
+### discount_by_customer_order  (1 rows, 0.00s)
+orders | one_discount
+830 | 667
+
+### order_value_quantiles  (1 rows, 0.00s)
+p5 | p25 | p50 | p75 | p90 | p99 | mx
+108.0 | 454.00000217750005 | 940.499999307 | 1873.8000152 | 3160.5999157060005 | 10164.800020800001 | 16387.499987925
+
+### freight_quantiles  (1 rows, 0.00s)
+p10 | p50 | p90 | p99
+3.43000007 | 41.3400002 | 188.039993 | 606.190002
+
+### freight_vs_order_value  (1 rows, 0.00s)
+mean_ratio | count(*)
+0.0485 | 830
+
+### product_popularity  (41 rows, 0.00s)
+k | products
+5 | 1
+6 | 3
+8 | 1
+9 | 1
+10 | 3
+12 | 2
+13 | 2
+14 | 4
+15 | 1
+16 | 1
+17 | 1
+18 | 2
+19 | 1
+20 | 2
+21 | 2
+22 | 1
+23 | 1
+24 | 3
+27 | 2
+28 | 1
+29 | 2
+30 | 4
+31 | 2
+32 | 5
+33 | 3
+34 | 1
+36 | 2
+37 | 2
+38 | 4
+39 | 4
+40 | 1
+41 | 1
+42 | 1
+43 | 1
+44 | 1
+46 | 1
+47 | 1
+48 | 1
+50 | 1
+51 | 3
+54 | 1
+
+### category_mix  (8 rows, 0.00s)
+categoryname | lines | net
+Beverages | 404 | 267868.18
+Dairy Products | 366 | 234507.28
+Confections | 334 | 167357.23
+Seafood | 330 | 131261.74
+Condiments | 216 | 106047.08
+Grains/Cereals | 196 | 95744.59
+Meat/Poultry | 173 | 163022.36
+Produce | 136 | 99984.58
+
+### shipping_country_mix  (8 rows, 0.00s)
+shipcountry | count(*)
+USA | 122
+Germany | 122
+Brazil | 83
+France | 77
+UK | 56
+Venezuela | 46
+Austria | 40
+Sweden | 37
+
+### required_lead_by_customer  (10 rows, 0.00s)
+customerid | leads | count(*)
+ALFKI | 28,42 | 6
+AROUT | 28,14 | 13
+BERGS | 28,14 | 18
+BLAUS | 28,42 | 7
+BLONP | 28,42 | 11
+BOLID | 28,14 | 3
+BONAP | 42,28,14 | 17
+BOTTM | 28,14 | 14
+BSBEV | 28,42,14 | 10
+CACTU | 28,14 | 6
+
+### required_lead_customers  (3 rows, 0.00s)
+lead | customers | orders
+14 | 43 | 68
+28 | 89 | 701
+42 | 43 | 61
+
+### ship_lag_by_shipper  (3 rows, 0.00s)
+shipvia | count(*) | mean_days | late
+1 | 245 | 8.57 | 12
+2 | 315 | 9.23 | 19
+3 | 249 | 7.47 | 9
+
+### ship_lag_by_year  (3 rows, 0.00s)
+y | count(*) | mean_days | unshipped
+1996 | 152 | 8.11 | 0
+1997 | 408 | 8.91 | 0
+1998 | 270 | 8.04 | 21
+

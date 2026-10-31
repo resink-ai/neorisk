@@ -1,0 +1,10 @@
+bitcoin_members                        source=    14 rebuilt=    14 multiset_equal=True
+bitcoin_transactions                   source= 22918 rebuilt= 22918 multiset_equal=True
+bitcoin_prices                         source=  3404 rebuilt=  3404 multiset_equal=True
+bitcoin_prices[text]                   source=  3404 rebuilt=  3404 multiset_equal=True
+bitcoin_transactions[txn_id=rank]      source= 22918 rebuilt= 22918 multiset_equal=True
+volume parsed to exact integer coins (mantissa has 2 decimals): True
+python volume format rule exact: 3404/3404
+python change format '%.2f%%' exact: 3404/3404
+events: price_published=3404 trade=22918 total=26322; entities: members=14 tickers=2
+ALL EXACT: True

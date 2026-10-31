@@ -1,0 +1,32 @@
+## mst_users_with_card_number
+U001 shape 9999-aaaa-aaaa-aaaa | length 19 | digits 4 | masked chars 12 | Luhn checkable (>=12 digits) False | Luhn n/a | leading digits are a run of consecutive digits True
+U002 NULL
+U003 shape 9999-aaaa-aaaa-aaaa | length 19 | digits 4 | masked chars 12 | Luhn checkable (>=12 digits) False | Luhn n/a | leading digits are a run of consecutive digits True
+
+## app2_mst_users.phone
+U001 999-aaaa-aaaa | contains x mask: True
+U002 999-aaaa-aaaa | contains x mask: True
+
+## app1_mst_users.email
+U001 domain example.com | RFC 2606 reserved: True
+U002 domain example.com | RFC 2606 reserved: True
+
+## action_log_with_ip.ip
+216.58.220.238 3 | private False | loopback False | global True | in 192.0.0.0/24 False
+98.139.183.24 2 | private False | loopback False | global True | in 192.0.0.0/24 False
+210.154.149.63 2 | private False | loopback False | global True | in 192.0.0.0/24 False
+127.0.0.1 1 | private True | loopback True | global False | in 192.0.0.0/24 False
+10.0.0.3 1 | private True | loopback False | global False | in 192.0.0.0/24 False
+172.16.0.5 1 | private True | loopback False | global False | in 192.0.0.0/24 False
+192.168.0.23 1 | private True | loopback False | global False | in 192.0.0.0/24 False
+192.0.0.10 1 | private False | loopback False | global True | in 192.0.0.0/24 True
+
+## form_error_log.value (dirty inputs, shape)
+regist email require ''
+regist kana require ''
+regist zip format_error '999-'
+cart email format_error 'aaa---.aa.aa'
+regist email format_error 'aaa@---aaaa'
+regist kana not_kana '山田 太郎'
+regist kana require ''
+cart tel format_error '99-99999999'

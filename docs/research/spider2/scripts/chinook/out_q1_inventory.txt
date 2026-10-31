@@ -1,0 +1,123 @@
+### row_counts  (11 rows, 0.00s)
+t | n
+albums | 347
+artists | 275
+customers | 59
+employees | 8
+genres | 25
+invoices | 412
+invoice_items | 2240
+media_types | 5
+playlists | 18
+playlist_track | 8715
+tracks | 3503
+
+### system_tables  (25 rows, 0.00s)
+t | name | seq | idx | stat
+sqlite_sequence | genres | 25 | None | None
+sqlite_sequence | media_types | 5 | None | None
+sqlite_sequence | artists | 275 | None | None
+sqlite_sequence | albums | 347 | None | None
+sqlite_sequence | tracks | 3503 | None | None
+sqlite_sequence | employees | 8 | None | None
+sqlite_sequence | customers | 59 | None | None
+sqlite_sequence | invoices | 412 | None | None
+sqlite_sequence | invoice_items | 2240 | None | None
+sqlite_sequence | playlists | 18 | None | None
+sqlite_stat1 | tracks | None | IFK_TrackMediaTypeId | 3503 701
+sqlite_stat1 | tracks | None | IFK_TrackGenreId | 3503 141
+sqlite_stat1 | tracks | None | IFK_TrackAlbumId | 3503 11
+sqlite_stat1 | playlist_track | None | IFK_PlaylistTrackTrackId | 8715 3
+sqlite_stat1 | playlist_track | None | sqlite_autoindex_playlist_track_1 | 8715 623 1
+sqlite_stat1 | albums | None | IFK_AlbumArtistId | 347 2
+sqlite_stat1 | artists | None | None | 275
+sqlite_stat1 | customers | None | IFK_CustomerSupportRepId | 59 20
+sqlite_stat1 | playlists | None | None | 18
+sqlite_stat1 | employees | None | IFK_EmployeeReportsTo | 8 2
+sqlite_stat1 | genres | None | None | 25
+sqlite_stat1 | invoices | None | IFK_InvoiceCustomerId | 412 7
+sqlite_stat1 | media_types | None | None | 5
+sqlite_stat1 | invoice_items | None | IFK_InvoiceLineTrackId | 2240 2
+sqlite_stat1 | invoice_items | None | IFK_InvoiceLineInvoiceId | 2240 6
+
+### seq_vs_max  (10 rows, 0.00s)
+name | seq | max_id
+genres | 25 | 25
+media_types | 5 | 5
+artists | 275 | 275
+albums | 347 | 347
+tracks | 3503 | 3503
+employees | 8 | 8
+customers | 59 | 59
+invoices | 412 | 412
+invoice_items | 2240 | 2240
+playlists | 18 | 18
+
+### invoice_items_max_id  (1 rows, 0.00s)
+max(InvoiceLineId) | count(*) | min(InvoiceLineId)
+2240 | 2240 | 1
+
+### ids_dense  (7 rows, 0.00s)
+t | min(AlbumId) | max(AlbumId) | count(*)
+albums | 1 | 347 | 347
+artists | 1 | 275 | 275
+tracks | 1 | 3503 | 3503
+customers | 1 | 59 | 59
+invoices | 1 | 412 | 412
+invoice_items | 1 | 2240 | 2240
+playlists | 1 | 18 | 18
+
+### typeof_columns  (20 rows, 0.00s)
+c | t | count(*)
+invoices.Total | real | 412
+invoices.InvoiceDate | text | 412
+invoice_items.UnitPrice | real | 2240
+invoice_items.Quantity | integer | 2240
+tracks.UnitPrice | real | 3503
+tracks.Bytes | integer | 3503
+tracks.Milliseconds | integer | 3503
+tracks.Composer | null | 978
+tracks.Composer | text | 2525
+tracks.AlbumId | integer | 3503
+tracks.GenreId | integer | 3503
+employees.BirthDate | text | 8
+employees.HireDate | text | 8
+employees.ReportsTo | integer | 7
+employees.ReportsTo | null | 1
+customers.SupportRepId | integer | 59
+customers.PostalCode | null | 4
+customers.PostalCode | text | 55
+invoices.BillingPostalCode | null | 28
+invoices.BillingPostalCode | text | 384
+
+### null_and_empty_customers  (1 rows, 0.00s)
+company_null | company_empty | state_null | state_empty | pc_null | pc_empty | phone_null | fax_null | fax_empty | addr_null | city_null | rep_null
+49 | 0 | 29 | 0 | 4 | 0 | 1 | 47 | 0 | 0 | 0 | 0
+
+### null_and_empty_invoices  (1 rows, 0.00s)
+a_null | c_null | s_null | s_empty | co_null | pc_null | pc_empty
+0 | 0 | 202 | 0 | 0 | 28 | 0
+
+### null_and_empty_tracks  (1 rows, 0.00s)
+album_null | genre_null | composer_null | composer_empty | bytes_null
+0 | 0 | 978 | 0 | 0
+
+### text_whitespace  (6 rows, 0.00s)
+c | untrimmed | non_ascii | lf
+tracks.Name | 0 | 274 | 0
+tracks.Composer | 0 | 149 | 0
+albums.Title | 0 | 20 | 0
+artists.Name | 0 | 31 | 0
+customers.* | 0 | 23 | 0
+invoices.Billing* | 0 | 133 | 0
+
+### dup_names  (7 rows, 0.00s)
+t | dup
+artists | 0
+albums.Title | 0
+albums(Title,ArtistId) | 0
+tracks.Name | 246
+tracks(Name,AlbumId) | 6
+playlists.Name | 4
+customers.Email | 0
+

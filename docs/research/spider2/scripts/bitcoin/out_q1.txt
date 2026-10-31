@@ -1,0 +1,104 @@
+### row_counts  (3 rows, 0.00s)
+t | n
+bitcoin_members | 14
+bitcoin_transactions | 22918
+bitcoin_prices | 3404
+
+### storage_types  (3 rows, 0.02s)
+t | types | count(*)
+tx | integer,text,text,text,text,real,real,text | 22918
+pr | text,text,real,real,real,real,text,text | 3404
+mem | text,text,text | 14
+
+### nulls_and_empty  (1 rows, 0.00s)
+mem | tx | pr
+0 | 0 | 0
+
+### members  (14 rows, 0.00s)
+rowid | member_id | first_name | region
+1 | c4ca42 | Danny | Australia
+2 | c81e72 | Vipul | United States
+3 | eccbc8 | Charlie | United States
+4 | a87ff6 | Nandita | United States
+5 | e4da3b | Rowan | United States
+6 | 167909 | Ayush | United States
+7 | 8f14e4 | Alex | United States
+8 | c9f0f8 | Abe | United States
+9 | 45c48c | Ben | Australia
+10 | d3d944 | Enoch | Africa
+11 | 6512bd | Vikram | India
+12 | c20ad4 | Leah | Asia
+13 | c51ce4 | Pavan | Australia
+14 | aab323 | Sonia | Australia
+
+### member_key  (1 rows, 0.00s)
+n | ids | names
+14 | 14 | 14
+
+### members_per_region  (5 rows, 0.00s)
+region | count(*)
+United States | 7
+Australia | 4
+India | 1
+Asia | 1
+Africa | 1
+
+### txn_key  (1 rows, 0.00s)
+n | ids | min(txn_id) | max(txn_id) | rowid_ne_id
+22918 | 22918 | 1 | 22918 | 0
+
+### txn_full_row_duplicates  (1 rows, 0.01s)
+count(*)
+0
+
+### price_key  (2 rows, 0.00s)
+ticker | n | days | min(rid) | max(rid) | min(d) | max(d)
+BTC | 1702 | 1702 | 1703 | 3404 | 2017-01-01 | 2021-08-29
+ETH | 1702 | 1702 | 1 | 1702 | 2017-01-01 | 2021-08-29
+
+### price_dup_days  (1 rows, 0.00s)
+count(*)
+0
+
+### price_calendar_gaps  (2 rows, 0.00s)
+ticker | gap | count(*)
+BTC | 1.0 | 1701
+ETH | 1.0 | 1701
+
+### fk_member  (1 rows, 0.00s)
+orphans | members_without_tx
+0 | 0
+
+### fk_price_day  (1 rows, 9.08s)
+tx | without_price_row
+22918 | 0
+
+### categoricals  (8 rows, 0.01s)
+c | v | count(*)
+ticker | BTC | 12484
+ticker | ETH | 10434
+txn_type | BUY | 18881
+txn_type | SELL | 4037
+ticker×type | BTC BUY | 10440
+ticker×type | BTC SELL | 2044
+ticker×type | ETH BUY | 8441
+ticker×type | ETH SELL | 1993
+
+### date_formats  (6 rows, 0.02s)
+k | count(*)
+txn_date not DD-MM-YYYY | 0
+txn_time not ISO-ms-Z | 0
+txn_date <> date(txn_time) | 0
+market_date not DD-MM-YYYY | 0
+invalid calendar date (tx) | 0
+invalid calendar date (pr) | 0
+
+### tx_time_range  (1 rows, 0.01s)
+min(txn_time) | max(txn_time) | min(d) | max(d)
+2017-01-01T00:00:00.000Z | 2021-08-27T22:26:10.258Z | 2017-01-01 | 2021-08-27
+
+### physical_order_prices  (2 rows, 0.00s)
+ticker | non_desc_steps | desc_steps
+BTC | 0 | 1701
+ETH | 0 | 1701
+
