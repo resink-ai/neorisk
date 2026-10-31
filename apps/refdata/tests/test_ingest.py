@@ -129,3 +129,22 @@ def test_run_window_covers_late_entity(shop, tmp_path):
     end = start.timestamp() + run.manifest["run"]["days"] * 86400
     assert end >= datetime(2021, 2, 1, tzinfo=UTC).timestamp()
     assert failed(run_checks(run)) == []
+
+
+def test_empty_block_writes_typed_empty_table(shop, tmp_path):
+    """A block with no rows (Sakila film_text, weblog's noise log) is an empty, typed table."""
+    from refdata.rebuild import rebuild
+    proj, db = shop
+    sql = (proj / "specs" / "ingest.sql").read_text()
+    (proj / "specs" / "ingest.sql").write_text(sql.replace("WHERE paid IS NOT NULL",
+                                                           "WHERE paid IS NOT NULL AND 0"))
+    run = read(ingest(proj, db, tmp_path / "ds"))
+    paid = run.events["order_paid"]
+    assert paid.height == 0
+    assert dict(paid.schema)["customer_id"] == run.events["order_placed"].schema["customer_id"]
+    assert failed(run_checks(run)) == []
+    out = rebuild(tmp_path / "ds", proj, db, tmp_path / "rebuilt.sqlite")
+    import sqlite3
+    con = sqlite3.connect(out)
+    assert con.execute("SELECT count(*) FROM orders WHERE paid IS NULL").fetchone() == (3,)
+    con.close()
