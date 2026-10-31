@@ -114,3 +114,18 @@ def test_force_never_deletes_a_non_dataset(shop, tmp_path):
     with pytest.raises(FileExistsError, match="not a refdata dataset"):
         ingest(proj, db, precious, force=True)
     assert (precious / "notes.txt").read_text() == "keep me"
+
+
+def test_run_window_covers_late_entity(shop, tmp_path):
+    """An entity created after the last event (Pizza Runner's runner 4) stays inside the run."""
+    proj, db = shop
+    sql = (proj / "specs" / "ingest.sql").read_text()
+    (proj / "specs" / "ingest.sql").write_text(sql.replace(
+        "SELECT cid AS ext_id, city FROM customers ORDER BY cid;",
+        "SELECT cid AS ext_id, city, '2021-02-01 00:00:00' AS created_at FROM customers "
+        "ORDER BY cid;"))
+    run = read(ingest(proj, db, tmp_path / "ds"))
+    start = datetime.fromisoformat(run.manifest["run"]["start"])
+    end = start.timestamp() + run.manifest["run"]["days"] * 86400
+    assert end >= datetime(2021, 2, 1, tzinfo=UTC).timestamp()
+    assert failed(run_checks(run)) == []
