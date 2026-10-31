@@ -1,0 +1,16 @@
+# Chinook: Luis Rocha's sample database (MIT), sqlitetutorial.net packaging, 2009–2013 dates.
+file = "chinook.sqlite"
+note = "Invoice dates are midnights, read as UTC. sqlite_sequence and sqlite_stat1 are not data."
+
+[tables]
+genres = ["GenreId"]
+media_types = ["MediaTypeId"]
+artists = ["ArtistId"]
+albums = ["AlbumId"]
+tracks = ["TrackId"]
+playlists = ["PlaylistId"]
+playlist_track = ["PlaylistId", "TrackId"]
+employees = ["EmployeeId"]
+customers = ["CustomerId"]
+invoices = ["InvoiceId"]
+invoice_items = ["InvoiceLineId"]

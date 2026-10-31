@@ -1,0 +1,5 @@
+# Chinook music store (Spider2 chinook). Stage 1 is a schema-only pack: the event log comes
+# from `uv run refdata ingest examples/chinook`, not from `datagen run`.
+[run]
+seed = 7
+days = 1816.0
