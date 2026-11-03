@@ -129,11 +129,11 @@ def _compare(args) -> int:
 
 
 def _roundtrip(args) -> int:
-    from refdata.compare import compare
     import shutil
 
     from neorisk_simkit.io import read
     from neorisk_simkit.io.log import LogError, write_log
+    from refdata.compare import compare
     from refdata.ingest import IngestError, ingest, owners
     from refdata.rebuild import rebuild
     project = Path(args.project)
