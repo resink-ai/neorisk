@@ -143,7 +143,9 @@ def test_empty_block_writes_typed_empty_table(shop, tmp_path):
     assert paid.height == 0
     assert dict(paid.schema)["customer_id"] == run.events["order_placed"].schema["customer_id"]
     assert failed(run_checks(run)) == []
-    out = rebuild(tmp_path / "ds", proj, db, tmp_path / "rebuilt.sqlite")
+    from neorisk_simkit.io.log import write_log
+    write_log(run, tmp_path / "log")
+    out = rebuild(tmp_path / "log", proj, db, tmp_path / "rebuilt.sqlite")
     import sqlite3
     con = sqlite3.connect(out)
     assert con.execute("SELECT count(*) FROM orders WHERE paid IS NULL").fetchone() == (3,)

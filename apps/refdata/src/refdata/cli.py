@@ -2,7 +2,7 @@
 
     refdata fetch [--dest DIR] [--force]
     refdata ingest PROJECT [--db SRC] [--out DIR] [--force]
-    refdata rebuild DATASET --project P [--db SRC] [--out FILE] [--force]
+    refdata rebuild LOG --project P [--db SRC] [--out FILE] [--force]
     refdata compare SRC REBUILT --project P [--json FILE]
     refdata roundtrip PROJECT [--db SRC] [--out-dir DIR] [--force]
 
@@ -37,8 +37,8 @@ def build_parser() -> argparse.ArgumentParser:
     i.add_argument("--db", default=None, help="default: data/spider2/<source.toml file>")
     i.add_argument("--out", default=None, help="default: data/ref/<project>")
     i.add_argument("--force", action="store_true", help="overwrite an existing dataset")
-    r = sub.add_parser("rebuild", help="a dataset → the source tables (specs/build.sql)")
-    r.add_argument("dataset")
+    r = sub.add_parser("rebuild", help="an event log → the source tables (specs/build.sql)")
+    r.add_argument("log", help="a directory holding log/ and schema/events.json")
     r.add_argument("--project", required=True)
     r.add_argument("--db", default=None, help="source, for its DDL; default: data/spider2/...")
     r.add_argument("--out", default=None, help="default: data/ref/<project>.rebuilt.sqlite")
@@ -92,7 +92,7 @@ def _rebuild(args) -> int:
     project = Path(args.project)
     out = Path(args.out) if args.out else REF / f"{project.name}.rebuilt.sqlite"
     try:
-        rebuild(Path(args.dataset), project, _db(project, args.db), out, force=args.force)
+        rebuild(Path(args.log), project, _db(project, args.db), out, force=args.force)
     except (FileNotFoundError, FileExistsError) as e:
         return _err(str(e))
     except ValueError as e:
@@ -130,18 +130,28 @@ def _compare(args) -> int:
 
 def _roundtrip(args) -> int:
     from refdata.compare import compare
-    from refdata.ingest import IngestError, ingest
+    import shutil
+
+    from neorisk_simkit.io import read
+    from neorisk_simkit.io.log import LogError, write_log
+    from refdata.ingest import IngestError, ingest, owners
     from refdata.rebuild import rebuild
     project = Path(args.project)
     ref = Path(args.out_dir) if args.out_dir else REF
     db = _db(project, args.db)
-    ds, out = ref / project.name, ref / f"{project.name}.rebuilt.sqlite"
+    ds, log = ref / project.name, ref / f"{project.name}.log"
+    out = ref / f"{project.name}.rebuilt.sqlite"
     try:
         ingest(project, db, ds, force=args.force)
-        rebuild(ds, project, db, out, force=args.force)
+        if log.exists():
+            if not args.force:
+                raise FileExistsError(f"{log} exists; pass --force to overwrite")
+            shutil.rmtree(log)
+        write_log(read(ds), log, owners=owners(project))
+        rebuild(log, project, db, out, force=args.force)
     except (FileNotFoundError, FileExistsError) as e:
         return _err(str(e))
-    except (IngestError, ValueError) as e:
+    except (IngestError, LogError, ValueError) as e:
         return _err(str(e), 1)
     return _report(compare(db, out, project), project, ref / f"{project.name}.compare.json")
 
