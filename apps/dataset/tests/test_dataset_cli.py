@@ -45,4 +45,4 @@ def test_cli_verify_failure_exit_1(shop_cli, capsys):
     b = config.DATASETS / "shop" / "specs" / "build.sql"
     b.write_text(b.read_text().replace("p.total / 100.0", "p.total / 10.0"))
     assert cli.main(["verify", "shop"]) == 1
-    assert _last(capsys)["failed"] == ["orders", "q1"]
+    assert _last(capsys)["failed"] == ["recipe", "orders", "q1"]

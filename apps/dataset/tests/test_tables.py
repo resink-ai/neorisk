@@ -123,3 +123,15 @@ def test_date_text_column_is_string_not_mixed():
     assert detect_mixed(con, "t") == set()
     assert column_types(con, "t") == {"d": "string", "u": "int64"}
     assert sqlite_table(con, "t", set()).column("d").to_pylist() == ["1962-02-18 00:00:00", None]
+
+
+def test_compare_rejects_bool_and_decimal_columns():
+    from decimal import Decimal
+    e = _t(a=pa.array([1, 0], pa.int64()))
+    r = compare_tables("t", e, _t(a=pa.array([True, False])))
+    assert not r.ok and "bool" in r.detail
+    r = compare_tables("t", _t(a=pa.array([1.5])),
+                       _t(a=pa.array([Decimal("1.5")], pa.decimal128(5, 1))))
+    assert not r.ok and "decimal" in r.detail
+    assert compare_tables("t", _t(a=pa.array(["x"])), _t(a=pa.array(["x"], pa.large_string()))).ok
+    assert compare_tables("t", e, _t(a=pa.array([1, 0], pa.int32()))).ok

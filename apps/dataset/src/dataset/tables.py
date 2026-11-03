@@ -179,6 +179,13 @@ def compare_tables(name: str, expected: pa.Table, got: pa.Table, *,
         return TableResult(name, False, ne, ng, detail=(
             f"columns differ: missing {sorted(set(want) - set(have))}, "
             f"extra {sorted(set(have) - set(want))}"))
+    bad = [f"{f.name}: {f.type}" for f in got.schema
+           if not (pa.types.is_integer(f.type) or pa.types.is_floating(f.type)
+                   or pa.types.is_string(f.type) or pa.types.is_large_string(f.type)
+                   or pa.types.is_null(f.type))]
+    if bad:
+        return TableResult(name, False, ne, ng, detail=(
+            f"column types outside the contract (int, float, string): {bad}"))
     got = got.select(want)
     floats = [pa.types.is_floating(f.type) for f in expected.schema]
     a, b = _rows(expected), _rows(got)

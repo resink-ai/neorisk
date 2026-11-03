@@ -15,10 +15,12 @@ import sqlite3
 import tempfile
 from pathlib import Path
 
+import duckdb
+import pyarrow as pa
 import pyarrow.parquet as pq
 
 from dataset.config import DatasetConfig
-from dataset.manifest import files_of, lock_diff, lock_of, recipe_sha256, sha256, write_json
+from dataset.manifest import files_of, lock_diff, lock_of, recipe_sha256, sha256, write_json, writer
 from dataset.names import resolve
 from dataset.tables import TableResult, answer_table, compare_tables, detect_mixed, sqlite_table
 from neorisk_simkit.io import read
@@ -26,7 +28,7 @@ from neorisk_simkit.io.log import LogError, write_log
 from neorisk_simkit.io.writer import WRITER
 from refdata.compare import _ordered, open_indexed
 from refdata.ingest import IngestError, ingest, owners
-from refdata.rebuild import build_tables, fill_sqlite
+from refdata.rebuild import build_tables, fill_table
 from refdata.source import load_source
 
 
@@ -105,10 +107,18 @@ def build_spider2(cfg: DatasetConfig, db: Path, *, record: bool = False) -> dict
             except (IngestError, LogError) as e:
                 raise BuildError(f"{cfg.name}: {e}") from e
         meta = _results(cfg, db, tmp)
+        rep = verify(cfg, root=tmp)
+        if not rep["ok"]:
+            failed = [r.name for r in [rep["recipe"], *rep["tables"], *rep["queries"]]
+                      if not r.ok]
+            raise BuildError(f"{cfg.name}: the reference build over the log does not "
+                             f"reproduce the source: {failed}; run `dataset verify` on a "
+                             f"build without --record to see the differences")
         files = files_of(tmp)
         log_rows = sum(v["rows"] for k, v in files.items() if k.startswith("log/"))
         manifest = {"name": cfg.name, "version": cfg.version, "kind": cfg.kind,
-                    "recipe_sha256": recipe_sha256(cfg.dir), "source_sha256": sha256(db),
+                    "writer": writer(), "recipe_sha256": recipe_sha256(cfg.dir),
+                    "source_sha256": sha256(db),
                     "counts": {"log": log_rows,
                                **{f"results/{t}": files[f"results/{t}.parquet"]["rows"]
                                   for t in meta["tables"]},
@@ -118,9 +128,11 @@ def build_spider2(cfg: DatasetConfig, db: Path, *, record: bool = False) -> dict
         if lock_path.exists():
             diff = lock_diff(json.loads(lock_path.read_text()), manifest)
             if diff:
+                why = (" (the Parquet writer libraries changed; their version is in every "
+                       "file's footer)" if "writer" in diff else "")
                 raise BuildError(f"{cfg.name} {cfg.version}: the build differs from "
-                                 f"{lock_path.name} in {diff[:10]}; changed output needs a "
-                                 f"new version")
+                                 f"{lock_path.name} in {diff[:10]}{why}; changed output "
+                                 f"needs a new version")
         elif record:
             write_json(lock_path, lock_of(manifest))
         write_json(tmp / "manifest.json", manifest)
@@ -136,25 +148,46 @@ def _failed(name: str, detail: str, rows: int = 0) -> TableResult:
     return TableResult(name, False, rows, 0, detail=detail)
 
 
-def verify(cfg: DatasetConfig) -> dict:
-    root = resolve(f"{cfg.name}/{cfg.version}")
-    if not (root / "manifest.json").exists():
+def verify(cfg: DatasetConfig, *, root: Path | None = None) -> dict:
+    """Every table and answer as a `TableResult`; a failure to rebuild a table is reported
+    as that table's failure, never raised. `recipe` fails when the specs changed since the
+    version was built (its manifest's `recipe_sha256`)."""
+    root = Path(root) if root else resolve(f"{cfg.name}/{cfg.version}")
+    results_json = root / "schema" / "results.json"
+    if not results_json.exists():
         raise FileNotFoundError(f"{cfg.name} {cfg.version} is not built under {root.parent}; "
                                 f"run: uv run dataset build {cfg.name}")
-    meta = json.loads((root / "schema" / "results.json").read_text())
+    meta = json.loads(results_json.read_text())
+    recipe = TableResult("recipe", True, 0, 0)
+    mf = root / "manifest.json"
+    if mf.exists() and json.loads(mf.read_text())["recipe_sha256"] != recipe_sha256(cfg.dir):
+        recipe = _failed("recipe", "specs/, dataset.toml or datagen.toml changed since this "
+                                   "version was built; rebuild it (or make a new version)")
     duck, blocks = build_tables(root, cfg.dir)
-    if set(blocks) != set(meta["tables"]):
-        raise ValueError(f"build.sql blocks differ from the results: missing "
-                         f"{sorted(set(meta['tables']) - set(blocks))}, extra "
-                         f"{sorted(set(blocks) - set(meta['tables']))}")
     mem = sqlite3.connect(":memory:")
     try:
-        cols = {t: [c["name"] for c in m["columns"]] for t, m in meta["tables"].items()}
-        fill_sqlite(duck, blocks, {t: m["ddl"] for t, m in meta["tables"].items()}, cols, mem)
-        tables = [compare_tables(t, pq.read_table(root / "results" / f"{t}.parquet"),
-                                 sqlite_table(mem, t, set(m["mixed"])))
-                  for t, m in meta["tables"].items()]
-        _index(mem, {t: m["key"] for t, m in meta["tables"].items()})
+        tables = []
+        for t, m in meta["tables"].items():
+            want = pq.read_table(root / "results" / f"{t}.parquet")
+            if t not in blocks:
+                tables.append(_failed(t, "no -- table block in build.sql", want.num_rows))
+                continue
+            try:
+                fill_table(duck, t, blocks[t], m["ddl"], [c["name"] for c in m["columns"]],
+                           mem)
+                got = sqlite_table(mem, t, set(m["mixed"]))
+            except (sqlite3.Error, duckdb.Error, pa.ArrowException, ValueError,
+                    TypeError) as e:
+                tables.append(_failed(t, f"the rebuild fails: {type(e).__name__}: {e}",
+                                      want.num_rows))
+                continue
+            tables.append(compare_tables(t, want, got))
+        extra = sorted(set(blocks) - set(meta["tables"]))
+        if extra:
+            tables.append(_failed("build.sql", f"blocks for tables not in the results: {extra}"))
+        _index(mem, {t: m["key"] for t, m in meta["tables"].items()
+                     if mem.execute("SELECT 1 FROM sqlite_master WHERE name = ?",
+                                    (t,)).fetchone()})
         queries = []
         for f in _queries(cfg):
             if f.stem not in meta["queries"]:
@@ -163,7 +196,7 @@ def verify(cfg: DatasetConfig) -> dict:
             want = pq.read_table(root / "expected" / "queries" / f"{f.stem}.parquet")
             try:
                 got = answer_table(mem, f.read_text())
-            except sqlite3.Error as e:
+            except (sqlite3.Error, ValueError) as e:
                 queries.append(_failed(f.stem, f"fails on the rebuilt tables: {e}",
                                        want.num_rows))
                 continue
@@ -171,4 +204,5 @@ def verify(cfg: DatasetConfig) -> dict:
                                           ordered=meta["queries"][f.stem]["ordered"]))
     finally:
         mem.close()
-    return {"ok": all(r.ok for r in tables + queries), "tables": tables, "queries": queries}
+    return {"ok": recipe.ok and all(r.ok for r in tables + queries), "recipe": recipe,
+            "tables": tables, "queries": queries}

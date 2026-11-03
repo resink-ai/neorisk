@@ -14,7 +14,14 @@ from pathlib import Path
 
 import pyarrow.parquet as pq
 
-LOCK_KEYS = ("name", "version", "kind", "recipe_sha256", "source_sha256", "files")
+LOCK_KEYS = ("name", "version", "kind", "writer", "recipe_sha256", "source_sha256", "files")
+
+
+def writer() -> dict:
+    """The libraries whose versions decide the files' bytes (Parquet footers name them)."""
+    import polars as pl
+    import pyarrow as pa
+    return {"polars": pl.__version__, "pyarrow": pa.__version__}
 
 
 def sha256(path: Path) -> str:

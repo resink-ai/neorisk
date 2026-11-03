@@ -105,10 +105,11 @@ def _verify(args) -> int:
         rep = verify(cfg)
     except (FileNotFoundError, ValueError) as e:
         return _err(str(e))
-    results = rep["tables"] + rep["queries"]
+    results = [rep["recipe"], *rep["tables"], *rep["queries"]]
     if args.json:
         Path(args.json).write_text(json.dumps(
-            {"ok": rep["ok"], "tables": [t.to_json() for t in rep["tables"]],
+            {"ok": rep["ok"], "recipe": rep["recipe"].to_json(),
+             "tables": [t.to_json() for t in rep["tables"]],
              "queries": [q.to_json() for q in rep["queries"]]}, indent=2) + "\n")
     for r in results:
         if not r.ok:
