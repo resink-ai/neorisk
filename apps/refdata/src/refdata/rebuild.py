@@ -61,24 +61,31 @@ def rebuild(log_root: Path, project: Path, src_db: Path, out: Path, *,
     out.parent.mkdir(parents=True, exist_ok=True)
     dst = sqlite3.connect(out)
     try:
-        for name, sql in ddl.items():
-            rel = duck.sql(blocks[name])
-            got, want = rel.columns, cols[name]
-            if sorted(got) != sorted(want):
-                raise ValueError(f"view {name!r}: missing columns "
-                                 f"{sorted(set(want) - set(got))}, unexpected "
-                                 f"{sorted(set(got) - set(want))}")
-            dst.execute(sql)
-            ph = ", ".join("?" * len(want))
-            sel = ", ".join(f'"{c}"' for c in want)
-            rows = duck.sql(f"SELECT {sel} FROM ({blocks[name].rstrip().rstrip(';')})")
-            with dst:
-                while batch := rows.fetchmany(50_000):
-                    dst.executemany(f'INSERT INTO "{name}" VALUES ({ph})',
-                                    [tuple(_value(v) for v in r) for r in batch])
+        fill_sqlite(duck, blocks, ddl, cols, dst)
     except BaseException:
         dst.close()
         out.unlink(missing_ok=True)
         raise
     dst.close()
     return out
+
+
+def fill_sqlite(duck: duckdb.DuckDBPyConnection, blocks: dict[str, str], ddl: dict[str, str],
+                cols: dict[str, list[str]], dst: sqlite3.Connection) -> None:
+    """Create each table from its source DDL (so column affinity applies, as in the source)
+    and fill it from its `build.sql` block, in the source's column order."""
+    for name, sql in ddl.items():
+        rel = duck.sql(blocks[name])
+        got, want = rel.columns, cols[name]
+        if sorted(got) != sorted(want):
+            raise ValueError(f"view {name!r}: missing columns "
+                             f"{sorted(set(want) - set(got))}, unexpected "
+                             f"{sorted(set(got) - set(want))}")
+        dst.execute(sql)
+        ph = ", ".join("?" * len(want))
+        sel = ", ".join(f'"{c}"' for c in want)
+        rows = duck.sql(f"SELECT {sel} FROM ({blocks[name].rstrip().rstrip(';')})")
+        with dst:
+            while batch := rows.fetchmany(50_000):
+                dst.executemany(f'INSERT INTO "{name}" VALUES ({ph})',
+                                [tuple(_value(v) for v in r) for r in batch])
