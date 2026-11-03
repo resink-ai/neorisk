@@ -1,0 +1,117 @@
+import sqlite3
+
+import pyarrow as pa
+import pytest
+
+from dataset.tables import (
+    affinity,
+    answer_table,
+    column_types,
+    compare_tables,
+    detect_mixed,
+    sqlite_table,
+)
+
+
+def _db(ddl: str, rows: list[tuple]) -> sqlite3.Connection:
+    con = sqlite3.connect(":memory:")
+    con.execute(ddl)
+    if rows:
+        ph = ", ".join("?" * len(rows[0]))
+        con.executemany(f"INSERT INTO t VALUES ({ph})", rows)
+    return con
+
+
+@pytest.mark.parametrize(("decl", "want"), [
+    ("INTEGER", "INTEGER"), ("BIGINT", "INTEGER"), ("INT2", "INTEGER"),
+    ("VARCHAR(10)", "TEXT"), ("TEXT", "TEXT"), ("", "BLOB"), ("REAL", "REAL"),
+    ("DOUBLE PRECISION", "REAL"), ("DECIMAL(10,2)", "NUMERIC"), ("NUMERIC", "NUMERIC"),
+    ("DATE", "NUMERIC")])
+def test_affinity_rules(decl, want):
+    assert affinity(decl) == want
+
+
+def test_mixed_column_becomes_sqlite_text():
+    con = _db("CREATE TABLE t (c INTEGER)", [(274,), ("",), (None,), ("12a",)])
+    assert detect_mixed(con, "t") == {"c"}
+    got = sqlite_table(con, "t", {"c"})
+    assert got.schema.field("c").type == pa.string()
+    assert got.column("c").to_pylist() == ["274", "", None, "12a"]
+
+
+def test_decimal_62_and_62_7_is_float_not_mixed():
+    con = _db("CREATE TABLE t (c DECIMAL(10,2))", [(62,), (62.7,)])
+    assert detect_mixed(con, "t") == set()
+    assert column_types(con, "t") == {"c": "float64"}
+    assert sqlite_table(con, "t", set()).column("c").to_pylist() == [62.0, 62.7]
+
+
+def test_numeric_of_integers_stays_int64():
+    con = _db("CREATE TABLE t (c NUMERIC)", [(2**62 + 1,), (None,)])
+    assert column_types(con, "t") == {"c": "int64"}
+    assert sqlite_table(con, "t", set()).column("c").to_pylist() == [2**62 + 1, None]
+
+
+def test_int64_column_exact():
+    con = _db("CREATE TABLE t (c INTEGER, s TEXT)", [(2**63 - 1, "x"), (-(2**63), None)])
+    got = sqlite_table(con, "t", set())
+    assert got.schema.field("c").type == pa.int64()
+    assert got.column("c").to_pylist() == [2**63 - 1, -(2**63)]
+
+
+def test_blob_value_refused():
+    con = _db("CREATE TABLE t (c BLOB)", [(b"\x00\x01",)])
+    with pytest.raises(ValueError, match="blob"):
+        detect_mixed(con, "t")
+
+
+def _t(**cols) -> pa.Table:
+    return pa.table(cols)
+
+
+def test_compare_int_equals_float():
+    r = compare_tables("t", _t(a=pa.array([62], pa.int64())), _t(a=pa.array([62.0])))
+    assert r.ok, r
+
+
+def test_compare_null_empty_backslash_n_distinct():
+    r = compare_tables("t", _t(a=pa.array([None, "", "\\N"], pa.string())),
+                       _t(a=pa.array(["", "", "\\N"], pa.string())))
+    assert not r.ok
+    assert (r.missing, r.extra) == ([(None,)], [("",)])
+    assert (r.rows_expected, r.rows_got) == (3, 3)
+
+
+def test_float_tolerance_only_on_float_columns():
+    assert compare_tables("t", _t(a=pa.array([1.0])), _t(a=pa.array([1.0 + 1e-12]))).ok
+    assert not compare_tables("t", _t(a=pa.array([1.0])), _t(a=pa.array([1.001]))).ok
+    assert not compare_tables("t", _t(a=pa.array(["1.0"])),
+                              _t(a=pa.array(["1.0000000000001"]))).ok
+
+
+def test_ordered_answer():
+    e = _t(a=pa.array([1, 2], pa.int64()), b=pa.array(["x", "y"]))
+    g = _t(a=pa.array([2, 1], pa.int64()), b=pa.array(["y", "x"]))
+    assert compare_tables("q", e, g).ok
+    assert not compare_tables("q", e, g, ordered=True).ok
+
+
+def test_columns_must_match():
+    r = compare_tables("t", _t(a=pa.array([1])), _t(a=pa.array([1]), extra=pa.array([2])))
+    assert not r.ok and "extra" in r.detail
+
+
+def test_columns_reordered_by_name():
+    e = _t(a=pa.array([1]), b=pa.array(["x"]))
+    assert compare_tables("t", e, _t(b=pa.array(["x"]), a=pa.array([1]))).ok
+
+
+def test_answer_table_types():
+    con = _db("CREATE TABLE t (i INTEGER, r REAL, s TEXT)", [(1, 1.5, "a"), (2, 2.0, None)])
+    got = answer_table(con, "SELECT i, r, i + r AS x, s, NULL AS n, "
+                            "CASE WHEN i = 1 THEN 'a' ELSE 2.5 END AS m FROM t ORDER BY i")
+    types = {f.name: f.type for f in got.schema}
+    assert types == {"i": pa.int64(), "r": pa.float64(), "x": pa.float64(), "s": pa.string(),
+                     "n": pa.string(), "m": pa.string()}
+    assert got.column("m").to_pylist() == ["a", "2.5"]
+    assert got.column("i").to_pylist() == [1, 2]
