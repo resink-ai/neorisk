@@ -35,3 +35,13 @@ def shop_dataset(tmp_path, monkeypatch):
     monkeypatch.setenv("NEORISK_DATA_ROOT", str(tmp_path / "root"))
     d = make_shop(tmp_path)
     return load(d), shop_fixtures.make_db(tmp_path / "shop.sqlite")
+
+
+@pytest.fixture
+def shop_cli(tmp_path, monkeypatch):
+    """The shop dataset as the only entry of the catalogue; returns the source db."""
+    from dataset import config
+    monkeypatch.setenv("NEORISK_DATA_ROOT", str(tmp_path / "root"))
+    make_shop(tmp_path)
+    monkeypatch.setattr(config, "DATASETS", tmp_path / "datasets")
+    return shop_fixtures.make_db(tmp_path / "shop.sqlite")
