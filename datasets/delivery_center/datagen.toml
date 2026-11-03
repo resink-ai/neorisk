@@ -1,0 +1,5 @@
+# Delivery Center (Spider2 delivery_center). Stage 1 is a schema-only pack: the event log comes
+# from `uv run refdata ingest datasets/delivery_center`, not from `datagen run`.
+[run]
+seed = 7
+days = 120.0

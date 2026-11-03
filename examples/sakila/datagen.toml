@@ -1,5 +1,0 @@
-# Sakila DVD rental (Spider2 sqlite-sakila; Pagila.sqlite is byte-identical). Stage 1 is a
-# schema-only pack: the event log comes from `uv run refdata ingest examples/sakila`.
-[run]
-seed = 7
-days = 266.0

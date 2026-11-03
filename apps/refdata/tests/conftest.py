@@ -81,7 +81,7 @@ def shop(tmp_path):
     (proj / "specs" / "pack.py").write_text(PACK)
     (proj / "specs" / "source.toml").write_text(SOURCE)
     (proj / "specs" / "ingest.sql").write_text(INGEST)
-    (proj / "specs" / "views.sql").write_text(VIEWS)
+    (proj / "specs" / "build.sql").write_text(VIEWS)
     return proj, make_db(tmp_path / "shop.sqlite")
 
 
@@ -95,7 +95,7 @@ def roundtrip(project: str, tmp_path: Path, capsys) -> tuple[dict, Path]:
 
     from refdata import cli
     from refdata.source import load_source
-    proj = REPO / "examples" / project
+    proj = REPO / "datasets" / project
     db = REPO / "data" / "spider2" / load_source(proj).file
     if not db.exists():
         pytest.skip(f"{db} not fetched (uv run refdata fetch)")

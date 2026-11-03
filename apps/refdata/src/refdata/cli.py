@@ -37,7 +37,7 @@ def build_parser() -> argparse.ArgumentParser:
     i.add_argument("--db", default=None, help="default: data/spider2/<source.toml file>")
     i.add_argument("--out", default=None, help="default: data/ref/<project>")
     i.add_argument("--force", action="store_true", help="overwrite an existing dataset")
-    r = sub.add_parser("rebuild", help="a dataset → the source tables (specs/views.sql)")
+    r = sub.add_parser("rebuild", help="a dataset → the source tables (specs/build.sql)")
     r.add_argument("dataset")
     r.add_argument("--project", required=True)
     r.add_argument("--db", default=None, help="source, for its DDL; default: data/spider2/...")

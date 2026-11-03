@@ -1,4 +1,4 @@
-"""Rebuild: a dataset → the source tables, through `specs/views.sql` (DuckDB).
+"""Rebuild: a dataset → the source tables, through `specs/build.sql` (DuckDB).
 
 Every Parquet file of the dataset is a DuckDB view named after its file (`order_placed`,
 `customers`, ...). Each `-- table: <name>` block yields one source table with exactly the
@@ -32,10 +32,10 @@ def rebuild(dataset: Path, project: Path, src_db: Path, out: Path, *,
             raise FileExistsError(f"{out} exists; pass --force to overwrite")
         out.unlink()
     src = load_source(project)
-    blocks = {b.name: b for b in parse_blocks((project / "specs" / "views.sql").read_text(),
+    blocks = {b.name: b for b in parse_blocks((project / "specs" / "build.sql").read_text(),
                                               {"table"})}
     if set(blocks) != set(src.tables):
-        raise ValueError(f"views.sql blocks differ from source.toml: missing "
+        raise ValueError(f"build.sql blocks differ from source.toml: missing "
                          f"{sorted(set(src.tables) - set(blocks))}, extra "
                          f"{sorted(set(blocks) - set(src.tables))}")
 

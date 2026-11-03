@@ -88,8 +88,8 @@ def test_roundtrip_fixture_exit_0(shop, tmp_path, capsys):
     args = ["roundtrip", str(proj), "--db", str(db), "--out-dir", str(tmp_path / "ref")]
     assert cli.main(args) == 0
     assert json.loads(capsys.readouterr().out.strip().splitlines()[-1])["failed"] == []
-    views = (proj / "specs" / "views.sql").read_text()
-    (proj / "specs" / "views.sql").write_text(views.replace("p.total / 100.0", "p.total / 10.0"))
+    views = (proj / "specs" / "build.sql").read_text()
+    (proj / "specs" / "build.sql").write_text(views.replace("p.total / 100.0", "p.total / 10.0"))
     assert cli.main([*args, "--force"]) == 1
     assert "orders" in json.loads(capsys.readouterr().out.strip().splitlines()[-1])["failed"]
 

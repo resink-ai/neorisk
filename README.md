@@ -61,10 +61,10 @@ overlay's ground truth (`actor_role`, `invitee_is_zombie`), so it is a ceiling, 
 
 ```sh
 uv run refdata fetch                          # 30 Spider 2.0 SQLite databases → data/spider2/
-uv run refdata roundtrip examples/olist       # real tables → simkit event log → the same tables
+uv run refdata roundtrip datasets/olist       # real tables → simkit event log → the same tables
 ```
 
-Thirteen projects in [`examples/`](examples/README.md#reference-datasets-spider-20) take real tables from the Spider 2.0 text-to-SQL benchmark and declare the event log behind them: `olist`, `delivery_center`, `airlines`, `databank`, `cliquebait`, `sakila`, `bitcoin`, `weblog`, `pizzarunner`, `chinook`, `northwind`, `oraclesh` and `adventureworks`. [`refdata`](apps/refdata/README.md) ingests the tables as a simkit dataset and rebuilds them from it. It proves the round trip exact, row for row, and runs the benchmark's own questions on both sides. All derived files stay in the git-ignored `data/`, because the sources' licences vary.
+Thirteen datasets in [`datasets/`](datasets/README.md) take real tables from the Spider 2.0 text-to-SQL benchmark and declare the event log behind them: `olist`, `delivery_center`, `airlines`, `databank`, `cliquebait`, `sakila`, `bitcoin`, `weblog`, `pizzarunner`, `chinook`, `northwind`, `oraclesh` and `adventureworks`. [`refdata`](apps/refdata/README.md) ingests the tables as a simkit dataset and rebuilds them from it. It proves the round trip exact, row for row, and runs the benchmark's own questions on both sides. All derived files stay in the git-ignored `data/`, because the sources' licences vary.
 
 ## Ethereum data collection
 
