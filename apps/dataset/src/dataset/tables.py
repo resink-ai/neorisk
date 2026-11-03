@@ -1,9 +1,9 @@
 """Results tables from SQLite, and the exact comparator every engine is graded with.
 
-A results column has one Parquet type, from its SQLite affinity and values: INTEGER and
-NUMERIC columns holding only integers are int64, other numeric columns float64, TEXT and
-BLOB string. A column whose stored values do not fit (text in a numeric column, a number in a
-text column) is *mixed*: it is stored as SQLite's own `CAST(x AS TEXT)`.
+A results column has one Parquet type, from the storage classes it holds: only text is
+string, only integers int64 (float64 under REAL affinity), any real float64. A column that
+holds text together with numbers (`''` among integers, say) is *mixed*: it is stored as
+SQLite's own `CAST(x AS TEXT)`.
 
 Tables compare as multisets of rows (lists for an ordered query answer). Integers and floats
 compare by value (62 == 62.0), text byte for byte, NULL only with NULL; float64 columns of
@@ -53,10 +53,13 @@ def _classes(con: sqlite3.Connection, table: str, col: str) -> set[str]:
 
 
 def column_types(con: sqlite3.Connection, table: str) -> dict[str, str]:
+    """Each column's results type, from the storage classes it holds (and REAL affinity):
+    only text → string; any real, or REAL affinity → float64; only integers → int64; text
+    together with numbers → string (a mixed column); nothing but NULL → by affinity."""
     out = {}
     for col, decl in _decls(con, table).items():
-        aff, cls = affinity(decl), _classes(con, table, col)
-        if aff in ("TEXT", "BLOB"):
+        aff, cls = affinity(decl), _classes(con, table, col) - {"null"}
+        if "text" in cls or (not cls and aff in ("TEXT", "BLOB")):
             out[col] = "string"
         elif aff == "REAL" or "real" in cls:
             out[col] = "float64"
@@ -66,13 +69,13 @@ def column_types(con: sqlite3.Connection, table: str) -> dict[str, str]:
 
 
 def detect_mixed(con: sqlite3.Connection, table: str) -> set[str]:
+    """Columns holding text together with numbers: they are stored as SQLite's own text."""
     mixed = set()
-    for col, decl in _decls(con, table).items():
+    for col in _decls(con, table):
         cls = _classes(con, table, col)
         if "blob" in cls:
             raise ValueError(f"{table}.{col} holds blob values; the contract has no blob type")
-        numeric = affinity(decl) not in ("TEXT", "BLOB")
-        if (numeric and "text" in cls) or (not numeric and cls & {"integer", "real"}):
+        if "text" in cls and cls & {"integer", "real"}:
             mixed.add(col)
     return mixed
 

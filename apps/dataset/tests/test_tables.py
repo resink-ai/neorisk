@@ -115,3 +115,11 @@ def test_answer_table_types():
                      "n": pa.string(), "m": pa.string()}
     assert got.column("m").to_pylist() == ["a", "2.5"]
     assert got.column("i").to_pylist() == [1, 2]
+
+
+def test_date_text_column_is_string_not_mixed():
+    """A DATE column (NUMERIC affinity) holding only text is a text column, not mixed."""
+    con = _db("CREATE TABLE t (d DATE, u)", [("1962-02-18 00:00:00", 1), (None, 2)])
+    assert detect_mixed(con, "t") == set()
+    assert column_types(con, "t") == {"d": "string", "u": "int64"}
+    assert sqlite_table(con, "t", set()).column("d").to_pylist() == ["1962-02-18 00:00:00", None]
