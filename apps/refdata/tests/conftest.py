@@ -83,24 +83,3 @@ def shop(tmp_path):
     (proj / "specs" / "ingest.sql").write_text(INGEST)
     (proj / "specs" / "build.sql").write_text(VIEWS)
     return proj, make_db(tmp_path / "shop.sqlite")
-
-
-REPO = Path(__file__).resolve().parents[3]
-
-
-def roundtrip(project: str, tmp_path: Path, capsys) -> tuple[dict, Path]:
-    """Run `refdata roundtrip examples/<project>` into tmp_path; skip without the source.
-    Returns the summary line (as a dict) and the ingested dataset's path."""
-    import json
-
-    from refdata import cli
-    from refdata.source import load_source
-    proj = REPO / "datasets" / project
-    db = REPO / "data" / "spider2" / load_source(proj).file
-    if not db.exists():
-        pytest.skip(f"{db} not fetched (uv run refdata fetch)")
-    code = cli.main(["roundtrip", str(proj), "--db", str(db), "--out-dir", str(tmp_path)])
-    cap = capsys.readouterr()
-    summary = json.loads(cap.out.strip().splitlines()[-1]) if cap.out.strip() else {}
-    assert code == 0, cap.err[-3000:]
-    return summary, tmp_path / project

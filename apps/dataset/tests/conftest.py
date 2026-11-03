@@ -45,3 +45,27 @@ def shop_cli(tmp_path, monkeypatch):
     make_shop(tmp_path)
     monkeypatch.setattr(config, "DATASETS", tmp_path / "datasets")
     return shop_fixtures.make_db(tmp_path / "shop.sqlite")
+
+
+@pytest.fixture
+def built(tmp_path, monkeypatch):
+    """Build and verify a real dataset into tmp_path; skip when its source is not fetched.
+    Returns (manifest, verify report, {event_type: rows} of the log)."""
+    import duckdb
+
+    from dataset.names import REPO
+    from dataset.spider2 import build_spider2, verify
+    from refdata.source import load_source
+
+    def run(name: str):
+        monkeypatch.setenv("NEORISK_DATA_ROOT", str(tmp_path / "root"))
+        cfg = load(name)
+        db = REPO / "data" / "spider2" / load_source(cfg.dir).file
+        if not db.exists():
+            pytest.skip(f"{db} not fetched (uv run refdata fetch)")
+        manifest = build_spider2(cfg, db)
+        log = tmp_path / "root" / name / cfg.version / "log" / "*.parquet"
+        types = dict(duckdb.sql(f"SELECT event_type, count(*) FROM read_parquet('{log}') "
+                                "GROUP BY 1").fetchall())
+        return manifest, verify(cfg), types
+    return run

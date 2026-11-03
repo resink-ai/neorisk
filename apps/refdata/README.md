@@ -4,9 +4,9 @@ Reference datasets: real tables from the [Spider 2.0](https://github.com/xlang-a
 
 ```bash
 uv run refdata fetch                                   # 30 SQLite files → data/spider2/ (436 MB zip, sha256-pinned)
-uv run refdata roundtrip datasets/olist [--force]      # ingest → rebuild → compare; exit 1 on any difference
+uv run refdata roundtrip datasets/olist [--force]      # ingest → log → rebuild → compare; exit 1 on any difference
 uv run refdata ingest datasets/olist [--db SRC] [--out DIR] [--force]          # → data/ref/olist/
-uv run refdata rebuild data/ref/olist --project datasets/olist [--out FILE]    # → data/ref/olist.rebuilt.sqlite
+uv run refdata rebuild data/ref/olist.log --project datasets/olist [--out FILE] # log → data/ref/olist.rebuilt.sqlite
 uv run refdata compare data/spider2/E_commerce.sqlite data/ref/olist.rebuilt.sqlite --project datasets/olist
 uv run datagen check data/ref/olist --project datasets/olist --skip-stats        # structural checks on real data
 ```
@@ -22,7 +22,7 @@ Everything under `data/` is git-ignored. The sources' licences vary (Olist is CC
 | `specs/pack.py` | The entities and events (stage 1 declares only these) |
 | `specs/source.toml` | The source file, and each source table's key (used only to sort diff samples) |
 | `specs/ingest.sql` | SQLite SQL, with one `-- event: <name> owner=<col> [ord=<col>]` or `-- entity: <name>` block per pack table |
-| `specs/build.sql` | DuckDB SQL, with one `-- table: <name>` block per source table, read over the dataset's Parquet files |
+| `specs/build.sql` | DuckDB SQL, with one `-- table: <name>` block per source table, read over the event log (decoded into one view per event type and entity by `refdata.logviews`) |
 | `specs/queries/<id>.sql` | Spider2 questions, run on the source and on the rebuilt file |
 
 ## Dataset conventions
