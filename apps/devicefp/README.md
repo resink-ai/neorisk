@@ -38,3 +38,10 @@ Rules the code keeps:
   choice use validation devices; test is reported, not tuned on.
 - **Naive Bayes is the bar:** the identity channel starts from its weights, and every run is
   reported as a paired per-fold difference with it.
+
+## Serving v3
+
+`python -m devicefp.export` writes a run as a self-contained bundle (encoder vocabularies and bin
+edges, weights, golden files). [serve/](serve/README.md) is the Rust engine and HTTP service that
+embeds raw JSON profiles from it on CPU or GPU, checked against PyTorch with
+`python -m devicefp.parity`.
