@@ -1,0 +1,29 @@
+[package]
+name = "devicefp-serve"
+version = "0.1.0"
+edition = "2024"
+description = "Native inference engine and embedding service for the devicefp v3 model"
+publish = false
+
+[features]
+default = ["cuda"]
+cuda = ["dep:cudarc"]
+
+[dependencies]
+anyhow = "1"
+axum = "0.8"
+clap = { version = "4", features = ["derive"] }
+cudarc = { version = "0.19", optional = true, default-features = false, features = ["std", "cublas", "cublaslt", "nvrtc", "driver", "dynamic-loading", "cuda-13000", "f16"] }
+gemm = { version = "0.19", features = ["x86-v4"] }
+half = "2"
+multiversion = "0.9"
+rayon = "1"
+regex = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["float_roundtrip"] }
+tokio = { version = "1", features = ["full"] }
+
+[profile.release]
+codegen-units = 1
+lto = "thin"
+debug = 1
