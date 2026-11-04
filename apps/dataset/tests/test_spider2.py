@@ -142,3 +142,16 @@ def test_generated_column_rebuilds_and_is_never_inserted(shop_dataset):
     assert t.column_names[-1] == "cents"
     assert t.column("cents").to_pylist()[0] == 1050
     assert verify(cfg)["ok"]
+
+
+def test_query_over_a_view_verifies(shop_dataset):
+    cfg, db = shop_dataset
+    con = sqlite3.connect(db)
+    con.execute("CREATE VIEW big_orders AS SELECT oid, total FROM orders WHERE total > 5")
+    con.commit()
+    con.close()
+    (cfg.dir / "specs" / "queries" / "q2.sql").write_text("SELECT oid FROM big_orders;\n")
+    build_spider2(cfg, db)
+    rep = verify(cfg)
+    assert rep["ok"], [(r.name, r.detail) for r in rep["queries"]]
+    assert [q.name for q in rep["queries"]] == ["q1", "q2"]

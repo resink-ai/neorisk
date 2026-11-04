@@ -67,9 +67,11 @@ def _results(cfg: DatasetConfig, db: Path, out: Path) -> dict:
         raise BuildError(f"{cfg.name}: [results.mixed] names tables not in source.toml: "
                          f"{sorted(unknown)}")
     con = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
-    meta: dict = {"tables": {}, "queries": {}}
+    meta: dict = {"tables": {}, "queries": {}, "views": {}}
     try:
         ddl = dict(con.execute("SELECT name, sql FROM sqlite_master WHERE type = 'table'"))
+        meta["views"] = dict(con.execute(
+            "SELECT name, sql FROM sqlite_master WHERE type = 'view' ORDER BY rowid"))
         for t, key in src.tables.items():
             if t not in ddl:
                 raise BuildError(f"{cfg.name}: table {t!r} is not in {db.name}")
@@ -194,6 +196,11 @@ def verify(cfg: DatasetConfig, *, root: Path | None = None) -> dict:
         extra = sorted(set(blocks) - set(meta["tables"]))
         if extra:
             tables.append(_failed("build.sql", f"blocks for tables not in the results: {extra}"))
+        for name, sql in meta.get("views", {}).items():     # the saved questions may read them
+            try:
+                mem.execute(sql)
+            except sqlite3.Error as e:
+                tables.append(_failed(f"view {name}", f"cannot be created: {e}"))
         _index(mem, {t: m["key"] for t, m in meta["tables"].items()
                      if mem.execute("SELECT 1 FROM sqlite_master WHERE name = ?",
                                     (t,)).fetchone()})
