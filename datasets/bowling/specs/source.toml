@@ -1,0 +1,17 @@
+# bowling: the Bowling League sample database of Viescas and Hernandez, *SQL Queries for Mere
+# Mortals*, as Spider2's BowlingLeague.sqlite; a 2017 season of 14 weekly tournaments.
+file = "BowlingLeague.sqlite"
+note = "Tournament dates are days, read as UTC midnight. sqlite_sequence is not data."
+
+[tables]
+Teams = ["TeamID"]
+Bowlers = ["BowlerID"]
+Tournaments = ["TourneyID"]
+Tourney_Matches = ["MatchID"]
+Match_Games = ["MatchID", "GameNumber"]
+Bowler_Scores = ["MatchID", "GameNumber", "BowlerID"]
+WAZips = ["ZIP"]
+Tournaments_Archive = ["TourneyID"]
+Tourney_Matches_Archive = ["MatchID"]
+Match_Games_Archive = ["MatchID", "GameNumber"]
+Bowler_Scores_Archive = ["MatchID", "GameNumber", "BowlerID"]
