@@ -1,0 +1,14 @@
+# WWE: a web scrape of profightdb.com, five promotions' cards and matches, 1963-01-25..2024-01-14.
+file = "WWE.sqlite"
+note = "Card dates are days, read as UTC midnight. Matches is 7 scrape copies of 77,567 matches. sqlite_sequence is not data."
+
+[tables]
+Promotions = ["id"]
+Tables = ["id"]
+Cards = ["id"]
+Locations = ["id"]
+Events = ["id"]
+Matches = ["id"]
+Belts = ["id"]
+Wrestlers = ["id"]
+Match_Types = ["id"]
