@@ -1,0 +1,11 @@
+# University: Mannino's textbook sample (students, faculty, courses, offerings, enrollments),
+# the university_* tables of Spider2's education_business catalog.
+file = "education_business.sqlite"
+note = "No times but FacHireDate. Enrollment and grade times come from a term-calendar rule; N = 2010-08-31."
+
+[tables]
+university_course = ["CourseNo"]
+university_faculty = ["FacNo"]
+university_student = ["StdNo"]
+university_offering = ["OfferNo"]
+university_enrollment = ["OfferNo", "StdNo"]
