@@ -1,0 +1,5 @@
+# Airlines (Spider2 Airlines = Postgres Pro demo-small). Stage 1 is a schema-only pack: the
+# event log comes from `uv run refdata ingest datasets/airlines`, not from `datagen run`.
+[run]
+seed = 7
+days = 60.0

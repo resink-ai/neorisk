@@ -1,0 +1,5 @@
+# Olist (Spider2 E_commerce). Stage 1 is a schema-only pack: the event log comes from
+# `uv run refdata ingest datasets/olist`, not from `datagen run`.
+[run]
+seed = 7
+days = 801.0

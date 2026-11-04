@@ -118,6 +118,13 @@ def _empty(schema: dict[str, pl.DataType]) -> pl.DataFrame:
     return pl.DataFrame(schema=schema)
 
 
+def owners(project: Path) -> dict[str, str]:
+    """Each event block's `owner=` column, from `specs/ingest.sql`: the log's entity key."""
+    blocks = parse_blocks((Path(project) / "specs" / "ingest.sql").read_text(),
+                          {"event", "entity"})
+    return {b.name: b.opts["owner"] for b in blocks if b.kind == "event" and "owner" in b.opts}
+
+
 def ingest(project: Path, db: Path, out: Path, *, force: bool = False) -> Path:
     project, db, out = Path(project), Path(db), Path(out)
     if not db.exists():

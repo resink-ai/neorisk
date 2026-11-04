@@ -1,5 +1,0 @@
-# Web and app logs (Spider2 log): a SQL-recipes textbook's sample data. Stage 1 is a schema-only
-# pack: the event log comes from `uv run refdata ingest examples/weblog`.
-[run]
-seed = 7
-days = 427.0

@@ -1,14 +1,14 @@
 # refdata
 
-Reference datasets: real tables from the [Spider 2.0](https://github.com/xlang-ai/Spider2) text-to-SQL benchmark, turned into simkit event logs and rebuilt exactly. Each one is a project in `examples/` whose `pack.py` declares the events. Stage 1, this app, proves that the event log *is* the tables. Stage 2 will make the same pack generate the log, and grade it with the same views. See `docs/superpowers/specs/2026-10-30-spider2-reference-datasets-design.md`.
+Reference datasets: real tables from the [Spider 2.0](https://github.com/xlang-ai/Spider2) text-to-SQL benchmark, turned into simkit event logs and rebuilt exactly. Each one is a dataset in `datasets/` whose `pack.py` declares the events. Stage 1, this app, proves that the event log *is* the tables. Stage 2 will make the same pack generate the log, and grade it with the same views. See `docs/superpowers/specs/2026-10-30-spider2-reference-datasets-design.md`.
 
 ```bash
 uv run refdata fetch                                   # 30 SQLite files → data/spider2/ (436 MB zip, sha256-pinned)
-uv run refdata roundtrip examples/olist [--force]      # ingest → rebuild → compare; exit 1 on any difference
-uv run refdata ingest examples/olist [--db SRC] [--out DIR] [--force]          # → data/ref/olist/
-uv run refdata rebuild data/ref/olist --project examples/olist [--out FILE]    # → data/ref/olist.rebuilt.sqlite
-uv run refdata compare data/spider2/E_commerce.sqlite data/ref/olist.rebuilt.sqlite --project examples/olist
-uv run datagen check data/ref/olist --project examples/olist --skip-stats        # structural checks on real data
+uv run refdata roundtrip datasets/olist [--force]      # ingest → log → rebuild → compare; exit 1 on any difference
+uv run refdata ingest datasets/olist [--db SRC] [--out DIR] [--force]          # → data/ref/olist/
+uv run refdata rebuild data/ref/olist.log --project datasets/olist [--out FILE] # log → data/ref/olist.rebuilt.sqlite
+uv run refdata compare data/spider2/E_commerce.sqlite data/ref/olist.rebuilt.sqlite --project datasets/olist
+uv run datagen check data/ref/olist --project datasets/olist --skip-stats        # structural checks on real data
 ```
 
 Exit codes are 0 for success, 1 when a round trip or comparison differs, and 2 for a usage error, a missing source or a refusal.
@@ -22,7 +22,7 @@ Everything under `data/` is git-ignored. The sources' licences vary (Olist is CC
 | `specs/pack.py` | The entities and events (stage 1 declares only these) |
 | `specs/source.toml` | The source file, and each source table's key (used only to sort diff samples) |
 | `specs/ingest.sql` | SQLite SQL, with one `-- event: <name> owner=<col> [ord=<col>]` or `-- entity: <name>` block per pack table |
-| `specs/views.sql` | DuckDB SQL, with one `-- table: <name>` block per source table, read over the dataset's Parquet files |
+| `specs/build.sql` | DuckDB SQL, with one `-- table: <name>` block per source table, read over the event log (decoded into one view per event type and entity by `refdata.logviews`) |
 | `specs/queries/<id>.sql` | Spider2 questions, run on the source and on the rebuilt file |
 
 ## Dataset conventions

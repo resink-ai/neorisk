@@ -1,0 +1,5 @@
+# Pizza Runner (Spider2 modern_data, pizza_* tables). Stage 1 is a schema-only pack: the event
+# log comes from `uv run refdata ingest datasets/pizzarunner`, not from `datagen run`.
+[run]
+seed = 7
+days = 14.0

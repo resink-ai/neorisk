@@ -14,6 +14,7 @@ resolution-markers = [
 members = [
     "bench",
     "datagen",
+    "dataset",
     "devicefp",
     "ethcollect",
     "ethmodel",
@@ -199,6 +200,27 @@ requires-dist = [
     { name = "neorisk-simkit", editable = "libs/simkit" },
     { name = "numpy", specifier = ">=1.26" },
     { name = "polars", specifier = ">=1.0" },
+]
+
+[[package]]
+name = "dataset"
+version = "0.1.0"
+source = { editable = "apps/dataset" }
+dependencies = [
+    { name = "duckdb" },
+    { name = "neorisk-simkit" },
+    { name = "polars" },
+    { name = "pyarrow" },
+    { name = "refdata" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "duckdb", specifier = ">=1.1" },
+    { name = "neorisk-simkit", editable = "libs/simkit" },
+    { name = "polars", specifier = ">=1.0" },
+    { name = "pyarrow", specifier = ">=17" },
+    { name = "refdata", editable = "apps/refdata" },
 ]
 
 [[package]]

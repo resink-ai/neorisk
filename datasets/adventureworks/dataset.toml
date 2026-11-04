@@ -1,0 +1,10 @@
+name = "adventureworks"
+version = "v1"
+kind = "spider2"
+
+[recipe]
+
+[results.mixed]
+salesperson = ["salesquota", "territoryid"]
+product = ["productmodelid", "productsubcategoryid", "weight"]
+salesorderheader = ["creditcardid", "currencyrateid", "salespersonid"]

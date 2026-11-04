@@ -1,5 +1,0 @@
-# Bitcoin trading (Spider2 bank_sales_trading, bitcoin_* tables). Stage 1 is a schema-only pack:
-# the event log comes from `uv run refdata ingest examples/bitcoin`, not from `datagen run`.
-[run]
-seed = 7
-days = 1702.0
