@@ -4,7 +4,7 @@
 
 Aliens living in the US: 50,000 fictional people with a name, an email, a gender, an alien type, a birth year, a favourite food, a feeding frequency, an aggression flag, an occupation and a US city.
 
-Version `v1`, kind `spider2`. The input is one ordered event log of 100,000 events; the output is the 4 source tables, rebuilt exactly, and the answers to 1 saved Spider 2.0 questions.
+Version `v1`, kind `spider2`. The input is one ordered event log of 100,000 events; the output is the 4 source tables, rebuilt exactly, and the answer to 1 saved Spider 2.0 question.
 
 ## Raw data
 

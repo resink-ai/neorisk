@@ -4,7 +4,7 @@
 
 An English word list: 370,103 lower-case words, with no time and no behaviour. Spider 2.0 uses it as a puzzle input for one anagram question.
 
-Version `v1`, kind `spider2`. The input is one ordered event log of 373,804 events; the output is the 1 source table, rebuilt exactly, and the answers to 2 saved Spider 2.0 questions.
+Version `v1`, kind `spider2`. The input is one ordered event log of 373,804 events; the output is the source table, rebuilt exactly, and the answers to 2 saved Spider 2.0 questions.
 
 ## Raw data
 

@@ -30,11 +30,11 @@ Each invoice and each invoice line is an event owned by the customer. The catalo
 | `media_types_created` | entity | 5 | `media_type_id`, `ext_id`, `name` |
 | `artists_created` | entity | 275 | `artist_id`, `ext_id`, `name` |
 | `albums_created` | entity | 347 | `album_id`, `ext_id`, `title`, `artist_id` |
-| `tracks_created` | entity | 3,503 | `track_id`, `ext_id`, `name`, `album_id`, `media_type_id`, `genre_id`, … (10 in all) |
+| `tracks_created` | entity | 3,503 | `track_id`, `ext_id`, `name`, `album_id`, `media_type_id`, `genre_id`, `composer`, `milliseconds`, `bytes`, `unit_price` |
 | `playlists_created` | entity | 18 | `playlist_id`, `ext_id`, `name` |
 | `playlist_track_created` | entity | 8,715 | `pt_id`, `ext_id`, `playlist_id`, `track_id` |
-| `employees_created` | entity | 8 | `employee_id`, `ext_id`, `last_name`, `first_name`, `title`, `reports_to`, … (15 in all) |
-| `customers_created` | entity | 59 | `customer_id`, `ext_id`, `first_name`, `last_name`, `company`, `address`, … (14 in all) |
+| `employees_created` | entity | 8 | `employee_id`, `ext_id`, `last_name`, `first_name`, `title`, `reports_to`, `birth_date`, `address`, `city`, `state`, `country`, `postal_code`, `phone`, `fax`, `email` |
+| `customers_created` | entity | 59 | `customer_id`, `ext_id`, `first_name`, `last_name`, `company`, `address`, `city`, `state`, `country`, `postal_code`, `phone`, `fax`, `email`, `support_rep_id` |
 | `invoice_issued` | business | 412 | `customer_id`, `invoice_id` |
 | `invoice_line_added` | business | 2,240 | `customer_id`, `invoice_id`, `invoice_line_id`, `track_id`, `unit_price`, `quantity` |
 

@@ -4,7 +4,7 @@
 
 Parch & Posey, a paper company selling standard, gloss and poster paper to large US companies: accounts visit the web site through a channel and place orders; each account has a sales rep, and each rep a region.
 
-Version `v1`, kind `spider2`. The input is one ordered event log of 16,390 events; the output is the 5 source tables, rebuilt exactly, and the answers to 1 saved Spider 2.0 questions.
+Version `v1`, kind `spider2`. The input is one ordered event log of 16,390 events; the output is the 5 source tables, rebuilt exactly, and the answer to 1 saved Spider 2.0 question.
 
 ## Raw data
 

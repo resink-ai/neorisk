@@ -4,7 +4,7 @@
 
 COVID-19 by state: daily cumulative cases and deaths for Colorado, Florida, Massachusetts and North Carolina, from 2020-02-01 to 2020-11-11.
 
-Version `v1`, kind `spider2`. The input is one ordered event log of 1,010 events; the output is the 1 source table, rebuilt exactly. No Spider 2.0 question reads this table, so there are no saved questions.
+Version `v1`, kind `spider2`. The input is one ordered event log of 1,010 events; the output is the source table, rebuilt exactly.
 
 ## Raw data
 

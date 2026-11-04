@@ -4,7 +4,7 @@
 
 A clock-in/clock-out log: staff members `A` to `Z` record an `Enter` or an `Exit` at a date and minute.
 
-Version `v1`, kind `spider2`. The input is one ordered event log of 262 events; the output is the 1 source table, rebuilt exactly. No Spider 2.0 question reads it, so there are 0 saved questions.
+Version `v1`, kind `spider2`. The input is one ordered event log of 262 events; the output is the source table, rebuilt exactly.
 
 ## Raw data
 

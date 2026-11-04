@@ -4,7 +4,7 @@
 
 India data-science salaries: Glassdoor listings, each the average salary reported for one company, job title and city.
 
-Version `v1`, kind `spider2`. The input is one ordered event log of 8,688 events; the output is the 1 source table, rebuilt exactly, and the answers to 1 saved Spider 2.0 questions.
+Version `v1`, kind `spider2`. The input is one ordered event log of 8,688 events; the output is the source table, rebuilt exactly, and the answer to 1 saved Spider 2.0 question.
 
 ## Raw data
 

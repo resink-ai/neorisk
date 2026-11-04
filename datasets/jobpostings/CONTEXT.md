@@ -4,7 +4,7 @@
 
 Data-job postings scraped from Google Jobs during 2023: each posting, the companies behind them, the skills catalogue, and which skills each posting asks for.
 
-Version `v1`, kind `spider2`. The input is one ordered event log of 459,758 events; the output is the 4 source tables, rebuilt exactly, and the answers to 1 saved Spider 2.0 question.
+Version `v1`, kind `spider2`. The input is one ordered event log of 459,758 events; the output is the 4 source tables, rebuilt exactly, and the answer to 1 saved Spider 2.0 question.
 
 ## Raw data
 

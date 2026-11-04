@@ -4,7 +4,7 @@
 
 Professional wrestling results scraped from profightdb.com ("The Internet Wrestling Database"): every card of five promotions (WWWF, WWF, WWE, WCW, NXT) from 1963-01-25 to 2024-01-14, and the matches on each card.
 
-Version `v1`, kind `spider2`. The input is one ordered event log of 128,303 events; the output is the 9 source tables, rebuilt exactly, and the answers to 1 saved Spider 2.0 questions.
+Version `v1`, kind `spider2`. The input is one ordered event log of 128,303 events; the output is the 9 source tables, rebuilt exactly, and the answer to 1 saved Spider 2.0 question.
 
 ## Raw data
 
