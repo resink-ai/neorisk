@@ -146,3 +146,14 @@ def test_generated_column_in_results():
     got = sqlite_table(con, "t", set())
     assert got.column_names == ["a", "b"]
     assert got.column("b").to_pylist() == [2, 10]
+
+
+def test_exact_float_columns_compare_bit_for_bit():
+    import math
+    big = 9.0e18
+    e = _t(a=pa.array([big, 0.5]))
+    g = _t(a=pa.array([math.nextafter(big, math.inf), 0.5]))
+    assert compare_tables("t", e, g).ok                     # within 1e-9: tolerated
+    r = compare_tables("t", e, g, exact={"a"})
+    assert not r.ok and r.missing == [(big,)]
+    assert compare_tables("t", e, e, exact={"a"}).ok

@@ -155,3 +155,27 @@ def test_query_over_a_view_verifies(shop_dataset):
     rep = verify(cfg)
     assert rep["ok"], [(r.name, r.detail) for r in rep["queries"]]
     assert [q.name for q in rep["queries"]] == ["q1", "q2"]
+
+
+def test_exact_column_catches_one_ulp(shop_dataset):
+    import math
+    cfg, db = shop_dataset
+    (cfg.dir / "dataset.toml").write_text((cfg.dir / "dataset.toml").read_text().replace(
+        "[results.mixed]", '[results.exact]\norders = ["total"]\n[results.mixed]'))
+    cfg = load(cfg.dir)
+    build_spider2(cfg, db)
+    p = resolve("shop/v1/results/orders.parquet")
+    t = pq.read_table(p)
+    tot = t.column("total").to_pylist()
+    tot[0] = math.nextafter(tot[0], math.inf)
+    pq.write_table(t.set_column(t.schema.get_field_index("total"), "total",
+                                pa.array(tot, pa.float64())), p)
+    assert [r.name for r in verify(cfg)["tables"] if not r.ok] == ["orders"]
+
+
+def test_exact_column_must_be_float(shop_dataset):
+    cfg, db = shop_dataset
+    (cfg.dir / "dataset.toml").write_text((cfg.dir / "dataset.toml").read_text().replace(
+        "[results.mixed]", '[results.exact]\norders = ["note"]\n[results.mixed]'))
+    with pytest.raises(BuildError, match="note"):
+        build_spider2(load(cfg.dir), db)

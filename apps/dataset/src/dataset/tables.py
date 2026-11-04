@@ -7,7 +7,8 @@ SQLite's own `CAST(x AS TEXT)`.
 
 Tables compare as multisets of rows (lists for an ordered query answer). Integers and floats
 compare by value (62 == 62.0), text byte for byte, NULL only with NULL; float64 columns of
-the expected table allow a relative tolerance of 1e-9.
+the expected table allow a relative tolerance of 1e-9, except the columns named `exact`, which
+compare bit for bit (float ids above 2**53, scores whose ties decide an answer).
 """
 
 from __future__ import annotations
@@ -183,7 +184,7 @@ def _sample(rows: list[tuple]) -> list[tuple]:
 
 
 def compare_tables(name: str, expected: pa.Table, got: pa.Table, *,
-                   ordered: bool = False) -> TableResult:
+                   ordered: bool = False, exact: set[str] | frozenset = frozenset()) -> TableResult:
     want, have = expected.column_names, got.column_names
     ne, ng = expected.num_rows, got.num_rows
     if sorted(want) != sorted(have):
@@ -198,7 +199,7 @@ def compare_tables(name: str, expected: pa.Table, got: pa.Table, *,
         return TableResult(name, False, ne, ng, detail=(
             f"column types outside the contract (int, float, string): {bad}"))
     got = got.select(want)
-    floats = [pa.types.is_floating(f.type) for f in expected.schema]
+    floats = [pa.types.is_floating(f.type) and f.name not in exact for f in expected.schema]
     a, b = _rows(expected), _rows(got)
     if ordered:
         ok = len(a) == len(b) and all(_row_eq(x, y, floats) for x, y in zip(a, b, strict=False))

@@ -62,10 +62,11 @@ def _index(con: sqlite3.Connection, keys: dict[str, list[str]]) -> None:
 
 def _results(cfg: DatasetConfig, db: Path, out: Path) -> dict:
     src = load_source(cfg.dir)
-    unknown = set(cfg.mixed) - set(src.tables)
-    if unknown:
-        raise BuildError(f"{cfg.name}: [results.mixed] names tables not in source.toml: "
-                         f"{sorted(unknown)}")
+    for section, names in (("mixed", cfg.mixed), ("exact", cfg.exact)):
+        unknown = set(names) - set(src.tables)
+        if unknown:
+            raise BuildError(f"{cfg.name}: [results.{section}] names tables not in source.toml: "
+                             f"{sorted(unknown)}")
     con = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
     meta: dict = {"tables": {}, "queries": {}, "views": {}}
     try:
@@ -80,6 +81,10 @@ def _results(cfg: DatasetConfig, db: Path, out: Path) -> dict:
                 raise BuildError(f"{cfg.name}: table {t!r} has mixed columns {sorted(mixed)}, "
                                  f"but dataset.toml declares {sorted(want)}")
             tbl = sqlite_table(con, t, mixed)
+            bad = [c for c in cfg.exact.get(t, []) if c not in tbl.column_names
+                   or not pa.types.is_floating(tbl.schema.field(c).type)]
+            if bad:
+                raise BuildError(f"{cfg.name}: [results.exact] {t}: {bad} are not float columns")
             _write_parquet(tbl, out / "results" / f"{t}.parquet")
             meta["tables"][t] = {"ddl": ddl[t], "key": key, "mixed": sorted(mixed),
                                  "generated": sorted(generated(con, t)),
@@ -192,7 +197,7 @@ def verify(cfg: DatasetConfig, *, root: Path | None = None) -> dict:
                 tables.append(_failed(t, f"the rebuild fails: {type(e).__name__}: {e}",
                                       want.num_rows))
                 continue
-            tables.append(compare_tables(t, want, got))
+            tables.append(compare_tables(t, want, got, exact=set(cfg.exact.get(t, []))))
         extra = sorted(set(blocks) - set(meta["tables"]))
         if extra:
             tables.append(_failed("build.sql", f"blocks for tables not in the results: {extra}"))

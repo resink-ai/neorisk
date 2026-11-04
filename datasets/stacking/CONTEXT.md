@@ -54,6 +54,8 @@ All of them. Run k, the k-th `solution` rowid, starts at 2023-01-01 00:00:00 + k
 
 `expected/queries/` holds the answers of the saved questions (`local262`, `local263`, `local264`), computed on the source. `dataset verify` runs `specs/build.sql` over the log, loads the tables into SQLite with the source's DDL, replays the source views, and compares the tables and the answers exactly: rows as multisets, numbers by value, text byte for byte.
 
+Every float column is declared in `dataset.toml` `[results.exact]`, so it compares bit for bit instead of within the usual relative 1e-9: every answer turns on exact ties between scores.
+
 ## Regenerate
 
 ```bash

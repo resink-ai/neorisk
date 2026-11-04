@@ -14,7 +14,7 @@ uv run dataset resolve olist/v1/log  # where a data name lives under the root
 
 | In the repo, `datasets/<name>/` | Holds |
 |---|---|
-| `dataset.toml` | Name, version, kind (`spider2` or `synthetic`), recipe, the mixed columns |
+| `dataset.toml` | Name, version, kind (`spider2` or `synthetic`), recipe, the mixed columns, the float columns compared bit for bit |
 | `CONTEXT.md` | What the raw data is, how the log was made, the expected output, how to regenerate and extend it |
 | `specs/` | Spider2: `pack.py`, `source.toml`, `ingest.sql`, `build.sql` (the reference build), `queries/` |
 | `<version>.lock.json` | Once recorded: every file's sha256 and rows; a build that differs fails |

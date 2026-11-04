@@ -59,6 +59,8 @@ Each collision is two events, `collision_occurred` at its date and time and `col
 
 local015 joins parties to collisions on `case_id`. Only 53 of the 2,796 motorcycle collisions have a sampled party, so the answer rests on 19 collisions, and it changes if a single bit of `case_id` changes.
 
+Every float column is declared in `dataset.toml` `[results.exact]`, so it compares bit for bit instead of within the usual relative 1e-9: `case_id` is a float id above 2⁵³, where 1e-9 would hide a changed id.
+
 ## Regenerate
 
 ```bash
