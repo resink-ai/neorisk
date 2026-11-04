@@ -128,3 +128,17 @@ def test_lock_names_a_writer_change(shop_dataset):
     lock.write_text(json.dumps(data))
     with pytest.raises(BuildError, match="writer"):
         build_spider2(cfg, db)
+
+
+def test_generated_column_rebuilds_and_is_never_inserted(shop_dataset):
+    cfg, db = shop_dataset
+    con = sqlite3.connect(db)
+    con.execute("ALTER TABLE orders ADD COLUMN cents INTEGER "
+                "GENERATED ALWAYS AS (CAST(round(total * 100) AS INTEGER)) VIRTUAL")
+    con.commit()
+    con.close()
+    build_spider2(cfg, db)
+    t = pq.read_table(resolve("shop/v1/results/orders.parquet"))
+    assert t.column_names[-1] == "cents"
+    assert t.column("cents").to_pylist()[0] == 1050
+    assert verify(cfg)["ok"]

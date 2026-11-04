@@ -135,3 +135,14 @@ def test_compare_rejects_bool_and_decimal_columns():
     assert not r.ok and "decimal" in r.detail
     assert compare_tables("t", _t(a=pa.array(["x"])), _t(a=pa.array(["x"], pa.large_string()))).ok
     assert compare_tables("t", e, _t(a=pa.array([1, 0], pa.int32()))).ok
+
+
+def test_generated_column_in_results():
+    con = _db("CREATE TABLE t (a INTEGER, b INTEGER GENERATED ALWAYS AS (a * 2) VIRTUAL)", [])
+    con.execute("INSERT INTO t (a) VALUES (1), (5)")
+    from dataset.tables import generated
+    assert generated(con, "t") == {"b"}
+    assert column_types(con, "t") == {"a": "int64", "b": "int64"}
+    got = sqlite_table(con, "t", set())
+    assert got.column_names == ["a", "b"]
+    assert got.column("b").to_pylist() == [2, 10]

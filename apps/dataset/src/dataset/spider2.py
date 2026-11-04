@@ -22,7 +22,14 @@ import pyarrow.parquet as pq
 from dataset.config import DatasetConfig
 from dataset.manifest import files_of, lock_diff, lock_of, recipe_sha256, sha256, write_json, writer
 from dataset.names import resolve
-from dataset.tables import TableResult, answer_table, compare_tables, detect_mixed, sqlite_table
+from dataset.tables import (
+    TableResult,
+    answer_table,
+    compare_tables,
+    detect_mixed,
+    generated,
+    sqlite_table,
+)
 from neorisk_simkit.io import read
 from neorisk_simkit.io.log import LogError, write_log
 from neorisk_simkit.io.writer import WRITER
@@ -73,6 +80,7 @@ def _results(cfg: DatasetConfig, db: Path, out: Path) -> dict:
             tbl = sqlite_table(con, t, mixed)
             _write_parquet(tbl, out / "results" / f"{t}.parquet")
             meta["tables"][t] = {"ddl": ddl[t], "key": key, "mixed": sorted(mixed),
+                                 "generated": sorted(generated(con, t)),
                                  "columns": [{"name": f.name, "type": str(f.type)}
                                              for f in tbl.schema]}
     finally:
@@ -173,8 +181,9 @@ def verify(cfg: DatasetConfig, *, root: Path | None = None) -> dict:
                 tables.append(_failed(t, "no -- table block in build.sql", want.num_rows))
                 continue
             try:
-                fill_table(duck, t, blocks[t], m["ddl"], [c["name"] for c in m["columns"]],
-                           mem)
+                gen = set(m.get("generated", []))
+                fill_table(duck, t, blocks[t], m["ddl"],
+                           [c["name"] for c in m["columns"] if c["name"] not in gen], mem)
                 got = sqlite_table(mem, t, set(m["mixed"]))
             except (sqlite3.Error, duckdb.Error, pa.ArrowException, ValueError,
                     TypeError) as e:

@@ -44,8 +44,19 @@ def affinity(decl: str) -> str:
     return "NUMERIC"
 
 
+def _xinfo(con: sqlite3.Connection, table: str) -> list[tuple]:
+    """`PRAGMA table_xinfo`, without a virtual table's hidden columns (hidden = 1); a
+    generated column (hidden 2 or 3) is part of the table, so it stays."""
+    return [r for r in con.execute(f"PRAGMA table_xinfo({_q(table)})") if r[6] != 1]
+
+
 def _decls(con: sqlite3.Connection, table: str) -> dict[str, str]:
-    return {r[1]: r[2] or "" for r in con.execute(f"PRAGMA table_info({_q(table)})")}
+    return {r[1]: r[2] or "" for r in _xinfo(con, table)}
+
+
+def generated(con: sqlite3.Connection, table: str) -> set[str]:
+    """Columns SQLite computes itself: in the results, never inserted by a rebuild."""
+    return {r[1] for r in _xinfo(con, table) if r[6] in (2, 3)}
 
 
 def _classes(con: sqlite3.Connection, table: str, col: str) -> set[str]:
