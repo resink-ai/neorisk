@@ -1,0 +1,16 @@
+# music: Chinook by Luis Rocha (MIT), upstream SQLite packaging, 2009–2013 dates.
+file = "music.sqlite"
+note = "Invoice dates are midnights, read as UTC. No AUTOINCREMENT, so there is no sqlite_sequence."
+
+[tables]
+Genre = ["GenreId"]
+MediaType = ["MediaTypeId"]
+Artist = ["ArtistId"]
+Album = ["AlbumId"]
+Track = ["TrackId"]
+Playlist = ["PlaylistId"]
+PlaylistTrack = ["PlaylistId", "TrackId"]
+Employee = ["EmployeeId"]
+Customer = ["CustomerId"]
+Invoice = ["InvoiceId"]
+InvoiceLine = ["InvoiceLineId"]
