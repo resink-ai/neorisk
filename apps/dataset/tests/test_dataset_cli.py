@@ -59,3 +59,13 @@ def test_context_prints_catalogue_from_build(shop_cli, capsys):
     assert "| `orders` | 3 | 6 | none |" in out
     assert "(`q1`)" in out
     assert "uv run dataset build shop" in out
+
+
+def test_context_intro_counts_read_naturally():
+    from dataset.context import _intro
+    assert _intro("v1", "spider2", 7, 1, 0) == (
+        "Version `v1`, kind `spider2`. The input is one ordered event log of 7 events; the output "
+        "is the source table, rebuilt exactly.")
+    assert _intro("v1", "spider2", 1, 2, 1).endswith(
+        "of 1 event; the output is the 2 source tables, rebuilt exactly, and the answer to 1 "
+        "saved Spider 2.0 question.")

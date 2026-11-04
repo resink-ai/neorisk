@@ -21,17 +21,24 @@ def _log_counts(root: Path) -> dict[str, int]:
                            "GROUP BY 1").fetchall())
 
 
+def _intro(version: str, kind: str, events: int, tables: int, queries: int) -> str:
+    log = f"{events:,} event" + ("" if events == 1 else "s")
+    out = "the source table" if tables == 1 else f"the {tables} source tables"
+    text = (f"Version `{version}`, kind `{kind}`. The input is one ordered event log of {log}; "
+            f"the output is {out}, rebuilt exactly")
+    if queries:
+        text += (", and the answer to 1 saved Spider 2.0 question" if queries == 1 else
+                 f", and the answers to {queries} saved Spider 2.0 questions")
+    return text + "."
+
+
 def render(cfg: DatasetConfig, root: Path) -> str:
     events = json.loads((root / "schema" / "events.json").read_text())["events"]
     results = json.loads((root / "schema" / "results.json").read_text())
     manifest = json.loads((root / "manifest.json").read_text())
     counts = _log_counts(root)
     tables, queries = results["tables"], sorted(results["queries"])
-    intro = (f"Version `{cfg.version}`, kind `{cfg.kind}`. The input is one ordered event log of "
-             f"{manifest['counts']['log']:,} events; the output is the {len(tables)} source "
-             f"tables, rebuilt exactly, and the answers to {len(queries)} saved Spider 2.0 "
-             "questions.")
-    out = [intro, "",
+    out = [_intro(cfg.version, cfg.kind, manifest["counts"]["log"], len(tables), len(queries)), "",
            "## Event catalogue", "", "| Event | Kind | Rows | Payload fields |", "|---|---|---:|---|"]
     for e in events:
         kind = "entity" if e["kind"] == "entity_created" else "business"
