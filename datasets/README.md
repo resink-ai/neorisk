@@ -46,5 +46,35 @@ Data files never go into git. They are named `<dataset>/<version>/<path>` and re
 | [`northwind`](northwind/CONTEXT.md) | spider2 | northwind | generated sample | MIT (Microsoft) | 4,175 | 15 | 3,366 | 2 | 0 | duckdb |
 | [`oraclesh`](oraclesh/CONTEXT.md) | spider2 | complex_oracle | generated sample | MIT (Oracle) | 1,063,399 | 10 | 1,064,608 | 6 | 0 | duckdb |
 | [`adventureworks`](adventureworks/CONTEXT.md) | spider2 | AdventureWorks | generated sample | MIT (Microsoft) | 199,389 | 13 | 168,686 | 1 | 8 | duckdb |
+| [`ipl`](ipl/CONTEXT.md) | spider2 | IPL | real sports data | unstated | 150,518 | 8 | 293,471 | 11 | 0 | duckdb |
+| [`f1`](f1/CONTEXT.md) | spider2 | f1 | real public sports results | unstated (Ergast terms unverified) | 686,185 | 29 | 1,941,243 | 9 | 0 | duckdb |
+| [`veg`](veg/CONTEXT.md) | spider2 | bank_sales_trading (`veg_*`) | real POS data, anonymised | unstated (contest data) | 934,742 | 4 | 934,987 | 2 | 0 | duckdb |
+| [`datamart`](datamart/CONTEXT.md) | spider2 | bank_sales_trading (`weekly_sales`) | generated course data | unstated | 17,117 | 2 | 34,234 | 2 | 0 | duckdb |
+| [`freshsegments`](freshsegments/CONTEXT.md) | spider2 | bank_sales_trading (`interest_*`) | course data | unstated | 16,191 | 2 | 15,482 | 2 | 0 | duckdb |
+| [`switrs`](switrs/CONTEXT.md) | spider2 | California_Traffic_Collision | real, administrative | CC0 (Kaggle) | 565,814 | 4 | 471,571 | 3 | 0 | duckdb |
+| [`eusoccer`](eusoccer/CONTEXT.md) | spider2 | EU_soccer | real, scraped | ODbL 1.0 (unverified) | 233,856 | 7 | 222,796 | 5 | 0 | duckdb |
+| [`wwe`](wwe/CONTEXT.md) | spider2 | WWE | real, scraped | unstated | 128,303 | 9 | 578,890 | 1 | 0 | duckdb |
+| [`dbimdb`](dbimdb/CONTEXT.md) | spider2 | Db-IMDB | real, scraped | unstated (IMDb content) | 140,056 | 13 | 154,676 | 5 | 0 | duckdb |
+| [`imdb_movies`](imdb_movies/CONTEXT.md) | spider2 | imdb_movies | real IMDb data, course-curated | unstated (IMDb content) | 90,680 | 7 | 75,898 | 2 | 0 | duckdb |
+| [`baseball`](baseball/CONTEXT.md) | spider2 | Baseball | real records, pre-aggregated | CC BY-SA 3.0 (Lahman) | 572,700 | 26 | 553,693 | 2 | 90 | duckdb |
+| [`atliq`](atliq/CONTEXT.md) | spider2 | education_business (`hardware_*`) | generated course data | unstated | 973,234 | 6 | 973,813 | 2 | 0 | duckdb |
+| [`parchposey`](parchposey/CONTEXT.md) | spider2 | education_business (`web_*`) | generated course data | unstated | 16,390 | 5 | 16,390 | 1 | 0 | duckdb |
+| [`university`](university/CONTEXT.md) | spider2 | education_business (`university_*`) | hand-made course data | unstated | 132 | 5 | 76 | 1 | 0 | duckdb |
+| [`staffhours`](staffhours/CONTEXT.md) | spider2 | education_business (`StaffHours`) | generated | unstated | 262 | 1 | 236 | 0 | 0 | duckdb |
+| [`salaries_india`](salaries_india/CONTEXT.md) | spider2 | education_business (`SalaryDataset`) | real, scraped, pre-aggregated | unstated | 8,688 | 1 | 4,344 | 1 | 0 | duckdb |
+| [`legislators`](legislators/CONTEXT.md) | spider2 | city_legislation (`legislators*`) | real public records | CC0 (upstream) | 100,107 | 3 | 86,896 | 4 | 0 | duckdb |
+| [`jobpostings`](jobpostings/CONTEXT.md) | spider2 | city_legislation (`job_*`, `skills_*`) | real, scraped | unstated | 459,758 | 4 | 459,758 | 1 | 0 | duckdb |
+| [`aliens`](aliens/CONTEXT.md) | spider2 | city_legislation (`alien*`) | generated | unstated | 100,000 | 4 | 200,000 | 1 | 0 | duckdb |
+| [`cities`](cities/CONTEXT.md) | spider2 | city_legislation (`cities*`) | course data, real city facts | unstated | 45,966 | 4 | 45,725 | 4 | 0 | duckdb |
+| [`unicorns`](unicorns/CONTEXT.md) | spider2 | modern_data (`companies_*`) | real snapshot, rounded | unstated | 2,181 | 3 | 3,255 | 2 | 0 | duckdb |
+| [`nyctrees`](nyctrees/CONTEXT.md) | spider2 | modern_data (`trees`, `income_trees`) | real census | unstated | 1,374,766 | 2 | 690,846 | 2 | 0 | duckdb |
+| [`covidstates`](covidstates/CONTEXT.md) | spider2 | modern_data (`statistics`) | real, pre-aggregated | unstated | 1,010 | 1 | 1,010 | 0 | 0 | duckdb |
+| [`wordlist`](wordlist/CONTEXT.md) | spider2 | modern_data (`word_list`) | English word list | unstated | 373,804 | 1 | 373,804 | 2 | 0 | duckdb |
+| [`stacking`](stacking/CONTEXT.md) | spider2 | stacking | real experiment output | unstated | 10,297 | 7 | 10,297 | 3 | 0 | duckdb |
+| [`oraclesql`](oraclesql/CONTEXT.md) | spider2 | oracle_sql | hand-made course data | freeware, not redistributable | 1,102 | 38 | 1,350 | 8 | 0 | duckdb |
+| [`bowling`](bowling/CONTEXT.md) | spider2 | BowlingLeague | course data | unstated | 1,988 | 11 | 2,156 | 1 | 0 | duckdb |
+| [`entertainment`](entertainment/CONTEXT.md) | spider2 | EntertainmentAgency | course data | unstated | 306 | 13 | 1,654 | 3 | 0 | duckdb |
+| [`school`](school/CONTEXT.md) | spider2 | school_scheduling | course data | unstated | 951 | 15 | 811 | 1 | 0 | duckdb |
+| [`music`](music/CONTEXT.md) | spider2 | music | real catalogue, generated sales | MIT | 15,607 | 11 | 15,607 | 1 | 0 | duckdb |
 
 The synthetic datasets (from the `datagen` examples) arrive in PR 3, and the Spark and Flink engines in PR 4.
