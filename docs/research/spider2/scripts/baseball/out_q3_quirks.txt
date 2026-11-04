@@ -1,0 +1,297 @@
+### setup_indexes (setup on in-memory copy)
+
+### appearances_player_orphans  (7 rows, 0.01s)
+player_id | year | team_id | count(*)
+arrueba01 | 2014 | LAN | 1
+castiru02 | 2014 | BOS | 1
+furcara02 | 2014 | MIA | 1
+harriwi10 | 2014 | ARI | 1
+pricebr10 | 2014 | CLE | 1
+rosajo01 | 2014 | COL | 1
+smithch09 | 2014 | DET | 1
+
+### allstar_player_orphan  (1 rows, 0.00s)
+player_id | year | game_num | game_id | team_id | league_id | gp | starting_pos
+carperma01 | 2014 | 0 | ALS201407150 | SLN | NL | 0 | ''
+
+### manager_award_orphan  (1 rows, 0.00s)
+player_id | award_id | year | league_id | tie | notes
+maddojo01 | BBWAA Manager of the year | 2015 | NL | '' | ''
+
+### appearances_team_orphans  (9 rows, 0.01s)
+year | team_id | league_id | count(*)
+1899 | WSN | NL | 41
+2014 | KCR | AL | 38
+1898 | WSN | NL | 37
+1892 | WSN | NL | 33
+1895 | WSN | NL | 31
+1894 | WSN | NL | 28
+1896 | WSN | NL | 26
+1897 | WSN | NL | 24
+1893 | WSN | NL | 18
+
+### appearances_team_orphans_summary  (1 rows, 0.01s)
+count(distinct year||team_id) | min(year) | max(year)
+9 | 1892 | 2014
+
+### appearances_league_only_mismatch  (1 rows, 0.02s)
+year | team_id | league_id | league_id
+2014 | CLE | NL | AL
+
+### postseason_team_orphans  (8 rows, 0.00s)
+year | round | team_id_winner | team_id_loser
+1884 | WS | PRO | NYP
+1885 | WS | CHC | STL
+1886 | WS | STL | CHC
+1887 | WS | DTN | STL
+1888 | WS | NYG | STL
+1889 | WS | NYG | BRO
+1890 | WS | BRO | LOU
+1892 | CS | BSN | CLV
+
+### college_orphans  (4 rows, 0.00s)
+college_id | count(*)
+caallia | 2
+ctpostu | 6
+txrange | 1
+txutper | 1
+
+### no_debut_but_appears  (3 rows, 0.01s)
+player_id | name_first | name_last | debut | final_game | (select group_concat(year||team_id) from appearances a where a.player_id=p.player_id)
+hyndmji01 | William | Hyndman | '' | '' | 1886PH4
+snydech03 | Chubby | Snyder | '' | '' | 1914BUF
+stineha01 | William | Stein | '' | '' | 1890PH4
+
+### no_debut_where_used  (1 rows, 0.01s)
+hof | mgr | bat | award | sal | none_of_these | no_final
+64 | 123 | 6 | 1 | 0 | 7 | 193
+
+### date_formats  (4 rows, 0.01s)
+c | count(*) | sum(debut glob '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]') | sum(debut<>'' and date(debut) is null) | sum(debut<>'' and date(debut)<>debut)
+debut | 18846 | 18653 | 0 | 0
+final_game | 18846 | 18653 | 0 | 0
+span_first | 2944 | 2944 | 0 | 0
+span_last | 2944 | 2944 | 0 | 0
+
+### debut_vs_stats  (1 rows, 0.03s)
+players_with_debut_and_batting | debut_year_eq_first_bat_year | debut_after_first_bat | final_eq_last_bat_year | final_before_last_bat | final_before_debut
+18653 | 18649 | 1 | 18649 | 0 | 1
+
+### debut_mismatch_examples  (8 rows, 0.02s)
+player_id | debut | final_game | first_bat | last_bat
+clarked01 | 1886-07-04 | 1891-08-08 | 1886 | 1886
+donnefr01 | 1893-08-15 | 1894-05-23 | 1893 | 1893
+gilliba01 | 1875-09-25 | 1888-04-27 | 1879 | 1888
+irwinjo01 | 1882-05-31 | 1896-08-08 | 1882 | 1891
+mcgrajo01 | 1891-08-26 | 1907-06-18 | 1891 | 1906
+mckened01 | 1874-07-29 | 1884-07-05 | 1884 | 1884
+morgabi01 | 1882-08-17 | 1884-08-21 | 1884 | 1884
+morgabi02 | 1883-08-06 | 1884-07-23 | 1882 | 1884
+
+### snapshot_dates  (1 rows, 0.00s)
+max(debut) | max(final_game) | sum(final_game='2015-10-04') | sum(final_game>='2015-09-01') | max(death_year) | (select max(yearid) from hall_of_fame) | (select max(span_last) from home_game)
+2015-10-03 | 2015-10-04 | 501 | 1076 | '' | 2016 | 2014-09-28
+
+### birth_death_partial  (1 rows, 0.02s)
+full_birth | partial_birth | no_birth_year | full_death | partial_death | place_without_year | death_before_birth | invalid_birth_date | invalid_death_date
+18382 | 321 | 143 | 9334 | 2 | 0 | 1 | 0 | 0
+
+### allstar_gameid_date  (1 rows, 0.00s)
+n | no_game_id | gid_year_eq | gid_valid_date | gid_suffix_eq_game_num | min_mmdd | max_mmdd
+5069 | 49 | 5020 | 5020 | 4548 | '' | 0809
+
+### allstar_no_gameid  (1 rows, 0.00s)
+year | game_num | count(*)
+1945 | 0 | 49
+
+### allstar_gameids_per_year  (5 rows, 0.00s)
+year | g | group_concat(distinct game_num)
+1959 | 2 | 2,1
+1960 | 2 | 2,1
+1961 | 2 | 2,1
+1962 | 2 | 1,2
+2015 | 20 | 0
+
+### odd_text_in_numeric  (2 rows, 0.00s)
+c | era | count(*)
+pitching_postseason.era | inf | 1
+pitching_postseason.baopp nonnumeric | - | 1
+
+### ps_baopp_forms  (20 rows, 0.00s)
+f | count(*) | min(baopp) | max(baopp)
+- | 1 | - | -
+0.x | 4441 | 0.0 | 0.85
+1.0 | 1 | 1.0 | 1.0
+11 | 2 | 11 | 11
+12 | 2 | 12 | 12
+13 | 1 | 13 | 13
+14 | 1 | 14 | 14
+15 | 1 | 15 | 15
+20 | 1 | 20 | 20
+21 | 1 | 21 | 21
+22 | 3 | 22 | 22
+23 | 2 | 23 | 23
+24 | 1 | 24 | 24
+25 | 2 | 25 | 25
+26 | 1 | 26 | 26
+27 | 1 | 27 | 27
+29 | 2 | 29 | 29
+31 | 1 | 31 | 31
+empty | 68 | '' | ''
+integer | 576 | 0 | 9
+
+### real_points_won  (8 rows, 0.00s)
+award_id | year | league_id | player_id | points_won | votes_first
+Rookie of the Year | 1968 | NL | benchjo01 | 10.5 | 10.5
+Rookie of the Year | 1968 | NL | koosmje01 | 9.5 | 9.5
+Rookie of the Year | 1975 | AL | lynnfr01 | 23.5 | 23.5
+Rookie of the Year | 1975 | AL | riceji01 | 0.5 | 0.5
+Rookie of the Year | 1981 | NL | brookhu01 | 8.5 | 0
+Rookie of the Year | 1981 | NL | raineti01 | 85 | 6.5
+Rookie of the Year | 1981 | NL | valenfe01 | 107 | 17.5
+Rookie of the Year | 1981 | NL | wilsomo01 | 1.5 | 0
+
+### award_id_case  (7 rows, 0.00s)
+t | award_id | count(*)
+manager_award_vote | Mgr of the Year | 81
+manager_award_vote | Mgr of the year | 333
+manager_award | BBWAA Manager of the year | 67
+manager_award | TSN Manager of the Year | 110
+player_award_vote | Cy Young | 764
+player_award_vote | MVP | 5215
+player_award_vote | Rookie of the Year | 816
+
+### player_award_notes  (29 rows, 0.00s)
+notes | count(*)
+'' | 1430
+OF | 1043
+SS | 455
+3B | 454
+2B | 452
+1B | 452
+C | 439
+P | 313
+P2 | 130
+P1 | 129
+P3 | 109
+RF | 106
+LF | 106
+CF | 106
+RHP | 70
+LHP | 70
+DH | 67
+P4 | 66
+C2 | 20
+C1 | 20
+P5 | 18
+RP | 8
+C3 | 6
+SP | 2
+P6 | 2
+C4 | 2
+Ss | 1
+2nd Game | 1
+1st Game | 1
+
+### league_ids  (14 rows, 0.02s)
+t | league_id | count(*)
+team | '' | 50
+team | AA | 85
+team | AL | 1205
+team | FL | 16
+team | NL | 1429
+team | PL | 8
+team | UA | 12
+batting | '' | 737
+batting | AA | 1890
+batting | AL | 46371
+batting | FL | 470
+batting | NL | 51385
+batting | PL | 147
+batting | UA | 332
+
+### empty_league_years  (2 rows, 0.00s)
+t | min(year) | max(year) | count(*)
+batting | 1871 | 1875 | 737
+team | 1871 | 1875 | 50
+
+### salary_values  (1 rows, 0.00s)
+count(*) | sum(salary=0) | min(salary) | max(salary) | sum(salary%1000=0) | sum(salary%10000=0)
+25575 | 2 | 0 | 33000000 | 21475 | 14393
+
+### home_game_spans  (1 rows, 0.00s)
+count(*) | last_before_first | first_year_ne | last_year_ne | openings_gt_games | zero_att
+2944 | 0 | 0 | 0 | 0 | 449
+
+### team_ids_multi_franchise  (3 rows, 0.00s)
+team_id | group_concat(distinct franchise_id) | group_concat(distinct league_id)
+HOU | HOU | NL,AL
+PH4 | PHA,PHQ | AA
+WAS | WAS,WSN | NL
+
+### hof_categories  (21 rows, 0.00s)
+votedby | category | inducted | count(*) | sum(ballots='') | sum(needed='') | sum(votes='')
+BBWAA | Player | N | 3515 | 0 | 0 | 0
+BBWAA | Player | Y | 116 | 0 | 0 | 0
+Veterans | Player | Y | 80 | 80 | 80 | 80
+Run Off | Player | N | 78 | 0 | 78 | 0
+Nominating Vote | Player | N | 76 | 0 | 76 | 0
+Veterans | Player | N | 60 | 0 | 0 | 0
+BBWAA | Manager | N | 51 | 0 | 0 | 0
+Old Timers | Player | Y | 25 | 25 | 25 | 25
+Final Ballot | Player | N | 21 | 0 | 0 | 0
+Negro League | Player | Y | 21 | 21 | 21 | 21
+Veterans | Manager | Y | 21 | 21 | 21 | 21
+Veterans | Pioneer/Executive | Y | 18 | 18 | 18 | 18
+Veterans | Umpire | Y | 10 | 10 | 10 | 10
+BBWAA | Pioneer/Executive | N | 7 | 0 | 0 | 0
+Centennial | Pioneer/Executive | Y | 5 | 5 | 5 | 5
+Negro League | Pioneer/Executive | Y | 5 | 5 | 5 | 5
+Old Timers | Pioneer/Executive | Y | 4 | 4 | 4 | 4
+Run Off | Player | Y | 3 | 0 | 3 | 0
+Special Election | Player | Y | 2 | 2 | 2 | 2
+Centennial | Manager | Y | 1 | 1 | 1 | 1
+Old Timers | Manager | Y | 1 | 1 | 1 | 1
+
+### team_flags  (15 rows, 0.00s)
+div_win | wc_win | lg_win | ws_win | count(*)
+'' | '' | N | N | 1044
+N | '' | N | N | 532
+N | N | N | N | 448
+'' | '' | N | '' | 293
+Y | N | N | N | 96
+'' | '' | Y | N | 74
+'' | '' | Y | Y | 70
+Y | '' | N | N | 54
+N | Y | N | N | 38
+'' | '' | Y | '' | 36
+'' | '' | '' | '' | 28
+Y | '' | Y | N | 25
+Y | '' | Y | Y | 25
+Y | N | Y | N | 15
+Y | N | Y | Y | 15
+
+### park_country  (6 rows, 0.00s)
+country | count(*) | sum(state='')
+AU | 1 | 0
+CA | 4 | 0
+JP | 1 | 0
+MX | 1 | 0
+PR | 1 | 1
+US | 242 | 0
+
+### year_coverage  (8 rows, 0.00s)
+t | min(year) | max(year)
+appearances | 1871 | 2015
+salary | 1985 | 2015
+home_game | 1871 | 2014
+player_college | 1864 | 2014
+fielding_outfield | 1871 | 1955
+team_half | 1981 | 1981
+manager_award_vote | 1983 | 2015
+player_award_vote | 1911 | 2015
+
+### player_college_vs_debut  (1 rows, 0.00s)
+count(*) | college_after_debut_year | no_debut
+17350 | 86 | 73
+

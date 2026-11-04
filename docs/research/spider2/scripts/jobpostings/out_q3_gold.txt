@@ -1,0 +1,21 @@
+### setup_indexes  (setup, 0.13s)
+
+### cohort  (1 rows, 0.00s)
+postings
+46
+
+### cohort_skills_raw  (8 rows, 0.06s)
+skill_id | skills | n
+0 | None | 3
+1 | python | 3
+5 | None | 3
+181 | None | 3
+182 | None | 3
+8 | None | 1
+14 | None | 1
+22 | None | 1
+
+### local168_inner_join  (1 rows, 0.08s)
+over_rows | n_rows | over_distinct_postings
+104100.0 | 4 | 106900.0
+

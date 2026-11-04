@@ -1,0 +1,407 @@
+objects: [('table', 26)]
+
+## all_star  rows=5069
+  player_id          TEXT     types={'text': 5069} empty=0 ws=0 distinct=1741 min='aaronha01' max='zobribe01'
+  year               INTEGER  types={'integer': 5069} empty=0 ws=0 distinct=83 min=1933 max=2015
+  game_num           INTEGER  types={'integer': 5069} empty=0 ws=0 distinct=3 min=0 max=2
+  game_id            TEXT     types={'text': 5069} empty=49 ws=0 distinct=106 min='ALS193307060' max='NLS201507159'
+  team_id            TEXT     types={'text': 5069} empty=0 ws=0 distinct=49 min='ANA' max='WS2'
+  league_id          TEXT     types={'text': 5069} empty=0 ws=0 distinct=2 min='AL' max='NL'
+  gp                 NUMERIC  types={'integer': 5050, 'text': 19} empty=19 ws=0 distinct=3 min=0 max=1
+  starting_pos       NUMERIC  types={'integer': 1580, 'text': 3489} empty=3489 ws=0 distinct=12 min=0 max=10
+
+## appearances  rows=100951
+  year               INTEGER  types={'integer': 100951} empty=0 ws=0 distinct=145 min=1871 max=2015
+  team_id            TEXT     types={'text': 100951} empty=0 ws=0 distinct=151 min='ALT' max='WSU'
+  league_id          TEXT     types={'text': 100951} empty=737 ws=0 distinct=7 min='AA' max='UA'
+  player_id          TEXT     types={'text': 100951} empty=0 ws=0 distinct=18660 min='aardsda01' max='zychto01'
+  g_all              NUMERIC  types={'integer': 100748, 'text': 203} empty=203 ws=0 distinct=167 min=0 max=165
+  gs                 NUMERIC  types={'integer': 49030, 'text': 51921} empty=51921 ws=0 distinct=165 min=0 max=163
+  g_batting          INTEGER  types={'integer': 100951} empty=0 ws=0 distinct=166 min=0 max=165
+  g_defense          NUMERIC  types={'integer': 100748, 'text': 203} empty=203 ws=0 distinct=167 min=0 max=165
+  g_p                INTEGER  types={'integer': 100951} empty=0 ws=0 distinct=95 min=0 max=106
+  g_c                INTEGER  types={'integer': 100951} empty=0 ws=0 distinct=157 min=0 max=160
+  g_1b               INTEGER  types={'integer': 100951} empty=0 ws=0 distinct=163 min=0 max=162
+  g_2b               INTEGER  types={'integer': 100951} empty=0 ws=0 distinct=164 min=0 max=163
+  g_3b               INTEGER  types={'integer': 100951} empty=0 ws=0 distinct=165 min=0 max=164
+  g_ss               INTEGER  types={'integer': 100951} empty=0 ws=0 distinct=166 min=0 max=165
+  g_lf               INTEGER  types={'integer': 100951} empty=0 ws=0 distinct=164 min=0 max=163
+  g_cf               INTEGER  types={'integer': 100951} empty=0 ws=0 distinct=163 min=0 max=162
+  g_rf               INTEGER  types={'integer': 100951} empty=0 ws=0 distinct=163 min=0 max=162
+  g_of               INTEGER  types={'integer': 100951} empty=0 ws=0 distinct=165 min=0 max=164
+  g_dh               NUMERIC  types={'integer': 49233, 'text': 51718} empty=51718 ws=0 distinct=158 min=0 max=162
+  g_ph               NUMERIC  types={'integer': 49233, 'text': 51718} empty=51718 ws=0 distinct=94 min=0 max=95
+  g_pr               NUMERIC  types={'integer': 42945, 'text': 58006} empty=58006 ws=0 distinct=50 min=0 max=92
+
+## batting  rows=101332
+  player_id          TEXT     types={'text': 101332} empty=0 ws=0 distinct=18659 min='aardsda01' max='zychto01'
+  year               INTEGER  types={'integer': 101332} empty=0 ws=0 distinct=145 min=1871 max=2015
+  stint              INTEGER  types={'integer': 101332} empty=0 ws=0 distinct=5 min=1 max=5
+  team_id            TEXT     types={'text': 101332} empty=0 ws=0 distinct=149 min='ALT' max='WSU'
+  league_id          TEXT     types={'text': 101332} empty=737 ws=0 distinct=7 min='AA' max='UA'
+  g                  INTEGER  types={'integer': 101332} empty=0 ws=0 distinct=166 min=0 max=165
+  ab                 NUMERIC  types={'integer': 96183, 'text': 5149} empty=5149 ws=0 distinct=700 min=0 max=716
+  r                  NUMERIC  types={'integer': 96183, 'text': 5149} empty=5149 ws=0 distinct=168 min=0 max=192
+  h                  NUMERIC  types={'integer': 96183, 'text': 5149} empty=5149 ws=0 distinct=251 min=0 max=262
+  double             NUMERIC  types={'integer': 96183, 'text': 5149} empty=5149 ws=0 distinct=65 min=0 max=67
+  triple             NUMERIC  types={'integer': 96183, 'text': 5149} empty=5149 ws=0 distinct=33 min=0 max=36
+  hr                 NUMERIC  types={'integer': 96183, 'text': 5149} empty=5149 ws=0 distinct=68 min=0 max=73
+  rbi                NUMERIC  types={'integer': 95759, 'text': 5573} empty=5573 ws=0 distinct=176 min=0 max=191
+  sb                 NUMERIC  types={'integer': 94883, 'text': 6449} empty=6449 ws=0 distinct=115 min=0 max=138
+  cs                 NUMERIC  types={'integer': 72729, 'text': 28603} empty=28603 ws=0 distinct=37 min=0 max=42
+  bb                 NUMERIC  types={'integer': 96183, 'text': 5149} empty=5149 ws=0 distinct=156 min=0 max=232
+  so                 NUMERIC  types={'integer': 88345, 'text': 12987} empty=12987 ws=0 distinct=204 min=0 max=223
+  ibb                NUMERIC  types={'integer': 59620, 'text': 41712} empty=41712 ws=0 distinct=46 min=0 max=120
+  hbp                NUMERIC  types={'integer': 93373, 'text': 7959} empty=7959 ws=0 distinct=42 min=0 max=51
+  sh                 NUMERIC  types={'integer': 89845, 'text': 11487} empty=11487 ws=0 distinct=55 min=0 max=67
+  sf                 NUMERIC  types={'integer': 60151, 'text': 41181} empty=41181 ws=0 distinct=21 min=0 max=19
+  g_idp              NUMERIC  types={'integer': 70075, 'text': 31257} empty=31257 ws=0 distinct=36 min=0 max=36
+
+## batting_postseason  rows=11690
+  year               INTEGER  types={'integer': 11690} empty=0 ws=0 distinct=119 min=1884 max=2015
+  round              TEXT     types={'text': 11690} empty=0 ws=0 distinct=14 min='AEDIV' max='WS'
+  player_id          TEXT     types={'text': 11690} empty=0 ws=0 distinct=3973 min='aaronha01' max='zumayjo01'
+  team_id            TEXT     types={'text': 11690} empty=0 ws=0 distinct=48 min='ANA' max='WS1'
+  league_id          TEXT     types={'text': 11690} empty=0 ws=0 distinct=3 min='AA' max='NL'
+  g                  INTEGER  types={'integer': 11690} empty=0 ws=0 distinct=14 min=1 max=15
+  ab                 INTEGER  types={'integer': 11690} empty=0 ws=0 distinct=52 min=0 max=66
+  r                  INTEGER  types={'integer': 11690} empty=0 ws=0 distinct=13 min=0 max=13
+  h                  INTEGER  types={'integer': 11690} empty=0 ws=0 distinct=19 min=0 max=21
+  double             INTEGER  types={'integer': 11690} empty=0 ws=0 distinct=7 min=0 max=6
+  triple             INTEGER  types={'integer': 11690} empty=0 ws=0 distinct=5 min=0 max=4
+  hr                 INTEGER  types={'integer': 11690} empty=0 ws=0 distinct=7 min=0 max=6
+  rbi                INTEGER  types={'integer': 11690} empty=0 ws=0 distinct=14 min=0 max=13
+  sb                 INTEGER  types={'integer': 11690} empty=0 ws=0 distinct=12 min=0 max=15
+  cs                 NUMERIC  types={'integer': 11489, 'text': 201} empty=201 ws=0 distinct=7 min=0 max=5
+  bb                 INTEGER  types={'integer': 11690} empty=0 ws=0 distinct=14 min=0 max=13
+  so                 INTEGER  types={'integer': 11690} empty=0 ws=0 distinct=14 min=0 max=13
+  ibb                NUMERIC  types={'integer': 10651, 'text': 1039} empty=1039 ws=0 distinct=9 min=0 max=7
+  hbp                NUMERIC  types={'integer': 10453, 'text': 1237} empty=1237 ws=0 distinct=6 min=0 max=4
+  sh                 NUMERIC  types={'integer': 10446, 'text': 1244} empty=1244 ws=0 distinct=7 min=0 max=5
+  sf                 NUMERIC  types={'integer': 10442, 'text': 1248} empty=1248 ws=0 distinct=5 min=0 max=3
+  g_idp              NUMERIC  types={'integer': 10485, 'text': 1205} empty=1205 ws=0 distinct=7 min=0 max=5
+
+## college  rows=1207
+  college_id         TEXT     types={'text': 1207} empty=0 ws=0 distinct=1207 min='abilchrist' max='youngst'
+  name_full          TEXT     types={'text': 1207} empty=0 ws=0 distinct=1199 min='Abilene Christian University' max='Youngstown State University'
+  city               TEXT     types={'text': 1207} empty=0 ws=0 distinct=856 min='Abilene' max='Yuma'
+  state              TEXT     types={'text': 1207} empty=0 ws=0 distinct=49 min='AL' max='WY'
+  country            TEXT     types={'text': 1207} empty=0 ws=0 distinct=1 min='USA' max='USA'
+
+## fielding  rows=170526
+  player_id          TEXT     types={'text': 170526} empty=0 ws=0 distinct=18465 min='aardsda01' max='zychto01'
+  year               INTEGER  types={'integer': 170526} empty=0 ws=0 distinct=145 min=1871 max=2015
+  stint              INTEGER  types={'integer': 170526} empty=0 ws=0 distinct=5 min=1 max=5
+  team_id            TEXT     types={'text': 170526} empty=0 ws=0 distinct=149 min='ALT' max='WSU'
+  league_id          TEXT     types={'text': 170526} empty=1503 ws=0 distinct=7 min='AA' max='UA'
+  pos                TEXT     types={'text': 170526} empty=0 ws=0 distinct=11 min='1B' max='SS'
+  g                  INTEGER  types={'integer': 170526} empty=0 ws=0 distinct=166 min=0 max=165
+  gs                 NUMERIC  types={'integer': 75849, 'text': 94677} empty=94677 ws=0 distinct=166 min=0 max=164
+  inn_outs           NUMERIC  types={'integer': 102313, 'text': 68213} empty=68213 ws=0 distinct=4310 min=0 max=4469
+  po                 NUMERIC  types={'integer': 156409, 'text': 14117} empty=14117 ws=0 distinct=1553 min=0 max=1846
+  a                  NUMERIC  types={'integer': 156408, 'text': 14118} empty=14118 ws=0 distinct=583 min=0 max=641
+  e                  NUMERIC  types={'integer': 156407, 'text': 14119} empty=14119 ws=0 distinct=108 min=0 max=119
+  dp                 NUMERIC  types={'integer': 156408, 'text': 14118} empty=14118 ws=0 distinct=171 min=0 max=194
+  pb                 NUMERIC  types={'integer': 11116, 'text': 159410} empty=159410 ws=0 distinct=90 min=0 max=105
+  wp                 NUMERIC  types={'integer': 4189, 'text': 166337} empty=166337 ws=0 distinct=63 min=0 max=69
+  sb                 NUMERIC  types={'integer': 6024, 'text': 164502} empty=164502 ws=0 distinct=134 min=0 max=155
+  cs                 NUMERIC  types={'integer': 6024, 'text': 164502} empty=164502 ws=0 distinct=72 min=0 max=89
+  zr                 NUMERIC  types={'integer': 4189, 'text': 166337} empty=166337 ws=0 distinct=14 min=0 max=15
+
+## fielding_outfield  rows=12028
+  player_id          TEXT     types={'text': 12028} empty=0 ws=0 distinct=3513 min='aaronha01' max='zwilldu01'
+  year               INTEGER  types={'integer': 12028} empty=0 ws=0 distinct=85 min=1871 max=1955
+  stint              INTEGER  types={'integer': 12028} empty=0 ws=0 distinct=5 min=1 max=5
+  glf                NUMERIC  types={'integer': 11991, 'text': 37} empty=37 ws=0 distinct=158 min=0 max=156
+  gcf                NUMERIC  types={'integer': 11991, 'text': 37} empty=37 ws=0 distinct=160 min=0 max=162
+  grf                NUMERIC  types={'integer': 11985, 'text': 43} empty=43 ws=0 distinct=160 min=0 max=160
+
+## fielding_postseason  rows=12311
+  player_id          TEXT     types={'text': 12311} empty=0 ws=0 distinct=3726 min='aaronha01' max='zumayjo01'
+  year               INTEGER  types={'integer': 12311} empty=0 ws=0 distinct=111 min=1903 max=2015
+  team_id            TEXT     types={'text': 12311} empty=0 ws=0 distinct=41 min='ANA' max='WS1'
+  league_id          TEXT     types={'text': 12311} empty=0 ws=0 distinct=2 min='AL' max='NL'
+  round              TEXT     types={'text': 12311} empty=0 ws=0 distinct=13 min='AEDIV' max='WS'
+  pos                TEXT     types={'text': 12311} empty=0 ws=0 distinct=11 min='1B' max='SS'
+  g                  INTEGER  types={'integer': 12311} empty=0 ws=0 distinct=11 min=1 max=11
+  gs                 NUMERIC  types={'integer': 11924, 'text': 387} empty=387 ws=0 distinct=10 min=0 max=8
+  inn_outs           NUMERIC  types={'integer': 11990, 'text': 321} empty=321 ws=0 distinct=212 min=0 max=222
+  po                 INTEGER  types={'integer': 12311} empty=0 ws=0 distinct=83 min=0 max=91
+  a                  INTEGER  types={'integer': 12311} empty=0 ws=0 distinct=34 min=0 max=33
+  e                  INTEGER  types={'integer': 12311} empty=0 ws=0 distinct=8 min=0 max=8
+  dp                 INTEGER  types={'integer': 12311} empty=0 ws=0 distinct=13 min=0 max=13
+  tp                 INTEGER  types={'integer': 12311} empty=0 ws=0 distinct=2 min=0 max=1
+  pb                 NUMERIC  types={'integer': 1351, 'text': 10960} empty=10960 ws=0 distinct=5 min=0 max=3
+  sb                 NUMERIC  types={'integer': 5555, 'text': 6756} empty=6756 ws=0 distinct=16 min=0 max=16
+  cs                 NUMERIC  types={'integer': 5555, 'text': 6756} empty=6756 ws=0 distinct=11 min=0 max=10
+
+## hall_of_fame  rows=4120
+  player_id          TEXT     types={'text': 4120} empty=0 ws=0 distinct=1239 min='aaronha01' max='ziskri01'
+  yearid             INTEGER  types={'integer': 4120} empty=0 ws=0 distinct=78 min=1936 max=2016
+  votedby            TEXT     types={'text': 4120} empty=0 ws=0 distinct=9 min='BBWAA' max='Veterans'
+  ballots            NUMERIC  types={'integer': 3927, 'text': 193} empty=193 ws=0 distinct=73 min=78 max=581
+  needed             NUMERIC  types={'integer': 3770, 'text': 350} empty=350 ws=0 distinct=64 min=59 max=436
+  votes              NUMERIC  types={'integer': 3927, 'text': 193} empty=193 ws=0 distinct=360 min=0 max=555
+  inducted           TEXT     types={'text': 4120} empty=0 ws=0 distinct=2 min='N' max='Y'
+  category           TEXT     types={'text': 4120} empty=0 ws=0 distinct=4 min='Manager' max='Umpire'
+  needed_note        TEXT     types={'text': 4120} empty=3963 ws=0 distinct=3 min='1st' max='Top 20'
+
+## home_game  rows=2944
+  year               INTEGER  types={'integer': 2944} empty=0 ws=0 distinct=144 min=1871 max=2014
+  league_id          TEXT     types={'text': 2944} empty=77 ws=0 distinct=7 min='AA' max='UA'
+  team_id            TEXT     types={'text': 2944} empty=0 ws=0 distinct=148 min='ALT' max='WSU'
+  park_id            TEXT     types={'text': 2944} empty=0 ws=0 distinct=249 min='ALB01' max='WOR03'
+  span_first         TEXT     types={'text': 2944} empty=0 ws=0 distinct=1052 min='1871-05-04' max='2014-04-08'
+  span_last          TEXT     types={'text': 2944} empty=0 ws=0 distinct=1103 min='1871-05-27' max='2014-09-28'
+  games              INTEGER  types={'integer': 2944} empty=0 ws=0 distinct=87 min=1 max=89
+  openings           INTEGER  types={'integer': 2944} empty=0 ws=0 distinct=84 min=0 max=83
+  attendance         INTEGER  types={'integer': 2944} empty=0 ws=0 distinct=2388 min=0 max=4483203
+
+## manager  rows=3405
+  player_id          TEXT     types={'text': 3405} empty=0 ws=0 distinct=696 min='actama99' max='zimmedo01'
+  year               INTEGER  types={'integer': 3405} empty=0 ws=0 distinct=145 min=1871 max=2015
+  team_id            TEXT     types={'text': 3405} empty=0 ws=0 distinct=149 min='ALT' max='WSU'
+  league_id          TEXT     types={'text': 3405} empty=67 ws=0 distinct=7 min='AA' max='UA'
+  inseason           INTEGER  types={'integer': 3405} empty=0 ws=0 distinct=9 min=1 max=9
+  g                  INTEGER  types={'integer': 3405} empty=0 ws=0 distinct=165 min=1 max=165
+  w                  INTEGER  types={'integer': 3405} empty=0 ws=0 distinct=114 min=0 max=116
+  l                  INTEGER  types={'integer': 3405} empty=0 ws=0 distinct=118 min=0 max=120
+  rank               NUMERIC  types={'integer': 3404, 'text': 1} empty=1 ws=0 distinct=13 min=1 max=12
+  plyr_mgr           TEXT     types={'text': 3405} empty=0 ws=0 distinct=2 min='N' max='Y'
+
+## manager_award  rows=177
+  player_id          TEXT     types={'text': 177} empty=0 ws=0 distinct=83 min='aloufe01' max='zimmedo01'
+  award_id           TEXT     types={'text': 177} empty=0 ws=0 distinct=2 min='BBWAA Manager of the year' max='TSN Manager of the Year'
+  year               INTEGER  types={'integer': 177} empty=0 ws=0 distinct=80 min=1936 max=2015
+  league_id          TEXT     types={'text': 177} empty=0 ws=0 distinct=3 min='AL' max='NL'
+  tie                TEXT     types={'text': 177} empty=175 ws=0 distinct=2 min='Y' max='Y'
+  notes              NUMERIC  types={'text': 177} empty=177 ws=0 distinct=1 min=None max=None
+
+## manager_award_vote  rows=414
+  award_id           TEXT     types={'text': 414} empty=0 ws=0 distinct=2 min='Mgr of the Year' max='Mgr of the year'
+  year               INTEGER  types={'integer': 414} empty=0 ws=0 distinct=33 min=1983 max=2015
+  league_id          TEXT     types={'text': 414} empty=0 ws=0 distinct=2 min='AL' max='NL'
+  player_id          TEXT     types={'text': 414} empty=0 ws=0 distinct=110 min='actama99' max='zimmedo01'
+  points_won         INTEGER  types={'integer': 414} empty=0 ws=0 distinct=117 min=1 max=154
+  points_max         INTEGER  types={'integer': 414} empty=0 ws=0 distinct=6 min=24 max=160
+  votes_first        INTEGER  types={'integer': 414} empty=0 ws=0 distinct=30 min=0 max=30
+
+## manager_half  rows=93
+  player_id          TEXT     types={'text': 93} empty=0 ws=0 distinct=54 min='amalfjo01' max='zimmedo01'
+  year               INTEGER  types={'integer': 93} empty=0 ws=0 distinct=2 min=1892 max=1981
+  team_id            TEXT     types={'text': 93} empty=0 ws=0 distinct=33 min='ATL' max='WAS'
+  league_id          TEXT     types={'text': 93} empty=0 ws=0 distinct=2 min='AL' max='NL'
+  inseason           INTEGER  types={'integer': 93} empty=0 ws=0 distinct=5 min=1 max=5
+  half               INTEGER  types={'integer': 93} empty=0 ws=0 distinct=2 min=1 max=2
+  g                  INTEGER  types={'integer': 93} empty=0 ws=0 distinct=40 min=2 max=80
+  w                  INTEGER  types={'integer': 93} empty=0 ws=0 distinct=42 min=0 max=53
+  l                  INTEGER  types={'integer': 93} empty=0 ws=0 distinct=34 min=2 max=46
+  rank               INTEGER  types={'integer': 93} empty=0 ws=0 distinct=12 min=1 max=12
+
+## park  rows=250
+  park_id            TEXT     types={'text': 250} empty=0 ws=0 distinct=250 min='ALB01' max='WOR03'
+  park_name          TEXT     types={'text': 250} empty=0 ws=0 distinct=240 min='23rd Street Park' max='Yankee Stadium II'
+  park_alias         TEXT     types={'text': 250} empty=193 ws=0 distinct=57 min='3Com Park' max='William A. Shea Stadium'
+  city               TEXT     types={'text': 250} empty=0 ws=0 distinct=83 min='Albany' max='Worcester'
+  state              TEXT     types={'text': 250} empty=1 ws=0 distinct=35 min='AZ' max='WV'
+  country            TEXT     types={'text': 250} empty=0 ws=0 distinct=6 min='AU' max='US'
+
+## pitching  rows=44139
+  player_id          TEXT     types={'text': 44139} empty=0 ws=0 distinct=9126 min='aardsda01' max='zychto01'
+  year               INTEGER  types={'integer': 44139} empty=0 ws=0 distinct=145 min=1871 max=2015
+  stint              INTEGER  types={'integer': 44139} empty=0 ws=0 distinct=4 min=1 max=4
+  team_id            TEXT     types={'text': 44139} empty=0 ws=0 distinct=149 min='ALT' max='WSU'
+  league_id          TEXT     types={'text': 44139} empty=131 ws=0 distinct=7 min='AA' max='UA'
+  w                  INTEGER  types={'integer': 44139} empty=0 ws=0 distinct=54 min=0 max=59
+  l                  INTEGER  types={'integer': 44139} empty=0 ws=0 distinct=43 min=0 max=48
+  g                  INTEGER  types={'integer': 44139} empty=0 ws=0 distinct=94 min=1 max=106
+  gs                 INTEGER  types={'integer': 44139} empty=0 ws=0 distinct=75 min=0 max=75
+  cg                 INTEGER  types={'integer': 44139} empty=0 ws=0 distinct=74 min=0 max=75
+  sho                INTEGER  types={'integer': 44139} empty=0 ws=0 distinct=15 min=0 max=16
+  sv                 INTEGER  types={'integer': 44139} empty=0 ws=0 distinct=57 min=0 max=62
+  ipouts             NUMERIC  types={'integer': 44138, 'text': 1} empty=1 ws=0 distinct=1314 min=0 max=2040
+  h                  INTEGER  types={'integer': 44139} empty=0 ws=0 distinct=533 min=0 max=772
+  er                 INTEGER  types={'integer': 44139} empty=0 ws=0 distinct=216 min=0 max=291
+  hr                 INTEGER  types={'integer': 44139} empty=0 ws=0 distinct=48 min=0 max=50
+  bb                 INTEGER  types={'integer': 44139} empty=0 ws=0 distinct=210 min=0 max=289
+  so                 INTEGER  types={'integer': 44139} empty=0 ws=0 distinct=339 min=0 max=513
+  baopp              NUMERIC  types={'integer': 1090, 'real': 41524, 'text': 1525} empty=1525 ws=0 distinct=426 min=0 max=9.99
+  era                NUMERIC  types={'integer': 3629, 'real': 40420, 'text': 90} empty=90 ws=0 distinct=1157 min=0 max=189
+  ibb                NUMERIC  types={'integer': 29564, 'text': 14575} empty=14575 ws=0 distinct=23 min=0 max=23
+  wp                 NUMERIC  types={'integer': 44006, 'text': 133} empty=133 ws=0 distinct=53 min=0 max=63
+  hbp                NUMERIC  types={'integer': 43580, 'text': 559} empty=559 ws=0 distinct=35 min=0 max=41
+  bk                 INTEGER  types={'integer': 44139} empty=0 ws=0 distinct=16 min=0 max=16
+  bfp                NUMERIC  types={'integer': 43900, 'text': 239} empty=239 ws=0 distinct=1637 min=0 max=2906
+  gf                 NUMERIC  types={'integer': 44006, 'text': 133} empty=133 ws=0 distinct=79 min=0 max=84
+  r                  INTEGER  types={'integer': 44139} empty=0 ws=0 distinct=345 min=0 max=519
+  sh                 NUMERIC  types={'integer': 11239, 'text': 32900} empty=32900 ws=0 distinct=22 min=0 max=21
+  sf                 NUMERIC  types={'integer': 11239, 'text': 32900} empty=32900 ws=0 distinct=16 min=0 max=14
+  g_idp              NUMERIC  types={'integer': 745, 'text': 43394} empty=43394 ws=0 distinct=28 min=0 max=36
+
+## pitching_postseason  rows=5109
+  player_id          TEXT     types={'text': 5109} empty=0 ws=0 distinct=1673 min='aasedo01' max='zumayjo01'
+  year               INTEGER  types={'integer': 5109} empty=0 ws=0 distinct=119 min=1884 max=2015
+  round              TEXT     types={'text': 5109} empty=0 ws=0 distinct=14 min='AEDIV' max='WS'
+  team_id            TEXT     types={'text': 5109} empty=0 ws=0 distinct=48 min='ANA' max='WS1'
+  league_id          TEXT     types={'text': 5109} empty=0 ws=0 distinct=3 min='AA' max='NL'
+  w                  INTEGER  types={'integer': 5109} empty=0 ws=0 distinct=5 min=0 max=4
+  l                  INTEGER  types={'integer': 5109} empty=0 ws=0 distinct=5 min=0 max=4
+  g                  INTEGER  types={'integer': 5109} empty=0 ws=0 distinct=8 min=1 max=8
+  gs                 INTEGER  types={'integer': 5109} empty=0 ws=0 distinct=8 min=0 max=8
+  cg                 INTEGER  types={'integer': 5109} empty=0 ws=0 distinct=8 min=0 max=8
+  sho                INTEGER  types={'integer': 5109} empty=0 ws=0 distinct=4 min=0 max=3
+  sv                 INTEGER  types={'integer': 5109} empty=0 ws=0 distinct=5 min=0 max=4
+  ipouts             INTEGER  types={'integer': 5109} empty=0 ws=0 distinct=90 min=0 max=213
+  h                  INTEGER  types={'integer': 5109} empty=0 ws=0 distinct=39 min=0 max=64
+  er                 INTEGER  types={'integer': 5109} empty=0 ws=0 distinct=20 min=0 max=26
+  hr                 INTEGER  types={'integer': 5109} empty=0 ws=0 distinct=6 min=0 max=5
+  bb                 INTEGER  types={'integer': 5109} empty=0 ws=0 distinct=19 min=0 max=32
+  so                 INTEGER  types={'integer': 5109} empty=0 ws=0 distinct=31 min=0 max=35
+  baopp              TEXT     types={'text': 5109} empty=68 ws=0 distinct=221 min='-' max='9'
+  era                NUMERIC  types={'integer': 2242, 'real': 2598, 'text': 269} empty=268 ws=0 distinct=326 min=0 max='inf'
+  ibb                NUMERIC  types={'integer': 5059, 'text': 50} empty=50 ws=0 distinct=6 min=0 max=4
+  wp                 NUMERIC  types={'integer': 5059, 'text': 50} empty=50 ws=0 distinct=7 min=0 max=5
+  hbp                NUMERIC  types={'integer': 5059, 'text': 50} empty=50 ws=0 distinct=5 min=0 max=3
+  bk                 NUMERIC  types={'integer': 4884, 'text': 225} empty=225 ws=0 distinct=3 min=0 max=1
+  bfp                NUMERIC  types={'integer': 5059, 'text': 50} empty=50 ws=0 distinct=109 min=1 max=178
+  gf                 INTEGER  types={'integer': 5109} empty=0 ws=0 distinct=7 min=0 max=6
+  r                  INTEGER  types={'integer': 5109} empty=0 ws=0 distinct=28 min=0 max=36
+  sh                 NUMERIC  types={'integer': 4398, 'text': 711} empty=711 ws=0 distinct=9 min=0 max=7
+  sf                 NUMERIC  types={'integer': 4398, 'text': 711} empty=711 ws=0 distinct=6 min=0 max=4
+  g_idp              NUMERIC  types={'integer': 5059, 'text': 50} empty=50 ws=0 distinct=8 min=0 max=6
+
+## player  rows=18846
+  player_id          TEXT     types={'text': 18846} empty=0 ws=0 distinct=18846 min='aardsda01' max='zychto01'
+  birth_year         NUMERIC  types={'integer': 18703, 'text': 143} empty=143 ws=0 distinct=166 min=1820 max=1995
+  birth_month        NUMERIC  types={'integer': 18531, 'text': 315} empty=315 ws=0 distinct=13 min=1 max=12
+  birth_day          NUMERIC  types={'integer': 18382, 'text': 464} empty=464 ws=0 distinct=32 min=1 max=31
+  birth_country      TEXT     types={'text': 18846} empty=73 ws=0 distinct=53 min='Afghanistan' max='Viet Nam'
+  birth_state        TEXT     types={'text': 18846} empty=626 ws=0 distinct=246 min='AB' max='Zulia'
+  birth_city         TEXT     types={'text': 18846} empty=199 ws=0 distinct=4714 min='Aberdeen' max='Zion'
+  death_year         NUMERIC  types={'integer': 9336, 'text': 9510} empty=9510 ws=0 distinct=146 min=1872 max=2016
+  death_month        NUMERIC  types={'integer': 9335, 'text': 9511} empty=9511 ws=0 distinct=13 min=1 max=12
+  death_day          NUMERIC  types={'integer': 9334, 'text': 9512} empty=9512 ws=0 distinct=32 min=1 max=31
+  death_country      TEXT     types={'text': 18846} empty=9517 ws=0 distinct=24 min='American Samoa' max='Venezuela'
+  death_state        TEXT     types={'text': 18846} empty=9569 ws=0 distinct=93 min='AB' max='Zulia'
+  death_city         TEXT     types={'text': 18846} empty=9521 ws=0 distinct=2554 min='Aberdeen' max='Zimmerman'
+  name_first         TEXT     types={'text': 18846} empty=39 ws=0 distinct=2313 min='A. J.' max='Zoilo'
+  name_last          TEXT     types={'text': 18846} empty=0 ws=0 distinct=9713 min='Aardsma' max='van den Hurk'
+  name_given         TEXT     types={'text': 18846} empty=39 ws=0 distinct=12437 min='A. Harry' max='Zoilo Manuel'
+  weight             NUMERIC  types={'integer': 17975, 'text': 871} empty=871 ws=0 distinct=132 min=65 max=320
+  height             NUMERIC  types={'integer': 18041, 'text': 805} empty=805 ws=0 distinct=23 min=43 max=83
+  bats               TEXT     types={'text': 18846} empty=1191 ws=0 distinct=4 min='B' max='R'
+  throws             TEXT     types={'text': 18846} empty=978 ws=0 distinct=3 min='L' max='R'
+  debut              TEXT     types={'text': 18846} empty=193 ws=0 distinct=10037 min='1871-05-04' max='2015-10-03'
+  final_game         TEXT     types={'text': 18846} empty=193 ws=0 distinct=9029 min='1871-05-05' max='2015-10-04'
+  retro_id           TEXT     types={'text': 18846} empty=54 ws=0 distinct=18793 min='aardd001' max='zycht001'
+  bbref_id           TEXT     types={'text': 18846} empty=1 ws=0 distinct=18846 min='aardsda01' max='zychto01'
+
+## player_award  rows=6078
+  player_id          TEXT     types={'text': 6078} empty=0 ws=0 distinct=1323 min='aaronha01' max='zitoba01'
+  award_id           TEXT     types={'text': 6078} empty=0 ws=0 distinct=27 min='ALCS MVP' max='World Series MVP'
+  year               INTEGER  types={'integer': 6078} empty=0 ws=0 distinct=117 min=1877 max=2015
+  league_id          TEXT     types={'text': 6078} empty=0 ws=0 distinct=4 min='AA' max='NL'
+  tie                TEXT     types={'text': 6078} empty=6033 ws=0 distinct=2 min='Y' max='Y'
+  notes              TEXT     types={'text': 6078} empty=1430 ws=0 distinct=29 min='1B' max='Ss'
+
+## player_award_vote  rows=6795
+  award_id           TEXT     types={'text': 6795} empty=0 ws=0 distinct=3 min='Cy Young' max='Rookie of the Year'
+  year               INTEGER  types={'integer': 6795} empty=0 ws=0 distinct=97 min=1911 max=2015
+  league_id          TEXT     types={'text': 6795} empty=0 ws=0 distinct=3 min='AL' max='NL'
+  player_id          TEXT     types={'text': 6795} empty=0 ws=0 distinct=2412 min='Cabremi01' max='zobribe01'
+  points_won         NUMERIC  types={'integer': 6789, 'real': 6} empty=0 ws=0 distinct=347 min=0 max=448
+  points_max         INTEGER  types={'integer': 6795} empty=0 ws=0 distinct=21 min=16 max=448
+  votes_first        NUMERIC  types={'integer': 6431, 'real': 6, 'text': 358} empty=358 ws=0 distinct=40 min=0 max=32
+
+## player_college  rows=17350
+  player_id          TEXT     types={'text': 17350} empty=0 ws=0 distinct=6575 min='aardsda01' max='zuvelpa01'
+  college_id         TEXT     types={'text': 17350} empty=0 ws=0 distinct=1038 min='akron' max='youngst'
+  year               INTEGER  types={'integer': 17350} empty=0 ws=0 distinct=151 min=1864 max=2014
+
+## postseason  rows=307
+  year               INTEGER  types={'integer': 307} empty=0 ws=0 distinct=119 min=1884 max=2015
+  round              TEXT     types={'text': 307} empty=0 ws=0 distinct=14 min='AEDIV' max='WS'
+  team_id_winner     TEXT     types={'text': 307} empty=0 ws=0 distinct=43 min='ANA' max='WS1'
+  league_id_winner   TEXT     types={'text': 307} empty=0 ws=0 distinct=3 min='AA' max='NL'
+  team_id_loser      TEXT     types={'text': 307} empty=0 ws=0 distinct=45 min='ANA' max='WS1'
+  league_id_loser    TEXT     types={'text': 307} empty=0 ws=0 distinct=3 min='AA' max='NL'
+  wins               INTEGER  types={'integer': 307} empty=0 ws=0 distinct=6 min=1 max=10
+  losses             INTEGER  types={'integer': 307} empty=0 ws=0 distinct=6 min=0 max=5
+  ties               INTEGER  types={'integer': 307} empty=0 ws=0 distinct=2 min=0 max=1
+
+## salary  rows=25575
+  year               INTEGER  types={'integer': 25575} empty=0 ws=0 distinct=31 min=1985 max=2015
+  team_id            TEXT     types={'text': 25575} empty=0 ws=0 distinct=35 min='ANA' max='WAS'
+  league_id          TEXT     types={'text': 25575} empty=0 ws=0 distinct=2 min='AL' max='NL'
+  player_id          TEXT     types={'text': 25575} empty=0 ws=0 distinct=4963 min='aardsda01' max='zuvelpa01'
+  salary             INTEGER  types={'integer': 25575} empty=0 ws=0 distinct=3266 min=0 max=33000000
+
+## team  rows=2805
+  year               INTEGER  types={'integer': 2805} empty=0 ws=0 distinct=145 min=1871 max=2015
+  league_id          TEXT     types={'text': 2805} empty=50 ws=0 distinct=7 min='AA' max='UA'
+  team_id            TEXT     types={'text': 2805} empty=0 ws=0 distinct=149 min='ALT' max='WSU'
+  franchise_id       TEXT     types={'text': 2805} empty=0 ws=0 distinct=120 min='ALT' max='WST'
+  div_id             TEXT     types={'text': 2805} empty=1517 ws=0 distinct=4 min='C' max='W'
+  rank               INTEGER  types={'integer': 2805} empty=0 ws=0 distinct=13 min=1 max=13
+  g                  INTEGER  types={'integer': 2805} empty=0 ws=0 distinct=122 min=6 max=165
+  ghome              NUMERIC  types={'integer': 2406, 'text': 399} empty=399 ws=0 distinct=39 min=44 max=84
+  w                  INTEGER  types={'integer': 2805} empty=0 ws=0 distinct=112 min=0 max=116
+  l                  INTEGER  types={'integer': 2805} empty=0 ws=0 distinct=113 min=4 max=134
+  div_win            TEXT     types={'text': 2805} empty=1545 ws=0 distinct=3 min='N' max='Y'
+  wc_win             TEXT     types={'text': 2805} empty=2181 ws=0 distinct=3 min='N' max='Y'
+  lg_win             TEXT     types={'text': 2805} empty=28 ws=0 distinct=3 min='N' max='Y'
+  ws_win             TEXT     types={'text': 2805} empty=357 ws=0 distinct=3 min='N' max='Y'
+  r                  INTEGER  types={'integer': 2805} empty=0 ws=0 distinct=612 min=24 max=1220
+  ab                 INTEGER  types={'integer': 2805} empty=0 ws=0 distinct=1096 min=211 max=5781
+  h                  INTEGER  types={'integer': 2805} empty=0 ws=0 distinct=730 min=33 max=1783
+  double             INTEGER  types={'integer': 2805} empty=0 ws=0 distinct=312 min=3 max=376
+  triple             INTEGER  types={'integer': 2805} empty=0 ws=0 distinct=122 min=0 max=150
+  hr                 INTEGER  types={'integer': 2805} empty=0 ws=0 distinct=246 min=0 max=264
+  bb                 INTEGER  types={'integer': 2805} empty=0 ws=0 distinct=566 min=0 max=835
+  so                 NUMERIC  types={'integer': 2685, 'text': 120} empty=120 ws=0 distinct=1028 min=0 max=1535
+  sb                 NUMERIC  types={'integer': 2661, 'text': 144} empty=144 ws=0 distinct=324 min=0 max=581
+  cs                 NUMERIC  types={'integer': 1946, 'text': 859} empty=859 ws=0 distinct=139 min=0 max=191
+  hbp                NUMERIC  types={'integer': 480, 'text': 2325} empty=2325 ws=0 distinct=65 min=26 max=103
+  sf                 NUMERIC  types={'integer': 480, 'text': 2325} empty=2325 ws=0 distinct=47 min=24 max=75
+  ra                 INTEGER  types={'integer': 2805} empty=0 ws=0 distinct=608 min=34 max=1252
+  er                 INTEGER  types={'integer': 2805} empty=0 ws=0 distinct=630 min=25 max=1023
+  era                NUMERIC  types={'integer': 32, 'real': 2773} empty=0 ws=0 distinct=385 min=1.22 max=8
+  cg                 INTEGER  types={'integer': 2805} empty=0 ws=0 distinct=147 min=0 max=148
+  sho                INTEGER  types={'integer': 2805} empty=0 ws=0 distinct=32 min=0 max=32
+  sv                 INTEGER  types={'integer': 2805} empty=0 ws=0 distinct=66 min=0 max=68
+  ipouts             INTEGER  types={'integer': 2805} empty=0 ws=0 distinct=638 min=162 max=4518
+  ha                 INTEGER  types={'integer': 2805} empty=0 ws=0 distinct=743 min=49 max=1993
+  hra                INTEGER  types={'integer': 2805} empty=0 ws=0 distinct=232 min=0 max=241
+  bba                INTEGER  types={'integer': 2805} empty=0 ws=0 distinct=566 min=0 max=827
+  soa                INTEGER  types={'integer': 2805} empty=0 ws=0 distinct=1050 min=0 max=1450
+  e                  INTEGER  types={'integer': 2805} empty=0 ws=0 distinct=446 min=47 max=639
+  dp                 NUMERIC  types={'integer': 2488, 'text': 317} empty=317 ws=0 distinct=168 min=18 max=217
+  fp                 NUMERIC  types={'real': 2805} empty=0 ws=0 distinct=37 min=0.76 max=0.991
+  name               TEXT     types={'text': 2805} empty=0 ws=0 distinct=139 min='Altoona Mountain City' max='Worcester Ruby Legs'
+  park               TEXT     types={'text': 2805} empty=34 ws=0 distinct=213 min='23rd Street Grounds' max='Yankee Stadium III'
+  attendance         NUMERIC  types={'integer': 2526, 'text': 279} empty=279 ws=0 distinct=2519 min=6088 max=4483350
+  bpf                INTEGER  types={'integer': 2805} empty=0 ws=0 distinct=43 min=60 max=129
+  ppf                INTEGER  types={'integer': 2805} empty=0 ws=0 distinct=42 min=60 max=141
+  team_id_br         TEXT     types={'text': 2805} empty=0 ws=0 distinct=101 min='ALT' max='WSN'
+  team_id_lahman45   TEXT     types={'text': 2805} empty=0 ws=0 distinct=148 min='ALT' max='WSU'
+  team_id_retro      TEXT     types={'text': 2805} empty=0 ws=0 distinct=149 min='ALT' max='WSU'
+
+## team_franchise  rows=120
+  franchise_id       TEXT     types={'text': 120} empty=0 ws=0 distinct=120 min='ALT' max='WST'
+  franchise_name     TEXT     types={'text': 120} empty=0 ws=0 distinct=99 min='Altoona Mountain City' max='Worcester Ruby Legs'
+  active             TEXT     types={'text': 120} empty=25 ws=0 distinct=3 min='N' max='Y'
+  na_assoc           TEXT     types={'text': 120} empty=108 ws=0 distinct=13 min='ATH' max='SNA'
+
+## team_half  rows=52
+  year               INTEGER  types={'integer': 52} empty=0 ws=0 distinct=1 min=1981 max=1981
+  league_id          TEXT     types={'text': 52} empty=0 ws=0 distinct=2 min='AL' max='NL'
+  team_id            TEXT     types={'text': 52} empty=0 ws=0 distinct=26 min='ATL' max='TOR'
+  half               INTEGER  types={'integer': 52} empty=0 ws=0 distinct=2 min=1 max=2
+  div_id             TEXT     types={'text': 52} empty=0 ws=0 distinct=2 min='E' max='W'
+  div_win            TEXT     types={'text': 52} empty=0 ws=0 distinct=1 min='N' max='N'
+  rank               INTEGER  types={'integer': 52} empty=0 ws=0 distinct=7 min=1 max=7
+  g                  INTEGER  types={'integer': 52} empty=0 ws=0 distinct=13 min=48 max=60
+  w                  INTEGER  types={'integer': 52} empty=0 ws=0 distinct=20 min=15 max=37
+  l                  INTEGER  types={'integer': 52} empty=0 ws=0 distinct=18 min=20 max=42
+
+total rows 553693

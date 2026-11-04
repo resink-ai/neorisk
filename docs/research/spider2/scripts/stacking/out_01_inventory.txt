@@ -1,0 +1,108 @@
+## objects
+type|name
+index|sqlite_autoindex_problem_1
+table|eda
+table|feature_importance
+table|model
+table|model_importance
+table|model_score
+table|problem
+table|solution
+view|solution_ext
+view|stack_ok
+view|stack_ok_score
+## counts
+t|count(*)
+problem|20
+solution|101
+model|303
+model_score|2872
+model_importance|2567
+feature_importance|2887
+eda|1547
+stack_ok (view)|139
+solution_ext (view)|101
+stack_ok_score (view)|64
+## keys: duplicates on the natural keys
+k|dups
+solution(name,version)|0
+model(name,version,step)|0
+model_score(name,version,step,model)|0
+model_importance(name,version,step,model)|0
+feature_importance(name,version,step,feature)|0
+eda(name,version,feature)|0
+## full-row duplicates per table
+'solution'|count(*) - (SELECT count(*) FROM (SELECT DISTINCT * FROM solution))
+solution|0
+model|0
+model_score|0
+model_importance|0
+feature_importance|0
+eda|0
+## model_score duplicate keys: are they identical rows or different scores?
+dup_keys|differing
+0|
+## model_importance duplicate keys
+dup_keys|differing
+0|
+## feature_importance duplicate keys
+dup_keys|differing
+0|
+## eda duplicate keys
+dup_keys|differing
+0|
+## orphans: every child (name, version) in solution; every name in problem
+'solution->problem'|count(*)
+solution->problem|0
+model->solution|0
+model_score->solution|0
+model_score->model(step)|0
+model_importance->model(step)|0
+feature_importance->model(step)|0
+eda->solution|0
+solution without model rows|0
+solution without model_score|0
+solution without eda|0
+problem without solution|0
+## versions per problem; steps per (name, version) in model
+name|versions|min(version)|max(version)
+Liver disease prediction|5|1|5
+Pumpkin Seeds|4|1|4
+water quality|3|1|3
+lithium ion batteries|3|1|3
+diabetes|4|1|4
+Franck-Hertz|5|1|5
+Tunnel diode|6|1|6
+survey lung cancer|5|1|5
+oil spill|5|1|5
+water quality 2|3|1|3
+PCOS|3|1|3
+kindey stone urine analysis|8|1|8
+Hospital Mortality Prediction|6|1|6
+smoke detection iot|5|1|5
+iris|7|1|7
+Delaney solubility|5|1|5
+concrete|7|1|7
+Critical Heat Flux|5|1|5
+Solar Power Generation|7|1|7
+PSS3E5|5|1|5
+steps|count(*)
+3|101
+'L1_model constant within (name,version)?'|count(*)
+L1_model constant within (name,version)?|0
+L1_model|count(*)
+regression|213
+tree|90
+## physical order: rowid order vs (name order of problem, version, step)
+'solution descents in (problem rowid, version)'|sum(pb.rowid < pa.rowid OR (pb.rowid=pa.rowid AND b.version<a.version))
+solution descents in (problem rowid, version)|5
+'model descents'|sum(pb.rowid < pa.rowid OR (pb.rowid=pa.rowid AND (b.version<a.version OR (b.version=a.version AND b.step<a.step))))
+model descents|5
+'model_score descents'|sum(pb.rowid < pa.rowid OR (pb.rowid=pa.rowid AND (b.version<a.version OR (b.version=a.version AND b.step<a.step))))
+model_score descents|5
+'model_importance descents'|sum(pb.rowid < pa.rowid OR (pb.rowid=pa.rowid AND (b.version<a.version OR (b.version=a.version AND b.step<a.step))))
+model_importance descents|5
+'feature_importance descents'|sum(pb.rowid < pa.rowid OR (pb.rowid=pa.rowid AND (b.version<a.version OR (b.version=a.version AND b.step<a.step))))
+feature_importance descents|5
+'eda descents'|sum(pb.rowid < pa.rowid OR (pb.rowid=pa.rowid AND b.version<a.version))
+eda descents|5

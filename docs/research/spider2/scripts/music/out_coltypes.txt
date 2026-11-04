@@ -1,0 +1,11 @@
+Album: AlbumId=int64, Title=string, ArtistId=int64
+Artist: ArtistId=int64, Name=string
+Customer: CustomerId=int64, FirstName=string, LastName=string, Company=string, Address=string, City=string, State=string, Country=string, PostalCode=string, Phone=string, Fax=string, Email=string, SupportRepId=int64
+Employee: EmployeeId=int64, LastName=string, FirstName=string, Title=string, ReportsTo=int64, BirthDate=string, HireDate=string, Address=string, City=string, State=string, Country=string, PostalCode=string, Phone=string, Fax=string, Email=string
+Genre: GenreId=int64, Name=string
+Invoice: InvoiceId=int64, CustomerId=int64, InvoiceDate=string, BillingAddress=string, BillingCity=string, BillingState=string, BillingCountry=string, BillingPostalCode=string, Total=float64
+InvoiceLine: InvoiceLineId=int64, InvoiceId=int64, TrackId=int64, UnitPrice=float64, Quantity=int64
+MediaType: MediaTypeId=int64, Name=string
+Playlist: PlaylistId=int64, Name=string
+PlaylistTrack: PlaylistId=int64, TrackId=int64
+Track: TrackId=int64, Name=string, AlbumId=int64, MediaTypeId=int64, GenreId=int64, Composer=string, Milliseconds=int64, Bytes=int64, UnitPrice=float64

@@ -1,0 +1,75 @@
+### setup_indexes (setup on in-memory copy)
+
+### events_before_debut  (13 rows, 0.21s)
+t | n | before_debut
+batting | 101326 | 1
+pitching | 44137 | 0
+fielding | 170518 | 2
+fielding_outfield | 12027 | 1
+appearances | 100941 | 0
+salary | 25567 | 45
+manager | 2913 | 1
+batting_postseason | 11689 | 1
+player_award | 6077 | 2
+player_award_vote | 6794 | 0
+hall_of_fame | 4050 | 1
+all_star (game date) | 5068 | 0
+player_college (year-06-30) | 17277 | 16930
+
+### events_before_debut_detail  (40 rows, 0.06s)
+t | player_id | year | debut
+batting | morgabi02 | 1882 | 1883-08-06
+player_award | ayalabo01 | 1954 TSN Player of the Year | 1992-09-05
+player_award | carpech02 | 2009 Comeback Player of the Year | 2011-06-14
+salary | anderal02 | 1985 | 1986-06-11
+salary | tuckeed01 | 1988 | 1992-06-14
+salary | huntebr01 | 1990 | 1991-05-31
+salary | mitchke02 | 1990 | 1991-07-23
+salary | manzajo01 | 1990 | 1991-10-05
+salary | hernaro01 | 1990 | 1991-09-02
+salary | castifr01 | 1990 | 1991-06-27
+salary | benavfr01 | 1990 | 1991-05-14
+salary | henrybu01 | 1990 | 1992-04-09
+salary | jeffere01 | 1990 | 1991-05-18
+salary | lockhke01 | 1990 | 1994-04-05
+salary | clarkph02 | 1990 | 1992-05-27
+salary | bowenry01 | 1990 | 1991-07-22
+salary | moellde01 | 1990 | 1992-07-28
+salary | pulliha01 | 1990 | 1991-08-10
+salary | castibr01 | 1990 | 1991-08-18
+salary | brownja03 | 1990 | 1991-07-02
+salary | parksde01 | 1990 | 1992-09-11
+salary | carrima01 | 1990 | 1991-05-23
+salary | perezyo01 | 1990 | 1991-09-30
+salary | donnech01 | 1990 | 1991-05-07
+salary | pegueju01 | 1990 | 1992-04-08
+salary | bonesri01 | 1990 | 1991-08-11
+salary | hernaje02 | 1990 | 1991-09-02
+salary | lennopa01 | 1990 | 1991-09-15
+salary | remlimi01 | 1990 | 1991-06-15
+salary | nenro01 | 1990 | 1993-04-10
+salary | petkoma01 | 1990 | 1991-06-08
+salary | karchma01 | 1992 | 1995-07-18
+salary | huismri01 | 1993 | 1995-09-04
+salary | gorecri01 | 1995 | 1997-09-10
+salary | gorecri01 | 1996 | 1997-09-10
+salary | ramiral02 | 1997 | 1998-09-19
+salary | daviska01 | 1997 | 2000-06-12
+salary | mossda01 | 1998 | 2001-04-26
+salary | einerda01 | 1998 | 2000-04-15
+salary | seabosc01 | 1998 | 2001-04-08
+
+### no_debut_first_event  (1 rows, 3.88s)
+n | never_used | min(f) | max(f)
+193 | 3 | 1871 | 2015
+
+### never_used_players  (3 rows, 0.05s)
+player_id | name_first | name_last | birth_year
+crossjo01 | Joe | Cross | 1858
+mondera02 | Raul | Mondesi | 1995
+sulliwi01 | William | Sullivan | ''
+
+### players_with_event_before_debut  (1 rows, 0.63s)
+players | rows
+49 | 54
+

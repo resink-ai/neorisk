@@ -1,0 +1,141 @@
+### row_counts  (6 rows, 0.01s)
+t | n
+dim_customer | 209
+dim_product | 397
+fact_gross_price | 579
+fact_manufacturing_cost | 579
+fact_pre_invoice_deductions | 418
+fact_sales_monthly | 971631
+
+### typeof_columns  (9 rows, 0.58s)
+c | ty | n
+cust.customer_code | integer | 209
+prod.product_code | text | 397
+gp.gross_price | real | 579
+mc.manufacturing_cost | real | 579
+ded.pct | real | 418
+sm.date | text | 971631
+sm.sold_quantity | integer | 971631
+sm.customer_code | integer | 971631
+sm.fiscal_year | integer | 971631
+
+### nulls_and_empty  (6 rows, 0.08s)
+t | nulls | empties
+cust | 52 | 0
+prod | 0 | 0
+sales | 0 | 0
+gp | 0 | 0
+mc | 0 | 0
+ded | 0 | 0
+
+### key_uniqueness  (7 rows, 0.88s)
+k | dups
+cust customer_code | 0
+prod product_code | 0
+gp (product,fy) | 0
+mc (product,cy) | 0
+ded (cust,fy) | 0
+sales (date,product,cust) | 0
+sales full-row dups | 0
+
+### fk_orphans  (5 rows, 0.25s)
+j | orphans | n
+sales.product -> prod | 0 | 971631
+sales.customer -> cust | 0 | 971631
+gp.product -> prod | 0 | 579
+mc.product -> prod | 0 | 579
+ded.customer -> cust | 0 | 418
+
+### parents_without_children  (10 rows, 7.55s)
+w | n
+products never sold | 50
+customers never buying | 0
+products without price | 50
+products without cost | 50
+customers without deduction | 0
+sales (prod,fy) without price | 0
+sales (prod,fy) without cost | 0
+sales (cust,fy) without deduction | 0
+price rows (prod,fy) never sold | 0
+ded rows (cust,fy) never sold | 0
+
+### price_cost_same_keys  (1 rows, 0.00s)
+matched | gp | mc
+579 | 579 | 579
+
+### years  (8 rows, 0.08s)
+t | y | n
+ded | 2020 | 209
+ded | 2021 | 209
+gp | 2020 | 245
+gp | 2021 | 334
+mc | 2020 | 245
+mc | 2021 | 334
+sales | 2020 | 363523
+sales | 2021 | 608108
+
+### date_formats  (1 rows, 0.28s)
+len | dd | n | min(date) | max(date)
+10 | 01 | 971631 | 2019-09-01 | 2021-08-01
+
+### fiscal_year_rule  (1 rows, 0.08s)
+ok | n
+971631 | 971631
+
+### months  (24 rows, 0.29s)
+date | n | qty | prods | custs
+2019-09-01 | 32491 | 1764002 | 245 | 157
+2019-10-01 | 33466 | 2190792 | 245 | 157
+2019-11-01 | 34361 | 3050825 | 245 | 157
+2019-12-01 | 34476 | 3184205 | 245 | 156
+2020-01-01 | 32540 | 1762652 | 245 | 157
+2020-02-01 | 32396 | 1702785 | 245 | 157
+2020-03-01 | 20056 | 238961 | 237 | 157
+2020-04-01 | 25017 | 819956 | 245 | 156
+2020-05-01 | 25954 | 1016170 | 245 | 157
+2020-06-01 | 28200 | 1559773 | 245 | 157
+2020-07-01 | 32332 | 1692575 | 245 | 157
+2020-08-01 | 32234 | 1790193 | 245 | 156
+2020-09-01 | 50577 | 3654783 | 334 | 157
+2020-10-01 | 51148 | 4592695 | 334 | 157
+2020-11-01 | 51567 | 6228716 | 334 | 157
+2020-12-01 | 51363 | 6625714 | 334 | 156
+2021-01-01 | 50589 | 3646066 | 334 | 157
+2021-02-01 | 50470 | 3540872 | 334 | 157
+2021-03-01 | 50462 | 3674448 | 334 | 157
+2021-04-01 | 50191 | 3687497 | 334 | 156
+2021-05-01 | 50541 | 3622794 | 334 | 157
+2021-06-01 | 50471 | 3520986 | 334 | 157
+2021-07-01 | 50510 | 3687245 | 334 | 157
+2021-08-01 | 50219 | 3682766 | 334 | 156
+
+### rowid_order  (1 rows, 0.77s)
+desc_pairs | pairs
+346 | 971630
+
+### rowid_order_date  (1 rows, 0.32s)
+desc_pairs | pairs
+346 | 971630
+
+### rowid_head  (12 rows, 0.00s)
+rowid | date | product_code | customer_code | sold_quantity | fiscal_year
+1 | 2019-09-01 | A0118150101 | 70002017 | 137 | 2020
+2 | 2019-09-01 | A0118150101 | 70002018 | 47 | 2020
+3 | 2019-09-01 | A0118150101 | 70003181 | 57 | 2020
+4 | 2019-09-01 | A0118150101 | 70003182 | 63 | 2020
+5 | 2019-09-01 | A0118150101 | 70004069 | 9 | 2020
+6 | 2019-09-01 | A0118150101 | 70004070 | 3 | 2020
+7 | 2019-09-01 | A0118150101 | 70005163 | 41 | 2020
+8 | 2019-09-01 | A0118150101 | 70006157 | 61 | 2020
+9 | 2019-09-01 | A0118150101 | 70006158 | 44 | 2020
+10 | 2019-09-01 | A0118150101 | 70007198 | 51 | 2020
+11 | 2019-09-01 | A0118150101 | 70007199 | 46 | 2020
+12 | 2019-09-01 | A0118150101 | 70008169 | 74 | 2020
+
+### dim_rowid_order  (4 rows, 0.00s)
+t | desc_pairs
+cust | 0
+prod | 0
+gp | 0
+ded | 0
+

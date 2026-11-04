@@ -1,0 +1,35 @@
+digits only: national avg over rows 767988.770718; over companies 744055.650189; over (loc,company) 753853.609971
+    Hyderabad Qwerty Concepts 5081882.00; SetuServ 4949704.00; XYZ (Turkey) 3000000.00; ABCDEF 2745265.50; MarketLinc 2658491.00
+    Mumbai Rahul Industries 6044006.00; NVIDIA 4187500.00; VINAYA KUMAR 4029337.00; Goldman Sachs 3977066.00; Zee Entertainment Enterprises Ltd. 3531413.00
+    New Delhi Super Highway Labs 3665141.00; Greenlight Planet 2876666.00; Boston Scientific 2707106.00; DreamOrbit Softech 2612697.00; OLX Group 2606510.00
+    Pune Atos 5273205.00; Volkswagen 5184922.00; RAKESH GROUP 5016304.00; The City Bank 5000000.00; DasDas 4466071.00
+annualise mo*12 hr*2080: national avg over rows 915555.247007; over companies 897657.204870; over (loc,company) 907091.420688
+    Hyderabad Meta 6275360.00; Qwerty Concepts 5081882.00; SetuServ 4949704.00; Nassau Re 3773676.00; Enrich IBS 3773676.00
+    Mumbai Rahul Industries 6044006.00; NVIDIA 4187500.00; VINAYA KUMAR 4029337.00; Goldman Sachs 3977066.00; Aegis 3626400.00
+    New Delhi Super Highway Labs 3665141.00; Flip Robo 3204288.00; Greenlight Planet 2876666.00; Wipro Technologies 2848511.00; Boston Scientific 2707106.00
+    Pune Atos 5273205.00; Volkswagen 5184922.00; Google 5025572.00; RAKESH GROUP 5016304.00; The City Bank 5000000.00
+annualise mo*12 hr*2080, rupee only: national avg over rows 918589.233905; over companies 900255.322466; over (loc,company) 909866.714777
+    Hyderabad Meta 6275360.00; Qwerty Concepts 5081882.00; SetuServ 4949704.00; Nassau Re 3773676.00; Enrich IBS 3773676.00
+    Mumbai Rahul Industries 6044006.00; NVIDIA 4187500.00; VINAYA KUMAR 4029337.00; Goldman Sachs 3977066.00; Aegis 3626400.00
+    New Delhi Super Highway Labs 3665141.00; Flip Robo 3204288.00; Greenlight Planet 2876666.00; Wipro Technologies 2848511.00; Boston Scientific 2707106.00
+    Pune Atos 5273205.00; Volkswagen 5184922.00; Google 5025572.00; RAKESH GROUP 5016304.00; The City Bank 5000000.00
+annualise mo*12 hr*8*22*12: national avg over rows 915678.856584; over companies 897759.082055; over (loc,company) 907213.628274
+    Hyderabad Meta 6371904.00; Qwerty Concepts 5081882.00; SetuServ 4949704.00; Nassau Re 3773676.00; Enrich IBS 3773676.00
+    Mumbai Rahul Industries 6044006.00; NVIDIA 4187500.00; VINAYA KUMAR 4029337.00; Goldman Sachs 3977066.00; Aegis 3626400.00
+    New Delhi Super Highway Labs 3665141.00; Flip Robo 3204288.00; Greenlight Planet 2876666.00; Wipro Technologies 2848511.00; Boston Scientific 2707106.00
+    Pune Atos 5273205.00; Volkswagen 5184922.00; Google 5025572.00; RAKESH GROUP 5016304.00; The City Bank 5000000.00
+yr rows only: national avg over rows 1015167.857983; over companies 1010092.877613; over (loc,company) 1013002.929571
+    Hyderabad Qwerty Concepts 5081882.00; SetuServ 4949704.00; MTX Group 3567037.00; XYZ (Turkey) 3000000.00; ABCDEF 2745265.50
+    Mumbai Rahul Industries 6044006.00; NVIDIA 4187500.00; VINAYA KUMAR 4029337.00; Goldman Sachs 3977066.00; Zee Entertainment Enterprises Ltd. 3531413.00
+    New Delhi Wipro Technologies 5092618.00; Super Highway Labs 3665141.00; Greenlight Planet 2876666.00; Boston Scientific 2707106.00; DreamOrbit Softech 2612697.00
+    Pune Google 7571032.00; Atos 5273205.00; Volkswagen 5184922.00; RAKESH GROUP 5016304.00; The City Bank 5000000.00
+mo*12, hr dropped: national avg over rows 912140.118695; over companies 896309.896836; over (loc,company) 903965.715799
+    Hyderabad Qwerty Concepts 5081882.00; SetuServ 4949704.00; Nassau Re 3773676.00; Enrich IBS 3773676.00; Government of India 3748296.00
+    Mumbai Rahul Industries 6044006.00; NVIDIA 4187500.00; VINAYA KUMAR 4029337.00; Goldman Sachs 3977066.00; Aegis 3626400.00
+    New Delhi Super Highway Labs 3665141.00; Flip Robo 3204288.00; Greenlight Planet 2876666.00; Wipro Technologies 2848511.00; Boston Scientific 2707106.00
+    Pune Atos 5273205.00; Volkswagen 5184922.00; Google 5025572.00; RAKESH GROUP 5016304.00; The City Bank 5000000.00
+annualise, company NULL kept: national avg over rows 915555.247007; over companies 897657.204870; over (loc,company) 907091.420688
+    Hyderabad Meta 6275360.00; Qwerty Concepts 5081882.00; SetuServ 4949704.00; Nassau Re 3773676.00; Enrich IBS 3773676.00
+    Mumbai Rahul Industries 6044006.00; NVIDIA 4187500.00; VINAYA KUMAR 4029337.00; Goldman Sachs 3977066.00; Aegis 3626400.00
+    New Delhi Super Highway Labs 3665141.00; Flip Robo 3204288.00; Greenlight Planet 2876666.00; Wipro Technologies 2848511.00; Boston Scientific 2707106.00
+    Pune Atos 5273205.00; Volkswagen 5184922.00; Google 5025572.00; RAKESH GROUP 5016304.00; The City Bank 5000000.00

@@ -1,0 +1,15 @@
+rows lap_time_stats 10789 pairs in lap_times 10789 pairs missing 0 extra 0
+avg_ms = sqlite avg(ms)                                 exact  10789/10789  within1e-9  10789/10789
+avg_ms = python mean(ms) fsum/n                         exact  10789/10789  within1e-9  10789/10789
+avg_s = sqlite avg(seconds)                             exact   3814/10789  within1e-9  10789/10789
+avg_s = avg_ms/1000                                     exact   3180/10789  within1e-9  10789/10789
+stdev_ms = sqrt(sqlite avg((x-m)^2)) [population]       exact   8868/10789  within1e-9  10789/10789
+stdev_ms = statistics.pstdev                            exact  10789/10789  within1e-9  10789/10789
+stdev_ms = sqrt(E[x^2]-m^2)                             exact   1024/10789  within1e-9  10789/10789
+stdev_ms = statistics.stdev [sample]                    exact    114/10789  within1e-9    114/10789
+stdev_s = stdev_ms/1000                                 exact   5107/10789  within1e-9  10789/10789
+avg_s = statistics.mean(ms/1000)                        exact   3303/10789  within1e-9  10789/10789
+avg_s = sum(ms/1000)/n                                  exact  10789/10789  within1e-9  10789/10789
+avg_s = fsum(ms/1000)/n                                 exact   3814/10789  within1e-9  10789/10789
+stdev_s = statistics.pstdev(ms/1000)                    exact  10789/10789  within1e-9  10789/10789
+single-lap pairs 114 their stdev values [0.0]

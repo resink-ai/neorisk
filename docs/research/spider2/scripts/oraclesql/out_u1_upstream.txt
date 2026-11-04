@@ -1,0 +1,41 @@
+fill sha256 b28b86abbd498d64e3aa8c62f5a92a48c0912494c77c22a52bd3dd5cfd4bf03f
+customers              sqlite=   4 upstream=   4 multiset_equal=True rowid_order_equals_insert_order=False
+conway_gen_zero        sqlite=   0 upstream=NO INSERTS
+web_devices            sqlite=   2 upstream=   2 multiset_equal=True rowid_order_equals_insert_order=True
+web_demographics       sqlite=   2 upstream=   2 multiset_equal=True rowid_order_equals_insert_order=True
+channels_dim           sqlite=   2 upstream=   2 multiset_equal=True rowid_order_equals_insert_order=True
+gender_dim             sqlite=   2 upstream=   2 multiset_equal=True rowid_order_equals_insert_order=True
+packaging              sqlite=  11 upstream=  11 multiset_equal=True rowid_order_equals_insert_order=True
+packaging_relations    sqlite=  12 upstream=  12 multiset_equal=True rowid_order_equals_insert_order=True
+product_groups         sqlite=   4 upstream=   4 multiset_equal=True rowid_order_equals_insert_order=True
+products               sqlite=  10 upstream=  10 multiset_equal=True rowid_order_equals_insert_order=True
+monthly_sales          sqlite= 360 upstream= 360 multiset_equal=True rowid_order_equals_insert_order=True
+breweries              sqlite=   3 upstream=   3 multiset_equal=True rowid_order_equals_insert_order=True
+purchases              sqlite= 180 upstream= 180 multiset_equal=True rowid_order_equals_insert_order=False
+product_alcohol        sqlite=  10 upstream=  10 multiset_equal=True rowid_order_equals_insert_order=True
+customer_favorites     sqlite=   4 upstream=   4 multiset_equal=True rowid_order_equals_insert_order=False
+customer_reviews       sqlite=   4 upstream=   4 multiset_equal=True rowid_order_equals_insert_order=False
+locations              sqlite= 256 upstream= 256 multiset_equal=True rowid_order_equals_insert_order=True
+inventory              sqlite= 113 upstream= 113 multiset_equal=True rowid_order_equals_insert_order=False
+orders                 sqlite=  10 upstream=  10 multiset_equal=True rowid_order_equals_insert_order=True
+orderlines             sqlite=  18 upstream=  18 multiset_equal=True rowid_order_equals_insert_order=True
+monthly_budget         sqlite=  48 upstream=  48 multiset_equal=True rowid_order_equals_insert_order=True
+product_minimums       sqlite=   2 upstream=   2 multiset_equal=True rowid_order_equals_insert_order=True
+stock                  sqlite=   1 upstream=   1 multiset_equal=True rowid_order_equals_insert_order=True
+ticker                 sqlite=  15 upstream=  15 multiset_equal=True rowid_order_equals_insert_order=True
+web_apps               sqlite=   1 upstream=   1 multiset_equal=True rowid_order_equals_insert_order=True
+web_pages              sqlite=   4 upstream=   4 multiset_equal=True rowid_order_equals_insert_order=True
+web_counter_hist       sqlite= 120 upstream= 120 multiset_equal=True rowid_order_equals_insert_order=True
+server_heartbeat       sqlite=  14 upstream=  14 multiset_equal=True rowid_order_equals_insert_order=True
+web_page_visits        sqlite=  23 upstream=  23 multiset_equal=True rowid_order_equals_insert_order=True
+employees              sqlite=  14 upstream=  14 multiset_equal=True rowid_order_equals_insert_order=False
+emp_hire_periods       sqlite=  15 upstream=  15 multiset_equal=True rowid_order_equals_insert_order=True
+picking_list           sqlite=   2 upstream=   2 multiset_equal=True rowid_order_equals_insert_order=True
+picking_line           sqlite=  21 upstream=  21 multiset_equal=True rowid_order_equals_insert_order=True
+picking_log            sqlite=  63 upstream=  63 multiset_equal=True rowid_order_equals_insert_order=True
+id_name_type           sqlite=   0 upstream=NO INSERTS
+id_name_coll_type      sqlite=   0 upstream=NO INSERTS
+id_name_coll_entries   sqlite=   0 upstream=NO INSERTS
+favorite_coll_type     sqlite=   0 upstream=NO INSERTS
+tables equal to upstream: 33 of 38
+upstream tables with inserts not in sqlite: []

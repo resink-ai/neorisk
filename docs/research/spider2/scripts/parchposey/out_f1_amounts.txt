@@ -1,0 +1,13 @@
+rows 6912
+std: qty*4.99 == stored 5281; qty*499/100 6912; round(qty*price,2) 6912; decimal-exact 6912
+gl: qty*7.49 == stored 5966; qty*749/100 6912; round(qty*price,2) 6912; decimal-exact 6912
+po: qty*8.12 == stored 3993; qty*812/100 6912; round(qty*price,2) 6912; decimal-exact 6912
+total_amt_usd == a+b+c (stored parts, left to right): 5163
+total_amt_usd == (qs*499+qg*749+qp*812)/100: 6912
+total_amt_usd == decimal-exact sum: 6912
+total_amt_usd == round(a+b+c,2): 6912
+std: stored == float(cents_int/100 via str) 6912
+gl: stored == float(cents_int/100 via str) 6912
+po: stored == float(cents_int/100 via str) 6912
+total: stored == float(cents/100 via str) 6912
+total mismatches vs decimal-exact: 0

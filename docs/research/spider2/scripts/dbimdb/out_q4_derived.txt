@@ -1,0 +1,35 @@
+### person_rebuilt_from_credits  (1 rows, 0.13s)
+rebuilt_rows | src_minus_rebuilt | rebuilt_minus_src
+38285 | 0 | 0
+
+### cast_index_from_billing  (1 rows, 0.08s)
+n | same
+82837 | 82837
+
+### producer_index_from_position  (1 rows, 0.01s)
+n | same
+11751 | 11751
+
+### credit_pid_padding_rule  (3 rows, 0.01s)
+t | n | rule_ok
+M_Cast | 82837 | 82837
+M_Producer | 11751 | 11751
+M_Director | 3475 | 3475
+
+### genre_padding_rule  (1 rows, 0.00s)
+n | twelve_spaces | unpadded
+328 | 327 | 'Null'
+
+### year_split_rule  (1 rows, 0.00s)
+n | rule_ok | four_digit_tail | bad_prefix
+3475 | 3475 | 3475 | 0
+
+### real_ids_whole  (2 rows, 0.00s)
+c | nonnull | whole
+M_Location.LID | 1849 | 1849
+M_Country.CID | 3470 | 3470
+
+### one_per_movie_link_tables  (1 rows, 0.00s)
+t | aligned | movies
+all five | 3475 | 3475
+

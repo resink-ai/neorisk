@@ -1,0 +1,86 @@
+### purchase_day_rule  (1 rows, 0.00s)
+n | rule_ok
+180 | 176
+
+### purchase_day_rule_misses  (4 rows, 0.00s)
+id | product_id | k | purchased
+725 | 7950 | 10 | 2018-01-31
+735 | 7950 | 10 | 2018-03-31
+745 | 7950 | 10 | 2018-05-31
+755 | 7950 | 10 | 2018-07-31
+
+### yearly_purchase_totals_round  (1 rows, 0.00s)
+multiple_of_100 | n
+30 | 30
+
+### lots_over_48  (6 rows, 0.00s)
+id | location_id | product_id | purchase_id | qty | purchase_qty
+1202 | 186 | 6520 | 729 | 24.0 | 72
+1205 | 77 | 6520 | 729 | 20.0 | 72
+1316 | 29 | 6520 | 729 | 14.0 | 72
+1433 | 165 | 6520 | 729 | 14.0 | 72
+1319 | 69 | 6520 | 749 | 70.0 | 70
+1430 | 129 | 6520 | 769 | 72.0 | 72
+
+### lot_split_rule  (1 rows, 0.00s)
+rule_ok | n
+59 | 62
+
+### lot_split_misses  (3 rows, 0.00s)
+id | product_id | qty | lots
+729 | 6520 | 72 | 24+20+14+14
+749 | 6520 | 70 | 70
+769 | 6520 | 72 | 72
+
+### inventory_id_interleave  (1 rows, 0.00s)
+min(id) | max(id) | count(*) | slots
+1148 | 1484 | 113 | 113
+
+### orderline_amount_vs_list  (18 rows, 0.00s)
+product_id | order_id | qty | amount | unit
+4280 | 421 | 110.0 | 2400.0 | 21.8182
+4280 | 422 | 80.0 | 1750.0 | 21.875
+4280 | 423 | 60.0 | 1300.0 | 21.6667
+4280 | 427 | 60.0 | 1480.0 | 24.6667
+4280 | 428 | 90.0 | 1925.0 | 21.3889
+4280 | 429 | 80.0 | 1750.0 | 21.875
+5310 | 425 | 40.0 | 750.0 | 18.75
+5430 | 425 | 60.0 | 1150.0 | 19.1667
+5430 | 429 | 40.0 | 875.0 | 21.875
+6520 | 421 | 140.0 | 2250.0 | 16.0714
+6520 | 422 | 80.0 | 1275.0 | 15.9375
+6520 | 423 | 40.0 | 650.0 | 16.25
+6520 | 426 | 40.0 | 680.0 | 17.0
+6600 | 424 | 16.0 | 320.0 | 20.0
+6600 | 425 | 24.0 | 480.0 | 20.0
+6600 | 426 | 16.0 | 320.0 | 20.0
+7950 | 428 | 100.0 | 960.0 | 9.6
+7950 | 430 | 50.0 | 480.0 | 9.6
+
+### monthly_sales_zeros_by_product  (3 rows, 0.00s)
+product_id | count(*)
+4160 | 13
+4280 | 3
+6600 | 1
+
+### monthly_sales_max  (5 rows, 0.00s)
+product_id | mth | qty
+4160 | 2018-02-01 | 247
+4160 | 2017-02-01 | 209
+4160 | 2017-12-01 | 172
+4160 | 2018-01-01 | 167
+4160 | 2018-12-01 | 160
+
+### picklist_alone_vs_inventory  (2 rows, 0.00s)
+picklist_id | locations | overdrawn | emptied | partly
+841 | 9 | 0 | 8 | 1
+842 | 10 | 0 | 8 | 2
+
+### both_picklists_vs_inventory  (1 rows, 0.00s)
+locations | overdrawn
+10 | 9
+
+### sales_2018_vs_lots_2018  (1 rows, 0.00s)
+sales_2018 | bought_2018 | in_stock_from_2018
+3659 | 4000 | 4000.0
+

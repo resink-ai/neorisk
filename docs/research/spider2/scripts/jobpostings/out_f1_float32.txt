@@ -1,0 +1,4 @@
+salary_year_avg: 2174 values; float32-exact 2174; already a 2-place double 2151; shortest decimal places {0: 2073, 1: 80, 2: 17, 3: 4}; float32(cents/100) rebuilds 2170
+  values needing > 2 places: [115653.984375, 54423.203125, 87006.375, 80679.6640625] ['115653.984375', '54423.203125']
+salary_hour_avg: 1090 values; float32-exact 1030; already a 2-place double 765; shortest decimal places {0: 478, 1: 291, 2: 94, 3: 95, None: 132}; float32(cents/100) rebuilds 863
+  values needing > 2 places: [27.435001373291016, 46.845001220703125, 26.63999938964844, 53.38500213623047, 33.775001525878906] ['27.435001373291015625', '46.845001220703125']

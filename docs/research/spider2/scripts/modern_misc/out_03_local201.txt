@@ -1,0 +1,6 @@
+R1 distinct words, distinct anagrams [('raad', 3), ('raash', 4), ('rabal', 1), ('rabat', 1), ('rabi', 3), ('rabic', 2), ('rabid', 3), ('rabin', 4), ('rabot', 3), ('race', 5)] == _a 
+R2 raw rows, distinct anagrams [('raad', 3), ('raash', 4), ('rabal', 1), ('rabat', 1), ('rabi', 3), ('rabic', 2), ('rabid', 3), ('rabin', 4), ('rabot', 3), ('race', 5)] == _a 
+R3 raw rows, count rows (duplicates count as anagrams) [('raad', 3), ('raash', 4), ('rabal', 1), ('rabat', 1), ('rabi', 3), ('rabic', 2), ('rabid', 3), ('rabin', 4), ('rabot', 3), ('race', 5)] == _a 
+duplicated r-words of length 4-5 (first 10): ['rason', 'rcpt', 'recti', 'rekey', 'reset', 'ridge', 'roily', 'roose', 'roud', 'rugs']
+_b words: ['rason', 'rcpt', 'recti', 'rekey', 'reset', 'ridge', 'roily', 'roose', 'roud', 'rugs']
+_b words with a true (other-word) anagram: ['rason', 'recti', 'rekey', 'reset', 'ridge', 'roud', 'rugs']

@@ -1,0 +1,211 @@
+### months_active_per_customer  (1 rows, 0.21s)
+m | customers
+18 | 209
+
+### customer_missing_month_patterns  (4 rows, 0.17s)
+p | customers
+2019-12-01,2020-04-01,2020-08-01,2020-12-01,2021-04-01,2021-08-01 | 53
+2019-11-01,2020-03-01,2020-07-01,2020-11-01,2021-03-01,2021-07-01 | 52
+2019-10-01,2020-02-01,2020-06-01,2020-10-01,2021-02-01,2021-06-01 | 52
+2019-09-01,2020-01-01,2020-05-01,2020-09-01,2021-01-01,2021-05-01 | 52
+
+### missing_months_same_both_years  (1 rows, 0.15s)
+same | n
+209 | 209
+
+### pair_months_vs_customer_months  (1 rows, 0.60s)
+full_ | partial | n | maxc
+91091 | 25757 | 116848 | 9
+
+### product_first_month  (2 rows, 0.17s)
+first | products
+2019-09-01 | 245
+2020-09-01 | 102
+
+### product_last_month  (2 rows, 0.18s)
+last | products
+2020-08-01 | 13
+2021-08-01 | 334
+
+### code_year_digits_vs_first_fy  (12 rows, 0.14s)
+yy | ffy | n
+18 | None | 3
+18 | 2020 | 94
+18 | 2021 | 1
+19 | None | 3
+19 | 2020 | 100
+19 | 2021 | 10
+20 | None | 3
+20 | 2020 | 40
+20 | 2021 | 48
+21 | None | 41
+21 | 2020 | 11
+21 | 2021 | 43
+
+### code_digits67_vs_division  (3 rows, 0.00s)
+d67 | division | n
+11 | PC | 161
+15 | P & A | 200
+16 | N & S | 36
+
+### code_digits89_vs_segment  (32 rows, 0.00s)
+d89 | segment | n
+01 | Accessories | 17
+01 | Desktop | 16
+01 | Networking | 3
+01 | Notebook | 19
+01 | Peripherals | 19
+01 | Storage | 6
+02 | Accessories | 17
+02 | Desktop | 16
+02 | Networking | 3
+02 | Notebook | 24
+02 | Peripherals | 18
+02 | Storage | 6
+03 | Accessories | 17
+03 | Networking | 3
+03 | Notebook | 22
+03 | Peripherals | 18
+03 | Storage | 6
+04 | Accessories | 17
+04 | Notebook | 24
+04 | Peripherals | 11
+04 | Storage | 6
+05 | Accessories | 12
+05 | Notebook | 16
+05 | Peripherals | 11
+05 | Storage | 3
+06 | Accessories | 12
+06 | Notebook | 8
+06 | Peripherals | 7
+07 | Accessories | 12
+07 | Notebook | 8
+08 | Accessories | 12
+08 | Notebook | 8
+
+### code_prefix_vs_channel  (3 rows, 0.00s)
+p | channel | n
+7 | Direct | 40
+8 | Distributor | 5
+9 | Retailer | 164
+
+### code_market_digits  (27 rows, 0.00s)
+mk | markets | m | n
+0001 | 1 | China | 3
+0002 | 1 | India | 18
+0003 | 1 | Indonesia | 4
+0004 | 1 | Japan | 10
+0005 | 1 | Pakistan | 5
+0006 | 1 | Philiphines | 6
+0007 | 1 | South Korea | 5
+0008 | 1 | Australia | 7
+0009 | 1 | Newzealand | 8
+0010 | 1 | Bangladesh | 5
+0011 | 1 | France | 10
+0012 | 1 | Germany | 11
+0013 | 1 | Italy | 11
+0014 | 1 | Netherlands | 9
+0015 | 1 | Norway | 9
+0016 | 1 | Poland | 8
+0017 | 1 | Portugal | 12
+0018 | 1 | Spain | 11
+0019 | 1 | Sweden | 5
+0020 | 1 | Austria | 8
+0021 | 1 | United Kingdom | 11
+0022 | 1 | USA | 15
+0023 | 1 | Canada | 11
+0024 | 1 | Chile | 2
+0025 | 1 | Columbia | 1
+0026 | 1 | Mexico | 2
+0027 | 1 | Brazil | 2
+
+### amazon_trailing_space  (2 rows, 0.00s)
+customer | len | n
+Amazon | 6 | 4
+Amazon  | 7 | 25
+
+### whitespace  (2 rows, 0.00s)
+t | n
+cust | 25
+prod | 10
+
+### non_ascii_product  (1 rows, 0.00s)
+n | endash
+7 | 7
+
+### non_ascii_customer  (1 rows, 0.00s)
+customer | hex(customer)
+Elkjøp | 456C6B6AC3B870
+
+### typos  (3 rows, 0.00s)
+market
+Philiphines
+Newzealand
+Columbia
+
+### qty_by_division_month  (6 rows, 0.35s)
+division | fiscal_year | qty | rows_
+N & S | 2020 | 5693995 | 33669
+N & S | 2021 | 10603324 | 48906
+P & A | 2020 | 14573725 | 215641
+P & A | 2021 | 38087235 | 334643
+PC | 2020 | 505169 | 114213
+PC | 2021 | 1474023 | 224559
+
+### qty_quantiles  (1 rows, 0.66s)
+p05 | p25 | p50 | p75 | p90 | p99 | mx
+1 | 3 | 14 | 62 | 185 | 888 | 5832
+
+### qty_by_channel  (5 rows, 0.49s)
+channel | platform | rows_ | qty | av
+Direct | Brick & Mortar | 75687 | 4829973 | 63.81509374132942
+Direct | E-Commerce | 113114 | 6660850 | 58.886167936771756
+Distributor | Brick & Mortar | 25720 | 7961027 | 309.52671073094865
+Retailer | Brick & Mortar | 590355 | 36135718 | 61.21014982510523
+Retailer | E-Commerce | 166755 | 15349903 | 92.0506311654823
+
+### qty_by_segment  (6 rows, 0.28s)
+segment | rows_ | qty | av
+Accessories | 306361 | 44526957 | 145.34146643991892
+Storage | 54430 | 12053041 | 221.44113540327027
+Peripherals | 243923 | 8134003 | 33.3466011815204
+Networking | 28145 | 4244278 | 150.80042636347486
+Notebook | 306012 | 1848352 | 6.040129145262277
+Desktop | 32760 | 130840 | 3.993894993894994
+
+### seasonality_index  (12 rows, 0.24s)
+mm | qty | av_per_row
+01 | 5408718 | 65.06
+02 | 5243657 | 63.28
+03 | 3913409 | 55.5
+04 | 4507453 | 59.93
+05 | 4638964 | 60.64
+06 | 5080759 | 64.58
+07 | 5379820 | 64.94
+08 | 5472959 | 66.38
+09 | 5418785 | 65.23
+10 | 6783487 | 80.17
+11 | 9279541 | 107.99
+12 | 9809919 | 114.28
+
+### gold_local058  (6 rows, 0.30s)
+segment | unique_product_count_2020 | u21 | pct
+Desktop | 7 | 22 | 214.29
+Networking | 6 | 9 | 50.0
+Accessories | 69 | 103 | 49.28
+Storage | 12 | 17 | 41.67
+Peripherals | 59 | 75 | 27.12
+Notebook | 92 | 108 | 17.39
+
+### gold_local059  (3 rows, 0.18s)
+division | overall_avg_quantity_sold
+N & S | 397699.333333
+P & A | 244691.000000
+PC | 10045.666667
+
+### gold_local059_fiscal_variant  (3 rows, 0.24s)
+division | avg_fy2021
+N & S | 688540.333333
+P & A | 422611.333333
+PC | 17329.666667
+

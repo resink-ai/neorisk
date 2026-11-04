@@ -1,0 +1,59 @@
+music tables not paired: []
+chinook tables not paired: ['sqlite_sequence', 'sqlite_stat1']
+
+## Artist vs artists: rows 275 vs 275
+   same column names in order: True
+   contract: rows only in music 0, only in chinook 0
+   strict: rows only in music 0, only in chinook 0
+
+## Album vs albums: rows 347 vs 347
+   same column names in order: True
+   contract: rows only in music 0, only in chinook 0
+   strict: rows only in music 0, only in chinook 0
+
+## Genre vs genres: rows 25 vs 25
+   same column names in order: True
+   contract: rows only in music 0, only in chinook 0
+   strict: rows only in music 0, only in chinook 0
+
+## MediaType vs media_types: rows 5 vs 5
+   same column names in order: True
+   contract: rows only in music 0, only in chinook 0
+   strict: rows only in music 0, only in chinook 0
+
+## Track vs tracks: rows 3503 vs 3503
+   same column names in order: True
+   contract: rows only in music 0, only in chinook 0
+   strict: rows only in music 0, only in chinook 0
+
+## Playlist vs playlists: rows 18 vs 18
+   same column names in order: True
+   contract: rows only in music 0, only in chinook 0
+   strict: rows only in music 0, only in chinook 0
+
+## PlaylistTrack vs playlist_track: rows 8715 vs 8715
+   same column names in order: True
+   contract: rows only in music 0, only in chinook 0
+   strict: rows only in music 0, only in chinook 0
+
+## Employee vs employees: rows 8 vs 8
+   same column names in order: True
+   contract: rows only in music 0, only in chinook 0
+   strict: rows only in music 0, only in chinook 0
+
+## Customer vs customers: rows 59 vs 59
+   same column names in order: True
+   contract: rows only in music 0, only in chinook 0
+   strict: rows only in music 0, only in chinook 0
+
+## Invoice vs invoices: rows 412 vs 412
+   same column names in order: True
+   contract: rows only in music 0, only in chinook 0
+   strict: rows only in music 0, only in chinook 0
+
+## InvoiceLine vs invoice_items: rows 2240 vs 2240
+   same column names in order: True
+   contract: rows only in music 0, only in chinook 0
+   strict: rows only in music 0, only in chinook 0
+
+TOTAL differing rows: contract 0, strict 0

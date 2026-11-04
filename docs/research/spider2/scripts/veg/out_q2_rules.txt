@@ -1,0 +1,71 @@
+### sale_return_is_sign  (1 rows, 0.06s)
+n | sign_rule_ok | zero_qty
+878503 | 878503 | 0
+
+### qty_grid  (1 rows, 0.10s)
+n | grams | exact_from_grams | whole_kg
+878503 | 878503 | 878503 | 147277
+
+### qty_decimals  (4 rows, 0.82s)
+dp | count(*)
+0 | 147277
+1 | 5298
+2 | 52916
+3 | 673012
+
+### price_grid  (1 rows, 0.10s)
+n | exact_from_fen | exact_from_jiao | min("unit_selling_px_rmb/kg") | max("unit_selling_px_rmb/kg")
+878503 | 878503 | 878503 | 0.1 | 119.9
+
+### whsle_grid  (1 rows, 0.00s)
+n | exact_from_fen | min("whsle_px_rmb-kg") | max("whsle_px_rmb-kg") | non_positive
+55982 | 55982 | 0.01 | 141.0 | 0
+
+### loss_grid  (1 rows, 0.00s)
+n | exact_2dp | min("loss_rate_%") | max("loss_rate_%") | zero
+251 | 251 | 0.0 | 29.25 | 22
+
+### loss_name_is_cat_name  (1 rows, 0.00s)
+n | same
+251 | 251
+
+### whsle_index_rule  (1 rows, 0.02s)
+n | ok
+55982 | 55982
+
+### cat_index_rule  (1 rows, 0.00s)
+n | ok
+251 | 251
+
+### loss_index_rule  (1 rows, 0.00s)
+n | ok
+251 | 251
+
+### txn_ties  (1 rows, 0.53s)
+rows_in_ties | tie_groups
+218113 | 96593
+
+### txn_tie_order_candidates  (1 rows, 1.11s)
+tie_pairs | item_increasing | item_decreasing | item_same | qty_increasing
+121520 | 57129 | 54868 | 9523 | 52740
+
+### txn_index_from_date_time_only  (1 rows, 0.43s)
+n | ok
+878503 | 878503
+
+### txn_full_duplicates  (1 rows, 0.34s)
+dup_groups | rows_in_groups | extra_rows | max_copies
+4847 | 10142 | 5295 | 6
+
+### txn_dup_examples  (5 rows, 0.60s)
+txn_date | txn_time | item_code | qty_sold(kg) | unit_selling_px_rmb/kg | c | idx
+2022-08-24 00:00:00 | 12:09:45 | 102900011030110 | 1.0 | 4.9 | 6 | 643793,643794,643795,643796,643797,643798
+2022-11-21 00:00:00 | 15:55:00 | 106949711300259 | 1.0 | 2.9 | 6 | 722317,722318,722319,722320,722321,722322
+2022-11-26 00:00:00 | 11:13:59 | 102900011034231 | 1.0 | 2.5 | 6 | 726015,726016,726017,726018,726019,726021
+2022-12-30 00:00:00 | 09:46:40 | 102900011034224 | 1.0 | 3.5 | 6 | 746696,746697,746698,746699,746700,746701
+2021-01-04 00:00:00 | 17:56:04 | 102900011021842 | 1.0 | 9.9 | 5 | 189563,189564,189565,189566,189567
+
+### dup_adjacent  (1 rows, 0.64s)
+adjacent | groups
+4595 | 4847
+

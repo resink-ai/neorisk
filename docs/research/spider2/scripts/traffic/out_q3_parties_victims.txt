@@ -1,0 +1,167 @@
+### parties_per_case  (3 rows, 0.02s)
+n | cases
+1 | 184477
+2 | 1106
+3 | 1
+
+### victims_per_case  (3 rows, 0.01s)
+n | cases
+1 | 94541
+2 | 899
+3 | 18
+
+### parties_dup_case_party  (2 rows, 0.10s)
+printf('%.0f',case_id) | party_number | id | party_type
+9575011021164015610 | 1 | 16273821 | driver
+9575011021164015610 | 1 | 16273820 | driver
+
+### party_number_dist  (17 rows, 0.02s)
+party_number | count(*)
+1 | 94438
+2 | 76453
+3 | 12214
+4 | 2727
+5 | 601
+6 | 170
+7 | 43
+8 | 21
+9 | 11
+10 | 4
+11 | 2
+12 | 2
+15 | 2
+18 | 1
+45 | 1
+54 | 1
+92 | 1
+
+### parties_id_ranges  (1 rows, 0.00s)
+min(id) | max(id) | count(*)
+34 | 16432232 | 186692
+
+### parties_id_dup_case_gap  (1 rows, 0.04s)
+far_apart | count(*)
+745 | 834
+
+### victims_id_dup_case_gap  (1 rows, 0.02s)
+far_apart | count(*)
+448 | 499
+
+### parties_time_source  (3 rows, 0.04s)
+src | count(*)
+case_id_2001 | 10198
+collision | 1831
+rule | 174663
+
+### victims_time_source  (3 rows, 0.02s)
+src | count(*)
+case_id_2001 | 6009
+collision | 929
+rule | 89455
+
+### case_ids_time_source  (3 rows, 0.02s)
+src | count(*)
+case_id_2001 | 5173
+collision | 993
+rule | 88077
+
+### case_ids_db_year_by_id_kind  (6 rows, 0.03s)
+db_year | k | count(*)
+2017 | counter | 1
+2018 | counter | 31666
+2018 | date-coded | 5237
+2020 | counter | 4526
+2021 | 9e7+ | 13117
+2021 | counter | 39696
+
+### parties_id_kind  (3 rows, 0.03s)
+k | count(*)
+9e7+ | 25503
+counter | 150889
+date-coded | 10300
+
+### party_real_non_integer  (1 rows, 0.02s)
+sum(party_age<>cast(party_age as int)) | sum(vehicle_year<>cast(vehicle_year as int)) | sum(oaf_violation_section<>cast(oaf_violation_section as int))
+0 | 0 | 0
+
+### victim_real_non_integer  (1 rows, 0.00s)
+sum(victim_age<>cast(victim_age as int))
+0
+
+### party_type_mix  (6 rows, 0.05s)
+party_type | count(*) | at_fault
+driver | 167908 | 83633
+parked vehicle | 12048 | 92
+pedestrian | 3072 | 1030
+bicyclist | 2613 | 1440
+other | 620 | 117
+None | 431 | 205
+
+### party_age_outliers  (1 rows, 0.02s)
+gt100 | zero | child_driver
+8 | 28 | 136
+
+### vehicle_year_outliers  (1 rows, 0.02s)
+future | pre1950 | max(vehicle_year) | min(vehicle_year)
+2 | 36 | 2918.0 | 1905.0
+
+### victim_age_outliers  (8 rows, 0.00s)
+victim_age | count(*)
+101.0 | 1
+104.0 | 1
+106.0 | 2
+107.0 | 1
+114.0 | 1
+115.0 | 1
+120.0 | 1
+999.0 | 1
+
+### victim_role_vs_degree  (8 rows, 0.02s)
+victim_degree_of_injury | count(*)
+no injury | 42655
+complaint of pain | 33400
+other visible injury | 12932
+possible injury | 2696
+severe injury | 2215
+suspected minor injury | 1378
+killed | 743
+suspected serious injury | 374
+
+### dirty_codes_pv  (10 rows, 0.07s)
+'party_drug_physical=G' | count(*)
+party_drug_physical=G | 16684
+party_sex=X | 37
+movement=S | 1
+vehicle_make numeric | 1
+cellphone_use_type=4 | 20
+victim_sex in 2,4 | 2
+victim_safety_equipment_2=Z | 1
+chp_vehicle_type_towing like %.0 | 356
+chp_vehicle_type_towed like %.0 | 503
+oaf_violation_suffix=0 | 567
+
+### towed_codes  (3 rows, 0.02s)
+chp_vehicle_type_towed | count(*)
+0 | 1605
+0.0 | 503
+00 | 89309
+
+### party_whitespace  (1 rows, 0.03s)
+sum(vehicle_make<>trim(vehicle_make)) | sum(vehicle_make glob '*[^ -~]*')
+0 | 0
+
+### matched_victims_party_number_le_party_count  (1 rows, 0.02s)
+sum(v.party_number <= c.party_count) | count(*)
+928 | 929
+
+### matched_parties_killed_vs_collision  (1 rows, 0.11s)
+sum(p.k <= c.killed_victims) | count(*)
+1824 | 1824
+
+### at_fault_rate_by_party_number  (4 rows, 0.03s)
+party_number | round(avg(at_fault),3) | count(*)
+1 | 0.843 | 94438
+2 | 0.079 | 76453
+3 | 0.057 | 12214
+4 | 0.047 | 2727
+

@@ -1,0 +1,10 @@
+companies_funding      n=   1085 leading_dup_run k=   11 base=   1074 1%_of_base=    10.74 round=   11 match=True dup_rows_inside_base=0
+companies_dates        n=   1085 leading_dup_run k=   11 base=   1074 1%_of_base=    10.74 round=   11 match=True dup_rows_inside_base=0
+companies_industries   n=   1085 leading_dup_run k=   11 base=   1074 1%_of_base=    10.74 round=   11 match=True dup_rows_inside_base=0
+trees                  n= 690626 leading_dup_run k= 6838 base= 683788 1%_of_base=  6837.88 round= 6838 match=True dup_rows_inside_base=0
+income_trees           n=    220 leading_dup_run k=    2 base=    218 1%_of_base=     2.18 round=    2 match=True dup_rows_inside_base=2
+statistics             n=   1010 leading_dup_run k=   10 base=   1000 1%_of_base=    10.00 round=   10 match=True dup_rows_inside_base=0
+word_list              n= 373804 leading_dup_run k= 3701 base= 370103 1%_of_base=  3701.03 round= 3701 match=True dup_rows_inside_base=1
+pizza_customer_orders  n=     14 leading_dup_run k=    0 base=     14 1%_of_base=     0.14 round=    0 match=True dup_rows_inside_base=1
+pizza_runner_orders    n=     10 leading_dup_run k=    0 base=     10 1%_of_base=     0.10 round=    0 match=True dup_rows_inside_base=0
+pizza_toppings         n=     12 leading_dup_run k=    0 base=     12 1%_of_base=     0.12 round=    0 match=True dup_rows_inside_base=0

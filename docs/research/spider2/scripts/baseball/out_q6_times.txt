@@ -1,0 +1,60 @@
+### setup_indexes (setup on in-memory copy)
+
+### natural_dates_mmdd  (4 rows, 0.00s)
+c | min(substr(span_last,6,5)) | max(substr(span_last,6,5))
+home_game.span_last | 03-23 | 11-01
+home_game.span_first | 03-22 | 10-30
+player.debut | 03-22 | 10-30
+player.final_game | 04-01 | 11-01
+
+### dates_after_oct31  (1 rows, 0.00s)
+sum(substr(span_last,6,5)>'10-31')
+1
+
+### birth_vs_events  (4 rows, 0.06s)
+t | count(*) | before_birth_year | age_lt_15
+batting | 101148 | 5 | 5
+player_college | 17350 | 0 | 0
+hall_of_fame | 4119 | 0 | None
+debut | 18515 | 1 | 1
+
+### birth_after_debut_detail  (1 rows, 0.00s)
+player_id | birth_year | birth_month | birth_day | debut
+johnsbi01 | 1961 | 9 | 28 | 1884-06-27
+
+### death_max  (1 rows, 0.00s)
+max(printf('%04d-%02d-%02d',death_year,death_month,death_day)) | sum(death_year=2016) | died_before_final_game
+2016-02-18 | 13 | 0
+
+### death_before_birth_detail  (1 rows, 0.00s)
+player_id | birth_year | death_year | debut
+johnsbi01 | 1961 | 1942 | 1884-06-27
+
+### events_after_death  (4 rows, 0.05s)
+t | sum(x.year > d.dy)
+batting | 0
+manager | 0
+hall_of_fame (posthumous) | 496
+salary | 1
+
+### no_birth_year_players  (1 rows, 0.00s)
+count(*) | sum(debut<>'') | min(debut) | max(debut)
+143 | 138 | '' | 1912-05-18
+
+### postseason_round_codes  (14 rows, 0.00s)
+round | count(*) | min(year) | max(year)
+WS | 118 | 1884 | 2015
+CS | 1 | 1892 | 1892
+ALCS | 46 | 1969 | 2015
+NLCS | 46 | 1969 | 2015
+AEDIV | 1 | 1981 | 1981
+AWDIV | 1 | 1981 | 1981
+NEDIV | 1 | 1981 | 1981
+NWDIV | 1 | 1981 | 1981
+ALDS1 | 21 | 1995 | 2015
+ALDS2 | 21 | 1995 | 2015
+NLDS1 | 21 | 1995 | 2015
+NLDS2 | 21 | 1995 | 2015
+ALWC | 4 | 2012 | 2015
+NLWC | 4 | 2012 | 2015
+

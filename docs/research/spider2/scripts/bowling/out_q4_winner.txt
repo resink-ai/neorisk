@@ -1,0 +1,10 @@
+### winner_by_game_number  (3 rows, 0.00s)
+GameNumber | odd | even
+1 | 56 | 0
+2 | 0 | 56
+3 | 56 | 0
+
+### winner_rule_exact  (1 rows, 0.00s)
+games | rule_odd_even_odd
+168 | 168
+

@@ -1,0 +1,19 @@
+listing rows per table: [(2, 1), (6, 1), (8, 1), (10, 2), (11, 1265)]
+distinct card urls in listings: 12682 ; listed more than once: 1
+listing checks over 12639 cards: {'card_in_some_listing': 12548, 'card_in_own_table': 12548, 'date_eq': 12548, 'promo_eq': 12548, 'event_name_eq': 12541, 'location_eq': 12548}
+cards missing from every listing (first 5): [(13382, 'http://www.profightdb.com/cards/nxt/tv-584-50479.html'), (13383, 'http://www.profightdb.com/cards/nxt/orlando-show-50449.html'), (13384, 'http://www.profightdb.com/cards/nxt/lakeland-show-50433.html'), (13385, 'http://www.profightdb.com/cards/nxt/lvl-up-91-taping-50370.html'), (13386, 'http://www.profightdb.com/cards/nxt/tv-583-50365.html')]
+info_html checks: {'date': 12639, 'promotion': 12639, 'location_last2': 12639}
+match_html checks (cards for row_count, matches for the rest): {'row_count': 12639, 'winner_name': 77567, 'loser_name': 77567, 'win_type': 77567, 'duration': 77567, 'match_type': 77567, 'title': 77567, 'title_change': 77567}
+listing data rows: 12681 ; tables whose id = number of their first row: 1270 of 1270
+cards whose id = number of their listing row: 12548 of 12548 listed cards
+listing rows with no card: 133 first: [286, 348, 380, 396, 404, 1008, 1736, 2150, 2153, 2156, 2315, 2321]
+Locations ids that are not a card id: 29 ; of those, a listing row with no card: 29 ; beyond the listing: []
+Events ids that are not a card id: 17 ; of those, a listing row with no card: 17 ; beyond the listing: []
+Promotions ids that are not a card id: 1 ; of those, a listing row with no card: 0 ; beyond the listing: [12682]
+  event name differs: card 4150 'WrestleMania 36 - Day 1 Taping Part 2' 'WrestleMania 36  - Day 1 Taping Part 2'
+  event name differs: card 4151 'WrestleMania 36 - Day 1 Taping Part 1' 'WrestleMania 36  - Day 1 Taping Part 1'
+  event name differs: card 4961 'WWE Live: Bournemouth (Smackdown)' 'WWE Live:  Bournemouth (Smackdown)'
+  event name differs: card 4965 'WWE Live: Coruña (Smackdown)' 'WWE Live: Coruña  (Smackdown)'
+  event name differs: card 5772 "Money In The Bank '15" "Money In The Bank  '15"
+  event name differs: card 11006 'LVL UP #78 Taping - Part 1' 'LVL UP #78 Taping  - Part 1'
+  event name differs: card 11100 "TV #540 - New Year's Evil 2023" "TV #540  - New Year's Evil 2023"

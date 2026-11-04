@@ -1,0 +1,341 @@
+### millis_suffix  (2 rows, 0.00s)
+t | ms000z | n
+orders | 6912 | 6912
+events | 9073 | 9073
+
+### rowid_vs_account_id  (1 rows, 0.00s)
+mism | n
+158 | 351
+
+### reps_id_step  (1 rows, 0.00s)
+min(id) | max(id) | count(*) | slots | not_step10
+321500 | 321990 | 50 | 50 | 0
+
+### reps_rowid_order  (1 rows, 0.00s)
+desc_pairs
+0
+
+### total_is_sum_qty  (1 rows, 0.00s)
+ok | n
+6912 | 6912
+
+### unit_prices  (3 rows, 0.00s)
+p | mn | mx
+standard | 4.989999999999999 | 4.99
+gloss | 7.489999999999999 | 7.490000000000001
+poster | 8.12 | 8.120000000000001
+
+### amt_is_qty_times_price_sqlite  (1 rows, 0.00s)
+std_eq | std_close | gl_eq | gl_close | po_eq | po_close | n
+5281 | 6912 | 5966 | 6912 | 3993 | 6912 | 6912
+
+### total_amt_is_sum_sqlite  (1 rows, 0.00s)
+eq | close_ | n
+5163 | 6912 | 6912
+
+### amt_cents_grid  (1 rows, 0.00s)
+std | gl | po | tot | n
+5957 | 6288 | 6063 | 6231 | 6912
+
+### zero_qty_orders  (1 rows, 0.00s)
+total0 | std0 | gl0 | po0 | only_poster
+20 | 825 | 1018 | 1149 | 93
+
+### zero_total_rows  (5 rows, 0.00s)
+id | account_id | occurred_at | standard_qty | gloss_qty | poster_qty | total | standard_amt_usd | gloss_amt_usd | poster_amt_usd | total_amt_usd
+124 | 1131 | 2016-11-07T05:10:56.000Z | 0 | 0 | 0 | 0 | 0.0 | 0.0 | 0.0 | 0.0
+1353 | 1951 | 2014-05-16T05:05:30.000Z | 0 | 0 | 0 | 0 | 0.0 | 0.0 | 0.0 | 0.0
+2518 | 2881 | 2016-01-30T16:55:46.000Z | 0 | 0 | 0 | 0 | 0.0 | 0.0 | 0.0 | 0.0
+4445 | 1221 | 2016-12-24T21:02:40.000Z | 0 | 0 | 0 | 0 | 0.0 | 0.0 | 0.0 | 0.0
+4446 | 1231 | 2016-03-27T11:35:30.000Z | 0 | 0 | 0 | 0 | 0.0 | 0.0 | 0.0 | 0.0
+
+### dup_orders_same_account_time  (8 rows, 0.00s)
+id | account_id | occurred_at | standard_qty | gloss_qty | poster_qty | total | standard_amt_usd | gloss_amt_usd | poster_amt_usd | total_amt_usd
+349 | 1301 | 2014-03-06T13:40:13.000Z | 111 | 25 | 29 | 165 | 553.89 | 187.25 | 235.48 | 976.62
+4526 | 1301 | 2014-03-06T13:40:13.000Z | 724 | 593 | 218 | 1535 | 3612.76 | 4441.57 | 1770.16 | 9824.49
+2329 | 2731 | 2015-11-15T13:18:55.000Z | 495 | 11 | 0 | 506 | 2470.05 | 82.39 | 0.0 | 2552.44
+5737 | 2731 | 2015-11-15T13:18:55.000Z | 13 | 31 | 42 | 86 | 64.87 | 232.19 | 341.04 | 638.1
+3891 | 4161 | 2016-05-26T17:56:04.000Z | 491 | 7 | 5 | 503 | 2450.09 | 52.43 | 40.6 | 2543.12
+6644 | 4161 | 2016-05-26T17:56:04.000Z | 3 | 95 | 13 | 111 | 14.97 | 711.55 | 105.56 | 832.08
+4032 | 4271 | 2015-09-08T17:10:32.000Z | 298 | 27 | 25 | 350 | 1487.02 | 202.23 | 203.0 | 1892.25
+6732 | 4271 | 2015-09-08T17:10:32.000Z | 50 | 533 | 310 | 893 | 249.5 | 3992.17 | 2517.2 | 6758.87
+
+### order_desc_by_account_time  (0 rows, 0.00s)
+id | account_id | occurred_at | pa | pt
+
+### orders_id_order_rule  (1 rows, 0.00s)
+acct_desc | time_desc_within_account
+1 | 0
+
+### events_id_order_rule  (1 rows, 0.00s)
+acct_desc | time_desc_within_account | ties
+1 | 187 | 0
+
+### events_id_order_channel  (1 rows, 0.01s)
+chan_desc | time_desc_within_chan | chan_switches
+1757 | 29 | 3541
+
+### account_order_in_ids  (2 rows, 0.01s)
+t | runs | accts
+orders | 678 | 350
+events | 702 | 351
+
+### channel_mix  (6 rows, 0.00s)
+channel | n
+direct | 5298
+facebook | 967
+organic | 952
+adwords | 906
+banner | 476
+twitter | 474
+
+### event_hour_mix  (48 rows, 0.00s)
+t | hh | n
+events | 00 | 362
+events | 01 | 330
+events | 02 | 394
+events | 03 | 423
+events | 04 | 399
+events | 05 | 369
+events | 06 | 376
+events | 07 | 359
+events | 08 | 371
+events | 09 | 413
+events | 10 | 374
+events | 11 | 405
+events | 12 | 385
+events | 13 | 381
+events | 14 | 339
+events | 15 | 393
+events | 16 | 424
+events | 17 | 356
+events | 18 | 348
+events | 19 | 371
+events | 20 | 391
+events | 21 | 370
+events | 22 | 372
+events | 23 | 368
+orders | 00 | 263
+orders | 01 | 211
+orders | 02 | 301
+orders | 03 | 313
+orders | 04 | 349
+orders | 05 | 271
+orders | 06 | 287
+orders | 07 | 299
+orders | 08 | 280
+orders | 09 | 343
+orders | 10 | 254
+orders | 11 | 306
+orders | 12 | 295
+orders | 13 | 321
+orders | 14 | 233
+orders | 15 | 268
+orders | 16 | 289
+orders | 17 | 280
+orders | 18 | 256
+orders | 19 | 299
+orders | 20 | 283
+orders | 21 | 331
+orders | 22 | 287
+orders | 23 | 293
+
+### per_year  (10 rows, 0.00s)
+t | y | n | usd
+events | 2013 | 144 | None
+events | 2014 | 1725 | None
+events | 2015 | 2241 | None
+events | 2016 | 4932 | None
+events | 2017 | 31 | None
+orders | 2013 | 99 | 377331.0
+orders | 2014 | 1306 | 4069106.54
+orders | 2015 | 1725 | 5752004.94
+orders | 2016 | 3757 | 12864917.92
+orders | 2017 | 25 | 78151.43
+
+### per_month_orders  (38 rows, 0.00s)
+ym | n
+2013-12 | 99
+2014-01 | 104
+2014-02 | 101
+2014-03 | 111
+2014-04 | 104
+2014-05 | 108
+2014-06 | 105
+2014-07 | 109
+2014-08 | 117
+2014-09 | 112
+2014-10 | 111
+2014-11 | 108
+2014-12 | 116
+2015-01 | 119
+2015-02 | 103
+2015-03 | 129
+2015-04 | 123
+2015-05 | 134
+2015-06 | 127
+2015-07 | 146
+2015-08 | 145
+2015-09 | 140
+2015-10 | 175
+2015-11 | 180
+2015-12 | 204
+2016-01 | 210
+2016-02 | 205
+2016-03 | 242
+2016-04 | 245
+2016-05 | 276
+2016-06 | 295
+2016-07 | 316
+2016-08 | 341
+2016-09 | 350
+2016-10 | 389
+2016-11 | 425
+2016-12 | 463
+2017-01 | 25
+
+### orders_per_account_month  (4 rows, 0.00s)
+c | n
+1 | 1681
+2 | 2398
+3 | 77
+4 | 51
+
+### orders_monthly_rhythm  (8 rows, 0.01s)
+gap_days | n
+0 | 2554
+29 | 2021
+28 | 996
+30 | 959
+58 | 13
+59 | 12
+60 | 4
+57 | 3
+
+### order_time_of_day_repeats  (1 rows, 0.00s)
+orders_in_repeated_tod | groups
+10 | 5
+
+### order_tod_drift  (14 rows, 0.00s)
+id | account_id | occurred_at | standard_qty | gloss_qty | poster_qty | total | standard_amt_usd | gloss_amt_usd | poster_amt_usd | total_amt_usd
+1 | 1001 | 2015-10-06T17:31:14.000Z | 123 | 22 | 24 | 169 | 613.77 | 164.78 | 194.88 | 973.43
+4307 | 1001 | 2015-11-05T03:25:21.000Z | 506 | 612 | 203 | 1321 | 2524.94 | 4583.88 | 1648.36 | 8757.18
+2 | 1001 | 2015-11-05T03:34:33.000Z | 190 | 41 | 57 | 288 | 948.1 | 307.09 | 462.84 | 1718.03
+4308 | 1001 | 2015-12-04T04:01:09.000Z | 526 | 597 | 287 | 1410 | 2624.74 | 4471.53 | 2330.44 | 9426.71
+3 | 1001 | 2015-12-04T04:21:55.000Z | 85 | 47 | 0 | 132 | 424.15 | 352.03 | 0.0 | 776.18
+4309 | 1001 | 2016-01-02T00:59:09.000Z | 566 | 645 | 194 | 1405 | 2824.34 | 4831.05 | 1575.28 | 9230.67
+4 | 1001 | 2016-01-02T01:18:24.000Z | 144 | 32 | 0 | 176 | 718.56 | 239.68 | 0.0 | 958.24
+4310 | 1001 | 2016-02-01T19:07:32.000Z | 473 | 595 | 212 | 1280 | 2360.27 | 4456.55 | 1721.44 | 8538.26
+5 | 1001 | 2016-02-01T19:27:27.000Z | 108 | 29 | 28 | 165 | 538.92 | 217.21 | 227.36 | 983.49
+6 | 1001 | 2016-03-02T15:29:32.000Z | 103 | 24 | 46 | 173 | 513.97 | 179.76 | 373.52 | 1067.25
+4311 | 1001 | 2016-03-02T15:40:29.000Z | 498 | 605 | 204 | 1307 | 2485.02 | 4531.45 | 1656.48 | 8672.95
+4312 | 1001 | 2016-04-01T11:15:27.000Z | 497 | 618 | 152 | 1267 | 2480.03 | 4628.82 | 1234.24 | 8343.09
+7 | 1001 | 2016-04-01T11:20:18.000Z | 101 | 33 | 92 | 226 | 503.99 | 247.17 | 747.04 | 1498.2
+4313 | 1001 | 2016-05-01T15:40:04.000Z | 483 | 570 | 201 | 1254 | 2410.17 | 4269.3 | 1632.12 | 8311.59
+
+### event_tod_drift  (14 rows, 0.00s)
+id | account_id | occurred_at | channel
+4394 | 1001 | 2015-10-06T04:22:11.000Z | facebook
+1 | 1001 | 2015-10-06T17:13:58.000Z | direct
+4395 | 1001 | 2015-10-22T05:02:47.000Z | organic
+4396 | 1001 | 2015-10-22T14:04:20.000Z | adwords
+2 | 1001 | 2015-11-05T03:08:26.000Z | direct
+4397 | 1001 | 2015-11-05T17:18:54.000Z | direct
+3 | 1001 | 2015-12-04T03:57:24.000Z | direct
+4398 | 1001 | 2015-12-11T08:44:16.000Z | direct
+4399 | 1001 | 2016-01-01T15:45:54.000Z | adwords
+4 | 1001 | 2016-01-02T00:55:03.000Z | direct
+4400 | 1001 | 2016-01-13T19:31:14.000Z | direct
+5 | 1001 | 2016-02-01T19:02:33.000Z | direct
+4401 | 1001 | 2016-02-07T17:44:10.000Z | adwords
+4402 | 1001 | 2016-02-27T15:27:22.000Z | organic
+
+### events_per_account_month  (4 rows, 0.00s)
+c | n
+1 | 6731
+2 | 1052
+3 | 70
+4 | 7
+
+### event_before_order  (1 rows, 0.28s)
+with_event_24h | n
+6912 | 6912
+
+### order_minus_nearest_event_minutes  (12 rows, 1.12s)
+mins | n
+9 | 256
+24 | 248
+23 | 245
+15 | 244
+14 | 243
+19 | 240
+6 | 240
+18 | 237
+3 | 237
+25 | 236
+16 | 235
+27 | 233
+
+### first_activity  (1 rows, 0.34s)
+order_first | event_first | same
+0 | 350 | 0
+
+### qty_stats  (4 rows, 0.00s)
+p | min(standard_qty) | avg(standard_qty) | max(standard_qty)
+standard | 0 | 280.43200231481484 | 22591
+gloss | 0 | 146.6685474537037 | 14281
+poster | 0 | 104.6941550925926 | 28262
+total | 0 | 531.7947048611111 | 28799
+
+### total_amt_quantiles  (1 rows, 0.00s)
+p10 | p25 | p50 | p75 | p90 | p99 | mx
+740.42 | 1412.94 | 2482.55 | 3361.58 | 6856.38 | 13947.39 | 232207.07
+
+### orders_per_account  (5 rows, 0.00s)
+b | accts | min(c) | max(c)
+1-5 | 91 | 1 | 5
+6-10 | 63 | 6 | 10
+11-20 | 76 | 11 | 20
+21-40 | 63 | 21 | 40
+41+ | 57 | 41 | 71
+
+### events_per_account  (5 rows, 0.00s)
+b | accts | min(c) | max(c)
+1-5 | 65 | 2 | 5
+6-10 | 51 | 6 | 10
+11-20 | 75 | 11 | 20
+21-40 | 86 | 21 | 40
+41+ | 74 | 41 | 101
+
+### account_text  (1 rows, 0.00s)
+odd_web | name_ws | poc_ws | pocs
+1 | 0 | 0 | 330
+
+### lat_long_precision  (1 rows, 0.00s)
+lat_len | long_len | min(lat) | max(lat) | min(long) | max(long)
+11 | 13 | 30.42191113 | 45.55565141 | -122.68221497 | -71.05133234
+
+### accounts_per_rep  (10 rows, 0.00s)
+c | reps
+3 | 8
+4 | 5
+5 | 3
+6 | 6
+7 | 9
+8 | 3
+9 | 3
+10 | 5
+11 | 7
+15 | 1
+
+### last_times  (1 rows, 0.00s)
+last_order | last_event | orders_2017 | events_2017
+2017-01-02T00:02:40.000Z | 2017-01-01T23:51:09.000Z | 25 | 31
+
+### gold_local114  (4 rows, 0.00s)
+region | orders | total | rep | amt
+Midwest | 897 | 3013486.51 | Charles Bidwell | 675637.19
+Northeast | 2357 | 7744405.36 | Tia Amato | 1010690.6
+Southeast | 2024 | 6458497.0 | Earlie Schleusner | 1098137.72
+West | 1634 | 5925122.96 | Georgianna Chisholm | 886244.12
+

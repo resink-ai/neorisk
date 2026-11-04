@@ -1,0 +1,194 @@
+### mixed_matches_all_innings  (9 rows, 0.00s)
+match_id | innings_no | team_batting | team_bowling | balls | overs | min(over_id) | max(over_id)
+392202 | 1 | 7 | 1 | 124 | 20 | 1 | 20
+392202 | 2 | 1 | 7 | 48 | 15 | 1 | 15
+392202 | 2 | 7 | 1 | 47 | 15 | 1 | 16
+392207 | 1 | 3 | 5 | 123 | 20 | 1 | 20
+392207 | 2 | 3 | 5 | 68 | 20 | 1 | 20
+392207 | 2 | 5 | 3 | 52 | 18 | 1 | 19
+419119 | 1 | 7 | 6 | 127 | 20 | 1 | 20
+419119 | 2 | 6 | 7 | 49 | 17 | 1 | 17
+419119 | 2 | 7 | 6 | 54 | 17 | 1 | 17
+
+### mixed_matches_meta  (3 rows, 0.00s)
+match_id | team_1 | team_2 | match_date | season_id | venue | toss_winner | toss_decision | win_type | win_margin | outcome_type | match_winner | man_of_the_match
+392202 | 1 | 7 | 2009-04-27 | 2 | St George's Park | 7 | bat | runs | 92 | Result | 7 | 133
+392207 | 3 | 5 | 2009-04-30 | 2 | SuperSport Park | 5 | field | runs | 38 | Result | 3 | 21
+419119 | 6 | 7 | 2010-03-17 | 3 | Feroz Shah Kotla | 6 | field | runs | 98 | Result | 7 | 133
+
+### mixed_overs_shared  (53 rows, 0.00s)
+match_id | over_id | teams | count(*)
+392202 | 1 | 1,7 | 6
+392202 | 2 | 1,7 | 7
+392202 | 3 | 1,7 | 7
+392202 | 4 | 7,1 | 7
+392202 | 5 | 7,1 | 6
+392202 | 6 | 1,7 | 6
+392202 | 7 | 7,1 | 6
+392202 | 8 | 7,1 | 6
+392202 | 9 | 1,7 | 6
+392202 | 10 | 7,1 | 6
+392202 | 11 | 1,7 | 6
+392202 | 12 | 1,7 | 6
+392202 | 13 | 7,1 | 6
+392202 | 14 | 1,7 | 6
+392202 | 15 | 1 | 6
+392202 | 16 | 7 | 2
+392207 | 1 | 3,5 | 7
+392207 | 2 | 3,5 | 6
+392207 | 3 | 3,5 | 6
+392207 | 4 | 3,5 | 6
+392207 | 5 | 3,5 | 6
+392207 | 6 | 5,3 | 6
+392207 | 7 | 3,5 | 6
+392207 | 8 | 5,3 | 6
+392207 | 9 | 3,5 | 7
+392207 | 10 | 3,5 | 6
+392207 | 11 | 3,5 | 6
+392207 | 12 | 3,5 | 6
+392207 | 13 | 5,3 | 6
+392207 | 14 | 3 | 6
+392207 | 15 | 5,3 | 6
+392207 | 16 | 3,5 | 6
+392207 | 17 | 5,3 | 6
+392207 | 18 | 5,3 | 7
+392207 | 19 | 5,3 | 6
+392207 | 20 | 3 | 3
+419119 | 1 | 7,6 | 6
+419119 | 2 | 7,6 | 7
+419119 | 3 | 6,7 | 6
+419119 | 4 | 7,6 | 6
+419119 | 5 | 6,7 | 6
+419119 | 6 | 7,6 | 6
+419119 | 7 | 7,6 | 6
+419119 | 8 | 6,7 | 6
+419119 | 9 | 7,6 | 7
+419119 | 10 | 6,7 | 6
+419119 | 11 | 7,6 | 6
+419119 | 12 | 7,6 | 7
+419119 | 13 | 7,6 | 6
+419119 | 14 | 6,7 | 6
+419119 | 15 | 7,6 | 7
+419119 | 16 | 7,6 | 6
+419119 | 17 | 7,6 | 3
+
+### mixed_pm_teams  (6 rows, 0.00s)
+match_id | team_id | count(*)
+392202 | 1 | 11
+392202 | 7 | 11
+392207 | 3 | 11
+392207 | 5 | 11
+419119 | 6 | 11
+419119 | 7 | 11
+
+### mixed_striker_team  (6 rows, 0.00s)
+match_id | team_batting | striker_pm_team | count(*)
+392202 | 1 | 1 | 48
+392202 | 7 | 1 | 47
+392207 | 3 | 5 | 68
+392207 | 5 | 5 | 52
+419119 | 6 | 6 | 49
+419119 | 7 | 6 | 54
+
+### m501274_not_in_pm  (9 rows, 0.00s)
+over_id | ball_id | innings_no | striker | non_striker | bowler | team_batting
+1 | 1 | 1 | 40 | 9 | 80 | 1
+1 | 2 | 1 | 40 | 9 | 80 | 1
+1 | 3 | 1 | 40 | 9 | 80 | 1
+1 | 4 | 1 | 40 | 9 | 80 | 1
+3 | 1 | 1 | 40 | 132 | 50 | 1
+3 | 2 | 1 | 40 | 132 | 50 | 1
+3 | 3 | 1 | 40 | 132 | 50 | 1
+3 | 4 | 1 | 40 | 132 | 50 | 1
+3 | 5 | 1 | 40 | 132 | 50 | 1
+
+### m501274_pm  (2 rows, 0.00s)
+team_id | count(*)
+1 | 10
+7 | 11
+
+### side_10_players  (1 rows, 0.00s)
+match_id | team_id | count(*)
+501274 | 1 | 10
+
+### sides_no_captain_or_2  (3 rows, 0.00s)
+match_id | team_id | group_concat(player_id||':'||role)
+501274 | 1 | 9:Player,31:Player,66:Player,87:Player,89:Player,132:Keeper,140:Player,151:Player,276:Player,284:Player
+829762 | 2 | 8:Captain,88:CaptainKeeper,110:Player,140:Player,162:Player,236:Player,296:Player,311:Player,378:Player,401:Player,402:Player
+829762 | 6 | 27:Player,136:Player,154:Player,191:Player,237:Keeper,260:Player,293:Player,371:Player,386:Player,393:Player,404:Player
+
+### first_ball_children  (1 rows, 0.00s)
+'bs' | match_id | over_id | ball_id | innings_no
+bs | 335987 | 1 | 1 | 2
+
+### unused_player  (1 rows, 0.00s)
+player_id | player_name | dob | batting_hand | bowling_skill | country_name
+448 | SS Mundhe | 1988-10-27 | Right-hand bat | Right-arm medium | India
+
+### player_35_neighbours  (4 rows, 0.00s)
+player_id | player_name | dob | batting_hand | bowling_skill | country_name
+33 | M Kaif | 1980-12-01 | Right-hand bat | Right-arm offbreak | India
+34 | DS Lehmann | 1970-02-05 | Left-hand bat | Slow left-arm orthodox | Australia
+36 | M Rawat | 1985-10-25 | Right-hand bat | Right-arm medium | India
+37 | D Salunkhe | 1982-11-12 | Right-hand bat | Legbreak | India
+
+### zero_ball_innings_short  (10 rows, 0.03s)
+match_id | innings_no | max(over_id) | win_type | win_margin
+336026 | 2 | 6 | wickets | 8
+336027 | 2 | 8 | runs | 6
+336030 | 2 | 8 | runs | 3
+392188 | 2 | 5 | wickets | 10
+501263 | 2 | 8 | wickets | 8
+598073 | 1 | 8 | runs | 24
+598073 | 2 | 8 | runs | 24
+733998 | 2 | 5 | wickets | 8
+829812 | 2 | 6 | wickets | 6
+980994 | 2 | 5 | wickets | 8
+
+### legal_7_overs  (3 rows, 0.05s)
+match_id | innings_no | over_id | count(*) | group_concat(coalesce(er.extra_type,'-'))
+335999 | 2 | 11 | 8 | -,-,wides,-,-,-,-,-
+392203 | 2 | 11 | 7 | -,-,-,-,-,-,-
+419160 | 1 | 19 | 9 | -,-,-,noballs,-,wides,-,-,-
+
+### legal_0_overs  (4 rows, 0.07s)
+match_id | innings_no | over_id | count(*) | group_concat(coalesce(er.extra_type,'-')) | group_concat(coalesce(wt.kind_out,'-'))
+335993 | 2 | 14 | 1 | wides | -
+548340 | 2 | 20 | 1 | wides | -
+548382 | 2 | 19 | 1 | wides | -
+980916 | 2 | 19 | 1 | wides | -
+
+### two_bowler_overs  (5 rows, 0.06s)
+match_id | innings_no | over_id | group_concat(bowler)
+336007 | 1 | 7 | 9,9,8,8,8,8
+392207 | 1 | 18 | 160,160,160,160,160,137,137
+392233 | 1 | 19 | 61,61,61,256,256,256,256,256
+419115 | 1 | 20 | 218,218,218,218,218,218,218,217
+419135 | 1 | 20 | 206,206,57,57,57,57,57,57
+
+### wicket_on_wide_kinds  (5 rows, 0.00s)
+kind_out | extra_type | count(*)
+retired hurt | legbyes | 2
+run out | legbyes | 1
+run out | noballs | 2
+run out | wides | 7
+stumped | wides | 18
+
+### chase_consistency  (2 rows, 0.08s)
+win_type | winner_agrees | disagrees | margin_eq | margin_ne
+runs | 251 | 6 | 241 | 16
+wickets | 300 | 7 | 0 | 0
+
+### wickets_margin  (1 rows, 0.00s)
+eq | ne
+307 | 0
+
+### toss_vs_batting_first  (2 rows, 0.01s)
+toss_decision | agrees | count(*)
+bat | 258 | 258
+field | 309 | 309
+
+### team1_is_batting_first  (1 rows, 0.01s)
+sum(m.team_1 = b.team_batting) | count(*)
+304 | 567
+

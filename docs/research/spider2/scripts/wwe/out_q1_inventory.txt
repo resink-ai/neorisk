@@ -1,0 +1,94 @@
+### row_counts  (9 rows, 0.02s)
+t | n | min(id) | max(id)
+Promotions | 6 | 1 | 12682
+Tables | 1270 | 1 | 12673
+Cards | 12639 | 1 | 14344
+Locations | 609 | 1 | 12645
+Events | 5033 | 1 | 14341
+Matches | 540800 | 1 | 540800
+Belts | 143 | 1 | 70791
+Wrestlers | 17182 | 1 | 1081588
+Match_Types | 1208 | 1 | 385709
+
+### sqlite_sequence  (9 rows, 0.00s)
+name | seq
+Tables | 14431
+Events | 14431
+Locations | 14431
+Promotions | 14431
+Cards | 14431
+Belts | 540800
+Match_Types | 540800
+Wrestlers | 1081600
+Matches | 540800
+
+### text_bytes  (4 rows, 0.04s)
+col | bytes | maxlen
+Tables.html | 8053184 | 6875
+Cards.info_html | 12417312 | 1106
+Cards.match_html | 38658644 | 13286
+Cards.url | 828657 | 140
+
+### typeof_cards  (1 rows, 0.10s)
+typeof(table_id) | typeof(location_id) | typeof(promotion_id) | typeof(event_date) | typeof(event_id) | typeof(url) | typeof(info_html) | typeof(match_html) | count(*)
+integer | integer | integer | text | integer | text | text | text | 12639
+
+### typeof_matches  (1 rows, 0.54s)
+typeof(card_id) | typeof(winner_id) | typeof(win_type) | typeof(loser_id) | typeof(match_type_id) | typeof(duration) | typeof(title_id) | typeof(title_change) | count(*)
+integer | text | text | text | text | text | text | integer | 540800
+
+### typeof_lookups  (8 rows, 0.01s)
+'Promotions' | typeof(name) | count(*)
+Promotions | text | 6
+Locations | text | 609
+Events | text | 5033
+Belts | text | 143
+Wrestlers | text | 17182
+Match_Types | text | 1208
+Tables.html | text | 1270
+Tables.url | text | 1270
+
+### empty_names  (3 rows, 0.00s)
+t | id | quote(name)
+Belts | 1 | ''
+Wrestlers | 4631 | ''
+Match_Types | 1 | ''
+
+### nulls_cards  (1 rows, 0.01s)
+sum(table_id IS NULL) | sum(location_id IS NULL) | sum(promotion_id IS NULL) | sum(event_date IS NULL) | sum(event_date = '') | sum(event_id IS NULL) | sum(url IS NULL) | sum(info_html IS NULL) | sum(match_html IS NULL)
+0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0
+
+### nulls_matches  (1 rows, 0.14s)
+sum(card_id IS NULL) | sum(winner_id IS NULL) | sum(winner_id='') | sum(win_type IS NULL) | sum(win_type='') | sum(loser_id IS NULL) | sum(loser_id='') | sum(match_type_id IS NULL) | sum(match_type_id='') | sum(duration IS NULL) | sum(duration='') | sum(title_id IS NULL) | sum(title_id='') | sum(title_change IS NULL)
+0 | 0 | 0 | 0 | 28 | 0 | 0 | 0 | 0 | 0 | 337952 | 0 | 0 | 0
+
+### matches_id_dense  (1 rows, 0.02s)
+n | span
+540800 | 540800
+
+### cards_id_gaps  (1 rows, 0.00s)
+n | span | gaps
+12639 | 14344 | 141
+
+### tables_id_pattern  (4 rows, 0.00s)
+id_mod_10 | count(*)
+0 | 299
+1 | 690
+3 | 172
+6 | 109
+
+### tables_url_promo  (2 rows, 0.00s)
+promo | count(*) | min(id) | max(id)
+'' | 23 | 1 | 221
+- | 1247 | 230 | 12673
+
+### tables_url_shape  (3 rows, 0.00s)
+url
+http://www.profightdb.com/cards/wwwf-cards-pg1-no-20.html?order=&type=
+http://www.profightdb.com/cards/wwwf-cards-pg2-no-20.html?order=&type=
+http://www.profightdb.com/cards/nxt-cards-pg172-no-103.html?order=&type=
+
+### tables_vs_card_ids  (1 rows, 0.00s)
+tables_with_card_same_id | n_tables
+1259 | 1270
+

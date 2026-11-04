@@ -1,0 +1,38 @@
+customers              ch13 ch02 ch09
+conway_gen_zero        ch06
+web_devices            ch07
+web_demographics       ch07
+channels_dim           ch07
+gender_dim             ch07
+packaging              ch04
+packaging_relations    ch04
+product_groups         -
+products               ch10 ch11 ch13 ch15 ch16 ch02 ch21 ch03 ch05 ch09
+monthly_sales          ch10 ch15 ch03
+breweries              ch10 ch02
+purchases              ch07
+product_alcohol        ch03 ch05
+customer_favorites     ch09
+customer_reviews       ch09
+locations              -
+inventory              ch13 ch16 ch21
+orders                 ch13 ch02
+orderlines             ch11 ch13
+monthly_budget         ch16
+product_minimums       ch16
+stock                  ch17
+ticker                 ch17
+web_apps               ch20
+web_pages              ch20
+web_counter_hist       -
+server_heartbeat       ch18
+web_page_visits        ch18
+employees              ch19 ch22
+emp_hire_periods       ch19
+picking_list           ch14
+picking_line           -
+picking_log            ch14
+id_name_type           -
+id_name_coll_type      ch02
+id_name_coll_entries   -
+favorite_coll_type     -

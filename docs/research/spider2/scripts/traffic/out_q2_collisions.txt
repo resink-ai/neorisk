@@ -1,0 +1,340 @@
+### date_time_formats  (1 rows, 0.04s)
+date_iso | date_valid | time_hms | time_nonzero_sec | time_null | time_midnight | process_iso
+94243 | 94243 | 93439 | 0 | 804 | 59 | 94243
+
+### process_lag_days  (7 rows, 0.06s)
+b | count(*) | min(d) | max(d)
+0 | 121 | 0.0 | 0.0
+1-7 | 5829 | 1.0 | 7.0
+8-30 | 10553 | 8.0 | 30.0
+31-90 | 14837 | 31.0 | 90.0
+91-365 | 45959 | 91.0 | 365.0
+366-730 | 16507 | 366.0 | 730.0
+>730 | 437 | 731.0 | 962.0
+
+### process_lag_quantiles  (1 rows, 0.10s)
+p10 | p50 | p90 | p99
+11.0 | 137.0 | 504.0 | 703.0
+
+### snapshot  (1 rows, 0.01s)
+max(collision_date) | max(process_date) | min(collision_date) | min(process_date)
+2021-05-30 | 2021-06-03 | 2001-01-01 | 2001-04-12
+
+### per_year  (21 rows, 0.03s)
+y | count(*) | mean_lag
+2001 | 5231 | 105.8
+2002 | 5416 | 160.7
+2003 | 5444 | 137.5
+2004 | 5304 | 161.1
+2005 | 5355 | 147.4
+2006 | 4973 | 120.9
+2007 | 5013 | 164.2
+2008 | 4525 | 223.0
+2009 | 4324 | 285.3
+2010 | 4212 | 387.7
+2011 | 4063 | 519.3
+2012 | 4043 | 561.9
+2013 | 3787 | 428.8
+2014 | 3983 | 356.0
+2015 | 4478 | 216.3
+2016 | 4818 | 39.5
+2017 | 4860 | 45.8
+2018 | 4709 | 42.9
+2019 | 4683 | 39.0
+2020 | 3733 | 50.8
+2021 | 1289 | 20.5
+
+### injured_sum_rule  (1 rows, 0.01s)
+eq | ne | null_
+94220 | 0 | 23
+
+### injured_sum_diffs  (1 rows, 0.02s)
+d | count(*)
+0.0 | 94220
+
+### killed_vs_mode_counts  (1 rows, 0.01s)
+ge | lt
+94220 | 0
+
+### severity_rule  (5 rows, 0.05s)
+collision_severity | k | s | o | p | none_ | knull | count(*)
+fatal | 630 | 0 | 0 | 0 | 0 | 0 | 630
+other injury | 0 | 0 | 11656 | 0 | 0 | 4 | 11660
+pain | 0 | 0 | 0 | 22557 | 0 | 8 | 22565
+property damage only | 0 | 0 | 0 | 0 | 57165 | 10 | 57175
+severe injury | 0 | 2212 | 0 | 0 | 0 | 1 | 2213
+
+### flag_vs_involved_with  (6 rows, 0.02s)
+pedestrian_collision | mv_ped | count(*)
+0 | None | 473
+0 | 0 | 90895
+0 | 1 | 77
+1 | None | 27
+1 | 0 | 171
+1 | 1 | 2600
+
+### not_chp_consistency  (3 rows, 0.04s)
+a | b | c | d | count(*)
+0 | 0 | 0 | None | 26
+0 | 0 | 0 | 0 | 43261
+1 | 1 | 1 | 1 | 50956
+
+### caltrans_null_pattern  (3 rows, 0.04s)
+a | b | c | d | e | f | count(*)
+0 | 0 | 0 | 0 | 0 | 0 | 25472
+0 | 0 | 0 | 1 | 1 | 1 | 3329
+1 | 1 | 1 | 1 | 1 | 1 | 65442
+
+### county_city_to_county_fd  (1 rows, 0.02s)
+ccl | multi_county
+525 | 0
+
+### county_city_to_population_fd  (1 rows, 0.02s)
+ccl | multi_population
+525 | 0
+
+### latlon_presence_by_year  (21 rows, 0.03s)
+y | count(*) | with_latlon
+2001 | 5231 | 0
+2002 | 5416 | 0
+2003 | 5444 | 0
+2004 | 5304 | 0
+2005 | 5355 | 0
+2006 | 4973 | 20
+2007 | 5013 | 64
+2008 | 4525 | 627
+2009 | 4324 | 1211
+2010 | 4212 | 1432
+2011 | 4063 | 1542
+2012 | 4043 | 1550
+2013 | 3787 | 1638
+2014 | 3983 | 1674
+2015 | 4478 | 2126
+2016 | 4818 | 2692
+2017 | 4860 | 2936
+2018 | 4709 | 2974
+2019 | 4683 | 3007
+2020 | 3733 | 2472
+2021 | 1289 | 998
+
+### real_columns_non_integer  (9 rows, 0.06s)
+'jurisdiction' | sum(jurisdiction<>cast(jurisdiction as int))
+jurisdiction | 0
+distance | 83
+postmile | 25204
+killed_victims | 0
+party_count | 0
+pcf_violation | 0
+state_route | 0
+latitude | 26952
+motorcyclist_injured_count | 0
+
+### latlon_decimals  (1 rows, 0.06s)
+max(length(cast(latitude as text))) | max(length(cast(longitude as text))) | sum(latitude=round(latitude,5)) | sum(latitude is not null) | sum(longitude=round(longitude,5)) | sum(postmile=round(postmile,3)) | sum(postmile is not null)
+8 | 10 | 26963 | 26963 | 26963 | 28801 | 28801
+
+### text_dot_zero  (5 rows, 0.03s)
+'reporting_district' | sum(reporting_district like '%.0')
+reporting_district | 177
+chp_road_type | 165
+chp_vehicle_type_at_fault | 897
+officer_id | 0
+beat_number | 558
+
+### chp_road_type_values  (11 rows, 0.02s)
+chp_road_type | count(*)
+0 | 76425
+0.0 | 147
+1 | 15503
+1.0 | 16
+2 | 5
+3 | 23
+4 | 131
+5 | 841
+6 | 1137
+6.0 | 2
+7 | 13
+
+### whitespace  (1 rows, 0.05s)
+pr | sr | oid | bn | rd | pr_nonascii | sr_nonascii
+0 | 0 | 0 | 0 | 0 | 0 | 0
+
+### odd_leading_chars  (10 rows, 0.01s)
+c | count(*)
+# | 6
++ | 1
+- | 1
+; | 2
+[ | 1
+` | 2
+road:' | 1
+road:( | 2
+road:. | 2
+road:] | 1
+
+### dirty_codes  (4 rows, 0.02s)
+'road_surface=H' | count(*)
+road_surface=H | 2
+pcf_violation_code | 7
+motor_vehicle_involved_with=2 | 2
+distance>52800 (10 mi) | 33
+
+### hit_and_run_x_severity  (15 rows, 0.04s)
+hit_and_run | collision_severity | count(*)
+felony | fatal | 47
+felony | other injury | 714
+felony | pain | 1585
+felony | property damage only | 67
+felony | severe injury | 200
+misdemeanor | fatal | 1
+misdemeanor | other injury | 364
+misdemeanor | pain | 759
+misdemeanor | property damage only | 14661
+misdemeanor | severe injury | 25
+not hit and run | fatal | 582
+not hit and run | other injury | 10582
+not hit and run | pain | 20221
+not hit and run | property damage only | 42447
+not hit and run | severe injury | 1988
+
+### weekday_hour  (7 rows, 0.03s)
+dow | count(*)
+0 | 11127
+1 | 13313
+2 | 13742
+3 | 13692
+4 | 13878
+5 | 15559
+6 | 12932
+
+### hour  (25 rows, 0.03s)
+h | count(*)
+None | 804
+00 | 1820
+01 | 1699
+02 | 1815
+03 | 1173
+04 | 1086
+05 | 1532
+06 | 2519
+07 | 4840
+08 | 4921
+09 | 3937
+10 | 4027
+11 | 4415
+12 | 5213
+13 | 5280
+14 | 6197
+15 | 7101
+16 | 6770
+17 | 7315
+18 | 5886
+19 | 4215
+20 | 3390
+21 | 3162
+22 | 2769
+23 | 2357
+
+### minute_rounding  (1 rows, 0.02s)
+on_half_hour | on_quarter | on_5min | count(collision_time)
+16039 | 26620 | 60348 | 93439
+
+### same_day_count  (32 rows, 0.03s)
+c | days
+1 | 2
+2 | 9
+3 | 29
+4 | 79
+5 | 138
+6 | 205
+7 | 306
+8 | 432
+9 | 577
+10 | 662
+11 | 658
+12 | 730
+13 | 675
+14 | 609
+15 | 555
+16 | 464
+17 | 380
+18 | 279
+19 | 209
+20 | 156
+21 | 94
+22 | 77
+23 | 44
+24 | 37
+25 | 17
+26 | 8
+27 | 9
+28 | 3
+29 | 3
+30 | 4
+31 | 1
+34 | 3
+
+### severity_mix  (5 rows, 0.03s)
+collision_severity | count(*) | pct
+property damage only | 57175 | 60.67
+pain | 22565 | 23.94
+other injury | 11660 | 12.37
+severe injury | 2213 | 2.35
+fatal | 630 | 0.67
+
+### party_count_dist  (10 rows, 0.02s)
+party_count | count(*)
+1.0 | 17768
+2.0 | 64165
+3.0 | 9676
+4.0 | 2031
+5.0 | 443
+6.0 | 112
+7.0 | 30
+8.0 | 11
+9.0 | 3
+10.0 | 4
+
+### pcf_category_mix  (24 rows, 0.03s)
+pcf_violation_category | count(*)
+speeding | 28773
+improper turning | 16490
+automobile right of way | 11227
+dui | 6977
+unsafe lane change | 6642
+traffic signals and signs | 5108
+unsafe starting or backing | 3484
+unknown | 2953
+wrong side of road | 2224
+other than driver (or pedestrian) | 2002
+following too closely | 1949
+None | 1602
+other hazardous violation | 966
+pedestrian violation | 940
+pedestrian right of way | 925
+improper passing | 854
+other improper driving | 685
+other equipment | 130
+hazardous parking | 126
+fell asleep | 91
+impeding traffic | 49
+brakes | 25
+lights | 14
+pedestrian dui | 7
+
+### type_of_collision_mix  (9 rows, 0.03s)
+type_of_collision | count(*)
+rear end | 30895
+broadside | 18510
+sideswipe | 16962
+hit object | 15334
+head-on | 4102
+other | 2647
+overturned | 2526
+pedestrian | 2501
+None | 766
+
+### matched_party_count_vs_parties  (1 rows, 0.03s)
+eq | more_in_collision | fewer | count(*)
+186 | 1638 | 0 | 1824
+

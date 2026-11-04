@@ -1,0 +1,260 @@
+## circuits  rows=77
+  circuit_id                   INT(11)                  pk=1 {'integer': 77} empty=0 \N=0 distinct=77
+  circuit_ref                  VARCHAR(255)             pk=0 {'text': 77} empty=0 \N=0 distinct=77
+  name                         VARCHAR(255)             pk=0 {'text': 77} empty=0 \N=0 distinct=77
+  location                     VARCHAR(255)             pk=0 {'text': 77} empty=0 \N=0 distinct=75
+  country                      VARCHAR(255)             pk=0 {'text': 77} empty=0 \N=0 distinct=35
+  lat                          FLOAT                    pk=0 {'real': 77} empty=0 \N=0 distinct=77
+  lng                          FLOAT                    pk=0 {'real': 77} empty=0 \N=0 distinct=77
+  alt                          INT(11)                  pk=0 {'integer': 77} empty=0 \N=0 distinct=66
+  url                          VARCHAR(255)             pk=0 {'text': 77} empty=0 \N=0 distinct=77
+## constructor_results  rows=12505
+  constructor_results_id       INT(11)                  pk=1 {'integer': 12505} empty=0 \N=0 distinct=12505
+  race_id                      INT(11)                  pk=0 {'integer': 12505} empty=0 \N=0 distinct=1048
+  constructor_id               INT(11)                  pk=0 {'integer': 12505} empty=0 \N=0 distinct=175
+  points                       FLOAT                    pk=0 {'real': 12505} empty=0 \N=0 distinct=60
+  status                       VARCHAR(255)             pk=0 {'null': 12488, 'text': 17} empty=0 \N=0 distinct=1
+## constructor_standings  rows=13271
+  constructor_standings_id     INT(11)                  pk=1 {'integer': 13271} empty=0 \N=0 distinct=13271
+  race_id                      INT(11)                  pk=0 {'integer': 13271} empty=0 \N=0 distinct=1049
+  constructor_id               INT(11)                  pk=0 {'integer': 13271} empty=0 \N=0 distinct=160
+  points                       FLOAT                    pk=0 {'real': 13271} empty=0 \N=0 distinct=557
+  position                     INT(11)                  pk=0 {'integer': 13271} empty=0 \N=0 distinct=22
+  position_text                VARCHAR(255)             pk=0 {'text': 13271} empty=0 \N=0 distinct=23
+  wins                         INT(11)                  pk=0 {'integer': 13271} empty=0 \N=0 distinct=22
+## constructors  rows=212
+  constructor_id               INT(11)                  pk=1 {'integer': 212} empty=0 \N=0 distinct=212
+  constructor_ref              VARCHAR(255)             pk=0 {'text': 212} empty=0 \N=0 distinct=212
+  name                         VARCHAR(255)             pk=0 {'text': 212} empty=0 \N=0 distinct=212
+  nationality                  VARCHAR(255)             pk=0 {'text': 212} empty=0 \N=0 distinct=24
+  url                          VARCHAR(255)             pk=0 {'text': 212} empty=0 \N=0 distinct=175
+## driver_standings  rows=34595
+  driver_standings_id          INT(11)                  pk=1 {'integer': 34595} empty=0 \N=0 distinct=34595
+  race_id                      INT(11)                  pk=0 {'integer': 34595} empty=0 \N=0 distinct=1113
+  driver_id                    INT(11)                  pk=0 {'integer': 34595} empty=0 \N=0 distinct=852
+  points                       FLOAT                    pk=0 {'real': 34595} empty=0 \N=0 distinct=429
+  position                     INT(11)                  pk=0 {'integer': 34595} empty=0 \N=0 distinct=108
+  position_text                VARCHAR(255)             pk=0 {'text': 34595} empty=0 \N=0 distinct=109
+  wins                         INT(11)                  pk=0 {'integer': 34595} empty=0 \N=0 distinct=20
+## drivers  rows=859
+  driver_id                    INT(11)                  pk=1 {'integer': 859} empty=0 \N=0 distinct=859
+  driver_ref                   VARCHAR(255)             pk=0 {'text': 859} empty=0 \N=0 distinct=859
+  number                       INT(11)                  pk=0 {'null': 802, 'integer': 57} empty=0 \N=0 distinct=46
+  code                         VARCHAR(3)               pk=0 {'null': 757, 'text': 102} empty=0 \N=0 distinct=96
+  forename                     VARCHAR(255)             pk=0 {'text': 859} empty=0 \N=0 distinct=478
+  surname                      VARCHAR(255)             pk=0 {'text': 859} empty=0 \N=0 distinct=800
+  full_name                    VARCHAR(255)   GENERATED pk=0 {'text': 859} empty=0 \N=0 distinct=859
+  dob                          DATE                     pk=0 {'text': 859} empty=0 \N=0 distinct=841
+  nationality                  VARCHAR(255)             pk=0 {'text': 859} empty=0 \N=0 distinct=42
+  url                          VARCHAR(255)             pk=0 {'text': 859} empty=0 \N=0 distinct=859
+## lap_times  rows=575029
+  race_id                      INT(11)                  pk=1 {'integer': 575029} empty=0 \N=0 distinct=531
+  driver_id                    INT(11)                  pk=2 {'integer': 575029} empty=0 \N=0 distinct=141
+  lap                          INT(11)                  pk=3 {'integer': 575029} empty=0 \N=0 distinct=87
+  position                     INT(11)                  pk=0 {'integer': 575029} empty=0 \N=0 distinct=24
+  time                         VARCHAR(255)             pk=0 {'text': 575029} empty=0 \N=0 distinct=75514
+  milliseconds                 INT(11)                  pk=0 {'integer': 575029} empty=0 \N=0 distinct=75514
+  seconds                      FLOAT          GENERATED pk=0 {'real': 575029} empty=0 \N=0 distinct=75514
+## pit_stops  rows=10990
+  race_id                      INT(11)                  pk=1 {'integer': 10990} empty=0 \N=0 distinct=273
+  driver_id                    INT(11)                  pk=2 {'integer': 10990} empty=0 \N=0 distinct=74
+  stop                         INT(11)                  pk=3 {'integer': 10990} empty=0 \N=0 distinct=14
+  lap                          INT(11)                  pk=0 {'integer': 10990} empty=0 \N=0 distinct=74
+  time                         TIME                     pk=0 {'text': 10990} empty=0 \N=0 distinct=7983
+  duration                     VARCHAR(255)             pk=0 {'text': 10990} empty=0 \N=0 distinct=7434
+  milliseconds                 INT(11)                  pk=0 {'integer': 10990} empty=0 \N=0 distinct=7434
+  seconds                      FLOAT          GENERATED pk=0 {'real': 10990} empty=0 \N=0 distinct=7434
+## qualifying  rows=10254
+  qualify_id                   INT(11)                  pk=1 {'integer': 10254} empty=0 \N=0 distinct=10254
+  race_id                      INT(11)                  pk=0 {'integer': 10254} empty=0 \N=0 distinct=482
+  driver_id                    INT(11)                  pk=0 {'integer': 10254} empty=0 \N=0 distinct=170
+  constructor_id               INT(11)                  pk=0 {'integer': 10254} empty=0 \N=0 distinct=47
+  number                       INT(11)                  pk=0 {'integer': 10254} empty=0 \N=0 distinct=55
+  position                     INT(11)                  pk=0 {'integer': 10254} empty=0 \N=0 distinct=28
+  q1                           VARCHAR(255)             pk=0 {'text': 10100, 'null': 154} empty=0 \N=0 distinct=8954
+  q2                           VARCHAR(255)             pk=0 {'text': 5682, 'null': 4572} empty=13 \N=0 distinct=5320
+  q3                           VARCHAR(255)             pk=0 {'null': 6713, 'text': 3541} empty=27 \N=0 distinct=3374
+## races  rows=1125
+  race_id                      INT(11)                  pk=1 {'integer': 1125} empty=0 \N=0 distinct=1125
+  year                         INT(11)                  pk=0 {'integer': 1125} empty=0 \N=0 distinct=75
+  round                        INT(11)                  pk=0 {'integer': 1125} empty=0 \N=0 distinct=24
+  circuit_id                   INT(11)                  pk=0 {'integer': 1125} empty=0 \N=0 distinct=77
+  name                         VARCHAR(255)             pk=0 {'text': 1125} empty=0 \N=0 distinct=54
+  date                         DATE                     pk=0 {'text': 1125} empty=0 \N=0 distinct=1125
+  time                         TIME                     pk=0 {'null': 731, 'text': 394} empty=0 \N=0 distinct=34
+  url                          VARCHAR(255)             pk=0 {'text': 1125} empty=0 \N=0 distinct=1125
+  fp1_date                     VARCHAR(255)             pk=0 {'null': 1035, 'text': 90} empty=0 \N=0 distinct=90
+  fp1_time                     VARCHAR(255)             pk=0 {'null': 1057, 'text': 68} empty=0 \N=0 distinct=20
+  fp2_date                     VARCHAR(255)             pk=0 {'null': 1035, 'text': 90} empty=0 \N=0 distinct=90
+  fp2_time                     VARCHAR(255)             pk=0 {'null': 1057, 'text': 68} empty=0 \N=0 distinct=19
+  fp3_date                     VARCHAR(255)             pk=0 {'null': 1053, 'text': 72} empty=0 \N=0 distinct=72
+  fp3_time                     VARCHAR(255)             pk=0 {'null': 1072, 'text': 53} empty=0 \N=0 distinct=18
+  quali_date                   VARCHAR(255)             pk=0 {'null': 1035, 'text': 90} empty=0 \N=0 distinct=90
+  quali_time                   VARCHAR(255)             pk=0 {'null': 1057, 'text': 68} empty=0 \N=0 distinct=15
+  sprint_date                  VARCHAR(255)             pk=0 {'null': 1107, 'text': 18} empty=0 \N=0 distinct=18
+  sprint_time                  VARCHAR(255)             pk=0 {'null': 1110, 'text': 15} empty=0 \N=0 distinct=12
+## results  rows=26519
+  result_id                    INT(11)                  pk=1 {'integer': 26519} empty=0 \N=0 distinct=26519
+  race_id                      INT(11)                  pk=0 {'integer': 26519} empty=0 \N=0 distinct=1113
+  driver_id                    INT(11)                  pk=0 {'integer': 26519} empty=0 \N=0 distinct=859
+  constructor_id               INT(11)                  pk=0 {'integer': 26519} empty=0 \N=0 distinct=211
+  number                       INT(11)                  pk=0 {'integer': 26513, 'null': 6} empty=0 \N=0 distinct=129
+  grid                         INT(11)                  pk=0 {'integer': 26519} empty=0 \N=0 distinct=35
+  position                     INT(11)                  pk=0 {'integer': 15591, 'null': 10928} empty=0 \N=0 distinct=33
+  position_text                VARCHAR(255)             pk=0 {'text': 26519} empty=0 \N=0 distinct=39
+  position_order               INT(11)                  pk=0 {'integer': 26519} empty=0 \N=0 distinct=39
+  points                       FLOAT                    pk=0 {'real': 26519} empty=0 \N=0 distinct=39
+  laps                         INT(11)                  pk=0 {'integer': 26519} empty=0 \N=0 distinct=172
+  time                         VARCHAR(255)             pk=0 {'null': 18986, 'text': 7533} empty=0 \N=0 distinct=7271
+  milliseconds                 INT(11)                  pk=0 {'null': 18986, 'integer': 7533} empty=0 \N=0 distinct=7492
+  fastest_lap                  INT(11)                  pk=0 {'null': 18499, 'integer': 8020} empty=0 \N=0 distinct=80
+  rank                         INT(11)                  pk=0 {'null': 18249, 'integer': 8270} empty=0 \N=0 distinct=25
+  fastest_lap_time             VARCHAR(255)             pk=0 {'null': 18499, 'text': 8020} empty=0 \N=0 distinct=7297
+  fastest_lap_speed            VARCHAR(255)             pk=0 {'null': 18499, 'text': 8020} empty=0 \N=0 distinct=7513
+  status_id                    INT(11)                  pk=0 {'integer': 26519} empty=0 \N=0 distinct=137
+## seasons  rows=75
+  year                         INT(11)                  pk=1 {'integer': 75} empty=0 \N=0 distinct=75
+  url                          VARCHAR(255)             pk=0 {'text': 75} empty=0 \N=0 distinct=75
+## status  rows=139
+  status_id                    INT(11)                  pk=1 {'integer': 139} empty=0 \N=0 distinct=139
+  status                       VARCHAR(255)             pk=0 {'text': 139} empty=0 \N=0 distinct=139
+## sprint_results  rows=300
+  result_id                    INT(11)                  pk=1 {'integer': 300} empty=0 \N=0 distinct=300
+  race_id                      INT(11)                  pk=0 {'integer': 300} empty=0 \N=0 distinct=15
+  driver_id                    INT(11)                  pk=0 {'integer': 300} empty=0 \N=0 distinct=29
+  constructor_id               INT(11)                  pk=0 {'integer': 300} empty=0 \N=0 distinct=12
+  number                       INT(11)                  pk=0 {'integer': 300} empty=0 \N=0 distinct=30
+  grid                         INT(11)                  pk=0 {'integer': 300} empty=0 \N=0 distinct=21
+  position                     INT(11)                  pk=0 {'integer': 285, 'null': 15} empty=0 \N=0 distinct=20
+  position_text                VARCHAR(255)             pk=0 {'text': 300} empty=0 \N=0 distinct=23
+  position_order               INT(11)                  pk=0 {'integer': 300} empty=0 \N=0 distinct=20
+  points                       FLOAT                    pk=0 {'real': 300} empty=0 \N=0 distinct=9
+  laps                         INT(11)                  pk=0 {'integer': 300} empty=0 \N=0 distinct=14
+  time                         VARCHAR(255)             pk=0 {'text': 281, 'null': 19} empty=0 \N=0 distinct=281
+  milliseconds                 INT(11)                  pk=0 {'integer': 281, 'null': 19} empty=0 \N=0 distinct=281
+  fastest_lap                  INT(11)                  pk=0 {'integer': 291, 'null': 9} empty=0 \N=0 distinct=23
+  fastest_lap_time             VARCHAR(255)             pk=0 {'text': 291, 'null': 9} empty=0 \N=0 distinct=290
+  fastest_lap_speed            VARCHAR(255)             pk=0 {'null': 300} empty=0 \N=0 distinct=0
+  status_id                    INT(11)                  pk=0 {'integer': 300} empty=0 \N=0 distinct=7
+## short_grand_prix_names  rows=40
+  full_name                    VARCHAR(255)             pk=1 {'text': 40} empty=0 \N=0 distinct=40
+  short_name                   VARCHAR(255)             pk=0 {'text': 40} empty=0 \N=0 distinct=38
+## short_constructor_names  rows=44
+  constructor_ref              VARCHAR(255)             pk=1 {'text': 44} empty=0 \N=0 distinct=44
+  short_name                   VARCHAR(255)             pk=0 {'text': 44} empty=0 \N=0 distinct=15
+## liveries  rows=64
+  constructor_ref              VARCHAR(255)             pk=1 {'text': 64} empty=0 \N=0 distinct=37
+  start_year                   INT(11)                  pk=2 {'integer': 64} empty=0 \N=0 distinct=32
+  end_year                     INT(11)                  pk=3 {'integer': 54, 'null': 10} empty=0 \N=0 distinct=28
+  primary_hex_code             VARCHAR(255)             pk=0 {'text': 64} empty=0 \N=0 distinct=52
+## tdr_overrides  rows=48
+  year                         INT(11)                  pk=1 {'integer': 48} empty=0 \N=0 distinct=14
+  constructor_ref              VARCHAR(255)             pk=2 {'text': 48} empty=0 \N=0 distinct=10
+  driver_ref                   VARCHAR(255)             pk=3 {'text': 48} empty=0 \N=0 distinct=30
+  team_driver_rank             INT(11)                  pk=0 {'integer': 48} empty=0 \N=0 distinct=4
+## circuits_ext  rows=77
+  circuit_id                   INT                      pk=0 {'integer': 77} empty=0 \N=0 distinct=77
+  circuit_ref                  TEXT                     pk=0 {'text': 77} empty=0 \N=0 distinct=77
+  name                         TEXT                     pk=0 {'text': 77} empty=0 \N=0 distinct=77
+  location                     TEXT                     pk=0 {'text': 77} empty=0 \N=0 distinct=75
+  country                      TEXT                     pk=0 {'text': 77} empty=0 \N=0 distinct=35
+  lat                          REAL                     pk=0 {'real': 77} empty=0 \N=0 distinct=77
+  lng                          REAL                     pk=0 {'real': 77} empty=0 \N=0 distinct=77
+  alt                          INT                      pk=0 {'integer': 77} empty=0 \N=0 distinct=66
+  url                          TEXT                     pk=0 {'text': 77} empty=0 \N=0 distinct=77
+  last_race_year               (none)                   pk=0 {'integer': 77} empty=0 \N=0 distinct=41
+  number_of_races              (none)                   pk=0 {'integer': 77} empty=0 \N=0 distinct=34
+## constructors_ext  rows=212
+  constructor_id               INT                      pk=0 {'integer': 212} empty=0 \N=0 distinct=212
+  constructor_ref              TEXT                     pk=0 {'text': 212} empty=0 \N=0 distinct=212
+  name                         TEXT                     pk=0 {'text': 212} empty=0 \N=0 distinct=212
+  nationality                  TEXT                     pk=0 {'text': 212} empty=0 \N=0 distinct=24
+  url                          TEXT                     pk=0 {'text': 212} empty=0 \N=0 distinct=175
+  short_name                   (none)                   pk=0 {'text': 212} empty=0 \N=0 distinct=172
+## drivers_ext  rows=859
+  driver_id                    INT                      pk=0 {'integer': 859} empty=0 \N=0 distinct=859
+  driver_ref                   TEXT                     pk=0 {'text': 859} empty=0 \N=0 distinct=859
+  number                       INT                      pk=0 {'null': 802, 'integer': 57} empty=0 \N=0 distinct=46
+  code                         (none)                   pk=0 {'text': 859} empty=0 \N=0 distinct=521
+  forename                     TEXT                     pk=0 {'text': 859} empty=0 \N=0 distinct=478
+  surname                      TEXT                     pk=0 {'text': 859} empty=0 \N=0 distinct=800
+  full_name                    TEXT                     pk=0 {'text': 859} empty=0 \N=0 distinct=859
+  dob                          NUM                      pk=0 {'text': 859} empty=0 \N=0 distinct=841
+  nationality                  TEXT                     pk=0 {'text': 859} empty=0 \N=0 distinct=42
+  url                          TEXT                     pk=0 {'text': 859} empty=0 \N=0 distinct=859
+## driver_standings_ext  rows=35012
+  driver_standings_id          INT                      pk=0 {'integer': 35012} empty=0 \N=0 distinct=34596
+  race_id                      INT                      pk=0 {'integer': 35012} empty=0 \N=0 distinct=1113
+  driver_id                    INT                      pk=0 {'integer': 35012} empty=0 \N=0 distinct=852
+  points                       REAL                     pk=0 {'real': 35012} empty=0 \N=0 distinct=429
+  position                     INT                      pk=0 {'integer': 35012} empty=0 \N=0 distinct=108
+  position_text                TEXT                     pk=0 {'text': 34595, 'null': 417} empty=0 \N=0 distinct=109
+  wins                         INT                      pk=0 {'integer': 35012} empty=0 \N=0 distinct=20
+## lap_times_ext  rows=575029
+  race_id                      INT                      pk=0 {'integer': 575029} empty=0 \N=0 distinct=531
+  driver_id                    INT                      pk=0 {'integer': 575029} empty=0 \N=0 distinct=141
+  lap                          INT                      pk=0 {'integer': 575029} empty=0 \N=0 distinct=87
+  position                     INT                      pk=0 {'integer': 575029} empty=0 \N=0 distinct=24
+  time                         TEXT                     pk=0 {'text': 575029} empty=0 \N=0 distinct=75514
+  milliseconds                 INT                      pk=0 {'integer': 575029} empty=0 \N=0 distinct=75514
+  seconds                      REAL                     pk=0 {'real': 575029} empty=0 \N=0 distinct=75514
+  running_milliseconds         (none)                   pk=0 {'integer': 575029} empty=0 \N=0 distinct=547825
+## lap_time_stats  rows=10789
+  race_id                      INT                      pk=0 {'integer': 10789} empty=0 \N=0 distinct=531
+  driver_id                    INT                      pk=0 {'integer': 10789} empty=0 \N=0 distinct=141
+  avg_milliseconds             (none)                   pk=0 {'real': 10789} empty=0 \N=0 distinct=10784
+  avg_seconds                  (none)                   pk=0 {'real': 10789} empty=0 \N=0 distinct=10788
+  stdev_milliseconds           (none)                   pk=0 {'real': 10789} empty=0 \N=0 distinct=10676
+  stdev_seconds                (none)                   pk=0 {'real': 10789} empty=0 \N=0 distinct=10676
+## races_ext  rows=1125
+  race_id                      INT                      pk=0 {'integer': 1125} empty=0 \N=0 distinct=1125
+  year                         INT                      pk=0 {'integer': 1125} empty=0 \N=0 distinct=75
+  round                        INT                      pk=0 {'integer': 1125} empty=0 \N=0 distinct=24
+  circuit_id                   INT                      pk=0 {'integer': 1125} empty=0 \N=0 distinct=77
+  name                         TEXT                     pk=0 {'text': 1125} empty=0 \N=0 distinct=54
+  date                         NUM                      pk=0 {'text': 1125} empty=0 \N=0 distinct=1125
+  time                         NUM                      pk=0 {'null': 731, 'text': 394} empty=0 \N=0 distinct=34
+  url                          TEXT                     pk=0 {'text': 1125} empty=0 \N=0 distinct=1125
+  fp1_date                     TEXT                     pk=0 {'null': 1035, 'text': 90} empty=0 \N=0 distinct=90
+  fp1_time                     TEXT                     pk=0 {'null': 1057, 'text': 68} empty=0 \N=0 distinct=20
+  fp2_date                     TEXT                     pk=0 {'null': 1035, 'text': 90} empty=0 \N=0 distinct=90
+  fp2_time                     TEXT                     pk=0 {'null': 1057, 'text': 68} empty=0 \N=0 distinct=19
+  fp3_date                     TEXT                     pk=0 {'null': 1053, 'text': 72} empty=0 \N=0 distinct=72
+  fp3_time                     TEXT                     pk=0 {'null': 1072, 'text': 53} empty=0 \N=0 distinct=18
+  quali_date                   TEXT                     pk=0 {'null': 1035, 'text': 90} empty=0 \N=0 distinct=90
+  quali_time                   TEXT                     pk=0 {'null': 1057, 'text': 68} empty=0 \N=0 distinct=15
+  sprint_date                  TEXT                     pk=0 {'null': 1107, 'text': 18} empty=0 \N=0 distinct=18
+  sprint_time                  TEXT                     pk=0 {'null': 1110, 'text': 15} empty=0 \N=0 distinct=12
+  is_pit_data_available        (none)                   pk=0 {'integer': 1125} empty=0 \N=0 distinct=2
+  short_name                   (none)                   pk=0 {'text': 1125} empty=0 \N=0 distinct=52
+  has_sprint                   (none)                   pk=0 {'integer': 1125} empty=0 \N=0 distinct=2
+  max_points                   (none)                   pk=0 {'integer': 1125} empty=0 \N=0 distinct=7
+## team_driver_ranks  rows=3530
+  year                         INT                      pk=0 {'integer': 3530} empty=0 \N=0 distinct=75
+  constructor_id               INT                      pk=0 {'integer': 3530} empty=0 \N=0 distinct=210
+  constructor_ref              TEXT                     pk=0 {'text': 3530} empty=0 \N=0 distinct=210
+  driver_id                    INT                      pk=0 {'integer': 3530} empty=0 \N=0 distinct=852
+  driver_ref                   TEXT                     pk=0 {'text': 3530} empty=0 \N=0 distinct=852
+  team_driver_rank             (none)                   pk=0 {'integer': 3530} empty=0 \N=0 distinct=29
+## drives  rows=3784
+  year                         INT                      pk=0 {'integer': 3784} empty=0 \N=0 distinct=75
+  driver_id                    INT                      pk=0 {'integer': 3784} empty=0 \N=0 distinct=859
+  drive_id                     (none)                   pk=0 {'integer': 3784} empty=0 \N=0 distinct=6
+  constructor_id               INT                      pk=0 {'integer': 3784} empty=0 \N=0 distinct=212
+  first_round                  INT                      pk=0 {'integer': 3784} empty=0 \N=0 distinct=19
+  last_round                   INT                      pk=0 {'integer': 3784} empty=0 \N=0 distinct=22
+  is_first_drive_of_season     (none)                   pk=0 {'integer': 3784} empty=0 \N=0 distinct=2
+  is_final_drive_of_season     (none)                   pk=0 {'integer': 3784} empty=0 \N=0 distinct=2
+## retirements  rows=11568
+  race_id                      INT                      pk=0 {'integer': 11568} empty=0 \N=0 distinct=1100
+  driver_id                    INT                      pk=0 {'integer': 11568} empty=0 \N=0 distinct=790
+  lap                          (none)                   pk=0 {'integer': 11568} empty=0 \N=0 distinct=153
+  position_order               INT                      pk=0 {'integer': 11568} empty=0 \N=0 distinct=38
+  status_id                    INT                      pk=0 {'integer': 11568} empty=0 \N=0 distinct=105
+  retirement_type              (none)                   pk=0 {'text': 11568} empty=0 \N=0 distinct=3
+## lap_positions  rows=613112
+  race_id                      INT                      pk=0 {'integer': 613112} empty=0 \N=0 distinct=1113
+  driver_id                    INT                      pk=0 {'integer': 613112} empty=0 \N=0 distinct=859
+  lap                          INT                      pk=0 {'integer': 613112} empty=0 \N=0 distinct=155
+  position                     INT                      pk=0 {'integer': 613112} empty=0 \N=0 distinct=39
+  lap_type                     (none)                   pk=0 {'text': 613112} empty=0 \N=0 distinct=9

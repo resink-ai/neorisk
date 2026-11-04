@@ -1,0 +1,119 @@
+### row_counts  (5 rows, 0.00s)
+t | n
+web_accounts | 351
+web_events | 9073
+web_orders | 6912
+web_region | 4
+web_sales_reps | 50
+
+### typeof_columns  (9 rows, 0.01s)
+c | ty | n
+orders.occurred_at | text | 6912
+orders.standard_amt_usd | real | 6912
+orders.gloss_amt_usd | real | 6912
+orders.poster_amt_usd | real | 6912
+orders.total_amt_usd | real | 6912
+orders.total | integer | 6912
+events.occurred_at | text | 9073
+accounts.lat | real | 351
+accounts.long | real | 351
+
+### nulls_empty  (4 rows, 0.00s)
+t | nulls | empties
+accounts | 0 | 0
+orders | 0 | 0
+events | 0 | 0
+reps | 0 | 0
+
+### key_uniqueness  (7 rows, 0.00s)
+k | dups | min(id) | max(id)
+accounts.id | 0 | 1001 | 4501
+orders.id | 0 | 1 | 6912
+events.id | 0 | 1 | 9073
+reps.id | 0 | 321500 | 321990
+region.id | 0 | 1 | 4
+accounts.name | 0 | None | None
+reps.name | 0 | None | None
+
+### dense_ids  (4 rows, 0.00s)
+t | dense
+orders | 1
+events | 1
+reps | 0
+accounts | 1
+
+### account_id_step  (1 rows, 0.00s)
+r
+1
+
+### fk_orphans  (4 rows, 0.00s)
+j | orphans | n
+orders.account_id | 0 | 6912
+events.account_id | 0 | 9073
+accounts.sales_rep_id | 0 | 351
+reps.region_id | 0 | 50
+
+### parents_without_children  (5 rows, 0.00s)
+w | n
+accounts w/o orders | 1
+accounts w/o events | 0
+accounts w/o either | 0
+reps w/o accounts | 0
+regions w/o reps | 0
+
+### account_wo_orders_rows  (1 rows, 0.00s)
+id | name | website | lat | long | primary_poc | sales_rep_id
+1731 | Goldman Sachs Group | www.gs.com | 40.75744399 | -73.96730918 | Loris Manfredi | 321690
+
+### region_rows  (4 rows, 0.00s)
+id | name
+1 | Northeast
+2 | Midwest
+3 | Southeast
+4 | West
+
+### reps_per_region  (4 rows, 0.00s)
+region_id | reps
+1 | 21
+2 | 9
+3 | 10
+4 | 10
+
+### time_formats  (2 rows, 0.00s)
+t | len | sep | n | min(occurred_at) | max(occurred_at)
+orders | 24 | T | 6912 | 2013-12-04T04:22:44.000Z | 2017-01-02T00:02:40.000Z
+events | 24 | T | 9073 | 2013-12-04T04:18:29.000Z | 2017-01-01T23:51:09.000Z
+
+### time_parse  (2 rows, 0.00s)
+t | unparsable | not_canonical
+orders | 0 | 6912
+events | 0 | 9073
+
+### time_samples  (3 rows, 0.00s)
+occurred_at
+2015-10-06T17:31:14.000Z
+2015-11-05T03:34:33.000Z
+2015-12-04T04:21:55.000Z
+
+### rowid_vs_id  (3 rows, 0.00s)
+t | mism
+orders | 0
+events | 0
+accounts | 351
+
+### id_vs_time_order  (2 rows, 0.01s)
+t | desc_pairs | pairs
+orders | 572 | 6911
+events | 782 | 9072
+
+### id_order_by_account  (2 rows, 0.01s)
+t | desc_pairs
+orders sorted by (account,time) | 1
+events sorted by (account,time) | 188
+
+### dup_rows  (3 rows, 0.00s)
+k | d
+orders (account,time) | 4
+events (account,time,channel) | 0
+events (account,time) | 0
+

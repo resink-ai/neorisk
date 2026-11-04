@@ -1,0 +1,69 @@
+### setup_indexes  (setup, 0.02s)
+
+### keys  (1 rows, 0.02s)
+a | d | l | ad | joined_all
+50000 | 50000 | 50000 | 50000 | 50000
+
+### rowid_is_id  (1 rows, 0.00s)
+a | d | l | ad
+50000 | 50000 | 50000 | 50000
+
+### per_column_lower_match  (1 rows, 0.06s)
+first_name | fn_null | last_name | email | type | birth_year | food | freq | aggressive | occupation | loc | state | country | n
+49996 | 4 | 50000 | 50000 | 50000 | 50000 | 50000 | 50000 | 50000 | 50000 | 50000 | 50000 | 50000 | 50000
+
+### null_first_names  (4 rows, 0.01s)
+id | src | first_name
+17710 | [Nan] | None
+26428 | [Nan] | None
+37143 | [Nan] | None
+37773 | [Nan] | None
+
+### age_rule  (1 rows, 0.01s)
+s | count(*)
+2024 | 50000
+
+### gender_map  (8 rows, 0.02s)
+src | dst | count(*)
+Agender | non-binary | 828
+Bigender | non-binary | 856
+Female | female | 22730
+Genderfluid | non-binary | 784
+Genderqueer | non-binary | 784
+Male | male | 22323
+Non-binary | non-binary | 848
+Polygender | non-binary | 847
+
+### region_is_function_of_state  (1 rows, 0.01s)
+states | single_region
+51 | 51
+
+### region_map  (8 rows, 0.01s)
+us_region | states | group_concat(distinct state)
+far west | 6 | california,washington,hawaii,oregon,alaska,nevada
+great lakes | 5 | ohio,michigan,illinois,wisconsin,indiana
+mideast | 6 | maryland,pennsylvania,new jersey,district of columbia,new york,delaware
+new england | 6 | connecticut,rhode island,massachusetts,maine,new hampshire,vermont
+plains | 7 | nebraska,missouri,kansas,south dakota,minnesota,iowa,north dakota
+rocky mountain | 5 | utah,montana,colorado,idaho,wyoming
+southeast | 12 | virginia,georgia,florida,north carolina,arkansas,kentucky,tennessee,alabama,west virginia,louisiana,south carolina,mississippi
+southwest | 4 | texas,oklahoma,arizona,new mexico
+
+### full_rebuild_except  (1 rows, 0.27s)
+rebuilt | b_minus_src | src_minus_b
+50000 | 0 | 0
+
+### case_collisions  (2 rows, 0.06s)
+c | src | lowered
+first_name | 8393 | 8393
+last_name | 31037 | 31034
+
+### full_rebuild_literal_maps  (1 rows, 0.27s)
+rebuilt | unmapped | b_minus_src | src_minus_b
+50000 | 0 | 0 | 0
+
+### nan_names_elsewhere  (2 rows, 0.01s)
+c | count(*)
+aliens.first_name | 4
+aliens.last_name | 0
+

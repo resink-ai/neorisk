@@ -1,0 +1,193 @@
+## solution in rowid order (the insertion order)
+group_concat(name||'#'||version, ' ; ')
+iris#1 ; iris#2 ; iris#3 ; concrete#1 ; concrete#2 ; concrete#3 ; concrete#4 ; concrete#5 ; iris#4 ; iris#5 ; Delaney solubility#1 ; Delaney solubility#2 ; Delaney solubility#3 ; Delaney solubility#4 ; Critical Heat Flux#1 ; Critical Heat Flux#2 ; Critical Heat Flux#3 ; Critical Heat Flux#4 ; Liver disease prediction#1 ; Liver disease prediction#2 ; Liver disease prediction#3 ; Liver disease prediction#4 ; Liver disease prediction#5 ; Pumpkin Seeds#1 ; Pumpkin Seeds#2 ; Pumpkin Seeds#3 ; Pumpkin Seeds#4 ; water quality#1 ; water quality#2 ; water quality#3 ; lithium ion batteries#1 ; lithium ion batteries#2 ; lithium ion batteries#3 ; diabetes#1 ; diabetes#2 ; diabetes#3 ; diabetes#4 ; Franck-Hertz#1 ; Franck-Hertz#2 ; Franck-Hertz#3 ; Franck-Hertz#4 ; Franck-Hertz#5 ; Tunnel diode#1 ; Tunnel diode#2 ; Tunnel diode#3 ; Tunnel diode#4 ; Tunnel diode#5 ; Tunnel diode#6 ; survey lung cancer#1 ; survey lung cancer#2 ; survey lung cancer#3 ; survey lung cancer#4 ; survey lung cancer#5 ; oil spill#1 ; oil spill#2 ; oil spill#3 ; oil spill#4 ; oil spill#5 ; Solar Power Generation#1 ; Solar Power Generation#2 ; Solar Power Generation#3 ; Solar Power Generation#4 ; Solar Power Generation#5 ; Solar Power Generation#6 ; PCOS#1 ; PCOS#2 ; water quality 2#1 ; water quality 2#2 ; water quality 2#3 ; PCOS#3 ; kindey stone urine analysis#1 ; kindey stone urine analysis#2 ; kindey stone urine analysis#3 ; kindey stone urine analysis#4 ; kindey stone urine analysis#5 ; kindey stone urine analysis#6 ; kindey stone urine analysis#7 ; kindey stone urine analysis#8 ; Hospital Mortality Prediction#1 ; Hospital Mortality Prediction#2 ; Hospital Mortality Prediction#3 ; Hospital Mortality Prediction#4 ; Hospital Mortality Prediction#5 ; Hospital Mortality Prediction#6 ; smoke detection iot#1 ; smoke detection iot#2 ; smoke detection iot#3 ; smoke detection iot#4 ; smoke detection iot#5 ; concrete#6 ; iris#6 ; iris#7 ; Delaney solubility#5 ; concrete#7 ; Critical Heat Flux#5 ; Solar Power Generation#7 ; PSS3E5#1 ; PSS3E5#2 ; PSS3E5#3 ; PSS3E5#4 ; PSS3E5#5
+## where (name, version) blocks of each child table start, in rowid order: does every table follow solution's order?
+t|blocks_out_of_solution_order|blocks
+eda|0|101
+feature_importance|0|101
+model|0|101
+model_importance|0|101
+model_score|0|101
+## are child blocks contiguous (no interleaving of (name,version))?
+'model_score'|count(*)
+model_score|0
+model_importance|0
+feature_importance|0
+eda|0
+## storage types of NUMERIC / BLOB columns
+'solution.correlation'|typeof(correlation)|count(*)
+solution.correlation|real|101
+solution.score|real|101
+solution.test_size|real|101
+model_score.train_score|integer|795
+model_score.train_score|real|2077
+model_score.test_score|integer|142
+model_score.test_score|real|2730
+model_importance.importance|integer|217
+model_importance.importance|real|2350
+feature_importance.importance|integer|513
+feature_importance.importance|real|2374
+eda.range|null|306
+eda.range|text|1241
+eda.type|null|306
+eda.type|text|1241
+## integer-valued NUMERIC cells (stored as integer): which values
+'model_score.test_score'|test_score|count(*)
+model_score.test_score|0|22
+model_score.test_score|1|120
+model_score.train_score|0|18
+model_score.train_score|1|777
+feature_importance|0|478
+feature_importance|1|35
+model_importance|0|207
+model_importance|1|10
+## solution value sets
+'correlation'|correlation|count(*)
+correlation|0.75|101
+nb_model|2|5
+nb_model|3|27
+nb_model|4|4
+nb_model|5|50
+nb_model|6|3
+nb_model|7|12
+nb_feature|3|8
+nb_feature|4|5
+nb_feature|5|83
+nb_feature|6|1
+nb_feature|7|2
+nb_feature|8|1
+nb_feature|10|1
+score|0.4|2
+score|0.45|3
+score|0.5|1
+score|0.55|5
+score|0.7|69
+score|0.75|4
+score|0.8|8
+score|0.85|4
+score|0.9|5
+test_size|0.29|10
+test_size|0.3|1
+test_size|0.33|90
+resampling|0|75
+resampling|1|26
+## models in model_score, and per (name,version,step) counts
+model|n|problems
+Stack|303|20
+RFCE|153|14
+RFCG|145|14
+HGBC|108|14
+KNCD|105|12
+ABC|103|14
+GPCQ|92|11
+LOGRLCV|88|14
+GPCR|88|11
+DTCG|87|14
+DTCE|83|14
+LOGRL|82|14
+HGBR|77|6
+RFRP|76|5
+RFRS|75|6
+GNB|74|11
+KNCU|73|12
+RFRA|67|6
+LOGRS|65|11
+GPRQ|63|6
+MLPC2|60|12
+MLPC1|60|12
+KERC|60|9
+LOGRSCV|57|11
+GPCL|56|11
+DTRA|55|6
+DTRF|53|6
+KNRD|49|6
+ABR|43|6
+GPRR|42|6
+KNRU|37|6
+MLPR1|36|6
+ELNE|36|6
+DTRP|36|5
+GPRL|34|6
+MLPR2|32|6
+LINR|32|6
+ELNECV|29|6
+KERR|16|3
+SGDCLL|14|2
+SGDCMH|8|2
+SGDCH|8|2
+SVCS|3|1
+SVCP|3|1
+SVCL|3|1
+SVCG|3|1
+n|count(*)
+2|2
+3|10
+4|54
+5|8
+6|100
+7|5
+8|26
+11|4
+12|1
+13|10
+14|2
+15|4
+16|3
+17|16
+19|15
+20|43
+'every (name,version,step) has a Stack row'|count(*)
+every (name,version,step) has a Stack row|0
+## model_importance models vs model_score models (per step): models scored but without importance and vice versa
+'score_not_importance'|count(*)
+score_not_importance|306
+importance_not_score|1
+model|count(*)
+GPCQ|1
+GPCR|1
+LOGRLCV|1
+Stack|303
+## model_importance sums to 1 per (name,version,step)?
+sum_1|not_1|min(t)|max(t)
+303|0|1.0|1.0
+## feature_importance sums to 1 per (name,version,step)?
+sum_1|not_1|min(t)|max(t)
+303|0|0.99999999999999|1.0
+## steps: does feature count shrink with step?
+step|rows|avg_features
+1|101|12.29
+2|101|12.29
+3|101|4.01
+## feature_importance features vs eda features (non-dropped, non-target)
+'fi features not in eda'|count(*)
+fi features not in eda|0
+'step1 fi features = eda features kept (drop_user=0, drop_correlation=0, target=0)?'|count(*)
+step1 fi features = eda features kept (drop_user=0, drop_correlation=0, target=0)?|0
+'step1 fi not in kept eda'|count(*)
+step1 fi not in kept eda|151
+## eda value sets
+type|count(*)
+|306
+cat|205
+num|1036
+drop_user|drop_correlation|target|count(*)
+0|0|0|1090
+0|0|1|101
+0|1|0|151
+1|0|0|205
+'one target per (name,version)'|count(*)
+one target per (name,version)|0
+'eda target feature = problem.target'|mismatches
+eda target feature = problem.target|4
+name|feature|target
+concrete|Strength|Concrete compressive strength(MPa, megapascals) 
+concrete|csMPa|Concrete compressive strength(MPa, megapascals) 
+iris|Species|variety
+## eda range text samples by type
+type|range
+num|[4.3, 7.9]
+|
+cat|['tube', 'annulus', 'plate']
+## text oddities in problem
+name|length(target)|untrimmed
+concrete|48|1

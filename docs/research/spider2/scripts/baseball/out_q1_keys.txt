@@ -1,0 +1,88 @@
+### key_uniqueness  (32 rows, 0.22s)
+k | n | d
+all_star(player,year,game_num) | 5069 | 5069
+appearances(year,team,player) | 100951 | 100951
+batting(player,year,stint) | 101332 | 101332
+batting_postseason(year,round,player) | 11690 | 11690
+batting_postseason(year,round,player,team) | 11690 | 11690
+college(college_id) | 1207 | 1207
+fielding(player,year,stint,pos) | 170526 | 170526
+fielding_outfield(player,year,stint) | 12028 | 12028
+fielding_postseason(player,year,round,pos) | 12311 | 12311
+fielding_postseason(player,year,team,round,pos) | 12311 | 12311
+hall_of_fame(player,yearid,votedby) | 4120 | 4120
+hall_of_fame(player,yearid) | 4120 | 3988
+home_game(year,team,park) | 2944 | 2944
+manager(year,team,inseason) | 3405 | 3405
+manager_award(player,award,year,league) | 177 | 177
+manager_award_vote(award,year,league,player) | 414 | 414
+manager_half(player,year,team,half) | 93 | 93
+park(park_id) | 250 | 250
+pitching(player,year,stint) | 44139 | 44139
+pitching_postseason(player,year,round) | 5109 | 5109
+player(player_id) | 18846 | 18846
+player(lower(player_id)) | 18846 | 18846
+player_award(player,award,year,league) | 6078 | 6078
+player_award(player,award,year,league,notes) | 6078 | 6078
+player_award_vote(award,year,league,player) | 6795 | 6795
+player_college(player,college,year) | 17350 | 17350
+postseason(year,round) | 307 | 307
+salary(year,team,player) | 25575 | 25575
+salary(year,player) | 25575 | 25471
+team(year,team_id) | 2805 | 2805
+team_franchise(franchise_id) | 120 | 120
+team_half(year,team,half) | 52 | 52
+
+### full_row_duplicates  (11 rows, 0.37s)
+t | dup
+all_star | 0
+appearances | 0
+batting | 0
+fielding | 0
+fielding_postseason | 0
+hall_of_fame | 0
+player_award | 0
+player_college | 0
+pitching_postseason | 0
+batting_postseason | 0
+salary | 0
+
+### dup_keys_detail_all_star  (0 rows, 0.00s)
+player_id | year | game_num | count(*)
+
+### dup_keys_detail_fielding_post  (0 rows, 0.00s)
+player_id | year | round | pos | count(*) | group_concat(team_id)
+
+### dup_keys_detail_pitching_post  (0 rows, 0.00s)
+player_id | year | round | count(*) | group_concat(team_id)
+
+### dup_keys_detail_batting_post  (0 rows, 0.00s)
+year | round | player_id | count(*) | group_concat(team_id)
+
+### dup_keys_detail_hof  (0 rows, 0.00s)
+player_id | yearid | votedby | count(*)
+
+### dup_keys_detail_player_award  (0 rows, 0.00s)
+player_id | award_id | year | league_id | count(*) | group_concat(notes,'|')
+
+### dup_keys_detail_player_college  (0 rows, 0.00s)
+player_id | college_id | year | count(*)
+
+### dup_keys_detail_salary  (0 rows, 0.01s)
+year | team_id | player_id | count(*) | group_concat(salary)
+
+### dup_keys_detail_postseason  (0 rows, 0.00s)
+year | round | count(*)
+
+### dup_keys_detail_manager_award  (0 rows, 0.00s)
+player_id | award_id | year | league_id | count(*)
+
+### dup_keys_detail_appearances  (0 rows, 0.03s)
+year | team_id | player_id | count(*)
+
+### dup_keys_detail_pav  (0 rows, 0.00s)
+award_id | year | league_id | player_id | count(*)
+
+### dup_keys_detail_home_game  (0 rows, 0.00s)
+year | team_id | park_id | count(*)
+

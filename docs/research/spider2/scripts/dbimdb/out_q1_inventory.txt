@@ -1,0 +1,316 @@
+### row_counts  (13 rows, 0.00s)
+t | n
+Movie | 3475
+Genre | 328
+Language | 32
+Country | 34
+Location | 559
+M_Location | 3475
+M_Country | 3475
+M_Language | 3475
+M_Genre | 3475
+Person | 38285
+M_Producer | 11751
+M_Director | 3475
+M_Cast | 82837
+
+### sqlite_master  (26 rows, 0.00s)
+type | name | tbl_name
+index | ix_Country_index | Country
+index | ix_Genre_index | Genre
+index | ix_Language_index | Language
+index | ix_Location_index | Location
+index | ix_M_Cast_index | M_Cast
+index | ix_M_Country_index | M_Country
+index | ix_M_Director_index | M_Director
+index | ix_M_Genre_index | M_Genre
+index | ix_M_Language_index | M_Language
+index | ix_M_Location_index | M_Location
+index | ix_M_Producer_index | M_Producer
+index | ix_Movie_index | Movie
+index | ix_Person_index | Person
+table | Country | Country
+table | Genre | Genre
+table | Language | Language
+table | Location | Location
+table | M_Cast | M_Cast
+table | M_Country | M_Country
+table | M_Director | M_Director
+table | M_Genre | M_Genre
+table | M_Language | M_Language
+table | M_Location | M_Location
+table | M_Producer | M_Producer
+table | Movie | Movie
+table | Person | Person
+
+### typeof_columns  (29 rows, 0.04s)
+c | t | n
+Movie.index | integer | 3475
+Movie.MID | text | 3475
+Movie.title | text | 3475
+Movie.year | text | 3475
+Movie.rating | real | 3475
+Movie.num_votes | integer | 3475
+Genre.Name | text | 328
+Genre.GID | integer | 328
+Language.LAID | integer | 32
+Country.CID | integer | 34
+Location.LID | integer | 559
+M_Location.LID | null | 1626
+M_Location.LID | real | 1849
+M_Country.CID | null | 5
+M_Country.CID | real | 3470
+M_Language.LAID | integer | 3475
+M_Genre.GID | integer | 3475
+Person.PID | null | 1
+Person.PID | text | 38284
+Person.Name | null | 1
+Person.Name | text | 38284
+Person.Gender | null | 8795
+Person.Gender | text | 29490
+M_Producer.PID | null | 21
+M_Producer.PID | text | 11730
+M_Director.PID | text | 3475
+M_Cast.PID | null | 2
+M_Cast.PID | text | 82835
+M_Cast.MID | text | 82837
+
+### index_is_rowid_minus_1  (13 rows, 0.00s)
+t | n | ok
+Movie | 3475 | 3475
+Genre | 328 | 328
+Language | 32 | 32
+Country | 34 | 34
+Location | 559 | 559
+M_Location | 3475 | 3475
+M_Country | 3475 | 3475
+M_Language | 3475 | 3475
+M_Genre | 3475 | 3475
+Person | 38285 | 38285
+M_Producer | 11751 | 11751
+M_Director | 3475 | 3475
+M_Cast | 82837 | 82837
+
+### link_id_equals_index  (7 rows, 0.00s)
+t | n | ok
+M_Location | 3475 | 3475
+M_Country | 3475 | 3475
+M_Language | 3475 | 3475
+M_Genre | 3475 | 3475
+M_Producer | 11751 | 11751
+M_Director | 3475 | 3475
+M_Cast | 82837 | 82837
+
+### lookup_id_equals_index  (4 rows, 0.00s)
+t | n | ok
+Genre | 328 | 328
+Language | 32 | 32
+Country | 34 | 34
+Location | 559 | 559
+
+### key_uniqueness  (13 rows, 0.11s)
+k | n | d | d_trim
+Movie.MID | 3475 | 3475 | 3475
+Person.PID | 38285 | 37565 | 37565
+Genre.Name | 328 | 328 | 328
+Language.Name | 32 | 32 | 32
+Country.Name | 34 | 34 | 34
+Location.Name | 559 | 559 | 559
+M_Location.MID | 3475 | 3475 | 3475
+M_Country.MID | 3475 | 3475 | 3475
+M_Language.MID | 3475 | 3475 | 3475
+M_Genre.MID | 3475 | 3475 | 3475
+M_Director.MID | 3475 | 3475 | 3475
+M_Producer(MID,PID) | 11751 | 11730 | 11730
+M_Cast(MID,PID) | 82837 | 82835 | 82835
+
+### whitespace_ids  (14 rows, 0.04s)
+c | n | padded | lead_sp | trail_sp
+Movie.MID | 3475 | 0 | 0 | 0
+Person.PID | 38285 | 0 | 0 | 0
+Person.Name | 38285 | 36820 | 36820 | 0
+Movie.title | 3475 | 0 | 0 | 0
+Genre.Name | 328 | 327 | 0 | 327
+Language.Name | 32 | 0 | 0 | 0
+Country.Name | 34 | 0 | 0 | 0
+Location.Name | 559 | 0 | 0 | 0
+M_Cast.MID | 82837 | 0 | 0 | 0
+M_Cast.PID | 82837 | 82835 | 82835 | 0
+M_Producer.PID | 11751 | 11730 | 11730 | 0
+M_Producer.MID | 11751 | 0 | 0 | 0
+M_Director.PID | 3475 | 0 | 0 | 0
+M_Director.MID | 3475 | 0 | 0 | 0
+
+### padding_shapes  (13 rows, 0.06s)
+c | lead | trail | n
+Person.PID | None | None | 1
+Person.PID | 0 | 0 | 38284
+Person.Name | None | None | 1
+Person.Name | 0 | 0 | 1464
+Person.Name | 1 | 0 | 36820
+Genre.Name | 0 | 0 | 1
+Genre.Name | 0 | 12 | 327
+M_Cast.PID | None | None | 2
+M_Cast.PID | 1 | 0 | 82835
+M_Producer.PID | None | None | 21
+M_Producer.PID | 1 | 0 | 11730
+M_Director.PID | 0 | 0 | 3475
+Movie.title | 0 | 0 | 3475
+
+### other_whitespace  (2 rows, 0.01s)
+c | tab | nl | nbsp | dbl
+Person.Name tab/nl/nbsp | 0 | 0 | 0 | 0
+Movie.title | 0 | 0 | 0 | 0
+
+### nulls_and_empties  (9 rows, 0.01s)
+t | a | b | c | d | e | f | g
+Movie | 0 | 0 | 0 | 0 | 0 | 0 | 0
+Person | 1 | 1 | 8795 | 0 | 0 | 0 | 0
+M_Location | 0 | 1626 | 0 | 0 | 0 | 0 | 0
+M_Country | 0 | 5 | 0 | 0 | 0 | 0 | 0
+M_Language | 0 | 0 | 0 | 0 | 0 | 0 | 0
+M_Genre | 0 | 0 | 0 | 0 | 0 | 0 | 0
+M_Cast | 0 | 2 | 0 | 0 | 0 | 0 | 0
+M_Producer | 0 | 21 | 0 | 0 | 0 | 0 | 0
+M_Director | 0 | 0 | 0 | 0 | 0 | 0 | 0
+
+### gender_values  (3 rows, 0.01s)
+g | n
+'Male' | 20055
+'Female' | 9435
+NULL | 8795
+
+### year_shapes  (5 rows, 0.00s)
+len | t | n | min(year) | max(year)
+4 | text | 3358 | 1931 | 2018
+6 | text | 95 | I 1964 | V 2015
+7 | text | 15 | II 1983 | VI 2015
+8 | text | 6 | III 2007 | III 2017
+9 | text | 1 | XVII 2016 | XVII 2016
+
+### year_nonnumeric_samples  (30 rows, 0.00s)
+year | count(*)
+I 2018 | 10
+I 2016 | 9
+I 2009 | 9
+I 2014 | 8
+I 2013 | 7
+I 2015 | 6
+I 2010 | 6
+I 2017 | 5
+I 2011 | 5
+I 2008 | 3
+I 2007 | 3
+I 1989 | 3
+III 2015 | 2
+III 2007 | 2
+II 2013 | 2
+I 2003 | 2
+I 2002 | 2
+I 2001 | 2
+I 1992 | 2
+I 1986 | 2
+XVII 2016 | 1
+VI 2015 | 1
+V 2015 | 1
+IV 2017 | 1
+IV 2011 | 1
+IV 2010 | 1
+III 2017 | 1
+III 2016 | 1
+II 2018 | 1
+II 2017 | 1
+
+### year_distinct_prefixes  (8 rows, 0.00s)
+prefix | n
+'' | 3358
+I  | 94
+II  | 11
+III  | 6
+IV  | 3
+XVII  | 1
+VI  | 1
+V  | 1
+
+### lookup_values  (66 rows, 0.00s)
+t | id | name
+Language | 0 | 'English'
+Language | 1 | 'Marathi'
+Language | 2 | 'Hindi'
+Language | 3 | 'Cantonese'
+Language | 4 | 'Telugu'
+Language | 5 | 'Mandarin'
+Language | 6 | 'Tamil'
+Language | 7 | 'Punjabi'
+Language | 8 | 'Danish'
+Language | 9 | 'Korean'
+Language | 10 | 'Spanish'
+Language | 11 | 'Arabic'
+Language | 12 | 'Urdu'
+Language | 13 | 'Tibetan'
+Language | 14 | 'Dutch'
+Language | 15 | 'Kannada'
+Language | 16 | 'Japanese'
+Language | 17 | 'Bengali'
+Language | 18 | 'Sinhalese'
+Language | 19 | 'Malayalam'
+Language | 20 | 'French'
+Language | 21 | 'Russian'
+Language | 22 | 'Gujarati'
+Language | 23 | 'Sanskrit'
+Language | 24 | 'Himachali'
+Language | 25 | 'Zulu'
+Language | 26 | 'German'
+Language | 27 | 'Persian'
+Language | 28 | 'Italian'
+Language | 29 | 'Bhojpuri'
+Language | 30 | 'Swiss German'
+Language | 31 | 'Georgian'
+Country | 0 | 'UK'
+Country | 1 | 'USA'
+Country | 2 | 'India'
+Country | 3 | 'Australia'
+Country | 4 | 'Hong Kong'
+Country | 5 | 'Germany'
+Country | 6 | 'Canada'
+Country | 7 | 'Denmark'
+Country | 8 | 'Belgium'
+Country | 9 | 'South Korea'
+Country | 10 | 'China'
+Country | 11 | 'Argentina'
+Country | 12 | 'Libya'
+Country | 13 | 'Switzerland'
+Country | 14 | 'Netherlands'
+Country | 15 | 'France'
+Country | 16 | 'Pakistan'
+Country | 17 | 'Japan'
+Country | 18 | 'Sri Lanka'
+Country | 19 | 'United Arab Emirates'
+Country | 20 | 'Bhutan'
+Country | 21 | 'Soviet Union'
+Country | 22 | 'Iceland'
+Country | 23 | 'Afghanistan'
+Country | 24 | 'South Africa'
+Country | 25 | 'Egypt'
+Country | 26 | 'Hungary'
+Country | 27 | 'Iran'
+Country | 28 | 'Suriname'
+Country | 29 | 'Sweden'
+Country | 30 | 'Spain'
+Country | 31 | 'Italy'
+Country | 32 | 'New Zealand'
+Country | 33 | 'Georgia'
+
+### rating_shapes  (1 rows, 0.00s)
+t | n | min(rating) | max(rating) | non_tenths
+real | 3475 | 1.3 | 9.6 | 0
+
+### votes_shapes  (1 rows, 0.00s)
+typeof(num_votes) | count(*) | min(num_votes) | max(num_votes)
+integer | 3475 | 51 | 1137529
+
+### real_id_columns  (2 rows, 0.00s)
+c | n | whole | nulls
+M_Location.LID | 3475 | 1849 | 1626
+M_Country.CID | 3475 | 3470 | 5
+

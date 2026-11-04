@@ -1,0 +1,23 @@
+trees 683788
+status {'Alive': 0.9538, 'Stump': 0.0258, 'Dead': 0.0204}
+health | Alive {'Good': 0.8109, 'Fair': 0.148, 'Poor': 0.0411, None: 0.0}
+borough {'Queens': 0.3664, 'Brooklyn': 0.2593, 'Staten Island': 0.154, 'Bronx': 0.1246, 'Manhattan': 0.0957}
+dbh (Alive) quantiles {0: 0, 0.1: 3, 0.25: 5, 0.5: 10, 0.75: 16, 0.9: 24, 0.99: 37, 0.999: 47, 1: 425} mean 11.709
+dbh (Dead) quantiles {0: 0, 0.1: 2, 0.25: 2, 0.5: 4, 0.75: 6, 0.9: 12, 0.99: 24, 0.999: 37, 1: 450}
+stump_diam (Stump) quantiles {0: 1, 0.1: 4, 0.25: 7, 0.5: 14, 0.75: 23, 0.9: 33, 0.99: 53, 0.999: 89, 1: 140}
+  Bronx: n=85203 Good/all=0.7817 Alive=0.9458
+  Brooklyn: n=177293 Good/all=0.7796 Alive=0.9574
+  Manhattan: n=65423 Good/all=0.7239 Alive=0.9542
+  Queens: n=250551 Good/all=0.7743 Alive=0.9498
+  Staten Island: n=105318 Good/all=0.7849 Alive=0.9632
+species top 1 cover 0.1334
+species top 5 cover 0.4563
+species top 10 cover 0.6535
+species top 20 cover 0.8196
+species top 50 cover 0.9536
+species count 132 singletons 0
+trees per zip quantiles {0: 7, 0.1: 374, 0.25: 1806, 0.5: 3229, 0.75: 4731, 0.9: 6855, 0.99: 13030, 0.999: 22186, 1: 22186} zips 191
+income zips 216 with households 184
+median income quantiles {0: 250, 0.1: 30779, 0.25: 43019, 0.5: 58076, 0.75: 80222, 0.9: 105500, 0.99: 145432, 0.999: 193510, 1: 193510}
+mean/median ratio quantiles {0: 1.0911894532399506, 0.1: 1.1952830188679244, 0.25: 1.2600225861095427, 0.5: 1.3605792740267069, 0.75: 1.4838050081493555, 0.9: 1.6887059918754233, 0.99: 2.5124913362367716, 0.999: 1765.112, 1: 1765.112}
+MOE/estimate (median income) quantiles {0: 0.0, 0.1: 0.03757058324209283, 0.25: 0.05230777425626548, 0.5: 0.06602418130557362, 0.75: 0.08658472738151629, 0.9: 0.11711034476278179, 0.99: 0.21234561521368406, 0.999: 0.22870795967128454, 1: 0.22870795967128454}

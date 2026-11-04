@@ -1,0 +1,6 @@
+create_date_dimension.sql     1235 bytes 7bd9e78ed1ead666
+create_legislators_table.sql      994 bytes ea860000fc0252d8
+create_legislators_terms.sql      711 bytes 90840f65e377b291
+legislators.csv  1966147 bytes bb2c07236997c829
+legislators_terms.csv  4339376 bytes 3c096d0543c1715a
+licence: none

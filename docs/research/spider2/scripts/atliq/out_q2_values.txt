@@ -1,0 +1,335 @@
+### rowid_order_product_date_cust  (1 rows, 0.64s)
+desc_pairs | pairs
+0 | 971630
+
+### rowid_order_date_product_cust  (1 rows, 0.64s)
+desc_pairs | pairs
+346 | 971630
+
+### rowid_descents_sample  (8 rows, 0.02s)
+r | date | product_code | customer_code | pdate | pprod
+3694 | 2019-09-01 | A0118150102 | 70002017 | 2021-08-01 | A0118150101
+7391 | 2019-09-01 | A0118150103 | 70002017 | 2021-08-01 | A0118150102
+11088 | 2019-09-01 | A0118150104 | 70002017 | 2021-08-01 | A0118150103
+14783 | 2019-09-01 | A0219150201 | 70002017 | 2021-08-01 | A0118150104
+18476 | 2019-09-01 | A0219150202 | 70002017 | 2021-08-01 | A0219150201
+22172 | 2019-09-01 | A0220150203 | 70002017 | 2021-08-01 | A0219150202
+25863 | 2019-09-01 | A0320150301 | 70002017 | 2021-08-01 | A0220150203
+29550 | 2020-09-01 | A0321150302 | 70002017 | 2021-08-01 | A0320150301
+
+### rowid_product_blocks  (1 rows, 0.51s)
+runs | prods
+347 | 347
+
+### rowid_customer_within_block_desc  (1 rows, 0.58s)
+desc_cust
+0
+
+### customer_null_columns  (1 rows, 0.00s)
+customer | platform | channel | market | sub_zone | region
+0 | 0 | 0 | 0 | 26 | 26
+
+### customer_null_rows  (10 rows, 0.00s)
+customer_code | customer | platform | channel | market | sub_zone | region
+70022084 | Atliq Exclusive | Brick & Mortar | Direct | USA | None | None
+70022085 | Atliq e Store | E-Commerce | Direct | USA | None | None
+70023031 | Atliq Exclusive | Brick & Mortar | Direct | Canada | None | None
+70023032 | Atliq e Store | E-Commerce | Direct | Canada | None | None
+90022071 | Acclaimed Stores | Brick & Mortar | Retailer | USA | None | None
+90022072 | Path | Brick & Mortar | Retailer | USA | None | None
+90022073 | Control | Brick & Mortar | Retailer | USA | None | None
+90022074 | Flipkart | E-Commerce | Retailer | USA | None | None
+90022075 | BestBuy | Brick & Mortar | Retailer | USA | None | None
+90022076 | Circuit City | Brick & Mortar | Retailer | USA | None | None
+
+### customer_head  (8 rows, 0.00s)
+rowid | customer_code | customer | platform | channel | market | sub_zone | region
+1 | 70002017 | Atliq Exclusive | Brick & Mortar | Direct | India | India | APAC
+2 | 70002018 | Atliq e Store | E-Commerce | Direct | India | India | APAC
+3 | 70003181 | Atliq Exclusive | Brick & Mortar | Direct | Indonesia | ROA | APAC
+4 | 70003182 | Atliq e Store | E-Commerce | Direct | Indonesia | ROA | APAC
+5 | 70004069 | Atliq Exclusive | Brick & Mortar | Direct | Japan | ROA | APAC
+6 | 70004070 | Atliq e Store | E-Commerce | Direct | Japan | ROA | APAC
+7 | 70005163 | Atliq e Store | E-Commerce | Direct | Pakistan | ROA | APAC
+8 | 70006157 | Atliq Exclusive | Brick & Mortar | Direct | Philiphines | ROA | APAC
+
+### product_head  (8 rows, 0.00s)
+rowid | product_code | division | segment | category | product | variant
+1 | A0118150101 | P & A | Peripherals | Internal HDD | AQ Dracula HDD – 3.5 Inch SATA 6 Gb/s 5400 RPM 256 MB Cache | Standard
+2 | A0118150102 | P & A | Peripherals | Internal HDD | AQ Dracula HDD – 3.5 Inch SATA 6 Gb/s 5400 RPM 256 MB Cache | Plus
+3 | A0118150103 | P & A | Peripherals | Internal HDD | AQ Dracula HDD – 3.5 Inch SATA 6 Gb/s 5400 RPM 256 MB Cache | Premium
+4 | A0118150104 | P & A | Peripherals | Internal HDD | AQ Dracula HDD – 3.5 Inch SATA 6 Gb/s 5400 RPM 256 MB Cache | Premium Plus
+5 | A0219150201 | P & A | Peripherals | Internal HDD | AQ WereWolf NAS Internal Hard Drive HDD – 8.89 cm | Standard
+6 | A0219150202 | P & A | Peripherals | Internal HDD | AQ WereWolf NAS Internal Hard Drive HDD – 8.89 cm | Plus
+7 | A0220150203 | P & A | Peripherals | Internal HDD | AQ WereWolf NAS Internal Hard Drive HDD – 8.89 cm | Premium
+8 | A0320150301 | P & A | Peripherals | Internal HDD | AQ Zion Saga | Standard
+
+### customer_mix  (28 rows, 0.00s)
+region | sub_zone | channel | platform | n
+None | None | Direct | Brick & Mortar | 2
+None | None | Direct | E-Commerce | 2
+None | None | Retailer | Brick & Mortar | 16
+None | None | Retailer | E-Commerce | 6
+APAC | ANZ | Direct | Brick & Mortar | 2
+APAC | ANZ | Direct | E-Commerce | 2
+APAC | ANZ | Retailer | Brick & Mortar | 9
+APAC | ANZ | Retailer | E-Commerce | 2
+APAC | India | Direct | Brick & Mortar | 1
+APAC | India | Direct | E-Commerce | 1
+APAC | India | Retailer | Brick & Mortar | 12
+APAC | India | Retailer | E-Commerce | 4
+APAC | ROA | Direct | Brick & Mortar | 5
+APAC | ROA | Direct | E-Commerce | 6
+APAC | ROA | Distributor | Brick & Mortar | 5
+APAC | ROA | Retailer | Brick & Mortar | 14
+APAC | ROA | Retailer | E-Commerce | 8
+EU | NE | Direct | Brick & Mortar | 4
+EU | NE | Direct | E-Commerce | 7
+EU | NE | Retailer | Brick & Mortar | 43
+EU | NE | Retailer | E-Commerce | 7
+EU | SE | Direct | Brick & Mortar | 2
+EU | SE | Direct | E-Commerce | 4
+EU | SE | Retailer | Brick & Mortar | 33
+EU | SE | Retailer | E-Commerce | 5
+LATAM | LATAM | Direct | E-Commerce | 2
+LATAM | LATAM | Retailer | Brick & Mortar | 2
+LATAM | LATAM | Retailer | E-Commerce | 3
+
+### customer_names  (1 rows, 0.00s)
+names | markets | name_market | nmcp
+75 | 27 | 208 | 209
+
+### customer_code_structure  (3 rows, 0.00s)
+p2 | n | min(customer_code) | max(customer_code)
+70 | 40 | 70002017 | 70027208
+80 | 5 | 80001019 | 80007196
+90 | 164 | 90001020 | 90027207
+
+### customer_code_vs_market  (27 rows, 0.00s)
+market | n | lo | hi | who
+India | 18 | 70002017 | 90002016 | Atliq Exclusive/Direct/Brick & Mortar; Atliq e Store/Direct/E-Commerce; Reliance Digital/Retailer/Brick & Mortar; Croma/Retailer/Brick & Mortar; Ezone/Retailer/Brick & Mortar; Vijay Sales/Retailer/Brick & Mortar; Lotus/Retailer/Brick & Mortar; Viveks/Retailer/Brick & Mortar; Girias/Retailer/Brick & Mortar; Amazon/Retailer/E-Commerce; Flipkart/Retailer/E-Commerce; Ebay/Retailer/E-Commerce; Atliq Exclusive/Retailer/Brick & Mortar; Electricalsocity/Retailer/Brick & Mortar; Electricalslytical/Retailer/Brick & Mortar; Expression/Retailer/Brick & Mortar; Propel/Retailer/Brick & Mortar; Amazon /Retailer/E-Commerce
+Indonesia | 4 | 70003181 | 90003180 | Atliq Exclusive/Direct/Brick & Mortar; Atliq e Store/Direct/E-Commerce; Acclaimed Stores/Retailer/Brick & Mortar; Amazon /Retailer/E-Commerce
+Japan | 10 | 70004069 | 90004068 | Atliq Exclusive/Direct/Brick & Mortar; Atliq e Store/Direct/E-Commerce; Info Stores/Retailer/Brick & Mortar; Flawless Stores/Retailer/Brick & Mortar; Electricalsbea Stores/Retailer/Brick & Mortar; All-Out/Retailer/Brick & Mortar; Neptune/Retailer/Brick & Mortar; Surface Stores/Retailer/Brick & Mortar; Amazon/Retailer/E-Commerce; Amazon /Retailer/E-Commerce
+Pakistan | 5 | 70005163 | 90005162 | Atliq e Store/Direct/E-Commerce; Expression/Retailer/Brick & Mortar; Nomad Stores/Retailer/Brick & Mortar; Zone/Retailer/Brick & Mortar; Amazon /Retailer/E-Commerce
+Philiphines | 6 | 70006157 | 90006156 | Atliq Exclusive/Direct/Brick & Mortar; Atliq e Store/Direct/E-Commerce; Synthetic/Distributor/Brick & Mortar; Novus/Distributor/Brick & Mortar; Insight/Retailer/Brick & Mortar; Amazon /Retailer/E-Commerce
+South Korea | 5 | 70007198 | 90007197 | Atliq Exclusive/Direct/Brick & Mortar; Atliq e Store/Direct/E-Commerce; Sage/Distributor/Brick & Mortar; Leader/Distributor/Brick & Mortar; Amazon /Retailer/E-Commerce
+Australia | 7 | 70008169 | 90008168 | Atliq Exclusive/Direct/Brick & Mortar; Atliq e Store/Direct/E-Commerce; Digimarket/Retailer/Brick & Mortar; Forward Stores/Retailer/Brick & Mortar; Sound/Retailer/Brick & Mortar; Electricalsocity/Retailer/Brick & Mortar; Amazon /Retailer/E-Commerce
+Newzealand | 8 | 70009133 | 90009132 | Atliq Exclusive/Direct/Brick & Mortar; Atliq e Store/Direct/E-Commerce; Epic Stores/Retailer/Brick & Mortar; Propel/Retailer/Brick & Mortar; Leader/Retailer/Brick & Mortar; Logic Stores/Retailer/Brick & Mortar; Path/Retailer/Brick & Mortar; Amazon /Retailer/E-Commerce
+Bangladesh | 5 | 70010047 | 90010046 | Atliq Exclusive/Direct/Brick & Mortar; Atliq e Store/Direct/E-Commerce; Surface Stores/Retailer/Brick & Mortar; Control/Retailer/Brick & Mortar; Amazon /Retailer/E-Commerce
+France | 10 | 70011193 | 90011192 | Atliq Exclusive/Direct/Brick & Mortar; Atliq e Store/Direct/E-Commerce; Epic Stores/Retailer/Brick & Mortar; Elite/Retailer/Brick & Mortar; Chip 7/Retailer/Brick & Mortar; Elkjøp/Retailer/Brick & Mortar; UniEuro/Retailer/Brick & Mortar; Media Markt/Retailer/Brick & Mortar; Sorefoz/Retailer/Brick & Mortar; Amazon /Retailer/E-Commerce
+Germany | 11 | 70012042 | 90012041 | Atliq Exclusive/Direct/Brick & Mortar; Atliq e Store/Direct/E-Commerce; Digimarket/Retailer/Brick & Mortar; Otto/Retailer/Brick & Mortar; Notebillig/Retailer/Brick & Mortar; Billa/Retailer/Brick & Mortar; Saturn/Retailer/Brick & Mortar; Expert/Retailer/Brick & Mortar; Currys (Dixons Carphone)/Retailer/Brick & Mortar; Fnac-Darty/Retailer/Brick & Mortar; Amazon /Retailer/E-Commerce
+Italy | 11 | 70013125 | 90013124 | Atliq Exclusive/Direct/Brick & Mortar; Atliq e Store/Direct/E-Commerce; Unity Stores/Retailer/Brick & Mortar; Euronics/Retailer/Brick & Mortar; Fnac-Darty/Retailer/Brick & Mortar; Argos (Sainsbury's)/Retailer/Brick & Mortar; Coolblue/Retailer/Brick & Mortar; Boulanger/Retailer/Brick & Mortar; Radio Popular/Retailer/Brick & Mortar; Expert/Retailer/Brick & Mortar; Amazon /Retailer/E-Commerce
+Netherlands | 9 | 70014142 | 90014141 | Atliq Exclusive/Direct/Brick & Mortar; Atliq e Store/Direct/E-Commerce; Electricalslance Stores/Retailer/Brick & Mortar; Reliance Digital/Retailer/Brick & Mortar; Media Markt/Retailer/Brick & Mortar; Mbit/Retailer/Brick & Mortar; Elkjøp/Retailer/Brick & Mortar; Radio Popular/Retailer/Brick & Mortar; Amazon /Retailer/E-Commerce
+Norway | 9 | 70015151 | 90015150 | Atliq Exclusive/Direct/Brick & Mortar; Atliq e Store/Direct/E-Commerce; Sound/Retailer/Brick & Mortar; Synthetic/Retailer/Brick & Mortar; Mbit/Retailer/Brick & Mortar; Chiptec/Retailer/Brick & Mortar; Boulanger/Retailer/Brick & Mortar; UniEuro/Retailer/Brick & Mortar; Amazon /Retailer/E-Commerce
+Poland | 8 | 70016177 | 90016176 | Atliq Exclusive/Direct/Brick & Mortar; Atliq e Store/Direct/E-Commerce; Electricalsara Stores/Retailer/Brick & Mortar; Power/Retailer/Brick & Mortar; Expert/Retailer/Brick & Mortar; Currys (Dixons Carphone)/Retailer/Brick & Mortar; Argos (Sainsbury's)/Retailer/Brick & Mortar; Amazon /Retailer/E-Commerce
+Portugal | 12 | 70017060 | 90017059 | Atliq e Store/Direct/E-Commerce; Premium Stores/Retailer/Brick & Mortar; Electricalsara Stores/Retailer/Brick & Mortar; Forward Stores/Retailer/Brick & Mortar; Power/Retailer/Brick & Mortar; Info Stores/Retailer/Brick & Mortar; Flawless Stores/Retailer/Brick & Mortar; Electricalslance Stores/Retailer/Brick & Mortar; Sorefoz/Retailer/Brick & Mortar; Euronics/Retailer/Brick & Mortar; Mbit/Retailer/Brick & Mortar; Amazon /Retailer/E-Commerce
+Spain | 11 | 70018115 | 90018114 | Atliq e Store/Direct/E-Commerce; Integration Stores/Retailer/Brick & Mortar; Flipkart/Retailer/E-Commerce; Elite/Retailer/Brick & Mortar; Relief/Retailer/Brick & Mortar; Chiptec/Retailer/Brick & Mortar; Boulanger/Retailer/Brick & Mortar; Media Markt/Retailer/Brick & Mortar; Euronics/Retailer/Brick & Mortar; Elkjøp/Retailer/Brick & Mortar; Amazon /Retailer/E-Commerce
+Sweden | 5 | 70019204 | 90019203 | Atliq e Store/Direct/E-Commerce; Sorefoz/Retailer/Brick & Mortar; Expert/Retailer/Brick & Mortar; Argos (Sainsbury's)/Retailer/Brick & Mortar; Amazon /Retailer/E-Commerce
+Austria | 8 | 70020104 | 90020103 | Atliq e Store/Direct/E-Commerce; Atlas Stores/Retailer/Brick & Mortar; Electricalsquipo Stores/Retailer/Brick & Mortar; Integration Stores/Retailer/Brick & Mortar; Nova/Retailer/Brick & Mortar; Euronics/Retailer/Brick & Mortar; Fnac-Darty/Retailer/Brick & Mortar; Amazon /Retailer/E-Commerce
+United Kingdom | 11 | 70021096 | 90021095 | Atliq e Store/Direct/E-Commerce; Electricalsquipo Stores/Retailer/Brick & Mortar; Logic Stores/Retailer/Brick & Mortar; Electricalslytical/Retailer/Brick & Mortar; Atlas Stores/Retailer/Brick & Mortar; Radio Popular/Retailer/Brick & Mortar; Expert/Retailer/Brick & Mortar; UniEuro/Retailer/Brick & Mortar; Chip 7/Retailer/Brick & Mortar; Coolblue/Retailer/Brick & Mortar; Amazon /Retailer/E-Commerce
+USA | 15 | 70022084 | 90022083 | Atliq Exclusive/Direct/Brick & Mortar; Atliq e Store/Direct/E-Commerce; Acclaimed Stores/Retailer/Brick & Mortar; Path/Retailer/Brick & Mortar; Control/Retailer/Brick & Mortar; Flipkart/Retailer/E-Commerce; BestBuy/Retailer/Brick & Mortar; Circuit City/Retailer/Brick & Mortar; Radio Shack/Retailer/Brick & Mortar; Costco/Retailer/Brick & Mortar; walmart/Retailer/Brick & Mortar; Staples/Retailer/Brick & Mortar; Amazon/Retailer/E-Commerce; Amazon /Retailer/E-Commerce; Ebay/Retailer/E-Commerce
+Canada | 11 | 70023031 | 90023030 | Atliq Exclusive/Direct/Brick & Mortar; Atliq e Store/Direct/E-Commerce; Nomad Stores/Retailer/Brick & Mortar; Amazon/Retailer/E-Commerce; Sage/Retailer/Brick & Mortar; Premium Stores/Retailer/Brick & Mortar; Relief/Retailer/Brick & Mortar; Costco/Retailer/Brick & Mortar; walmart/Retailer/Brick & Mortar; Staples/Retailer/Brick & Mortar; Amazon /Retailer/E-Commerce
+Mexico | 2 | 70026206 | 90026205 | Atliq e Store/Direct/E-Commerce; Amazon /Retailer/E-Commerce
+Brazil | 2 | 70027208 | 90027207 | Atliq e Store/Direct/E-Commerce; Amazon /Retailer/E-Commerce
+China | 3 | 80001019 | 90001021 | Neptune/Distributor/Brick & Mortar; Zone/Retailer/Brick & Mortar; Taobao/Retailer/E-Commerce
+Chile | 2 | 90024183 | 90024184 | Electricalsbea Stores/Retailer/Brick & Mortar; Amazon /Retailer/E-Commerce
+Columbia | 1 | 90025209 | 90025209 | Electricalsbea Stores/Retailer/Brick & Mortar
+
+### customers_buying_per_month  (1 rows, 0.04s)
+ever
+209
+
+### product_mix  (15 rows, 0.00s)
+division | segment | category | n
+N & S | Networking | Wi fi extender | 9
+N & S | Storage | External Solid State Drives | 15
+N & S | Storage | USB Flash Drives | 12
+P & A | Accessories | Batteries | 20
+P & A | Accessories | Keyboard | 48
+P & A | Accessories | Mouse | 48
+P & A | Peripherals | Graphic Card | 36
+P & A | Peripherals | Internal HDD | 10
+P & A | Peripherals | MotherBoard | 20
+P & A | Peripherals | Processors | 18
+PC | Desktop | Business Laptop | 16
+PC | Desktop | Personal Desktop | 16
+PC | Notebook | Business Laptop | 28
+PC | Notebook | Gaming Laptop | 40
+PC | Notebook | Personal Laptop | 61
+
+### product_code_structure  (1 rows, 0.00s)
+len | c1 | n
+11 | A | 397
+
+### product_variant_mix  (20 rows, 0.00s)
+variant | n
+Plus 2 | 35
+Standard | 33
+Premium | 33
+Plus 1 | 31
+Standard 2 | 23
+Standard 1 | 23
+Premium 2 | 23
+Premium 1 | 23
+Plus | 21
+Premium Black | 16
+Premium Misty Green | 15
+Standard Grey | 12
+Standard Blue | 12
+Standard Red | 11
+Plus Red | 11
+Plus Grey | 11
+Plus Blue | 11
+Plus 3 | 11
+Standard 3 | 7
+Standard Firey Red | 5
+
+### product_code_prefix_vs_product  (1 rows, 0.00s)
+prefix9 | products | both_
+113 | 73 | 113
+
+### unsold_products  (10 rows, 0.04s)
+product_code | division | segment | category | product | variant
+A0921150602 | P & A | Peripherals | Graphic Card | AQ Marquee P4 | Plus 1
+A0921150603 | P & A | Peripherals | Graphic Card | AQ Marquee P4 | Plus 2
+A0921150604 | P & A | Peripherals | Graphic Card | AQ Marquee P4 | Premium
+A1521150603 | P & A | Peripherals | Processors | AQ Electron 3 3600 Desktop Processor | Premium
+A2021150504 | P & A | Peripherals | MotherBoard | AQ MB Lito 2 | Premium
+A2821150802 | P & A | Accessories | Mouse | AQ Lumina Ms | Standard 2
+A2821150803 | P & A | Accessories | Mouse | AQ Lumina Ms | Plus 1
+A2821150804 | P & A | Accessories | Mouse | AQ Lumina Ms | Plus 2
+A2821150805 | P & A | Accessories | Mouse | AQ Lumina Ms | Premium 1
+A2821150806 | P & A | Accessories | Mouse | AQ Lumina Ms | Premium 2
+
+### unsold_vs_priced  (1 rows, 0.04s)
+unsold_and_unpriced
+50
+
+### products_by_year_sold  (3 rows, 0.17s)
+fy | n
+2020 | 13
+2020,2021 | 232
+2021 | 102
+
+### products_priced_by_year  (3 rows, 0.00s)
+fy | n
+2020 | 13
+2020,2021 | 232
+2021 | 102
+
+### qty_stats  (1 rows, 0.08s)
+mn | mx | av | zeros | negs | total
+1 | 5832 | 73.00865349088285 | 0 | 0 | 70937471
+
+### cube_density  (2 rows, 0.24s)
+fiscal_year | rows_ | pairs
+2020 | 363523 | 47488
+2021 | 608108 | 69360
+
+### months_per_pair  (9 rows, 0.31s)
+m | pairs
+1 | 1311
+2 | 1271
+3 | 1568
+4 | 2012
+5 | 2473
+6 | 4419
+7 | 5296
+8 | 7407
+9 | 91091
+
+### price_decimals  (3 rows, 0.00s)
+t | dp4 | dp2 | min(gross_price) | max(gross_price)
+gp | 579 | 7 | 2.9168 | 834.9812
+mc | 579 | 7 | 0.892 | 240.5364
+ded | 418 | 4 | 0.0531 | 0.3095
+
+### price_text_samples  (6 rows, 0.00s)
+product_code | fiscal_year | gross_price | t
+A0118150101 | 2020 | 16.2323 | 16.2323
+A0118150101 | 2021 | 19.0573 | 19.0573
+A0118150102 | 2020 | 19.8577 | 19.8577
+A0118150102 | 2021 | 21.4565 | 21.4565
+A0118150103 | 2020 | 22.1317 | 22.1317
+A0118150103 | 2021 | 21.7795 | 21.7795
+
+### cost_text_samples  (6 rows, 0.00s)
+product_code | cost_year | manufacturing_cost | t
+A0118150101 | 2020 | 5.0207 | 5.0207
+A0118150101 | 2021 | 5.5172 | 5.5172
+A0118150102 | 2020 | 5.718 | 5.718
+A0118150102 | 2021 | 6.2835 | 6.2835
+A0118150103 | 2020 | 6.3264 | 6.3264
+A0118150103 | 2021 | 6.59 | 6.59
+
+### ded_text_samples  (6 rows, 0.00s)
+customer_code | fiscal_year | pre_invoice_discount_pct | t
+70002017 | 2020 | 0.0735 | 0.0735
+70002017 | 2021 | 0.0703 | 0.0703
+70002018 | 2020 | 0.2255 | 0.2255
+70002018 | 2021 | 0.2061 | 0.2061
+70003181 | 2020 | 0.0531 | 0.0531
+70003181 | 2021 | 0.0974 | 0.0974
+
+### price_change_2020_2021  (1 rows, 0.00s)
+n | ratio_avg | mn | mx
+232 | 1.0587319138624767 | 0.930700159330155 | 1.1816122347148015
+
+### cost_change_2020_2021  (1 rows, 0.00s)
+n | ratio_avg | mn | mx
+232 | 1.0579543979220725 | 1.0100815310257287 | 1.1111370971514103
+
+### margin  (1 rows, 0.00s)
+mn | av | mx
+0.2857745103079533 | 0.299295990186545 | 0.312488736709317
+
+### ded_stats  (2 rows, 0.00s)
+fiscal_year | min(pre_invoice_discount_pct) | avg(pre_invoice_discount_pct) | max(pre_invoice_discount_pct)
+2020 | 0.0531 | 0.2332684210526316 | 0.3091
+2021 | 0.0552 | 0.23396411483253587 | 0.3095
+
+### ded_year_corr  (1 rows, 0.00s)
+n | d_avg | mn | mx
+209 | 0.0006956937799043051 | -0.11830000000000002 | 0.1197
+
+### march_2020_missing_products  (8 rows, 0.05s)
+product_code | segment | product
+A5621110407 | Notebook | AQ Smash 1
+A6018110101 | Desktop | AQ Home Allin1
+A6018110102 | Desktop | AQ Home Allin1
+A6018110103 | Desktop | AQ Home Allin1
+A6018110104 | Desktop | AQ Home Allin1
+A6018110105 | Desktop | AQ Home Allin1
+A6018110106 | Desktop | AQ Home Allin1
+A6019110107 | Desktop | AQ Home Allin1
+
+### customers_per_month_missing  (4 rows, 0.17s)
+date | missing
+2019-09-01 | 52
+2019-10-01 | 52
+2019-11-01 | 52
+2019-12-01 | 53
+
+### customer_inactive_months  (20 rows, 2.11s)
+customer_code | customer | market | months
+70002017 | Atliq Exclusive | India | 18
+70002018 | Atliq e Store | India | 18
+70003181 | Atliq Exclusive | Indonesia | 18
+70003182 | Atliq e Store | Indonesia | 18
+70004069 | Atliq Exclusive | Japan | 18
+70004070 | Atliq e Store | Japan | 18
+70005163 | Atliq e Store | Pakistan | 18
+70006157 | Atliq Exclusive | Philiphines | 18
+70006158 | Atliq e Store | Philiphines | 18
+70007198 | Atliq Exclusive | South Korea | 18
+70007199 | Atliq e Store | South Korea | 18
+70008169 | Atliq Exclusive | Australia | 18
+70008170 | Atliq e Store | Australia | 18
+70009133 | Atliq Exclusive | Newzealand | 18
+70009134 | Atliq e Store | Newzealand | 18
+70010047 | Atliq Exclusive | Bangladesh | 18
+70010048 | Atliq e Store | Bangladesh | 18
+70011193 | Atliq Exclusive | France | 18
+70011194 | Atliq e Store | France | 18
+70012042 | Atliq Exclusive | Germany | 18
+

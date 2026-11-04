@@ -1,0 +1,141 @@
+### person_dup_pids  (1 rows, 0.01s)
+dup_pid_groups | rows_in_groups | extra_rows | max_copies
+719 | 1438 | 719 | 2
+
+### person_dup_exact  (1 rows, 0.02s)
+groups | identical | name_differs | gender_differs
+719 | 0 | 719 | 0
+
+### person_dup_name_samples  (20 rows, 0.03s)
+PID | quote(Name) | quote(Gender) | index
+nm0000187 | ' Madonna' | NULL | 1554
+nm0000187 | 'Madonna' | NULL | 37252
+nm0000229 | ' Steven Spielberg' | NULL | 32419
+nm0000229 | 'Steven Spielberg' | NULL | 36835
+nm0000269 | ' Jean-Jacques Annaud' | NULL | 32427
+nm0000269 | 'Jean-Jacques Annaud' | NULL | 36858
+nm0000386 | ' Roland Emmerich' | NULL | 32229
+nm0000386 | 'Roland Emmerich' | NULL | 36833
+nm0000487 | ' Ang Lee' | NULL | 32253
+nm0000487 | 'Ang Lee' | NULL | 36837
+nm0001060 | ' Chris Columbus' | NULL | 32272
+nm0001060 | 'Chris Columbus' | NULL | 36839
+nm0001162 | ' Griffin Dunne' | 'Male' | 39
+nm0001162 | 'Griffin Dunne' | 'Male' | 36889
+nm0001355 | ' Michael Hoffman' | NULL | 34807
+nm0001355 | 'Michael Hoffman' | NULL | 37074
+nm0001408 | ' Shekhar Kapur' | 'Male' | 12085
+nm0001408 | 'Shekhar Kapur' | 'Male' | 37100
+nm0002041 | ' Dean Devlin' | NULL | 32213
+nm0002041 | 'Dean Devlin' | NULL | 36831
+
+### person_full_row_dups  (1 rows, 0.02s)
+full_row_extra
+0
+
+### person_null_row  (1 rows, 0.00s)
+index | quote(PID) | quote(Name) | quote(Gender)
+30439 | NULL | NULL | NULL
+
+### person_name_dups  (1 rows, 0.02s)
+names_shared_by_gt1_pid
+1268
+
+### fk_orphans  (12 rows, 0.12s)
+fk | n | null_ref | orphans
+M_Cast.PID(trim)->Person | 82837 | 2 | 0
+M_Cast.PID(raw)->Person | 82837 | 2 | 82835
+M_Producer.PID(trim)->Person | 11751 | 21 | 0
+M_Director.PID->Person | 3475 | 0 | 0
+M_Cast.MID->Movie | 82837 | 0 | 0
+M_Producer.MID->Movie | 11751 | 0 | 0
+M_Director.MID->Movie | 3475 | 0 | 0
+M_Genre.MID->Movie | 3475 | 0 | 0
+M_Genre.GID->Genre | 3475 | 0 | 0
+M_Language.LAID->Language | 3475 | 0 | 0
+M_Country.CID->Country | 3475 | 5 | 0
+M_Location.LID->Location | 3475 | 1626 | 0
+
+### link_rows_align_with_movie  (5 rows, 0.00s)
+t | n | same_row
+M_Location | 3475 | 3475
+M_Country | 3475 | 3475
+M_Language | 3475 | 3475
+M_Genre | 3475 | 3475
+M_Director | 3475 | 3475
+
+### lookup_first_use_order  (4 rows, 0.01s)
+t | ids | in_first_use_order
+Genre | 328 | 328
+Language | 32 | 32
+Country | 34 | 34
+Location | 559 | 559
+
+### lookup_unused  (4 rows, 0.00s)
+t | n | unused
+Genre | 328 | 0
+Language | 32 | 0
+Country | 34 | 0
+Location | 559 | 0
+
+### person_coverage  (1 rows, 0.10s)
+persons | cast_people | producers | directors | unused | cast_and_director | producer_and_director
+37565 | 32127 | 5436 | 1464 | 0 | 392 | 525
+
+### person_order_vs_first_credit  (1 rows, 0.15s)
+n | same_rank | earlier | later
+37565 | 1 | 0 | 37564
+
+### person_movie_monotone  (1 rows, 0.10s)
+pairs | nondecreasing | drops
+38283 | 37632 | 651
+
+### cast_per_movie  (1 rows, 0.01s)
+movies_with_cast | min(c) | max(c) | avg(c)
+3475 | 1 | 238 | 23.837985611510792
+
+### movies_without  (1 rows, 0.01s)
+no_cast | no_producer | no_director
+0 | 0 | 0
+
+### cast_dup_rows  (0 rows, 0.03s)
+MID | quote(PID) | count(*)
+
+### producer_dup_rows  (0 rows, 0.00s)
+MID | quote(PID) | count(*)
+
+### null_pid_credit_rows  (23 rows, 0.00s)
+t | index | MID | quote(PID)
+M_Cast | 77014 | tt2355921 | NULL
+M_Cast | 82629 | tt1587388 | NULL
+M_Producer | 6725 | tt0332313 | NULL
+M_Producer | 7426 | tt0316406 | NULL
+M_Producer | 8193 | tt4944434 | NULL
+M_Producer | 8786 | tt0231348 | NULL
+M_Producer | 10435 | tt4332782 | NULL
+M_Producer | 10997 | tt2355921 | NULL
+M_Producer | 11190 | tt4944418 | NULL
+M_Producer | 11191 | tt0251067 | NULL
+M_Producer | 11274 | tt3030720 | NULL
+M_Producer | 11452 | tt4971292 | NULL
+M_Producer | 11497 | tt4946222 | NULL
+M_Producer | 11518 | tt0233979 | NULL
+M_Producer | 11549 | tt2373632 | NULL
+M_Producer | 11622 | tt2963042 | NULL
+M_Producer | 11723 | tt2971560 | NULL
+M_Producer | 11725 | tt0290632 | NULL
+M_Producer | 11726 | tt1587388 | NULL
+M_Producer | 11727 | tt3445640 | NULL
+M_Producer | 11728 | tt4944394 | NULL
+M_Producer | 11739 | tt0363011 | NULL
+M_Producer | 11749 | tt0375882 | NULL
+
+### credit_order_within_movie  (2 rows, 0.06s)
+t | pairs | nondecr
+M_Cast | 82836 | 82836
+M_Producer | 11750 | 11750
+
+### director_is_also_cast  (1 rows, 6.93s)
+movies | director_in_cast
+3475 | 299
+

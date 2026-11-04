@@ -1,0 +1,53 @@
+### product_whitespace_rows  (10 rows, 0.00s)
+product_code | product | variant | category
+A3119150301 | [AQ Gamers ] | [Standard 1] | [Keyboard]
+A3119150302 | [AQ Gamers ] | [Standard 2] | [Keyboard]
+A3119150303 | [AQ Gamers ] | [Plus 1] | [Keyboard]
+A3120150304 | [AQ Gamers ] | [Plus 2] | [Keyboard]
+A3120150305 | [AQ Gamers ] | [Premium 1] | [Keyboard]
+A3120150306 | [AQ Gamers ] | [Premium 2] | [Keyboard]
+A3718150102 | [AQ LION x1] | [Plus 1 ] | [Batteries]
+A3818150202 | [AQ LION x2] | [Plus 1 ] | [Batteries]
+A3920150302 | [AQ LION x3] | [Plus 1 ] | [Batteries]
+A4020150402 | [AQ Mx NB] | [Plus 1 ] | [Batteries]
+
+### missing_month_group_rule  (3 rows, 28.45s)
+rule_ | ok | n
+grp = (rowid-1) % 4 | 48 | 209
+grp = customer_code % 4 | 104 | 209
+grp = (rank by code -1) % 4 | 48 | 209
+
+### missing_group_sizes_by_channel  (3 rows, 1.10s)
+channel | miss_sep | n
+Direct | 9 | 40
+Distributor | 1 | 5
+Retailer | 42 | 164
+
+### products_full_year  (3 rows, 0.28s)
+fiscal_year | m | products
+2020 | 11 | 8
+2020 | 12 | 237
+2021 | 12 | 334
+
+### customers_per_product_month  (2 rows, 0.32s)
+fiscal_year | mn | av | mx
+2020 | 3 | 123.98465211459754 | 157
+2021 | 81 | 151.72355289421156 | 157
+
+### price_rows_order_by_variant  (1 rows, 0.00s)
+up | down | pairs
+276 | 133 | 409
+
+### sales_cust_rank_vs_qty  (5 rows, 0.00s)
+platform | channel | avg_ded
+Brick & Mortar | Direct | 0.0826
+Brick & Mortar | Distributor | 0.2554
+Brick & Mortar | Retailer | 0.2487
+E-Commerce | Direct | 0.238
+E-Commerce | Retailer | 0.2408
+
+### monthly_rows_cv  (2 rows, 0.25s)
+fiscal_year | mn | mx
+2020 | 25017 | 34476
+2021 | 50191 | 51567
+

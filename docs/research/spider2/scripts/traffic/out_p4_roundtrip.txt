@@ -1,0 +1,14 @@
+1. REAL cells via JSON into DuckDB: 2311339 cells, 0 differ
+2. case_id text -> DuckDB DOUBLE: (471571, 463423) | distinct texts: (460904, 460904)
+3. collision_date/time via event_time (rows, date ok, time ok): (94243, 94243, 94243)
+4. process_date via event_time (rows, ok): (94243, 94243)
+5. parties: date-coded ids decoding to a valid YYMMDDHHMM: 10230, invalid: 70
+5. victims: date-coded ids decoding to a valid YYMMDDHHMM: 6057, invalid: 4
+5. case_ids: date-coded ids decoding to a valid YYMMDDHHMM: 5196, invalid: 41
+5. collisions: date-coded ids decoding to a valid YYMMDDHHMM: 5195, invalid: 36
+5b. parties: valid YYMMDD 10300, valid HHMM 10230, invalid HHMM top [('2500', 58), ('1699', 3), ('2499', 3), ('0899', 2)]
+5b. victims: valid YYMMDD 6061, valid HHMM 6057, invalid HHMM top [('2500', 3), ('1699', 1)]
+5b. case_ids: valid YYMMDD 5237, valid HHMM 5196, invalid HHMM top [('2500', 29), ('1699', 3), ('2499', 2), ('1299', 2)]
+5b. collisions: valid YYMMDD 5231, valid HHMM 5195, invalid HHMM top [('2500', 29), ('2499', 4), ('1699', 1), ('0999', 1)]
+6. printf text DuckDB misreads (value, text, python float(text)==value): [('4.3000105191200015e+18', '4300010519120002000', False), ('1.9420105071700355e+18', '1942010507170035000', False), ('1.9450111241850004e+18', '1945011124185000000', False)]
+7. sqlite 3.47.1 | printf('%.0f'): rows 471571 distinct texts 460904 distinct values 460904 python float(text)==value 463423 | values > int64 max: 10979

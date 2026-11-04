@@ -1,0 +1,26 @@
+### days_generated  (1 rows, 0.00s)
+gen | gen_minus_src | src_minus_gen
+1096 | 0 | 0
+
+### weeks_generated  (1 rows, 0.00s)
+dow_first | gen | gen_minus_src | src_minus_gen
+0 | 156 | 0 | 0
+
+### months_generated  (1 rows, 0.00s)
+gen | gen_minus_src | src_minus_gen
+36 | 0 | 0
+
+### months_sample  (3 rows, 0.00s)
+MonthYear | YearNumber | MonthNumber | MonthStart | MonthEnd | January | February | March | April | May | June | July | August | September | October | November | December
+January 2017 | 2017 | 1 | 2017-01-01 | 2017-01-31 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0
+February 2017 | 2017 | 2 | 2017-02-01 | 2017-02-28 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0
+March 2017 | 2017 | 3 | 2017-03-01 | 2017-03-31 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0
+
+### skiplabels_generated  (1 rows, 0.00s)
+gen_minus_src | src_minus_gen
+0 | 0
+
+### helpers_cover_engagements  (1 rows, 0.00s)
+starts_in_days | count(*)
+111 | 111
+

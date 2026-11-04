@@ -1,0 +1,91 @@
+## Bowler_Scores  rows=1344
+   pk=['MatchID', 'GameNumber', 'BowlerID']  rowid order == pk order: 1344/1344
+   MatchID                  INT              [integer:1344] empty=0 \N=0 ws=0 distinct=56 min=1 max=56
+   GameNumber               smallint         [integer:1344] empty=0 \N=0 ws=0 distinct=3 min=1 max=3
+   BowlerID                 INT              [integer:1344] empty=0 \N=0 ws=0 distinct=32 min=1 max=32
+   RawScore                 smallint         [integer:1344] empty=0 \N=0 ws=0 distinct=61 min=135 max=195
+   HandiCapScore            smallint         [integer:1344] empty=0 \N=0 ws=0 distinct=70 min=161 max=231
+   WonGame                  BOOLEAN          [integer:1344] empty=0 \N=0 ws=0 distinct=2 min=0 max=1
+
+## Bowler_Scores_Archive  rows=0
+   pk=['MatchID', 'GameNumber', 'BowlerID']  rowid order == pk order: 0/0
+   MatchID                  INT              [] empty=0 \N=0 ws=0 distinct=0 min=None max=None
+   GameNumber               smallint         [] empty=0 \N=0 ws=0 distinct=0 min=None max=None
+   BowlerID                 INT              [] empty=0 \N=0 ws=0 distinct=0 min=None max=None
+   RawScore                 smallint         [] empty=0 \N=0 ws=0 distinct=0 min=None max=None
+   HandiCapScore            smallint         [] empty=0 \N=0 ws=0 distinct=0 min=None max=None
+   WonGame                  BOOLEAN          [] empty=0 \N=0 ws=0 distinct=0 min=None max=None
+
+## Bowlers  rows=34
+   pk=['BowlerID']  rowid order == pk order: 34/34
+   BowlerID                 INTEGER          [integer:34] empty=0 \N=0 ws=0 distinct=34 min=1 max=34
+   BowlerLastName           TEXT             [text:34] empty=0 \N=0 ws=0 distinct=13 min='Black' max='Viescas'
+   BowlerFirstName          TEXT             [text:34] empty=0 \N=0 ws=0 distinct=30 min='Alaina' max='Zachary'
+   BowlerMiddleInit         TEXT             [null:23,text:11] empty=0 \N=0 ws=0 distinct=6 min='A' max='M'
+   BowlerAddress            TEXT             [text:34] empty=0 \N=0 ws=0 distinct=15 min='122 Spring Valley Drive' max='Route 2, Box 203B'
+   BowlerCity               TEXT             [text:34] empty=0 \N=0 ws=0 distinct=10 min='Auburn' max='Woodinville'
+   BowlerState              TEXT             [text:34] empty=0 \N=0 ws=0 distinct=1 min='WA' max='WA'
+   BowlerZip                TEXT             [text:34] empty=0 \N=0 ws=0 distinct=12 min='98002' max='98404'
+   BowlerPhoneNumber        TEXT             [text:34] empty=0 \N=0 ws=0 distinct=15 min='(206) 555-1189' max='(206) 889-9191'
+   TeamID                   INT              [integer:34] empty=0 \N=0 ws=0 distinct=8 min=1 max=8
+   BowlerTotalPins          INT              [integer:34] empty=0 \N=0 ws=0 distinct=33 min=0 max=6607
+   BowlerGamesBowled        INT              [integer:34] empty=0 \N=0 ws=0 distinct=2 min=0 max=39
+   BowlerCurrentAverage     smallint         [integer:34] empty=0 \N=0 ws=0 distinct=17 min=0 max=169
+   BowlerCurrentHcp         smallint         [integer:34] empty=0 \N=0 ws=0 distinct=16 min=0 max=52
+
+## Match_Games  rows=168
+   pk=['MatchID', 'GameNumber']  rowid order == pk order: 168/168
+   MatchID                  INT              [integer:168] empty=0 \N=0 ws=0 distinct=56 min=1 max=56
+   GameNumber               smallint         [integer:168] empty=0 \N=0 ws=0 distinct=3 min=1 max=3
+   WinningTeamID            INT              [integer:168] empty=0 \N=0 ws=0 distinct=8 min=1 max=8
+
+## Match_Games_Archive  rows=0
+   pk=['MatchID', 'GameNumber']  rowid order == pk order: 0/0
+   MatchID                  INT              [] empty=0 \N=0 ws=0 distinct=0 min=None max=None
+   GameNumber               smallint         [] empty=0 \N=0 ws=0 distinct=0 min=None max=None
+   WinningTeamID            INT              [] empty=0 \N=0 ws=0 distinct=0 min=None max=None
+
+## Teams  rows=10
+   pk=['TeamID']  rowid order == pk order: 10/10
+   TeamID                   INTEGER          [integer:10] empty=0 \N=0 ws=0 distinct=10 min=1 max=10
+   TeamName                 TEXT             [text:10] empty=0 \N=0 ws=0 distinct=10 min='Barracudas' max='Terrapins'
+   CaptainID                INT              [integer:10] empty=0 \N=0 ws=0 distinct=10 min=2 max=32
+
+## Tournaments  rows=20
+   pk=['TourneyID']  rowid order == pk order: 20/20
+   TourneyID                INTEGER          [integer:20] empty=0 \N=0 ws=0 distinct=20 min=1 max=20
+   TourneyDate              DATE             [text:20] empty=0 \N=0 ws=0 distinct=20 min='2017-09-04' max='2018-08-16'
+   TourneyLocation          TEXT             [text:20] empty=0 \N=0 ws=0 distinct=7 min='Acapulco Lanes' max='Totem Lanes'
+
+## Tournaments_Archive  rows=0
+   pk=['TourneyID']  rowid order == pk order: 0/0
+   TourneyID                INT              [] empty=0 \N=0 ws=0 distinct=0 min=None max=None
+   TourneyDate              DATE             [] empty=0 \N=0 ws=0 distinct=0 min=None max=None
+   TourneyLocation          TEXT             [] empty=0 \N=0 ws=0 distinct=0 min=None max=None
+
+## Tourney_Matches  rows=57
+   pk=['MatchID']  rowid order == pk order: 57/57
+   MatchID                  INTEGER          [integer:57] empty=0 \N=0 ws=0 distinct=57 min=1 max=57
+   TourneyID                INT              [integer:57] empty=0 \N=0 ws=0 distinct=14 min=1 max=14
+   Lanes                    TEXT             [text:57] empty=0 \N=0 ws=0 distinct=14 min='01-02' max='27-28'
+   OddLaneTeamID            INT              [integer:57] empty=0 \N=0 ws=0 distinct=9 min=1 max=10
+   EvenLaneTeamID           INT              [integer:57] empty=0 \N=0 ws=0 distinct=9 min=1 max=9
+
+## Tourney_Matches_Archive  rows=0
+   pk=['MatchID']  rowid order == pk order: 0/0
+   MatchID                  INT              [] empty=0 \N=0 ws=0 distinct=0 min=None max=None
+   TourneyID                INT              [] empty=0 \N=0 ws=0 distinct=0 min=None max=None
+   Lanes                    TEXT             [] empty=0 \N=0 ws=0 distinct=0 min=None max=None
+   OddLaneTeamID            INT              [] empty=0 \N=0 ws=0 distinct=0 min=None max=None
+   EvenLaneTeamID           INT              [] empty=0 \N=0 ws=0 distinct=0 min=None max=None
+
+## WAZips  rows=523
+   pk=['ZIP']  rowid order == pk order: 523/523
+   ZIP                      TEXT             [text:523] empty=0 \N=0 ws=0 distinct=523 min='98001' max='99403'
+   City                     TEXT             [text:523] empty=0 \N=0 ws=0 distinct=385 min='Aberdeen' max='Zillah'
+   State                    TEXT             [text:523] empty=0 \N=0 ws=0 distinct=1 min='WA' max='WA'
+
+## sqlite_sequence  rows=4
+   name                                      [text:4] empty=0 \N=0 ws=0 distinct=4 min='Bowlers' max='Tourney_Matches'
+   seq                                       [integer:4] empty=0 \N=0 ws=0 distinct=4 min=10 max=57
+

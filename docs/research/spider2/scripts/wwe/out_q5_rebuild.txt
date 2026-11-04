@@ -1,0 +1,20 @@
+### matches_rebuild_sql  (1 rows, 2.57s)
+distinct_matches | rebuilt | only_rebuilt | only_source
+77567 | 540800 | 0 | 0
+
+### duration_seconds_roundtrip  (1 rows, 0.09s)
+n | differ
+540800 | 0
+
+### ref_text_roundtrip  (1 rows, 0.11s)
+non_text | differ
+0 | 0
+
+### wrestler_first_use_date  (1 rows, 0.33s)
+wrestlers | min(d) | max(d) | first_seen_after_run1
+17182 | 1963-01-25 | 2024-01-13 | 84
+
+### snapshot_N  (1 rows, 0.00s)
+N | start
+2024-01-14 | 1963-01-25
+

@@ -1,0 +1,105 @@
+### row_counts  (2 rows, 0.00s)
+t | n
+weekly_sales | 17117
+cleaned_weekly_sales | 17117
+
+### typeof_weekly_sales  (2 rows, 0.01s)
+wd | r | p | s | c | tx | sa | n
+text | text | text | null | text | integer | integer | 3024
+text | text | text | text | text | integer | integer | 14093
+
+### typeof_cleaned  (1 rows, 0.02s)
+wdf | wd | s | wn | mn | cy | ab | dm | at | n
+text | text | text | integer | integer | integer | text | text | real | 17117
+
+### null_empty_counts  (1 rows, 0.00s)
+seg_null | seg_empty | seg_text_null | reg_null | plat_null | ct_null | tx_null | sales_null
+3024 | 0 | 0 | 0 | 0 | 0 | 0 | 0
+
+### key_uniqueness  (1 rows, 0.01s)
+n | d
+17117 | 17117
+
+### key_uniqueness_cleaned  (1 rows, 0.01s)
+n | d
+17117 | 17117
+
+### dimension_values  (20 rows, 0.01s)
+dim | v | n
+region | AFRICA | 2448
+region | ASIA | 2448
+region | CANADA | 2448
+region | EUROPE | 2436
+region | OCEANIA | 2448
+region | SOUTH AMERICA | 2441
+region | USA | 2448
+platform | Retail | 8568
+platform | Shopify | 8549
+segment | <NULL> | 3024
+segment | C1 | 2016
+segment | C2 | 2016
+segment | C3 | 2016
+segment | C4 | 2004
+segment | F1 | 2016
+segment | F2 | 2016
+segment | F3 | 2009
+customer_type | Existing | 8064
+customer_type | Guest | 1008
+customer_type | New | 8045
+
+### segment_by_customer_type  (17 rows, 0.01s)
+customer_type | seg | n
+Existing | <NULL> | 1008
+Existing | C1 | 1008
+Existing | C2 | 1008
+Existing | C3 | 1008
+Existing | C4 | 1008
+Existing | F1 | 1008
+Existing | F2 | 1008
+Existing | F3 | 1008
+Guest | <NULL> | 1008
+New | <NULL> | 1008
+New | C1 | 1008
+New | C2 | 1008
+New | C3 | 1008
+New | C4 | 996
+New | F1 | 1008
+New | F2 | 1008
+New | F3 | 1001
+
+### week_date_formats  (2 rows, 0.00s)
+len | n | min(week_date) | max(week_date)
+6 | 5227 | 1/4/19 | 9/7/18
+7 | 11890 | 10/6/19 | 31/8/20
+
+### weeks  (1 rows, 0.00s)
+weeks
+72
+
+### grid_size  (1 rows, 0.00s)
+full_grid_if_22_combos | seg_ct_combos
+22176 | 17
+
+### rows_per_week  (2 rows, 0.00s)
+n | weeks
+237 | 19
+238 | 53
+
+### rowid_order_sample  (11 rows, 0.00s)
+rowid | week_date | region | platform | segment | customer_type
+1 | 31/8/20 | ASIA | Retail | C3 | New
+2 | 31/8/20 | ASIA | Retail | F1 | New
+3 | 31/8/20 | USA | Retail | None | Guest
+4 | 31/8/20 | EUROPE | Retail | C1 | New
+5 | 31/8/20 | AFRICA | Retail | C2 | New
+236 | 31/8/20 | CANADA | Retail | C3 | New
+237 | 31/8/20 | CANADA | Shopify | F2 | New
+238 | 31/8/20 | SOUTH AMERICA | Shopify | C2 | Existing
+239 | 24/8/20 | AFRICA | Retail | None | Guest
+17116 | 26/3/18 | EUROPE | Retail | C4 | New
+17117 | 26/3/18 | AFRICA | Retail | C3 | Existing
+
+### rowid_vs_cleaned_rowid  (1 rows, 0.00s)
+n | same_row_except_date
+17117 | 17117
+

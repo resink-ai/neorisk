@@ -1,0 +1,148 @@
+### sqlite_sequence  (4 rows, 0.00s)
+name | seq | max_id
+Tournaments | 20 | 20
+Bowlers | 34 | 34
+Teams | 10 | 10
+Tourney_Matches | 57 | 57
+
+### tournaments  (20 rows, 0.00s)
+TourneyID | TourneyDate | TourneyLocation | dow | matches
+1 | 2017-09-04 | Red Rooster Lanes | 1 | 4
+2 | 2017-09-11 | Thunderbird Lanes | 1 | 4
+3 | 2017-09-18 | Bolero Lanes | 1 | 4
+4 | 2017-09-25 | Imperial Lanes | 1 | 4
+5 | 2017-10-02 | Sports World Lanes | 1 | 4
+6 | 2017-10-09 | Totem Lanes | 1 | 4
+7 | 2017-10-16 | Acapulco Lanes | 1 | 4
+8 | 2017-10-23 | Red Rooster Lanes | 1 | 4
+9 | 2017-10-30 | Thunderbird Lanes | 1 | 4
+10 | 2017-11-06 | Bolero Lanes | 1 | 4
+11 | 2017-11-13 | Imperial Lanes | 1 | 5
+12 | 2017-11-20 | Sports World Lanes | 1 | 4
+13 | 2017-11-27 | Totem Lanes | 1 | 4
+14 | 2017-12-04 | Acapulco Lanes | 1 | 4
+15 | 2018-07-12 | Red Rooster Lanes | 4 | 0
+16 | 2018-07-19 | Thunderbird Lanes | 4 | 0
+17 | 2018-07-26 | Bolero Lanes | 4 | 0
+18 | 2018-08-02 | Sports World Lanes | 4 | 0
+19 | 2018-08-09 | Imperial Lanes | 4 | 0
+20 | 2018-08-16 | Totem Lanes | 4 | 0
+
+### date_format  (1 rows, 0.00s)
+len | count(*)
+10 | 20
+
+### teams  (10 rows, 0.00s)
+TeamID | TeamName | CaptainID | bowlers | captain_team
+1 | Marlins | 2 | 4 | 1
+2 | Sharks | 5 | 4 | 2
+3 | Terrapins | 12 | 4 | 3
+4 | Barracudas | 16 | 4 | 4
+5 | Dolphins | 20 | 4 | 5
+6 | Orcas | 24 | 4 | 6
+7 | Manatees | 28 | 6 | 7
+8 | Swordfish | 32 | 4 | 8
+9 | Huckleberrys | 7 | 0 | 2
+10 | Never Show Ups | 22 | 0 | 6
+
+### bowlers  (34 rows, 0.00s)
+BowlerID | BowlerLastName | BowlerFirstName | TeamID | BowlerTotalPins | BowlerGamesBowled | BowlerCurrentAverage | BowlerCurrentHcp | BowlerZip | BowlerCity
+1 | Fournier | Barbara | 1 | 5790 | 39 | 148 | 47 | 98014 | Bothell
+2 | Fournier | David | 1 | 6152 | 39 | 158 | 38 | 98014 | Bothell
+3 | Kennedy | John | 1 | 6435 | 39 | 165 | 32 | 98154 | Ballard
+4 | Sheskey | Sara | 1 | 5534 | 39 | 142 | 52 | 98011 | Seattle
+5 | Patterson | Ann | 2 | 5819 | 39 | 149 | 46 | 98002 | Auburn
+6 | Patterson | Neil | 2 | 6150 | 39 | 158 | 38 | 98002 | Auburn
+7 | Viescas | David | 2 | 6607 | 39 | 169 | 28 | 98052 | Redmond
+8 | Viescas | Stephanie | 2 | 5558 | 39 | 143 | 51 | 98052 | Redmond
+9 | Black | Alastair | 3 | 5874 | 39 | 151 | 44 | 98105 | Seattle
+10 | Cunningham | David | 3 | 6184 | 39 | 159 | 37 | 98052 | Redmond
+11 | Kennedy | Angel | 3 | 6372 | 39 | 163 | 33 | 98154 | Ballard
+12 | Viescas | Carol | 3 | 5560 | 39 | 143 | 51 | 98004 | Bellevue
+13 | Hallmark | Elizabeth | 4 | 5928 | 39 | 152 | 43 | 98072 | Woodinville
+14 | Hallmark | Gary | 4 | 6116 | 39 | 157 | 39 | 98072 | Woodinville
+15 | Patterson | Kathryn | 4 | 6313 | 39 | 162 | 34 | 98002 | Auburn
+16 | Sheskey | Richard | 4 | 5549 | 39 | 142 | 52 | 98011 | Seattle
+17 | Hernandez | Kendra | 5 | 5854 | 39 | 150 | 45 | 98033 | Kirkland
+18 | Hernandez | Michael | 5 | 6125 | 39 | 157 | 39 | 98033 | Kirkland
+19 | Viescas | John | 5 | 6581 | 39 | 169 | 28 | 98052 | Redmond
+20 | Viescas | Suzanne | 5 | 5589 | 39 | 143 | 51 | 98052 | Redmond
+21 | Ehrlich | Zachary | 6 | 5767 | 39 | 148 | 47 | 98122 | Seattle
+22 | Hallmark | Alaina | 6 | 6147 | 39 | 158 | 38 | 98072 | Woodinville
+23 | Viescas | Caleb | 6 | 6422 | 39 | 165 | 32 | 98052 | Redmond
+24 | Thompson | Sarah | 6 | 6589 | 39 | 169 | 28 | 98019 | Duvall
+25 | Patterson | Megan | 7 | 5843 | 39 | 150 | 45 | 98002 | Auburn
+26 | Thompson | Mary | 7 | 6137 | 39 | 157 | 39 | 98019 | Duvall
+27 | Thompson | William | 7 | 6532 | 39 | 167 | 30 | 98019 | Duvall
+28 | Viescas | Michael | 7 | 5575 | 39 | 143 | 51 | 98052 | Redmond
+29 | Hallmark | Bailey | 8 | 5848 | 39 | 150 | 45 | 98072 | Woodinville
+30 | Patterson | Rachel | 8 | 6126 | 39 | 157 | 39 | 98002 | Auburn
+31 | Clothier | Ben | 8 | 6387 | 39 | 164 | 32 | 98033 | Kirkland
+32 | Rosales | Joe | 8 | 5525 | 39 | 142 | 52 | 98404 | Tacoma
+33 | Patterson | Kerry | 7 | 0 | 0 | 0 | 0 | 98002 | Auburn
+34 | Patterson | Maria | 7 | 0 | 0 | 0 | 0 | 98002 | Auburn
+
+### matches  (57 rows, 0.00s)
+MatchID | TourneyID | Lanes | OddLaneTeamID | EvenLaneTeamID
+1 | 1 | 01-02 | 1 | 2
+2 | 1 | 03-04 | 3 | 4
+3 | 1 | 05-06 | 5 | 6
+4 | 1 | 07-08 | 7 | 8
+5 | 2 | 21-22 | 3 | 1
+6 | 2 | 23-24 | 4 | 2
+7 | 2 | 25-26 | 5 | 7
+8 | 2 | 27-28 | 8 | 6
+9 | 3 | 15-16 | 2 | 3
+10 | 3 | 17-18 | 1 | 4
+11 | 3 | 19-20 | 7 | 6
+12 | 3 | 21-22 | 5 | 8
+13 | 4 | 09-10 | 1 | 5
+14 | 4 | 11-12 | 2 | 6
+15 | 4 | 13-14 | 3 | 7
+16 | 4 | 15-16 | 4 | 8
+17 | 5 | 11-12 | 6 | 1
+18 | 5 | 13-14 | 5 | 2
+19 | 5 | 15-16 | 8 | 3
+20 | 5 | 17-18 | 7 | 4
+21 | 6 | 05-06 | 1 | 7
+22 | 6 | 07-08 | 3 | 5
+23 | 6 | 09-10 | 2 | 8
+24 | 6 | 11-12 | 4 | 6
+25 | 7 | 13-14 | 8 | 1
+26 | 7 | 15-16 | 7 | 2
+27 | 7 | 17-18 | 6 | 3
+28 | 7 | 19-20 | 5 | 4
+29 | 8 | 21-22 | 1 | 3
+30 | 8 | 23-24 | 2 | 4
+31 | 8 | 25-26 | 7 | 5
+32 | 8 | 27-28 | 6 | 8
+33 | 9 | 15-16 | 3 | 2
+34 | 9 | 17-18 | 4 | 1
+35 | 9 | 19-20 | 6 | 7
+36 | 9 | 21-22 | 8 | 5
+37 | 10 | 09-10 | 5 | 1
+38 | 10 | 11-12 | 6 | 2
+39 | 10 | 13-14 | 7 | 3
+40 | 10 | 15-16 | 8 | 4
+41 | 11 | 11-12 | 1 | 6
+42 | 11 | 13-14 | 2 | 5
+43 | 11 | 15-16 | 3 | 8
+44 | 11 | 17-18 | 4 | 7
+45 | 12 | 05-06 | 7 | 1
+46 | 12 | 07-08 | 5 | 3
+47 | 12 | 09-10 | 8 | 2
+48 | 12 | 11-12 | 6 | 4
+49 | 13 | 13-14 | 1 | 8
+50 | 13 | 15-16 | 2 | 7
+51 | 13 | 17-18 | 3 | 6
+52 | 13 | 19-20 | 4 | 5
+53 | 14 | 01-02 | 2 | 1
+54 | 14 | 03-04 | 4 | 3
+55 | 14 | 05-06 | 6 | 5
+56 | 14 | 07-08 | 8 | 7
+57 | 11 | 19-20 | 10 | 9
+
+### match_57  (1 rows, 0.00s)
+MatchID | TourneyID | Lanes | OddLaneTeamID | EvenLaneTeamID | games | scores
+57 | 11 | 19-20 | 10 | 9 | 0 | 0
+

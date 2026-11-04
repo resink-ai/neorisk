@@ -1,0 +1,200 @@
+### row_counts  (8 rows, 0.00s)
+t | count(*)
+player | 468
+team | 12
+match | 567
+player_match | 12495
+ball_by_ball | 134703
+batsman_scored | 131259
+wicket_taken | 6618
+extra_runs | 7349
+
+### team_rows  (12 rows, 0.00s)
+team_id | name
+2 | Royal Challengers Bangalore
+3 | Chennai Super Kings
+4 | Kings XI Punjab
+5 | Rajasthan Royals
+6 | Delhi Daredevils
+7 | Mumbai Indians
+8 | Deccan Chargers
+9 | Kochi Tuskers Kerala
+10 | Pune Warriors
+11 | Sunrisers Hyderabad
+12 | Rising Pune Supergiants
+13 | Gujarat Lions
+
+### team_ids_used_not_in_team  (1 rows, 0.01s)
+x | count(*)
+1 | 16703
+
+### player_id_gaps  (1 rows, 0.00s)
+i
+35
+
+### player_ids_used_not_in_player  (6 rows, 0.03s)
+src | count(*)
+pm | 124
+striker | 1312
+non_striker | 1386
+bowler | 1727
+player_out | 67
+motm | 7
+
+### match_ids_not_in_match  (5 rows, 0.01s)
+src | match_id | count(*)
+bbb | 419136 | 250
+bs | 419136 | 242
+wt | 419136 | 13
+er | 419136 | 15
+pm | 419136 | 22
+
+### orphan_match_detail  (2 rows, 0.00s)
+innings_no | team_batting | team_bowling | balls | min(over_id) | max(over_id)
+1 | 6 | 1 | 124 | 1 | 20
+2 | 1 | 6 | 126 | 1 | 20
+
+### matches_per_season  (9 rows, 0.00s)
+season_id | count(*) | min(match_date) | max(match_date)
+1 | 58 | 2008-04-18 | 2008-06-01
+2 | 56 | 2009-04-18 | 2009-05-24
+3 | 58 | 2010-03-12 | 2010-04-25
+4 | 72 | 2011-04-08 | 2011-05-28
+5 | 74 | 2012-04-04 | 2012-05-27
+6 | 74 | 2013-04-03 | 2013-05-26
+7 | 59 | 2014-04-16 | 2014-06-01
+8 | 56 | 2015-04-08 | 2015-05-24
+9 | 60 | 2016-04-09 | 2016-05-29
+
+### cats_match  (5 rows, 0.00s)
+c | v | count(*)
+toss_decision | bat | 258
+toss_decision | field | 309
+win_type | runs | 260
+win_type | wickets | 307
+outcome_type | Result | 567
+
+### cats_player  (27 rows, 0.00s)
+c | v | count(*)
+batting_hand | Left-hand bat | 125
+batting_hand | Right-hand bat | 343
+bowling_skill | Left-arm fast | 3
+bowling_skill | Left-arm fast-medium | 13
+bowling_skill | Left-arm medium | 11
+bowling_skill | Left-arm medium-fast | 8
+bowling_skill | Legbreak | 24
+bowling_skill | Legbreak googly | 21
+bowling_skill | Right-arm bowler | 1
+bowling_skill | Right-arm fast | 20
+bowling_skill | Right-arm fast-medium | 53
+bowling_skill | Right-arm medium | 147
+bowling_skill | Right-arm medium-fast | 38
+bowling_skill | Right-arm offbreak | 81
+bowling_skill | Slow left-arm chinaman | 5
+bowling_skill | Slow left-arm orthodox | 43
+country | Australia | 72
+country | Bangladesh | 5
+country | England | 14
+country | India | 261
+country | Netherlands | 1
+country | New Zealand | 22
+country | Pakistan | 13
+country | South Africa | 39
+country | Sri Lanka | 20
+country | West Indies | 19
+country | Zimbabwea | 2
+
+### cats_role  (4 rows, 0.00s)
+role | count(*)
+Captain | 888
+CaptainKeeper | 247
+Keeper | 889
+Player | 10471
+
+### cats_kind_out  (9 rows, 0.00s)
+kind_out | count(*)
+caught | 3894
+bowled | 1234
+run out | 677
+lbw | 393
+stumped | 219
+caught and bowled | 184
+retired hurt | 8
+hit wicket | 8
+obstructing the field | 1
+
+### cats_extra  (19 rows, 0.00s)
+extra_type | extra_runs | count(*)
+byes | 1 | 256
+byes | 2 | 26
+byes | 3 | 2
+byes | 4 | 89
+legbyes | 1 | 2009
+legbyes | 2 | 112
+legbyes | 3 | 13
+legbyes | 4 | 180
+legbyes | 5 | 3
+noballs | 1 | 553
+noballs | 2 | 7
+noballs | 3 | 1
+noballs | 5 | 6
+penalty | 5 | 1
+wides | 1 | 3681
+wides | 2 | 190
+wides | 3 | 34
+wides | 4 | 4
+wides | 5 | 182
+
+### runs_dist  (7 rows, 0.01s)
+runs_scored | count(*)
+0 | 51688
+1 | 49427
+2 | 8687
+3 | 466
+4 | 15212
+5 | 41
+6 | 5738
+
+### date_formats  (2 rows, 0.00s)
+c | n | ok | valid
+match_date | 567 | 567 | 567
+dob | 468 | 468 | 468
+
+### rowid_order  (4 rows, 0.11s)
+t | sum(o)
+match | 0
+player | 0
+bbb_by_key | 0
+match_id_vs_date | 16
+
+### match_id_date_inversions  (16 rows, 0.00s)
+match_id | match_date | pid | pd | season_id
+336008 | 2008-05-03 | 336007 | 2008-05-25 | 1
+336018 | 2008-05-10 | 336017 | 2008-05-28 | 1
+336025 | 2008-05-15 | 336024 | 2008-05-28 | 1
+336039 | 2008-05-03 | 336038 | 2008-05-24 | 1
+419133 | 2010-03-25 | 419132 | 2010-03-27 | 3
+548327 | 2012-04-14 | 548326 | 2012-04-19 | 5
+548335 | 2012-04-19 | 548334 | 2012-05-10 | 5
+598034 | 2013-04-24 | 598033 | 2013-05-16 | 6
+598051 | 2013-05-05 | 598050 | 2013-05-14 | 6
+598053 | 2013-04-09 | 598052 | 2013-05-05 | 6
+598064 | 2013-04-23 | 598063 | 2013-05-12 | 6
+598067 | 2013-05-14 | 598066 | 2013-05-15 | 6
+598069 | 2013-05-06 | 598068 | 2013-05-15 | 6
+598073 | 2013-05-18 | 598072 | 2013-05-19 | 6
+829730 | 2015-04-15 | 829728 | 2015-04-30 | 8
+829770 | 2015-04-28 | 829766 | 2015-05-07 | 8
+
+### matches_per_day  (2 rows, 0.00s)
+n | days
+1 | 239
+2 | 164
+
+### country_typo  (1 rows, 0.00s)
+country_name | count(*)
+Zimbabwea | 2
+
+### dup_player_names  (0 rows, 0.00s)
+player_name | count(*)
+

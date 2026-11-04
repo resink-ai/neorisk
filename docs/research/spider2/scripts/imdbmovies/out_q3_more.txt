@@ -1,0 +1,125 @@
+### dob_formats  (4 rows, 0.00s)
+fmt | n
+NULL | 13431
+YYYY | 904
+YYYY-MM-DD | 11399
+other | 1
+
+### dob_other_samples  (1 rows, 0.00s)
+date_of_birth | count(*)
+October 29 | 1
+
+### dob_invalid_dates  (1 rows, 0.00s)
+count(*)
+0
+
+### dob_late  (24 rows, 0.00s)
+id | name | date_of_birth
+nm3897067 | Teo Briones | 2005-01-11
+nm3993221 | Ella Anderson | 2005-03-26
+nm4680692 | Christian Distefano | 2005-01-11
+nm5008863 | Farrah Mackenzie | 2005-10-29
+nm5016878 | Jacob Tremblay | 2006-10-05
+nm5085683 | Mckenna Grace | 2006-06-25
+nm5177929 | Pixie Davies | 2006-12-09
+nm5242354 | Collin Dean | 2005-01-08
+nm5503448 | Jeté Laurence | 2007-07-27
+nm5693430 | Ata Berk Mutlu | 2005-06-14
+nm5840275 | Momone Shinokawa | 2006-05-16
+nm6069036 | Aybars Kartal Özson | 2008-05-18
+nm6179030 | Sage Correa | 2007-11-27
+nm6320366 | Fantine Harduin | 2005-01-23
+nm6813974 | William Stagg | 2006-09-15
+nm7195971 | Miya Cech | 2007-03-04
+nm7415871 | Noah Jupe | 2005-02-25
+nm7513400 | Alexis Neblett | 2005-02-12
+nm7814433 | Marta Timofeeva | 2009-08-08
+nm8619937 | Levi Eisenblätter | 2006
+nm8621197 | Eun-hyung Jo | 2005-03-27
+nm8630118 | Towa Araki | 2005-09-28
+nm8718993 | Laura Lavigné Bie-Olsen | 2005-07-06
+nm8748872 | Rina Endô | 2005-10-04
+
+### genre_order_desc  (1 rows, 0.01s)
+pairs | desc_alpha
+6665 | 6664
+
+### roles_actor_first  (1 rows, 0.01s)
+pairs | actor_block_first
+11858 | 8863
+
+### names_rowid_by_id_runs  (1 rows, 0.01s)
+runs
+1596
+
+### role_movies_vs_director_movies  (1 rows, 0.01s)
+role_movies | dir_movies | both_ | neither
+3757 | 3577 | 3567 | 4230
+
+### credited_movies_by_year  (3 rows, 0.00s)
+year | movies | with_roles | with_dir
+2017 | 3052 | 1461 | 1387
+2018 | 2944 | 1408 | 1342
+2019 | 2001 | 888 | 848
+
+### credited_movies_by_votes  (4 rows, 0.01s)
+band | n | with_roles | with_dir
+a <500 | 4103 | 1951 | 1855
+b 500-1999 | 2114 | 985 | 934
+c 2k-10k | 1074 | 491 | 465
+d 10k+ | 706 | 330 | 323
+
+### names_credit_coverage  (1 rows, 0.01s)
+n | role_people | directors
+25735 | 12611 | 3603
+
+### names_unused_with_known_for  (1 rows, 0.01s)
+unused | with_known_for | known_for_here
+9590 | 796 | 668
+
+### name_dups  (1 rows, 0.01s)
+count(*)
+57
+
+### erd_types  (7 rows, 0.00s)
+'ERD.'||c | t | count(*)
+ERD.Unnamed: 12 | null | 17
+ERD.Unnamed: 12 | text | 8
+ERD.Unnamed: 2 | null | 25
+ERD.Unnamed: 6 | null | 21
+ERD.Unnamed: 6 | text | 4
+ERD.Unnamed: 9 | null | 6
+ERD.Unnamed: 9 | text | 19
+
+### erd_matches_schema  (25 rows, 0.00s)
+table | column | exists_
+movie | id | 1
+movie | title | 1
+movie | year | 1
+movie | date_published | 1
+movie | duration | 1
+movie | country | 1
+movie | worlwide_gross_income | 1
+movie | languages | 1
+movie | production_company | 1
+genre | movie_id | 1
+genre | genre | 1
+director_mapping | movie_id | 1
+director_mapping | name_id | 1
+role_mapping | movie_id | 1
+role_mapping | name_id | 1
+role_mapping | category | 1
+names | id | 1
+names | name | 1
+names | height | 1
+names | date_of_birth | 1
+names | known_for_movies | 1
+ratings | movie_id | 1
+ratings | avg_rating | 1
+ratings | total_votes | 1
+ratings | median_rating | 1
+
+### erd_real_columns_nonnull  (1 rows, 0.00s)
+u2 | u3 | u4 | u5 | u7 | u8 | u10 | u11
+0 | 0 | 0 | 0 | 0 | 0 | 0 | 0
+

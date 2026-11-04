@@ -1,0 +1,138 @@
+### matches_ref_text_shape  (1 rows, 0.11s)
+bad_winner | bad_loser | bad_mt | bad_title
+0 | 0 | 0 | 0
+
+### fk_orphans  (9 rows, 0.31s)
+fk | orphans
+Matches.card_id | 0
+Matches.winner_id | 0
+Matches.loser_id | 0
+Matches.match_type_id | 0
+Matches.title_id | 0
+Cards.table_id | 0
+Cards.location_id | 0
+Cards.promotion_id | 0
+Cards.event_id | 0
+
+### unused_parents  (8 rows, 12.12s)
+what | n
+Cards without matches | 1
+Tables without cards | 0
+Locations unused | 13
+Events unused | 13
+Promotions unused | 1
+Wrestlers unused | 0
+Belts unused | 0
+Match_Types unused | 0
+
+### fp_card_counter  (4 rows, 7.79s)
+t | n | eq | lt | gt
+Promotions | 6 | 5 | 0 | 0
+Locations | 609 | 580 | 16 | 0
+Events | 5033 | 5016 | 4 | 0
+Tables | 1270 | 1259 | 11 | 0
+
+### fp_match_counter  (3 rows, 0.38s)
+t | count(*) | eq | sum(x.id < mn) | sum(x.id > mn)
+Belts | 143 | 143 | 0 | 0
+Match_Types | 1208 | 1208 | 0 | 0
+Wrestlers | 17182 | 17182 | 0 | 0
+
+### fp_card_counter_misses  (11 rows, 0.42s)
+t | id | mn | url
+Tables | 380 | 381 | http://www.profightdb.com/cards/wwf-cards-pg16-no-1.html?order=&type=
+Tables | 2150 | 2151 | http://www.profightdb.com/cards/wwf-cards-pg193-no-1.html?order=&type=
+Tables | 6261 | 6262 | http://www.profightdb.com/cards/wwe-cards-pg306-no-2.html?order=&type=
+Tables | 6831 | 6832 | http://www.profightdb.com/cards/wwe-cards-pg363-no-2.html?order=&type=
+Tables | 6941 | 6944 | http://www.profightdb.com/cards/wwe-cards-pg374-no-2.html?order=&type=
+Tables | 7091 | 7092 | http://www.profightdb.com/cards/wwe-cards-pg389-no-2.html?order=&type=
+Tables | 7131 | 7132 | http://www.profightdb.com/cards/wwe-cards-pg393-no-2.html?order=&type=
+Tables | 7611 | 7612 | http://www.profightdb.com/cards/wwe-cards-pg441-no-2.html?order=&type=
+Tables | 7621 | 7622 | http://www.profightdb.com/cards/wwe-cards-pg442-no-2.html?order=&type=
+Tables | 8081 | 8082 | http://www.profightdb.com/cards/wwe-cards-pg488-no-2.html?order=&type=
+Tables | 11423 | 11424 | http://www.profightdb.com/cards/nxt-cards-pg47-no-103.html?order=&type=
+
+### fp_card_counter_misses_other  (40 rows, 0.53s)
+t | id | mn | name
+Locations | 286 | 5112 | Lake Charles, Louisiana
+Locations | 348 | 7445 | Moncton, New Brunswick
+Locations | 396 | 4838 | Bangor, Maine
+Locations | 404 | 1062 | Lowell, Massachusetts
+Locations | 1736 | 2147 | Essen, North Rhine-Westphalia
+Locations | 2156 | 2320 | Brüssel, Brussels-Capital Region
+Locations | 2321 | 6223 | Rotterdam, South Holland
+Locations | 2369 | None | Fairbanks, Alaska
+Locations | 3244 | None | Thousand Palms, California
+Locations | 4307 | None | Bogota, Capital District
+Locations | 4383 | None | Stockholm, Södermanland
+Locations | 4384 | 8952 | Helsinki, Greater Helsinki
+Locations | 4896 | 5095 | Hobbs, New Mexico
+Locations | 4968 | 7090 | Valencia, Valencia
+Locations | 5059 | 7999 | Düsseldorf, North Rhine-Westphalia
+Locations | 5172 | 5596 | Madrid, Madrid
+Locations | 5283 | 7402 | Heroica Puebla de Zaragoza, Puebla
+Locations | 5300 | None | Auckland, Auckland
+Locations | 5707 | 6993 | Brisbane, Queensland
+Locations | 5842 | 7154 | Antwerp, Antwerp
+Locations | 6642 | None | Red Deer, Alberta
+Locations | 6676 | None | Trieste, Trieste
+Locations | 6907 | 7381 | Nantes, Loire
+Locations | 7091 | None | Seville, Andalusia
+Locations | 7238 | None | Tegucigalpa, Central District
+Locations | 7403 | None | San Luis Potosi, San Luis Potosi
+Locations | 8174 | None | Salzburg, Salzburg
+Locations | 10824 | None | Bad Segeberg, Schleswig-Holstein
+Locations | 10825 | None | Schwerin, Mecklenburg-Vorpommern
+Events | 2150 | None | European Spring Tour '93 - Day 9
+Events | 2153 | None | European Spring Tour '93 - Day 6
+Events | 2156 | None | European Spring Tour '93 - Day 3
+Events | 2315 | None | European Rampage Again Tour '92 - Day 6
+Events | 2321 | None | European Rampage Again Tour '92 - Day 1
+Events | 4968 | None | WWE Live: Valencia (Smackdown)
+Events | 5172 | None | WWE Live: Madrid (Smackdown)
+Events | 5175 | None | WWE Live: Barcelona (Smackdown)
+Events | 5188 | None | WWE Live: Manchester (Smackdown)
+Events | 5300 | None | WWE Live: New Zealand
+Events | 6812 | 6887 | WWE Live - Smackdown World Tour
+
+### matches_per_card_order  (1 rows, 0.08s)
+contiguous | cards | card_id_decreasing_steps
+22 | 12638 | 0
+
+### card_gap_vs_tables  (1 rows, 0.00s)
+missing_ids | after_last_card | used_by_tables | used_by_locations | used_by_events
+1792 | 87 | 11 | 29 | 17
+
+### cards_per_table  (10 rows, 0.00s)
+cards_per_table | tables
+1 | 1
+5 | 2
+7 | 5
+8 | 11
+9 | 95
+10 | 1152
+12 | 1
+16 | 1
+42 | 1
+60 | 1
+
+### table_id_vs_promo  (5 rows, 0.00s)
+name | tables | cards | min(c.id) | max(c.id) | min(event_date) | max(event_date)
+WWWF | 23 | 229 | 1 | 229 | 1963-01-25 | 1979-03-26
+WWF | 299 | 2967 | 230 | 3210 | 1979-04-30 | 2002-05-05
+WWE | 667 | 6616 | 3211 | 14344 | 2002-05-06 | 2024-01-14
+WCW | 109 | 1078 | 9876 | 10962 | 1991-01-11 | 2001-03-26
+NXT | 172 | 1749 | 10963 | 14244 | 2012-05-17 | 2024-01-13
+
+### table_page_promo_mix  (1 rows, 0.00s)
+count(*)
+0
+
+### unique_dups  (1 rows, 0.09s)
+wrestler_dup_names | wrestler_dup_lower | card_dup_url | card_dup_info
+0 | 0 | 0 | 3934
+
+### matches_self  (1 rows, 0.02s)
+winner_eq_loser
+105
+

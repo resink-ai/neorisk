@@ -1,0 +1,15 @@
+versions per problem [(3, 4), (4, 2), (5, 8), (6, 2), (7, 3), (8, 1)]
+problem types [('classification', 14), ('regression', 6)]
+eda features per run {0: 2, 0.1: 2, 0.25: 7, 0.5: 11, 0.75: 16, 0.9: 50, 1: 51}
+step-1 base models per run {0: 6, 0.1: 12, 0.25: 15, 0.5: 18, 0.75: 19, 0.9: 19, 1: 19}
+step-2 base models per run {0: 1, 0.1: 3, 0.25: 3, 0.5: 5, 0.75: 5, 0.9: 7, 1: 7}
+Stack test_score classification step 1: n=66 {0: 0.5759, 0.1: 0.7407, 0.25: 0.78, 0.5: 0.8606, 0.75: 0.9862, 0.9: 1, 1: 1}
+Stack test_score classification step 3: n=66 {0: 0.5759, 0.1: 0.6735, 0.25: 0.7758, 0.5: 0.8545, 0.75: 0.9724, 0.9: 1.0, 1: 1}
+train-test gap (base models, test>-1) classification: {0: -0.0814, 0.1: 0, 0.25: 0.0061, 0.5: 0.0361, 0.75: 0.1161, 0.9: 0.22, 1: 0.4829}
+Stack test_score regression step 1: n=35 {0: 0.7362, 0.1: 0.7419, 0.25: 0.8603, 0.5: 0.9104, 0.75: 0.9247, 0.9: 0.9793, 1: 0.9938}
+Stack test_score regression step 3: n=35 {0: 0.3963, 0.1: 0.7371, 0.25: 0.8066, 0.5: 0.8803, 0.75: 0.9224, 0.9: 0.9659, 1: 0.9758}
+train-test gap (base models, test>-1) regression: {0: -0.2204, 0.1: -0.0672, 0.25: 0.0624, 0.5: 0.0864, 0.75: 0.1525, 0.9: 0.2151, 1: 0.4868}
+Stack step-3 score, version v+1 vs v: up 36 down 35 same 10
+L1_model switches between consecutive versions: 21 of 81
+first version L1_model: Counter({'regression': 20})
+config fields changed between consecutive versions: {'nb_model': 63, 'nb_feature': 20, 'score': 20, 'test_size': 2, 'resampling': 3}

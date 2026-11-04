@@ -1,0 +1,11 @@
+collision sampling fraction estimated from parties overlap: 0.9808%; from victims: 0.9638%; from case_ids: 1.0537%
+  implied full collisions table: 9,609,183 / 9,778,650 / 8,944,259
+party sampling fraction from victims->(case,party) overlap: 1.0385%; implied full parties: 17,977,824
+collisions with >=1 sampled party: observed 1824, expected under independence 1,925
+party_age quantiles: {0.05: 18.0, 0.25: 25.0, 0.5: 36.0, 0.75: 50.0, 0.95: 69.0, 0.99: 82.0}
+victim_age quantiles (excl 999): {0.05: 4.0, 0.25: 17.0, 0.5: 27.0, 0.75: 44.0, 0.95: 68.0, 0.99: 82.0}
+vehicle_year quantiles: {0.05: 1988.0, 0.25: 1997.0, 0.5: 2002.0, 0.75: 2007.0, 0.95: 2016.0, 0.99: 2018.0}
+distance (ft) quantiles: {0.05: 0.0, 0.25: 0.0, 0.5: 100.0, 0.75: 490.0, 0.95: 2640.0, 0.99: 8923.0}
+collisions/day over 7455 days: mean 12.64 var 18.15 zero-days 1
+month mix 2001-2020: {'01': 7625, '02': 7357, '03': 7941, '04': 7522, '05': 7619, '06': 7554, '07': 7394, '08': 7653, '09': 7895, '10': 8401, '11': 7875, '12': 8118}
+matched victims degree x collision severity: [('fatal', 'killed', 6), ('fatal', 'other visible injury', 3), ('fatal', 'no injury', 3), ('fatal', 'severe injury', 1), ('other injury', 'other visible injury', 101), ('other injury', 'complaint of pain', 48), ('other injury', 'no injury', 43), ('other injury', 'suspected minor injury', 11), ('pain', 'complaint of pain', 273), ('pain', 'no injury', 106), ('pain', 'possible injury', 27), ('property damage only', 'no injury', 271)]

@@ -1,0 +1,44 @@
+### local269_avg_leaf_total  (1 rows, 0.00s)
+average_total_quantity | per_top
+946.0 | 531=864,532=720,533=960,534=1240
+
+### local270_top_items_over_500  (4 rows, 0.00s)
+container_name | item_name | total_quantity
+Pallet of L | Bottle 500cl | 864
+Pallet Mix SG | Bottle 500cl | 856
+Pallet of M | Bottle 330cl | 720
+Pallet Mix MS | Bottle 500cl | 600
+
+### local274_order421_avg_picked  (2 rows, 0.00s)
+product_id | name | picks | units | avg_units
+4280 | Hoppy Crude Oil | 3 | 110.0 | 36.666666666666664
+6520 | Der Helle Kumpel | 6 | 140.0 | 23.333333333333332
+
+### local272_order423_from_picking_line  (4 rows, 0.00s)
+product_id | warehouse | aisle | position | quantity_to_pick
+6520 | 1 | A | 16 | 22.0
+4280 | 2 | B | 3 | 30.0
+4280 | 2 | C | 20 | 30.0
+6520 | 2 | D | 9 | 18.0
+
+### local272_fifo_warehouse1  (5 rows, 0.00s)
+product_id | aisle | position | quantity_to_pick
+4280 | C | 1 | 36.0
+4280 | D | 18 | 24.0
+6520 | A | 29 | 14.0
+6520 | C | 13 | 20.0
+6520 | A | 16 | 6.0
+
+### local275_cma_ratio_over_2_all_2017  (10 rows, 0.01s)
+product_id | months_2017 | months_over_2 | min_ratio | max_ratio
+4040 | 12 | 0 | 0.099 | 1.581
+4160 | 12 | 3 | 0.0 | 5.187
+4280 | 12 | 0 | 0.0 | 1.787
+5310 | 12 | 0 | 0.833 | 1.19
+5430 | 12 | 0 | 0.644 | 1.238
+6520 | 12 | 0 | 0.419 | 1.888
+6600 | 12 | 2 | 0.0 | 2.291
+7790 | 12 | 3 | 0.065 | 2.893
+7870 | 12 | 1 | 0.346 | 2.091
+7950 | 12 | 0 | 0.478 | 1.175
+

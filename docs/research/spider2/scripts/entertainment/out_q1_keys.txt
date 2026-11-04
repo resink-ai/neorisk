@@ -1,0 +1,184 @@
+### fk_orphans  (9 rows, 0.00s)
+fk | n
+eng->customers | 0
+eng->agents | 0
+eng->entertainers | 0
+em->entertainers | 0
+em->members | 0
+es->entertainers | 0
+es->styles | 0
+mp->customers | 0
+mp->styles | 0
+
+### parents_without_children  (9 rows, 0.00s)
+k | count(*)
+customers w/o engagements | 2
+agents w/o engagements | 1
+entertainers w/o engagements | 1
+entertainers w/o styles | 0
+members w/o entertainer | 0
+styles unused by both | 5
+styles w/o entertainer | 8
+styles w/o preference | 5
+customers w/o preference | 0
+
+### unused_rows  (9 rows, 0.00s)
+k | id | nm
+customer | 10008 | Gehring
+customer | 10011 | Bonnicksen
+agent | 9 | Dumbwit
+entertainer | 1009 | Katherine Ehrlich
+style unused | 2 | 50's Music
+style unused | 9 | Rap
+style unused | 12 | Elvis
+style unused | 16 | Karaoke
+style unused | 25 | 90's Music
+
+### engagement_number_gaps  (1 rows, 0.00s)
+min(EngagementNumber) | max(EngagementNumber) | count(*) | missing
+2 | 131 | 111 | 19
+
+### missing_numbers  (1 rows, 0.00s)
+group_concat(x)
+1,18,20,25,29,33,39,40,47,50,54,57,65,67,86,93,94,113,117,130
+
+### pref_seq_shape  (15 rows, 0.00s)
+CustomerID | n | group_concat(PreferenceSeq||':'||StyleID)
+10001 | 2 | 2:10,1:22
+10002 | 2 | 1:3,2:8
+10003 | 2 | 2:17,1:19
+10004 | 2 | 1:15,2:21
+10005 | 2 | 2:7,1:14
+10006 | 2 | 2:13,1:23
+10007 | 3 | 2:4,1:8,3:19
+10008 | 2 | 1:10,2:21
+10009 | 3 | 2:6,1:11,3:18
+10010 | 3 | 2:15,1:19,3:24
+10011 | 3 | 2:1,3:7,1:21
+10012 | 2 | 2:10,1:20
+10013 | 2 | 1:15,2:24
+10014 | 3 | 3:5,2:18,1:22
+10015 | 3 | 3:1,2:20,1:21
+
+### pref_seq_unique_per_customer  (1 rows, 0.00s)
+count(*)
+0
+
+### style_strength_shape  (13 rows, 0.00s)
+EntertainerID | n | group_concat(StyleStrength||':'||StyleID)
+1001 | 3 | 2:10,1:20,3:21
+1002 | 3 | 2:17,1:19,3:23
+1003 | 2 | 1:3,2:8
+1004 | 1 | 1:13
+1005 | 3 | 3:15,1:19,2:24
+1006 | 3 | 3:22,1:23,2:24
+1007 | 2 | 2:6,1:11
+1008 | 2 | 2:3,1:6
+1009 | 3 | 2:7,1:14,3:21
+1010 | 3 | 2:4,3:21,1:22
+1011 | 3 | 2:7,1:14,3:20
+1012 | 2 | 2:7,1:13
+1013 | 2 | 2:10,1:15
+
+### strength_unique_per_entertainer  (1 rows, 0.00s)
+count(*)
+0
+
+### members_status  (2 rows, 0.00s)
+Status | count(*)
+1 | 27
+2 | 13
+
+### members_per_entertainer  (13 rows, 0.00s)
+EntertainerID | EntStageName | members | status2 | group_concat(m.MemberID)
+1001 | Carol Peacock Trio | 3 | 1 | 106,107,118
+1002 | Topazz | 2 | 1 | 120,121
+1003 | JV & the Deep Six | 6 | 1 | 102,103,104,109,117,119
+1004 | Jim Glynn | 1 | 1 | 125
+1005 | Jazz Persuasion | 3 | 1 | 116,120,121
+1006 | Modern Dance | 4 | 1 | 104,113,118,120
+1007 | Coldwater Cattle Company | 5 | 1 | 101,102,105,107,110
+1008 | Country Feeling | 5 | 1 | 103,105,111,114,115
+1009 | Katherine Ehrlich | 1 | 1 | 121
+1010 | Saturday Revue | 4 | 1 | 108,112,123,124
+1011 | Julia Schnebly | 1 | 1 | 122
+1012 | Susan McLain | 1 | 1 | 123
+1013 | Caroline Coie Cuartet | 4 | 1 | 112,114,117,124
+
+### members_in_many  (13 rows, 0.00s)
+MemberID | count(*)
+102 | 2
+103 | 2
+104 | 2
+105 | 2
+107 | 2
+112 | 2
+114 | 2
+117 | 2
+118 | 2
+120 | 3
+121 | 3
+123 | 2
+124 | 2
+
+### agents  (9 rows, 0.00s)
+AgentID | AgtFirstName | AgtLastName | DateHired | Salary | CommissionRate | cr17
+1 | William | Thompson | 1997-05-15 | 35000 | 0.04 | 0.04
+2 | Scott | Bishop | 1998-02-05 | 27000 | 0.04 | 0.04
+3 | Carol | Viescas | 1997-11-19 | 30000 | 0.05 | 0.05
+4 | Karen | Smith | 1998-03-05 | 22000 | 0.055 | 0.055
+5 | Marianne | Wier | 1998-02-02 | 24500 | 0.045 | 0.045
+6 | John | Kennedy | 1997-05-15 | 33000 | 0.06 | 0.06
+7 | Caleb | Viescas | 1998-02-16 | 22100 | 0.035 | 0.035
+8 | Maria | Patterson | 1997-09-03 | 30000 | 0.04 | 0.04
+9 | Daffy | Dumbwit | 2000-02-05 | 50 | 0.01 | 0.01
+
+### entertainers  (13 rows, 0.00s)
+EntertainerID | EntStageName | DateEntered | EntWebPage | EntEMailAddress | EntZipCode
+1001 | Carol Peacock Trio | 1997-05-24 | www.cptrio.com | carolp@cptrio.com | 98052
+1002 | Topazz | 1996-02-14 | www.topazz.com | None | 98002
+1003 | JV & the Deep Six | 1998-03-18 | www.jvd6.com | jv@myspring.com | 98052
+1004 | Jim Glynn | 1996-04-01 | None | None | 98009
+1005 | Jazz Persuasion | 1997-05-12 | www.jazzper.com | None | 98005
+1006 | Modern Dance | 1995-05-16 | www.moderndance.com | mikeh@moderndance.com | 98072
+1007 | Coldwater Cattle Company | 1995-11-30 | www.coldwatercows.com | None | 98105
+1008 | Country Feeling | 1996-02-28 | None | None | 98125
+1009 | Katherine Ehrlich | 1998-09-13 | None | ke@mzo.com | 98072
+1010 | Saturday Revue | 1995-01-20 | www.satrevue.com | edz@coolness.com | 98125
+1011 | Julia Schnebly | 1996-04-12 | None | None | 99837
+1012 | Susan McLain | 1998-10-12 | www.greensleeves.com | susan@gs.com | 98006
+1013 | Caroline Coie Cuartet | 1997-07-11 | None | carolinec@willow.com | 98002
+
+### members  (25 rows, 0.00s)
+MemberID | MbrFirstName | MbrLastName | MbrPhoneNumber | Gender
+101 | David | Hamilton | 555-2701 | M
+102 | Suzanne | Viescas | 555-2686 | F
+103 | Gary | Hallmark | 555-2676 | M
+104 | Jeffrey | Smith | 555-2596 | M
+105 | Robert | Brown | 555-2491 | M
+106 | Mariya | Sergienko | 555-2526 | F
+107 | Sara | Sheskey | 555-2566 | F
+108 | Rachel | Patterson | 555-2546 | F
+109 | David | Viescas | 555-2661 | M
+110 | Manuela | Seidel | 555-2641 | F
+111 | Kathryn | Patterson | 555-2651 | F
+112 | Kendra | Bonnicksen | 555-2716 | F
+113 | Steve | Pundt | 555-9938 | M
+114 | George | Chavez | 555-9930 | M
+115 | Joe | Rosales III | 555-2281 | M
+116 | Angel | Kennedy | 555-2311 | M
+117 | Luke | Patterson | 555-2316 | M
+118 | Janice | Galvin | 555-2691 | F
+119 | John | Viescas | 555-2511 | M
+120 | Michael | Hernandez | 555-2711 | M
+121 | Katherine | Ehrlich | 555-0399 | F
+122 | Julia | Schnebly | 555-9936 | F
+123 | Susan | McLain | 555-2301 | F
+124 | Caroline | Coie | 555-2306 | F
+125 | Jim | Glynn | 555-2531 | None
+
+### people_overlap  (2 rows, 0.00s)
+k | count(*)
+cust=member phone | 2
+cust=member name | 0
+

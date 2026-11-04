@@ -1,0 +1,53 @@
+### cabremi_case  (1 rows, 0.00s)
+player_id | name_first | name_last
+cabremi01 | Miguel | Cabrera
+
+### cabremi_vote  (14 rows, 0.00s)
+award_id | year | league_id | player_id | points_won | points_max | votes_first
+MVP | 2003 | NL | cabremi01 | 3 | 448 | 0
+Rookie of the Year | 2003 | NL | cabremi01 | 3 | 160 | 0
+MVP | 2004 | NL | cabremi01 | 5 | 448 | 0
+MVP | 2005 | NL | Cabremi01 | 146 | 448 | 0
+MVP | 2006 | NL | cabremi01 | 170 | 448 | 0
+MVP | 2007 | NL | cabremi01 | 18 | 448 | 0
+MVP | 2008 | AL | cabremi01 | 17 | 392 | 0
+MVP | 2009 | AL | cabremi01 | 171 | 392 | 1
+MVP | 2010 | AL | cabremi01 | 262 | 392 | 5
+MVP | 2011 | AL | cabremi01 | 193 | 392 | 2
+MVP | 2012 | AL | cabremi01 | 362 | 392 | 22
+MVP | 2013 | AL | cabremi01 | 385 | 420 | 23
+MVP | 2014 | AL | cabremi01 | 82 | 420 | 0
+MVP | 2015 | AL | cabremi01 | 40 | 420 | 0
+
+### orphan_ids_distinct  (1 rows, 0.04s)
+count(distinct pid)
+12
+
+### johnsbi01  (1 rows, 0.00s)
+player_id | birth_year | birth_month | birth_day | death_year | debut | final_game | name_first | name_last
+johnsbi01 | 1961 | 9 | 28 | 1942 | 1884-06-27 | 1892-04-27 | Lefty | Johnson
+
+### leblawa01_era  (3 rows, 0.00s)
+player_id | year | ipouts | er | era | baopp
+leblawa01 | 2014 | '' | 4 | '' | ''
+leblawa01 | 2014 | 3 | 2 | 18 | 0.5
+leblawa01 | 2014 | 86 | 7 | 2.2 | 0.179
+
+### notes_ss  (1 rows, 0.00s)
+player_id | award_id | year | league_id | tie | notes
+rodrial01 | Hank Aaron Award | 2002 | AL | '' | Ss
+
+### manager_rank_empty  (1 rows, 0.00s)
+player_id | year | team_id | league_id | inseason | g | w | l | rank | plyr_mgr
+yostne01 | 2012 | KCA | AL | 1 | 162 | 72 | 90 | '' | N
+
+### home_game_park_years  (3 rows, 0.00s)
+park_id | min(year) | max(year)
+BAL01 | 1871 | 1871
+BOS01 | 1871 | 1887
+CHI01 | 1871 | 1871
+
+### unused_park  (1 rows, 0.00s)
+park_id | park_name | park_alias | city | state | country
+FOR02 | Swinney Park | '' | Fort Wayne | IN | US
+

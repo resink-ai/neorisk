@@ -1,0 +1,60 @@
+## ball_by_ball  rows=134703
+match_id: types[integer:134703] null=0 empty=0 ws=0 backslashN=0 distinct=568 min=335987 max=981024
+over_id: types[integer:134703] null=0 empty=0 ws=0 backslashN=0 distinct=20 min=1 max=20
+ball_id: types[integer:134703] null=0 empty=0 ws=0 backslashN=0 distinct=9 min=1 max=9
+innings_no: types[integer:134703] null=0 empty=0 ws=0 backslashN=0 distinct=2 min=1 max=2
+team_batting: types[integer:134703] null=0 empty=0 ws=0 backslashN=0 distinct=13 min=1 max=13
+team_bowling: types[integer:134703] null=0 empty=0 ws=0 backslashN=0 distinct=13 min=1 max=13
+striker_batting_position: types[integer:134703] null=0 empty=0 ws=0 backslashN=0 distinct=11 min=1 max=11
+striker: types[integer:134703] null=0 empty=0 ws=0 backslashN=0 distinct=434 min=1 max=434
+non_striker: types[integer:134703] null=0 empty=0 ws=0 backslashN=0 distinct=429 min=1 max=451
+bowler: types[integer:134703] null=0 empty=0 ws=0 backslashN=0 distinct=330 min=1 max=465
+## batsman_scored  rows=131259
+match_id: types[integer:131259] null=0 empty=0 ws=0 backslashN=0 distinct=568 min=335987 max=981024
+over_id: types[integer:131259] null=0 empty=0 ws=0 backslashN=0 distinct=20 min=1 max=20
+ball_id: types[integer:131259] null=0 empty=0 ws=0 backslashN=0 distinct=9 min=1 max=9
+runs_scored: types[integer:131259] null=0 empty=0 ws=0 backslashN=0 distinct=7 min=0 max=6
+innings_no: types[integer:131259] null=0 empty=0 ws=0 backslashN=0 distinct=2 min=1 max=2
+## extra_runs  rows=7349
+match_id: types[integer:7349] null=0 empty=0 ws=0 backslashN=0 distinct=568 min=335987 max=981024
+over_id: types[integer:7349] null=0 empty=0 ws=0 backslashN=0 distinct=20 min=1 max=20
+ball_id: types[integer:7349] null=0 empty=0 ws=0 backslashN=0 distinct=9 min=1 max=9
+extra_type: types[text:7349] null=0 empty=0 ws=0 backslashN=0 distinct=5 min='byes' max='wides'
+extra_runs: types[integer:7349] null=0 empty=0 ws=0 backslashN=0 distinct=5 min=1 max=5
+innings_no: types[integer:7349] null=0 empty=0 ws=0 backslashN=0 distinct=2 min=1 max=2
+## match  rows=567
+match_id: types[integer:567] null=0 empty=0 ws=0 backslashN=0 distinct=567 min=335987 max=981024
+team_1: types[integer:567] null=0 empty=0 ws=0 backslashN=0 distinct=13 min=1 max=13
+team_2: types[integer:567] null=0 empty=0 ws=0 backslashN=0 distinct=13 min=1 max=13
+match_date: types[text:567] null=0 empty=0 ws=0 backslashN=0 distinct=403 min='2008-04-18' max='2016-05-29'
+season_id: types[integer:567] null=0 empty=0 ws=0 backslashN=0 distinct=9 min=1 max=9
+venue: types[text:567] null=0 empty=0 ws=0 backslashN=0 distinct=35 min='Barabati Stadium' max='Wankhede Stadium'
+toss_winner: types[integer:567] null=0 empty=0 ws=0 backslashN=0 distinct=13 min=1 max=13
+toss_decision: types[text:567] null=0 empty=0 ws=0 backslashN=0 distinct=2 min='bat' max='field'
+win_type: types[text:567] null=0 empty=0 ws=0 backslashN=0 distinct=2 min='runs' max='wickets'
+win_margin: types[integer:567] null=0 empty=0 ws=0 backslashN=0 distinct=81 min=1 max=144
+outcome_type: types[text:567] null=0 empty=0 ws=0 backslashN=0 distinct=1 min='Result' max='Result'
+match_winner: types[integer:567] null=0 empty=0 ws=0 backslashN=0 distinct=13 min=1 max=13
+man_of_the_match: types[integer:567] null=0 empty=0 ws=0 backslashN=0 distinct=186 min=1 max=460
+## player  rows=468
+player_id: types[integer:468] null=0 empty=0 ws=0 backslashN=0 distinct=468 min=1 max=469
+player_name: types[text:468] null=0 empty=0 ws=0 backslashN=0 distinct=468 min='A Ashish Reddy' max='Z Khan'
+dob: types[text:468] null=0 empty=0 ws=0 backslashN=0 distinct=454 min='1969-06-30' max='1998-07-18'
+batting_hand: types[text:468] null=0 empty=0 ws=0 backslashN=0 distinct=2 min='Left-hand bat' max='Right-hand bat'
+bowling_skill: types[text:468] null=0 empty=0 ws=0 backslashN=0 distinct=14 min='Left-arm fast' max='Slow left-arm orthodox'
+country_name: types[text:468] null=0 empty=0 ws=0 backslashN=0 distinct=11 min='Australia' max='Zimbabwea'
+## player_match  rows=12495
+match_id: types[integer:12495] null=0 empty=0 ws=0 backslashN=0 distinct=568 min=335987 max=981024
+player_id: types[integer:12495] null=0 empty=0 ws=0 backslashN=0 distinct=468 min=1 max=469
+role: types[text:12495] null=0 empty=0 ws=0 backslashN=0 distinct=4 min='Captain' max='Player'
+team_id: types[integer:12495] null=0 empty=0 ws=0 backslashN=0 distinct=13 min=1 max=13
+## team  rows=12
+team_id: types[integer:12] null=0 empty=0 ws=0 backslashN=0 distinct=12 min=2 max=13
+name: types[text:12] null=0 empty=0 ws=0 backslashN=0 distinct=12 min='Chennai Super Kings' max='Sunrisers Hyderabad'
+## wicket_taken  rows=6618
+match_id: types[integer:6618] null=0 empty=0 ws=0 backslashN=0 distinct=568 min=335987 max=981024
+over_id: types[integer:6618] null=0 empty=0 ws=0 backslashN=0 distinct=20 min=1 max=20
+ball_id: types[integer:6618] null=0 empty=0 ws=0 backslashN=0 distinct=9 min=1 max=9
+player_out: types[integer:6618] null=0 empty=0 ws=0 backslashN=0 distinct=411 min=1 max=438
+kind_out: types[text:6618] null=0 empty=0 ws=0 backslashN=0 distinct=9 min='bowled' max='stumped'
+innings_no: types[integer:6618] null=0 empty=0 ws=0 backslashN=0 distinct=2 min=1 max=2

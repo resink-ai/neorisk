@@ -1,0 +1,120 @@
+### row_counts  (4 rows, 0.00s)
+'collisions' | count(*)
+collisions | 94243
+case_ids | 94243
+parties | 186692
+victims | 96393
+
+### collisions_case_id_unique  (1 rows, 0.01s)
+count(*) | count(distinct case_id)
+94243 | 94243
+
+### case_ids_dup  (1 rows, 0.05s)
+case_id | printf('%.0f', case_id) | db_year | count(*)
+1.9420110081630351e+18 | 1942011008163035136 | 2018 | 2
+
+### case_ids_exact_dup_rows  (1 rows, 0.03s)
+count(*)
+1
+
+### parties_case_in_collisions  (1 rows, 0.02s)
+n | matched
+186692 | 1831
+
+### victims_case_in_collisions  (1 rows, 0.01s)
+n | matched
+96393 | 929
+
+### case_ids_in_collisions  (1 rows, 0.01s)
+n | matched
+94243 | 993
+
+### collisions_in_case_ids  (1 rows, 0.01s)
+n | matched
+94243 | 993
+
+### collisions_with_parties  (1 rows, 0.02s)
+n | with_party | with_victim
+94243 | 1824 | 918
+
+### victims_case_in_parties  (1 rows, 0.04s)
+n | matched_case | matched_party
+96393 | 2122 | 1001
+
+### parties_id_dups  (1 rows, 0.01s)
+dup_ids | rows_in_dups
+834 | 1668
+
+### parties_id_dup_identical  (1 rows, 0.19s)
+groups | identical
+834 | 0
+
+### parties_full_dup_rows  (1 rows, 0.71s)
+count(*) - (select count(*) from (select distinct * from parties))
+0
+
+### victims_id_dups  (1 rows, 0.00s)
+dup_ids | rows_in_dups
+499 | 998
+
+### victims_full_dup_rows  (1 rows, 0.19s)
+count(*) - (select count(*) from (select distinct * from victims))
+0
+
+### parties_case_party_unique  (1 rows, 0.09s)
+count(*) | count(distinct printf('%.0f', case_id)||'/'||party_number)
+186692 | 186691
+
+### parties_dup_id_examples  (6 rows, 0.00s)
+id | case_id | party_number | party_type | at_fault | party_sex | party_age | party_sobriety | party_drug_physical | direction_of_travel | party_safety_equipment_1 | party_safety_equipment_2 | financial_responsibility | hazardous_materials | cellphone_in_use | cellphone_use_type | school_bus_related | oaf_violation_code | oaf_violation_category | oaf_violation_section | oaf_violation_suffix | other_associate_factor_1 | other_associate_factor_2 | party_number_killed | party_number_injured | movement_preceding_collision | vehicle_year | vehicle_make | statewide_vehicle_type | chp_vehicle_type_towing | chp_vehicle_type_towed | party_race
+2222 | 4007883.0 | 1 | driver | 1 | male | 20.0 | had not been drinking | None | west | not required | lap belt used | no proof of insurance obtained | None | 0.0 | cellphone not in use | None | None | None | None | None | none apparent | None | 0 | 0 | other unsafe turning | 1968.0 | mercury | passenger car | passenger car, station | 00 | white
+2222 | 1202.0 | 3 | driver | 0 | male | 30.0 | had not been drinking | None | south | lap/shoulder harness used | None | proof of insurance obtained | None | None | no cellphone/unknown | None | None | None | None | None | none apparent | None | 0 | 1 | stopped | 1994.0 | acura | passenger car | None | None | hispanic
+13492 | 3565677.0 | 2 | driver | 0 | female | 37.0 | had not been drinking | None | south | air bag not deployed | lap/shoulder harness used | proof of insurance obtained | None | 0.0 | cellphone not in use | None | None | None | None | None | none apparent | None | 0 | 0 | proceeding straight | 2001.0 | volvo | passenger car | passenger car, station | 00 | white
+13492 | 7496.0 | 1 | driver | 1 | female | 18.0 | had not been drinking | None | east | lap/shoulder harness used | None | proof of insurance obtained | None | 0.0 | cellphone not in use | None | None | None | None | None | none apparent | None | 0 | 0 | proceeding straight | 1990.0 | buick | passenger car | None | None | hispanic
+25447 | 4054282.0 | 1 | driver | 1 | None | None | impairment unknown | G | south | None | None | None | None | None | None | None | None | hit and run | 20002.0 | A | violation | inattention | 0 | 0 | making left turn | None | None | None | None | 00 | None
+25447 | 14096.0 | 1 | driver | 1 | None | None | impairment unknown | G | north | None | None | None | None | None | no cellphone/unknown | None | None | None | None | None | none apparent | None | 0 | 0 | making right turn | 1984.0 | datsun | passenger car | None | None | None
+
+### victims_dup_id_examples  (6 rows, 0.00s)
+id | case_id | party_number | victim_role | victim_sex | victim_age | victim_degree_of_injury | victim_seating_position | victim_safety_equipment_1 | victim_safety_equipment_2 | victim_ejected
+576 | 544.0 | 1 | passenger | None | None | no injury | passenger seat 3 | lap/shoulder harness used | None | not ejected
+576 | 3522190.0 | 2 | passenger | female | 4.0 | no injury | station wagon rear | not required | none in vehicle | not ejected
+1665 | 3526275.0 | 1 | driver | female | 58.0 | severe injury | driver | lap/shoulder harness used | None | not ejected
+1665 | 4015255.0 | 2 | driver | female | 38.0 | killed | driver | air bag deployed | lap/shoulder harness used | not ejected
+1714 | 3526328.0 | 1 | passenger | female | 21.0 | other visible injury | passenger seat 4 | air bag deployed | lap/shoulder harness used | not ejected
+1714 | 4015884.0 | 1 | passenger | female | 50.0 | no injury | passenger seat 3 | air bag not deployed | lap/shoulder harness used | not ejected
+
+### case_ids_db_year_vs_collision_year  (21 rows, 0.02s)
+db_year | y | count(*)
+2018 | 2001 | 64
+2018 | 2002 | 59
+2018 | 2003 | 66
+2018 | 2004 | 59
+2018 | 2005 | 57
+2018 | 2006 | 50
+2018 | 2007 | 45
+2020 | 2008 | 44
+2021 | 2009 | 36
+2021 | 2010 | 46
+2021 | 2011 | 49
+2021 | 2012 | 46
+2021 | 2013 | 50
+2021 | 2014 | 42
+2021 | 2015 | 51
+2021 | 2016 | 42
+2021 | 2017 | 47
+2021 | 2018 | 43
+2021 | 2019 | 46
+2021 | 2020 | 36
+2021 | 2021 | 15
+
+### rowid_order  (4 rows, 0.16s)
+'collisions' | sum(a.case_id > b.case_id) | sum(a.case_id < b.case_id)
+collisions | 47065 | 47177
+parties.id | 93316 | 93375
+victims.id | 48037 | 48355
+case_ids | 47231 | 47011
+
+### collisions_date_order  (1 rows, 0.02s)
+sum(a.collision_date > b.collision_date) | sum(a.collision_date < b.collision_date)
+47042 | 47189
+

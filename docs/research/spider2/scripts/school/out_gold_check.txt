@@ -1,0 +1,1 @@
+local130: mine 18 rows, gold 18 rows, equal as multiset: True

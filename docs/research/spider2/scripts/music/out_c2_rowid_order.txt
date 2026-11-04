@@ -1,0 +1,16 @@
+Artist         same rowid order: True   same rowids: True
+Album          same rowid order: True   same rowids: True
+Genre          same rowid order: True   same rowids: True
+MediaType      same rowid order: True   same rowids: True
+Track          same rowid order: True   same rowids: True
+Playlist       same rowid order: True   same rowids: True
+PlaylistTrack  same rowid order: True   same rowids: True
+Employee       same rowid order: True   same rowids: True
+Customer       same rowid order: True   same rowids: True
+Invoice        same rowid order: True   same rowids: True
+InvoiceLine    same rowid order: True   same rowids: True
+music sqlite_* tables: ['sqlite_autoindex_PlaylistTrack_1']
+chinook sqlite_* tables: ['sqlite_sequence', 'sqlite_autoindex_playlist_track_1', 'sqlite_stat1']
+music indexes: 21  chinook indexes: 10
+music DDL has AUTOINCREMENT: False
+chinook DDL has AUTOINCREMENT: True

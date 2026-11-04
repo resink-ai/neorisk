@@ -1,0 +1,213 @@
+### event_date_format  (1 rows, 0.01s)
+len | iso | count(*) | invalid | noncanonical | min(event_date) | max(event_date)
+10 | 1 | 12639 | 0 | 0 | 1963-01-25 | 2024-01-14
+
+### card_id_vs_date_within_promo  (5 rows, 0.01s)
+name | date_desc_steps | date_asc_steps | same_day
+NXT | 1179 | 0 | 535
+WCW | 910 | 0 | 167
+WWE | 3712 | 0 | 2846
+WWF | 1538 | 0 | 1428
+WWWF | 226 | 0 | 2
+
+### late_batches  (7 rows, 0.01s)
+grp | name | count(*) | min(c.id) | max(c.id) | min(event_date) | max(event_date)
+regular | NXT | 1715 | 10963 | 12681 | 2012-05-17 | 2023-10-31
+regular | WCW | 1078 | 9876 | 10962 | 1991-01-11 | 2001-03-26
+regular | WWE | 6559 | 3211 | 9875 | 2002-05-06 | 2023-11-04
+regular | WWF | 2967 | 230 | 3210 | 1979-04-30 | 2002-05-05
+regular | WWWF | 229 | 1 | 229 | 1963-01-25 | 1979-03-26
+late | NXT | 34 | 13382 | 14244 | 2023-10-17 | 2024-01-13
+late | WWE | 57 | 13412 | 14344 | 2023-11-04 | 2024-01-14
+
+### regular_max_date_by_promo  (5 rows, 0.00s)
+name | max(event_date)
+NXT | 2023-10-31
+WCW | 2001-03-26
+WWE | 2023-11-04
+WWF | 2002-05-05
+WWWF | 1979-03-26
+
+### card_without_matches  (1 rows, 7.93s)
+id | table_id | promotion_id | event_date | event_id | url | length(match_html)
+2475 | 2470 | 230 | 1991-05-17 | 258 | http://www.profightdb.com/cards/wwf/wwf-live-42222.html | 323
+
+### same_date_cards  (7 rows, 0.01s)
+cards_on_same_date_and_promo | count(*)
+1 | 3763
+2 | 2956
+3 | 717
+4 | 163
+5 | 21
+6 | 8
+8 | 1
+
+### events_reuse  (20 rows, 0.00s)
+cards_per_event_name | events
+1 | 4837
+2 | 44
+3 | 21
+4 | 16
+5 | 4
+6 | 5
+7 | 8
+8 | 3
+9 | 5
+10 | 3
+11 | 10
+12 | 3
+13 | 2
+14 | 3
+15 | 2
+16 | 2
+17 | 2
+18 | 2
+19 | 3
+20 | 2
+
+### events_top  (15 rows, 0.00s)
+name | count(*)
+Monday Night Raw | 1337
+Smackdown! Taping | 789
+Main Event Taping | 524
+WWE Live | 463
+WWF Live | 349
+Nitro | 277
+Monday Night Raw Taping | 229
+WCW Live | 187
+Friday Night Smackdown | 186
+ECW Taping | 180
+WWE Live (Smackdown) | 171
+WWE Live (Raw) | 169
+Superstars Taping #1 | 160
+Superstars Taping | 158
+Smackdown Live | 157
+
+### locations_top  (10 rows, 0.00s)
+name | count(*)
+Orlando, Florida | 695
+New York, New York | 482
+Winter Park, Florida | 404
+Tampa, Florida | 249
+Philadelphia, Pennsylvania | 170
+Chicago, Illinois | 157
+Atlanta, Georgia | 146
+Boston, Massachusetts | 124
+Houston, Texas | 121
+Cleveland, Ohio | 120
+
+### win_type_mix  (25 rows, 0.12s)
+wt | rows
+'def. (pin)' | 296999
+'def.' | 156912
+'def. (sub)' | 32851
+'def. (DQ)' | 30018
+'draw (NC)' | 9793
+'def. (CO)' | 6469
+'draw (DCO)' | 1950
+'draw (time)' | 1377
+'draw (DDQ)' | 1218
+'draw' | 1029
+'def. (TKO)' | 616
+'def. (KO)' | 406
+'vs.' | 315
+'def. (forfeit)' | 245
+'draw (curfew)' | 161
+'(pin)' | 161
+'draw (DPin)' | 98
+'draw (DTKO)' | 56
+'' | 28
+'def.draw (time)' | 21
+'(sub)' | 21
+'(DQ)' | 21
+'draw (points)' | 14
+'def.draw (NC)' | 14
+'def.draw (DCO)' | 7
+
+### duration_format  (2 rows, 0.11s)
+shape | count(*) | min(duration) | max(duration)
+MM:SS | 202848 | 00:02 | 81:00
+empty | 337952 | '' | ''
+
+### duration_other  (0 rows, 0.02s)
+quote(duration) | count(*)
+
+### duration_seconds_range  (1 rows, 0.06s)
+min(s) | max(s) | bad_seconds
+2 | 4860 | 0
+
+### title_change_mix  (4 rows, 0.10s)
+title_change | no_title | count(*)
+0 | 0 | 67881
+0 | 1 | 462147
+1 | 0 | 10709
+1 | 1 | 63
+
+### belts_title_change_names  (0 rows, 0.00s)
+id | name
+
+### belts_sample  (12 rows, 0.00s)
+id | name
+1 | ''
+9 | WWWF World Heavyweight Title
+10 | WWWF International Tag Team Titles
+14 | WWWF Junior Heavyweight Title
+31 | WWWF Martial Arts Title
+68 | WWWF Womens Title
+631 | AWA World Heavyweight Championship
+660 | NWA Womens Title
+1106 | WWWF United States Tag Team Titles
+1428 | Ring Ka King Heavyweight Championship
+1452 | WWWF United States Title
+1625 | WWF Cruiserweight Title
+
+### match_types_top  (15 rows, 0.16s)
+quote(t.name) | count(*)
+'' | 435973
+'dark' | 19974
+'6-person tag' | 17633
+'handicap tag' | 5993
+'triple-threat' | 3649
+'street fight' | 3183
+'"hardcore"' | 2989
+'8-person tag' | 2637
+'3-way Match' | 2233
+'no disqualification' | 2205
+'steel cage' | 2176
+'Battle Royal' | 1624
+'fatal 4-way' | 1393
+'three-way' | 1244
+'Gauntlet' | 1169
+
+### winner_eq_loser  (5 rows, 0.02s)
+id | quote(w.name) | win_type | count(*)
+4631 | '' | def. (pin) | 70
+1324 | 'Unknown Male Wrestler' | def. (pin) | 14
+1324 | 'Unknown Male Wrestler' | draw (NC) | 7
+4631 | '' | def. (sub) | 7
+4631 | '' | draw (NC) | 7
+
+### empty_wrestler_use  (1 rows, 0.03s)
+as_winner | as_loser
+84 | 98
+
+### wrestler_names_tags  (1 rows, 0.00s)
+amp | comma | paren | count(*)
+12952 | 0 | 13 | 17182
+
+### wrestler_names_long  (5 rows, 0.00s)
+id | name
+129102 | Alex Wright & Arn Anderson & Big Bubba Rogers & Big Train Bart & Bobby Eaton & Bobby Walker & Booker T. & Brian Knobbs & Brian Pillman & Buddy Lee Parker & Bunkhouse Buck & Chris Benoit & Chris Kanyon & Cobra & Dave Sullivan & Diamond Dallas Page & Dick Slater & Disco Inferno & Eddy Guerrero & Fidel Sierra & Hugh Morrus & Hulk Hogan & James Earl Wright & Jerry Sags & Jim Duggan & Joey Maggs & Johnny B. Badd & Kensuke Sasaki & Kevin Sullivan & Kurasawa & Lex Luger & Lord Steven Regal & Marcus Bagwell & Mark Starr & Maxx Muscle & Meng & Mike Winner & Mr. JL & One Man Gang & Paul Orndorff & Pez Whatley & Ric Flair & Ricky Santana & Road Warrior Hawk & Scott Armstrong & Scott Norton & Scotty Riggs & Sgt. Craig Pittman & Shark & Squire David Taylor & Steve Armstrong & Stevie Ray & Sting & Super Assassin #1 & Super Assassin #2 & The Giant & The Yeti & V. K. Wallstreet & Zodiac
+125236 | Alex Wright & Barry Darsow & Bobby Blaze & Booker T. & Brad Armstrong & Chavo Guerrero Jr. & Chris Adams & Chris Benoit & Chris Jericho & Ciclope & Curt Hennig & Damien & Dean Malenko & Diamond Dallas Page & Disco Inferno & Eddy Guerrero & El Dandy & Ernest Miller & Fit Finlay & Glacier & Greg Valentine & Hector Garza & Hollywood Hogan & Hugh Morrus & Jim Duggan & John Nord & Johnny Grunge & Jr. & Jr. & Juventud Guerrera & Kendall Windham & La Parka & Lex Luger & Lizmark & Lord Steven Regal & Louie Spicolli & Marcus Bagwell & Meng & Mortis & Norman Smiley & Prince Iaukea & Randy Savage & Ray Traylor & Rey Misterio & Rick Steiner & Rocco Rock & Scott Steiner & Silver King & Squire David Taylor & Steve McMichael & Stevie Ray & Super Calo & The Barbarian & The Giant & The Renegade & Ultimo Dragon & Villano IV & Villano V & Vincent & Wrath & Yuji Nagata
+127408 | Alex Wright & Arn Anderson & Big Bubba & Bobby Eaton & Booker T. & Bunkhouse Buck & Chris Benoit & Chris Jericho & Ciclope & David Taylor & Dean Malenko & Diamond Dallas Page & Disco Inferno & Eddy Guerrero & Galaxy & Hugh Morrus & Ice Train & Jack Boot & Jacques Rougeau & Jeff Jarrett & Jim Duggan & Jim Powers & Jimmy Graffiti & Joe Gomez & Johnny Grunge & Jr. & Juventud Guerrera & Kenny Kaos & Kevin Nash & Kevin Sullivan & Konnan & La Parka & Lex Luger & Lord Steven Regal & Marcus Bagwell & Mark Starr & Meng & Michael Wallstreet & Mike Enos & Mr. JL & Pez Whatley & Pierre Ouellette & Prince Iaukea & Rey Misterio & Rick Steiner & Roadblock & Robbie Rage & Ron Studd & Scott Hall & Scott Norton & Scotty Riggs & Sgt. Craig Pittman & Steve McMichael & Stevie Ray & Syxx & The Barbarian & The Renegade & Tony Rumble & Ultimate Dragon & Villano IV
+122188 | Alex Wright & Barry Darsow & Barry Horowitz & Bobby Blaze & Bobby Duncum & Bobby Eaton & Booker T. & Buddy Lee Parker & Chavo Guerrero Jr. & Chip Minton & Chris Adams & Chris Benoit & Chris Jericho & Ciclope & Damien & Dean Malenko & Disco Inferno & Eddy Guerrero & El Dandy & Ernest Miller & Glacier & Hammer & Hector Garza & Horace Hogan & Johnny Swinger & Jr. & Jr. & Jr. & Juventud Guerrera & Kanyon & Kaz Hayashi & Kendall Windham & Kenny Kaos & Kidman & Konnan & La Parka & Lenny Lane & Lex Luger & Lizmark & Lodi & Mike Enos & Norman Smiley & Perry Saturn & Prince Iaukea & Psicosis & Rey Misterio & Scott Hall & Scott Norton & Scott Putski & Scott Steiner & Scotty Riggs & Silver King & Steve McMichael & Stevie Ray & Super Calo & The Disciple & The Giant & The Renegade & Tokyo Magnum & Villano V & Vincent & Wrath
+56324 | Apollo Crews & Babatunde & Baron Corbin & Big Cass & Big E & Bo Dallas & Bobby Lashley & Bobby Roode & Chad Gable & Chris Jericho & Curt Hawkins & Curtis Axel & Dan Matha & Daniel Bryan & Dash Wilder & Dolph Ziggler & Drew Gulak & Elias & Fandango & Goldust & Heath Slater & Hiroki Sumi & Hornswoggle & Karl Anderson & Kevin Owens & Kofi Kingston & Konnor & Kurt Angle & Luke Gallows & Mark Henry & Mike Kanellis & Mojo Rawley & Primo & Randy Orton & Rey Mysterio & Rhyno & Roderick Strong & Scott Dawson & Shane McMahon & Shelton Benjamin & Sin Cara & The Great Khali & Titus O'Neil & Tony Nese & Tucker Knight & Tye Dillinger & Tyler Breeze & Viktor & Xavier Woods
+
+### promotion_by_belt_prefix  (5 rows, 0.04s)
+promo | nxt_belts | count(*)
+NXT | 8669 | 9103
+WCW | 0 | 7602
+WWE | 691 | 44665
+WWF | 0 | 15442
+WWWF | 0 | 1778
+

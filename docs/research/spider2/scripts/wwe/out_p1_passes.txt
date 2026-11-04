@@ -1,0 +1,63 @@
+rows 540800 runs 88131
+cards 12638
+blocks per card: [(1, 22), (2, 7), (3, 21), (4, 16), (5, 11), (6, 14), (7, 12547)]
+cards whose blocks are all identical: 12638
+non-identical cards (card, block sizes) first 20: []
+cards whose blocks are equal as multisets: 12638
+pass: first_id last_id runs rows
+1 1 540800 12638 77567
+2 76998 540647 12616 77414
+3 154076 540591 12609 77358
+4 231220 540475 12588 77242
+5 308462 540377 12572 77144
+6 385820 540311 12561 77078
+7 463234 540230 12547 76997
+pass-number decreases along id order: 21
+rows in first block of each card: 77567
+duplicate payload rows inside a first block: 21
+pass 1 cards 12638 order inversions vs pass 1: 0
+pass 2 cards 12616 order inversions vs pass 1: 0
+pass 3 cards 12609 order inversions vs pass 1: 0
+pass 4 cards 12588 order inversions vs pass 1: 0
+pass 5 cards 12572 order inversions vs pass 1: 0
+pass 6 cards 12561 order inversions vs pass 1: 0
+pass 7 cards 12547 order inversions vs pass 1: 0
+first pass-number decrease at run 25094 id 153995
+pass 1 run idx range 0 88130 contiguous? False
+pass 2 run idx range 12547 88108 contiguous? False
+pass 3 run idx range 25108 88101 contiguous? False
+pass 4 run idx range 37680 88080 contiguous? False
+pass 5 run idx range 50268 88064 contiguous? False
+pass 6 run idx range 62877 88053 contiguous? False
+pass 7 run idx range 75493 88039 contiguous? True
+tail runs (idx, card, pass, lo, hi, n):
+cards with < 7 blocks: 91 card id range 13382 14344
+segments (late_card?, pass) n_runs first_id last_id:
+(False, 1) 12547 1 76997
+(False, 2) 12547 76998 153994
+(True, 1) 14 153995 154075
+(False, 3) 12547 154076 231072
+(True, 2) 14 231073 231153
+(True, 1) 11 231154 231219
+(False, 4) 12547 231220 308216
+(True, 3) 14 308217 308297
+(True, 2) 11 308298 308363
+(True, 1) 16 308364 308461
+(False, 5) 12547 308462 385458
+(True, 4) 14 385459 385539
+(True, 3) 11 385540 385605
+(True, 2) 16 385606 385703
+(True, 1) 21 385704 385819
+(False, 6) 12547 385820 462816
+(True, 5) 14 462817 462897
+(True, 4) 11 462898 462963
+(True, 3) 16 462964 463061
+(True, 2) 21 463062 463177
+(True, 1) 7 463178 463233
+(False, 7) 12547 463234 540230
+(True, 6) 14 540231 540311
+(True, 5) 11 540312 540377
+(True, 4) 16 540378 540475
+(True, 3) 21 540476 540591
+(True, 2) 7 540592 540647
+(True, 1) 22 540648 540800

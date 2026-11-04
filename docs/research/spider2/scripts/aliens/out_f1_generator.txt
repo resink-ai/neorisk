@@ -1,0 +1,17 @@
+emails: 50000; local part ends with base36(id-1): 50000; equals lower(initial+last letters)+base36(id-1): 50000
+  non-matching examples: []
+distinct email domains 500; top [('nature.com', 133), ('vinaora.com', 129), ('usatoday.com', 126), ('joomla.org', 124), ('examiner.com', 121)]
+type: 5 values, min 9931 max 10124 (mean 10000.0); [('Flatwoods', 10124), ('Nordic', 10033), ('Reptile', 9964), ('Green', 9948), ('Grey', 9931)]
+gender: 8 values, min 784 max 22730 (mean 6250.0); [('Female', 22730), ('Male', 22323), ('Bigender', 856), ('Non-binary', 848), ('Polygender', 847), ('Agender', 828), ('Genderqueer', 784), ('Genderfluid', 784)]
+feeding_frequency: 8 values, min 6077 max 6490 (mean 6250.0); [('Once', 6490), ('Weekly', 6300), ('Never', 6290), ('Daily', 6283), ('Seldom', 6201), ('Yearly', 6192), ('Often', 6167), ('Monthly', 6077)]
+aggressive: 2 values, min 24947 max 25053 (mean 25000.0); [(0, 25053), (1, 24947)]
+state: 51 values, min 30 max 5413 (mean 980.4); [('Texas', 5413), ('California', 5410), ('Florida', 4176), ('New York', 2690), ('Ohio', 1851), ('Virginia', 1749), ('District of Columbia', 1661), ('Pennsylvania', 1590), ('Georgia', 1431), ('North Carolina', 1248)]
+occupation: 195 values, min 84 max 474 (mean 256.4); [('VP Quality Control', 474), ('Research Nurse', 474), ('Geological Engineer', 473), ('Actuary', 472), ('Graphic Designer', 471), ('Quality Control Specialist', 468), ('Paralegal', 467), ('VP Product Management', 464), ('Recruiting Manager', 464), ('Internal Auditor', 464)]
+current_location: 461 values, min 13 max 1661 (mean 108.5); [('Washington', 1661), ('Houston', 1015), ('New York City', 840), ('El Paso', 840), ('Dallas', 664), ('Atlanta', 625), ('Kansas City', 563), ('Sacramento', 542), ('Miami', 527), ('Los Angeles', 501)]
+favorite_food: 1498 values, min 16 max 54 (mean 33.4); [('Stork, european', 54), ('Deer, barasingha', 54), ('Crane, blue', 54), ('Asiatic wild ass', 54), ('White-throated monitor', 52), ('Long-nosed bandicoot', 51), ('Jacana, african', 51), ('Chickadee, black-capped', 51), ('White-faced whistling duck', 50), ('Cattle egret', 50)]
+birth_year: 301 distinct years 1672..1972; per-year count min 132 median 166 max 199
+aggressive share by type: [('Flatwoods', 0.4976, 10124), ('Green', 0.4956, 9948), ('Grey', 0.5014, 9931), ('Nordic', 0.5005, 10033), ('Reptile', 0.4996, 9964)]
+aggressive share by feeding_frequency: [('Daily', 0.4889, 6283), ('Monthly', 0.4973, 6077), ('Never', 0.5099, 6290), ('Often', 0.4951, 6167), ('Once', 0.4978, 6490), ('Seldom', 0.5006, 6201), ('Weekly', 0.5005, 6300), ('Yearly', 0.5015, 6192)]
+mean birth_year by type: [('Flatwoods', 1821.087, 10124), ('Green', 1822.9494, 9948), ('Grey', 1822.2007, 9931), ('Nordic', 1821.2385, 10033), ('Reptile', 1822.902, 9964)]
+current_location values 461, of which mapped to >1 state: 29
+  examples: [('Albany', 'New York,Georgia'), ('Alexandria', 'Virginia,Louisiana'), ('Anderson', 'South Carolina,Indiana'), ('Arlington', 'Virginia,Texas'), ('Aurora', 'Colorado,Illinois')]

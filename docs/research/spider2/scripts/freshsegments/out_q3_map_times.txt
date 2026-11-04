@@ -1,0 +1,152 @@
+### created_modified_order  (1 rows, 0.00s)
+modified_after | same | modified_before | n
+709 | 500 | 0 | 1209
+
+### created_range  (1 rows, 0.00s)
+min(created_at) | max(created_at) | min(last_modified) | max(last_modified)
+2016-05-26 14:57:59 | 2019-05-06 22:00:00 | 2016-10-28 15:50:51 | 2019-08-26 11:24:45
+
+### created_by_month  (34 rows, 0.00s)
+ym | n
+2016-05 | 154
+2016-06 | 14
+2016-08 | 6
+2016-09 | 33
+2016-10 | 3
+2017-01 | 6
+2017-02 | 33
+2017-03 | 128
+2017-04 | 5
+2017-05 | 44
+2017-06 | 12
+2017-07 | 15
+2017-08 | 4
+2017-09 | 14
+2017-10 | 28
+2017-11 | 13
+2017-12 | 5
+2018-01 | 10
+2018-02 | 19
+2018-03 | 22
+2018-04 | 18
+2018-05 | 86
+2018-06 | 56
+2018-07 | 9
+2018-08 | 65
+2018-09 | 54
+2018-10 | 89
+2018-11 | 82
+2018-12 | 29
+2019-01 | 90
+2019-02 | 37
+2019-03 | 13
+2019-04 | 12
+2019-05 | 1
+
+### modified_by_month  (28 rows, 0.00s)
+ym | n
+2016-10 | 1
+2017-01 | 2
+2017-03 | 1
+2017-05 | 5
+2017-06 | 5
+2017-07 | 2
+2017-08 | 1
+2017-10 | 1
+2017-12 | 137
+2018-01 | 2
+2018-02 | 10
+2018-03 | 12
+2018-04 | 13
+2018-05 | 434
+2018-06 | 52
+2018-07 | 11
+2018-08 | 67
+2018-09 | 58
+2018-10 | 67
+2018-11 | 47
+2018-12 | 42
+2019-01 | 153
+2019-02 | 46
+2019-03 | 18
+2019-04 | 16
+2019-05 | 1
+2019-07 | 1
+2019-08 | 4
+
+### distinct_stamps  (1 rows, 0.00s)
+created_stamps | modified_stamps
+302 | 256
+
+### top_created_stamps  (8 rows, 0.00s)
+created_at | n
+2016-05-26 14:57:59 | 154
+2017-03-27 16:59:29 | 88
+2016-09-07 16:12:46 | 33
+2018-11-16 15:15:15 | 28
+2017-05-15 13:04:55 | 15
+2019-02-06 21:00:01 | 14
+2019-02-04 22:00:00 | 14
+2019-01-25 23:00:00 | 14
+
+### first_metric_vs_created  (1 rows, 0.00s)
+first_metric_month_before_created_day | ok | n
+188 | 1014 | 1202
+
+### metric_rows_before_created  (1 rows, 0.00s)
+rows_ | ids | created_in_same_month
+188 | 188 | 188
+
+### metric_rows_before_created_month_end  (1 rows, 0.00s)
+rows_
+0
+
+### months_per_interest  (14 rows, 0.00s)
+months | interests
+1 | 13
+2 | 12
+3 | 15
+4 | 32
+5 | 38
+6 | 33
+7 | 90
+8 | 67
+9 | 95
+10 | 86
+11 | 94
+12 | 65
+13 | 82
+14 | 480
+
+### id_vs_created_order  (1 rows, 0.00s)
+pairs | nondecreasing
+1208 | 1207
+
+### id_ranges  (4 rows, 0.00s)
+b | count(*) | min(created_at) | max(created_at)
+1000-9999 | 303 | 2016-06-09 16:28:11 | 2017-08-24 15:42:48
+10000-39999 | 488 | 2017-09-12 16:34:57 | 2018-10-25 16:20:04
+<1000 | 154 | 2016-05-26 14:57:59 | 2016-05-26 14:57:59
+>=40000 | 264 | 2018-11-02 17:10:04 | 2019-05-06 22:00:00
+
+### summaries_untrimmed  (4 rows, 0.00s)
+id | s
+17271 | [People reading news on the collector car market. ]
+17452 | [Professionals reading industry news and trends on immunology at medical clinics and labs. ]
+18784 | [People and medical professionals reading family medical practice journals. ]
+44381 | [People reading about symphony music and classical music ]
+
+### map_unused  (7 rows, 0.07s)
+id | interest_name | created_at
+19598 | Doctor Who Fans | 2018-05-15 14:20:04
+35964 | eSports Enthusiasts | 2018-09-06 20:30:04
+40185 | Astronomy Enthusiasts | 2018-11-02 17:10:04
+40186 | WWE and Pro Wrestling Fans | 2018-11-02 17:10:04
+42010 | Minecraft Video Game Fans | 2018-12-11 14:15:04
+42400 | Diablo Video Game Fans | 2018-12-19 13:45:03
+47789 | Israel Trip Planners | 2019-03-14 22:00:00
+
+### non_ascii  (1 rows, 0.00s)
+count(*)
+0
+

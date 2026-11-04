@@ -1,0 +1,19 @@
+## R1: join dates x industries on company_id over raw rows (duplicates fan out), top industry by 2019-2021 count
+top|n|avg_per_year
+Fintech|179|59.666667
+## R2: distinct companies (dedup each table first), top by 2019-2021
+top|n|avg_per_year
+Fintech|173|57.666667
+## per-year counts in top industry (Fintech), raw join vs dedup
+y|raw|dedup
+2019|21|20
+2020|18|15
+2021|140|138
+## top 3 industries 2019-2021 (dedup)
+industry|count(*)
+Fintech|173
+Internet software & services|152
+E-commerce & direct-to-consumer|75
+## R3: also join companies_funding (raw rows, as the DataCamp project does)
+industry|n|avg_per_year
+Fintech|181|60.333333

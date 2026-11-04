@@ -1,0 +1,13 @@
+Agents: AgentID=int64, AgtFirstName=string, AgtLastName=string, AgtStreetAddress=string, AgtCity=string, AgtState=string, AgtZipCode=string, AgtPhoneNumber=string, DateHired=string, Salary=int64, CommissionRate=float64
+Customers: CustomerID=int64, CustFirstName=string, CustLastName=string, CustStreetAddress=string, CustCity=string, CustState=string, CustZipCode=string, CustPhoneNumber=string
+Engagements: EngagementNumber=int64, StartDate=string, EndDate=string, StartTime=string, StopTime=string, ContractPrice=int64, CustomerID=int64, AgentID=int64, EntertainerID=int64
+Entertainer_Members: EntertainerID=int64, MemberID=int64, Status=int64
+Entertainer_Styles: EntertainerID=int64, StyleID=int64, StyleStrength=int64
+Entertainers: EntertainerID=int64, EntStageName=string, EntSSN=string, EntStreetAddress=string, EntCity=string, EntState=string, EntZipCode=string, EntPhoneNumber=string, EntWebPage=string, EntEMailAddress=string, DateEntered=string
+Members: MemberID=int64, MbrFirstName=string, MbrLastName=string, MbrPhoneNumber=string, Gender=string
+Musical_Preferences: CustomerID=int64, StyleID=int64, PreferenceSeq=int64
+Musical_Styles: StyleID=int64, StyleName=string
+ztblDays: DateField=string
+ztblMonths: MonthYear=string, YearNumber=int64, MonthNumber=int64, MonthStart=string, MonthEnd=string, January=int64, February=int64, March=int64, April=int64, May=int64, June=int64, July=int64, August=int64, September=int64, October=int64, November=int64, December=int64
+ztblSkipLabels: LabelCount=int64
+ztblWeeks: WeekStart=string, WeekEnd=string

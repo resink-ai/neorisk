@@ -1,0 +1,97 @@
+## Album  rows=347
+   pk=['AlbumId']  rowid order == pk order: 347/347
+   AlbumId                  INTEGER          [integer:347] empty=0 \N=0 ws=0 distinct=347 min=1 max=347
+   Title                    NVARCHAR(160)    [text:347] empty=0 \N=0 ws=0 distinct=347 min='...And Justice For All' max='[1997] Black Light Syndrome'
+   ArtistId                 INTEGER          [integer:347] empty=0 \N=0 ws=0 distinct=204 min=1 max=275
+
+## Artist  rows=275
+   pk=['ArtistId']  rowid order == pk order: 275/275
+   ArtistId                 INTEGER          [integer:275] empty=0 \N=0 ws=0 distinct=275 min=1 max=275
+   Name                     NVARCHAR(120)    [text:275] empty=0 \N=0 ws=0 distinct=275 min='A Cor Do Som' max='Zeca Pagodinho'
+
+## Customer  rows=59
+   pk=['CustomerId']  rowid order == pk order: 59/59
+   CustomerId               INTEGER          [integer:59] empty=0 \N=0 ws=0 distinct=59 min=1 max=59
+   FirstName                NVARCHAR(40)     [text:59] empty=0 \N=0 ws=0 distinct=57 min='Aaron' max='Wyatt'
+   LastName                 NVARCHAR(20)     [text:59] empty=0 \N=0 ws=0 distinct=59 min='Almeida' max='Zimmermann'
+   Company                  NVARCHAR(80)     [null:49,text:10] empty=0 \N=0 ws=0 distinct=10 min='Apple Inc.' max='Woodstock Discos'
+   Address                  NVARCHAR(70)     [text:59] empty=0 \N=0 ws=0 distinct=59 min='1 Infinite Loop' max='Via Degli Scipioni, 43'
+   City                     NVARCHAR(40)     [text:59] empty=0 \N=0 ws=1 distinct=53 min='Amsterdam' max='Yellowknife'
+   State                    NVARCHAR(40)     [null:29,text:30] empty=0 \N=0 ws=0 distinct=25 min='AB' max='WI'
+   Country                  NVARCHAR(40)     [text:59] empty=0 \N=0 ws=0 distinct=24 min='Argentina' max='United Kingdom'
+   PostalCode               NVARCHAR(10)     [null:4,text:55] empty=0 \N=0 ws=0 distinct=55 min='00-358' max='X1A 1N6'
+   Phone                    NVARCHAR(24)     [null:1,text:58] empty=0 \N=0 ws=0 distinct=58 min='+1 (204) 452-6452' max='+91 080 22289999'
+   Fax                      NVARCHAR(24)     [null:47,text:12] empty=0 \N=0 ws=0 distinct=12 min='+1 (212) 221-4679' max='+55 (61) 3363-7855'
+   Email                    NVARCHAR(60)     [text:59] empty=0 \N=0 ws=0 distinct=59 min='aaronmitchell@yahoo.ca' max='wyatt.girard@yahoo.fr'
+   SupportRepId             INTEGER          [integer:59] empty=0 \N=0 ws=0 distinct=3 min=3 max=5
+
+## Employee  rows=8
+   pk=['EmployeeId']  rowid order == pk order: 8/8
+   EmployeeId               INTEGER          [integer:8] empty=0 \N=0 ws=0 distinct=8 min=1 max=8
+   LastName                 NVARCHAR(20)     [text:8] empty=0 \N=0 ws=0 distinct=8 min='Adams' max='Peacock'
+   FirstName                NVARCHAR(20)     [text:8] empty=0 \N=0 ws=0 distinct=8 min='Andrew' max='Steve'
+   Title                    NVARCHAR(30)     [text:8] empty=0 \N=0 ws=0 distinct=5 min='General Manager' max='Sales Support Agent'
+   ReportsTo                INTEGER          [integer:7,null:1] empty=0 \N=0 ws=0 distinct=3 min=1 max=6
+   BirthDate                DATETIME         [text:8] empty=0 \N=0 ws=0 distinct=8 min='1947-09-19 00:00:00' max='1973-08-29 00:00:00'
+   HireDate                 DATETIME         [text:8] empty=0 \N=0 ws=0 distinct=7 min='2002-04-01 00:00:00' max='2004-03-04 00:00:00'
+   Address                  NVARCHAR(70)     [text:8] empty=0 \N=0 ws=0 distinct=8 min='1111 6 Ave SW' max='923 7 ST NW'
+   City                     NVARCHAR(40)     [text:8] empty=0 \N=0 ws=0 distinct=3 min='Calgary' max='Lethbridge'
+   State                    NVARCHAR(40)     [text:8] empty=0 \N=0 ws=0 distinct=1 min='AB' max='AB'
+   Country                  NVARCHAR(40)     [text:8] empty=0 \N=0 ws=0 distinct=1 min='Canada' max='Canada'
+   PostalCode               NVARCHAR(10)     [text:8] empty=0 \N=0 ws=0 distinct=8 min='T1H 1Y8' max='T5K 2N1'
+   Phone                    NVARCHAR(24)     [text:8] empty=0 \N=0 ws=0 distinct=7 min='+1 (403) 246-9887' max='1 (780) 836-9987'
+   Fax                      NVARCHAR(24)     [text:8] empty=0 \N=0 ws=0 distinct=8 min='+1 (403) 246-9899' max='1 (780) 836-9543'
+   Email                    NVARCHAR(60)     [text:8] empty=0 \N=0 ws=0 distinct=8 min='andrew@chinookcorp.com' max='steve@chinookcorp.com'
+
+## Genre  rows=25
+   pk=['GenreId']  rowid order == pk order: 25/25
+   GenreId                  INTEGER          [integer:25] empty=0 \N=0 ws=0 distinct=25 min=1 max=25
+   Name                     NVARCHAR(120)    [text:25] empty=0 \N=0 ws=0 distinct=25 min='Alternative' max='World'
+
+## Invoice  rows=412
+   pk=['InvoiceId']  rowid order == pk order: 412/412
+   InvoiceId                INTEGER          [integer:412] empty=0 \N=0 ws=0 distinct=412 min=1 max=412
+   CustomerId               INTEGER          [integer:412] empty=0 \N=0 ws=0 distinct=59 min=1 max=59
+   InvoiceDate              DATETIME         [text:412] empty=0 \N=0 ws=0 distinct=354 min='2009-01-01 00:00:00' max='2013-12-22 00:00:00'
+   BillingAddress           NVARCHAR(70)     [text:412] empty=0 \N=0 ws=0 distinct=59 min='1 Infinite Loop' max='Via Degli Scipioni, 43'
+   BillingCity              NVARCHAR(40)     [text:412] empty=0 \N=0 ws=7 distinct=53 min='Amsterdam' max='Yellowknife'
+   BillingState             NVARCHAR(40)     [null:202,text:210] empty=0 \N=0 ws=0 distinct=25 min='AB' max='WI'
+   BillingCountry           NVARCHAR(40)     [text:412] empty=0 \N=0 ws=0 distinct=24 min='Argentina' max='United Kingdom'
+   BillingPostalCode        NVARCHAR(10)     [null:28,text:384] empty=0 \N=0 ws=0 distinct=55 min='00-358' max='X1A 1N6'
+   Total                    NUMERIC(10,2)    [real:412] empty=0 \N=0 ws=0 distinct=23 min=0.99 max=25.86
+
+## InvoiceLine  rows=2240
+   pk=['InvoiceLineId']  rowid order == pk order: 2240/2240
+   InvoiceLineId            INTEGER          [integer:2240] empty=0 \N=0 ws=0 distinct=2240 min=1 max=2240
+   InvoiceId                INTEGER          [integer:2240] empty=0 \N=0 ws=0 distinct=412 min=1 max=412
+   TrackId                  INTEGER          [integer:2240] empty=0 \N=0 ws=0 distinct=1984 min=1 max=3500
+   UnitPrice                NUMERIC(10,2)    [real:2240] empty=0 \N=0 ws=0 distinct=2 min=0.99 max=1.99
+   Quantity                 INTEGER          [integer:2240] empty=0 \N=0 ws=0 distinct=1 min=1 max=1
+
+## MediaType  rows=5
+   pk=['MediaTypeId']  rowid order == pk order: 5/5
+   MediaTypeId              INTEGER          [integer:5] empty=0 \N=0 ws=0 distinct=5 min=1 max=5
+   Name                     NVARCHAR(120)    [text:5] empty=0 \N=0 ws=0 distinct=5 min='AAC audio file' max='Purchased AAC audio file'
+
+## Playlist  rows=18
+   pk=['PlaylistId']  rowid order == pk order: 18/18
+   PlaylistId               INTEGER          [integer:18] empty=0 \N=0 ws=0 distinct=18 min=1 max=18
+   Name                     NVARCHAR(120)    [text:18] empty=0 \N=0 ws=0 distinct=14 min='90’s Music' max='TV Shows'
+
+## PlaylistTrack  rows=8715
+   pk=['PlaylistId', 'TrackId']  rowid order == pk order: 162/8715
+   PlaylistId               INTEGER          [integer:8715] empty=0 \N=0 ws=0 distinct=14 min=1 max=18
+   TrackId                  INTEGER          [integer:8715] empty=0 \N=0 ws=0 distinct=3503 min=1 max=3503
+
+## Track  rows=3503
+   pk=['TrackId']  rowid order == pk order: 3503/3503
+   TrackId                  INTEGER          [integer:3503] empty=0 \N=0 ws=0 distinct=3503 min=1 max=3503
+   Name                     NVARCHAR(200)    [text:3503] empty=0 \N=0 ws=0 distinct=3257 min='"40"' max='Último Pau-De-Arara'
+   AlbumId                  INTEGER          [integer:3503] empty=0 \N=0 ws=0 distinct=347 min=1 max=347
+   MediaTypeId              INTEGER          [integer:3503] empty=0 \N=0 ws=0 distinct=5 min=1 max=5
+   GenreId                  INTEGER          [integer:3503] empty=0 \N=0 ws=0 distinct=25 min=1 max=25
+   Composer                 NVARCHAR(220)    [null:978,text:2525] empty=0 \N=0 ws=0 distinct=852 min='A. F. Iommi, W. Ward, T. Butler, J. Osbourne' max='roger glover'
+   Milliseconds             INTEGER          [integer:3503] empty=0 \N=0 ws=0 distinct=3080 min=1071 max=5286953
+   Bytes                    INTEGER          [integer:3503] empty=0 \N=0 ws=0 distinct=3501 min=38747 max=1059546140
+   UnitPrice                NUMERIC(10,2)    [real:3503] empty=0 \N=0 ws=0 distinct=2 min=0.99 max=1.99
+

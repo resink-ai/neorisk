@@ -1,0 +1,18 @@
+null row index: [30439]
+blocks A,B,C sizes: 30439 6381 1464
+B rows all before C rows: True
+H1 A == first len(A) distinct cast PIDs in M_Cast order: True
+A's last PID first seen at M_Cast index 76941 movie index 3118 of 3475
+H2 B == rest-of-cast then new producers: True 6381
+H3a B == producers first-seen (new only): False 4729
+H3 B == per-movie cast+producers first-seen (new only): False 6381
+H4 B == per-movie producers+cast first-seen (new only): False 6381
+set(B) == set(H3): True B - H3: 0 H3 - B: 0
+H2 common prefix with B: 6381
+H3a common prefix with B: 0
+H3 common prefix with B: 0
+H4 common prefix with B: 0
+H5 C == distinct directors in M_Director order: True
+dup PIDs whose names differ only by the leading space: 719 of 719
+H6 Person.PID by index == firstseen(cast ++ producer, NULL kept) ++ firstseen(director): True 38285 38285
+first NULL in M_Cast at index 77014

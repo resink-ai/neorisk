@@ -1,0 +1,132 @@
+## counts
+t|n|idx_d|idx_lo|idx_hi|tid_d|tid_lo|tid_hi
+trees|690626|683788|0|683787|683788|3|722694
+t|n|zips|min(zipcode)|max(zipcode)
+income_trees|220|216|10001|11697
+## trees: idx <-> tree_id is 1:1 ?
+count(*)
+0
+count(*)
+0
+## trees duplicates: ids with >1 row, total rows, distinct full rows among them
+dup_ids|rows|max_copies
+6838|13676|2
+distinct_full_rows_of_dup_ids
+6838
+distinct_full_rows
+683788
+## where the duplicates sit physically: min rowid of first copies, rowid range of the earlier copy
+min(r1)|max(r1)|min(r2)|max(r2)
+1|6838|6854|690511
+dup_first_copy_in_rows_1_6838
+6838
+## rows 6839.. distinct idx
+count(*)|count(DISTINCT idx)
+683788|683788
+## idx = rank(tree_id)-1 ? (over distinct)
+mismatches
+683788
+## physical order of rows 6839.. by idx: ascents/descents
+asc_|desc_
+683787|0
+## storage types per column
+'tree_dbh'|typeof(tree_dbh)|count(*)
+tree_dbh|integer|690626
+stump_diam|integer|690626
+status|text|690626
+health|null|31935
+health|text|658691
+spc_latin|null|31938
+spc_latin|text|658688
+spc_common|null|31938
+spc_common|text|658688
+address|text|690626
+zipcode|integer|690626
+borocode|integer|690626
+boroname|text|690626
+nta_name|text|690626
+state|text|690626
+latitude|real|690626
+longitude|real|690626
+## empty strings per text column
+status|health|spc_latin|spc_common|address|boroname|nta_name|state
+0|0|0|0|0|0|0|0
+## income_trees storage types
+typeof(zipcode)|typeof(Estimate_Total)|typeof(Margin_of_Error_Total)|typeof(Estimate_Median_income)|typeof(Margin_of_Error_Median_income)|typeof(Estimate_Mean_income)|typeof(Margin_of_Error_Mean_income)|count(*)
+integer|integer|integer|integer|integer|integer|integer|220
+## income_trees duplicates
+dup_zips|rows
+4|8
+distinct_full_rows
+216
+rowid|zipcode|Estimate_Total|Margin_of_Error_Total|Estimate_Median_income|Margin_of_Error_Median_income|Estimate_Mean_income|Margin_of_Error_Mean_income
+15|10463|27458|478|56482|2218|80384|4046
+137|10463|27458|478|56482|2218|80384|4046
+1|11205|15198|353|47575|3834|73353|3929
+33|11205|15198|353|47575|3834|73353|3929
+2|11218|24909|371|56120|3925|78208|3788
+46|11218|24909|371|56120|3925|78208|3788
+29|11370|8809|291|53427|4549|75046|9658
+167|11370|8809|291|53427|4549|75046|9658
+## income_trees zeros / negatives
+tot0|med0|mean0|medneg|moe_neg|meanneg
+32|32|32|0|0|0
+zipcode|Estimate_Total|Margin_of_Error_Total|Estimate_Median_income|Margin_of_Error_Median_income|Estimate_Mean_income|Margin_of_Error_Mean_income
+10020|0|11|0|0|0|0
+10103|0|11|0|0|0|0
+10110|0|11|0|0|0|0
+10111|0|11|0|0|0|0
+10112|0|11|0|0|0|0
+10115|0|11|0|0|0|0
+10119|0|11|0|0|0|0
+10152|0|11|0|0|0|0
+10153|0|11|0|0|0|0
+10154|0|11|0|0|0|0
+10165|0|11|0|0|0|0
+10167|0|11|0|0|0|0
+10168|0|11|0|0|0|0
+10169|0|11|0|0|0|0
+10170|0|11|0|0|0|0
+10171|0|11|0|0|0|0
+10172|0|11|0|0|0|0
+10173|0|11|0|0|0|0
+10174|0|11|0|0|0|0
+10177|0|11|0|0|0|0
+10199|0|11|0|0|0|0
+10271|0|11|0|0|0|0
+10278|0|11|0|0|0|0
+10279|0|11|0|0|0|0
+10311|0|11|0|0|0|0
+11351|0|11|0|0|0|0
+11359|0|11|0|0|0|0
+11371|0|11|0|0|0|0
+11424|0|11|0|0|0|0
+11425|0|11|0|0|0|0
+11430|0|11|0|0|0|0
+11451|0|11|0|0|0|0
+## joins: trees.zipcode -> income_trees
+tree_zips|rows_matched|rows_unmatched|null_zip|zero_zip
+191|687628|2998|0|0
+tree_zips_unmatched
+6
+income_zips_without_trees
+31
+## trees: borocode <-> boroname 1:1 ; nta_name in one borough
+boroname|borocode|count(*)
+Manhattan|1|66089
+Bronx|2|86035
+Brooklyn|3|179089
+Queens|4|253039
+Staten Island|5|106374
+nta_multi_boro
+7
+ntas|latin|common|addresses
+188|132|132|408701
+## spc_latin <-> spc_common 1:1 ?
+count(*)
+0
+count(*)
+0
+## zipcode in more than one borough
+zips_multi_boro
+3

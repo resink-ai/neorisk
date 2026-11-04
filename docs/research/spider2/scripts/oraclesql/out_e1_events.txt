@@ -1,0 +1,88 @@
+### event_counts  (26 rows, 0.00s)
+ev | n | timing
+purchase_received | 180 | natural
+lot_stored | 113 | rule: purchase date
+monthly_sales_reported | 360 | reported: mth
+budget_set | 48 | rule: Jan 1 of mth year
+order_placed | 10 | natural
+order_line_added | 18 | natural (order time)
+picklist_created | 2 | natural
+pick_line_planned | 21 | rule: picklist created
+picker_arrived | 21 | natural
+line_picked | 21 | natural
+picker_departed | 21 | natural
+hire_period_started | 15 | natural
+hire_period_ended | 8 | natural
+page_counter_read | 120 | reported: day
+page_visited | 23 | natural
+heartbeat_received | 14 | natural
+device_counts_reported | 2 | reported: day
+demographics_reported | 2 | reported: day
+price_quoted | 15 | natural (daily close)
+customers_snapshot | 4 | rule: N
+employees_snapshot | 14 | rule: N
+products_snapshot | 2 | rule: N
+TOTAL (22 types) | 1034 | ''
+natural | 348 | ''
+reported | 484 | ''
+rule | 202 | ''
+
+### entity_counts  (12 rows, 0.00s)
+e | n
+product_groups | 4
+products (+ product_alcohol, product_minimums) | 10
+breweries | 3
+customers (+ favorites, reviews) | 4
+packaging | 11
+packaging_relations | 12
+employees | 14
+web_apps | 1
+web_pages | 4
+stock | 1
+channels_dim | 2
+gender_dim | 2
+
+### one_to_one_folds  (4 rows, 0.00s)
+k | count(*)
+products with product_alcohol | 10
+customers with favorites row | 4
+customers with reviews row | 4
+products with minimums | 2
+
+### time_ties  (5 rows, 0.00s)
+k | count(*)
+purchases same day | 0
+orders same day | 0
+visits same second | 0
+heartbeats same minute across servers | 3
+picking_log same second across lists | 0
+
+### snapshot_N  (1 rows, 0.00s)
+N
+2019-05-02
+
+### employee_created_at  (14 rows, 0.00s)
+id | first_start
+142 | 2010-07-01
+143 | 2010-07-01
+144 | 2010-07-01
+145 | 2014-02-01
+146 | 2014-10-01
+147 | 2014-10-01
+148 | None
+149 | None
+150 | None
+151 | None
+152 | None
+153 | None
+154 | None
+155 | None
+
+### subcatalog_rows  (5 rows, 0.00s)
+g | n
+brewery core | 1049
+warehouse staff and picking | 115
+web analytics | 170
+stock ticker | 16
+empty (conway, Oracle types) | 0
+

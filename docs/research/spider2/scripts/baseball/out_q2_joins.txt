@@ -1,0 +1,118 @@
+### setup_indexes (setup on in-memory copy)
+
+### player_fk_orphans  (18 rows, 0.07s)
+t | n | orphan
+all_star | 5069 | 1
+appearances | 100951 | 7
+batting | 101332 | 0
+batting_postseason | 11690 | 0
+fielding | 170526 | 0
+fielding_outfield | 12028 | 0
+fielding_postseason | 12311 | 0
+hall_of_fame | 4120 | 1
+manager | 3405 | 1
+manager_award | 177 | 1
+manager_award_vote | 414 | 0
+manager_half | 93 | 0
+pitching | 44139 | 0
+pitching_postseason | 5109 | 0
+player_award | 6078 | 0
+player_award_vote | 6795 | 1
+player_college | 17350 | 0
+salary | 25575 | 8
+
+### player_orphan_detail  (8 rows, 0.01s)
+t | player_id | count(*)
+hall_of_fame | nomohid01 | 1
+player_award_vote | Cabremi01 | 1
+salary | arrueba01 | 1
+salary | castiru02 | 2
+salary | furcara02 | 1
+salary | harriwi10 | 2
+salary | rosajo01 | 2
+manager | cammebi99 | 1
+
+### team_year_fk_orphans  (15 rows, 0.20s)
+t | n | orphan | orphan_with_league
+appearances | 100951 | 276 | 277
+batting | 101332 | 0 | 0
+pitching | 44139 | 0 | 0
+fielding | 170526 | 0 | 0
+manager | 3405 | 0 | 0
+salary | 25575 | 0 | 2
+all_star | 5069 | 8 | 8
+home_game | 2944 | 0 | 0
+team_half | 52 | 0 | 0
+manager_half | 93 | 0 | 0
+batting_postseason | 11690 | 0 | 0
+pitching_postseason | 5109 | 0 | 0
+fielding_postseason | 12311 | 0 | 0
+postseason.winner | 307 | 4 | 4
+postseason.loser | 307 | 8 | 8
+
+### team_year_orphan_detail  (5 rows, 0.00s)
+t | year | team_id | league_id | count(*)
+all_star | 1996 | TBA | AL | 1
+all_star | 2009 | TBR | AL | 1
+all_star | 2011 | ARL | NL | 1
+all_star | 2011 | BIS | AL | 1
+all_star | 2015 | SFG | NL | 4
+
+### league_mismatch_detail  (2 rows, 0.03s)
+t | year | team_id | league_id | team_league | count(*)
+salary | 2014 | CLE | NL | AL | 1
+salary | 2015 | ARI | AL | NL | 1
+
+### other_fk  (13 rows, 0.13s)
+fk | n | orphan
+team.franchise_id->team_franchise | 2805 | 0
+home_game.park_id->park | 2944 | 0
+player_college.college_id->college | 17350 | 10
+team.park->park.park_name (nonempty) | 2771 | 789
+fielding_outfield->fielding(player,year,stint,OF) | 12028 | 16
+fielding->appearances(player,year,team) | 170526 | 1101
+batting->appearances(player,year,team) | 101332 | 627
+appearances->batting(player,year,team) | 100951 | 300
+pitching->appearances | 44139 | 281
+manager_half->manager(player,year,team,inseason) | 93 | 0
+team_half->team | 52 | 0
+postseason lines->postseason(year,round,team) | 11690 | 152
+player_award_vote->player_award (same player,award,year,league) | 6795 | 6657
+
+### team_franchise_used  (1 rows, 0.00s)
+n | used
+120 | 120
+
+### park_used  (1 rows, 0.00s)
+n | used
+250 | 249
+
+### college_used  (1 rows, 0.00s)
+n | used
+1207 | 1034
+
+### team_id_functional  (8 rows, 0.00s)
+f | count(*)
+team_id -> franchise_id | 2
+team_id -> league_id | 1
+team_id -> name | 20
+team_id -> team_id_br | 2
+team_id = team_id_lahman45 rows | 2712
+team_id = team_id_retro rows | 2745
+distinct team_id | 149
+distinct franchise_id | 120
+
+### player_usage  (1 rows, 0.02s)
+n | in_appearances | in_batting | in_manager | neither | no_debut | no_debut_but_appears | no_debut_in_hof | no_debut_in_manager
+18846 | 18653 | 18659 | 695 | 70 | 193 | 3 | 64 | 123
+
+### rowid_order  (7 rows, 0.13s)
+t | player_key_breaks | year_breaks
+batting by (year? player?) | 144 | 0
+player | 0 | None
+appearances | 734 | 0
+fielding | 4151 | 0
+pitching | 1638 | 0
+salary | 2 | 0
+team | 778 | 0
+

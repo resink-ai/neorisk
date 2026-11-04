@@ -1,0 +1,120 @@
+### row_counts  (4 rows, 0.01s)
+t | n
+veg_txn_df | 878503
+veg_whsle_df | 55982
+veg_cat | 251
+veg_loss_rate_df | 251
+
+### typeof_txn  (1 rows, 1.09s)
+i | d | t | c | q | p | sr | dc | dw | n
+integer | text | text | integer | real | real | text | integer | text | 878503
+
+### typeof_whsle  (1 rows, 0.03s)
+typeof("index") | typeof(whsle_date) | typeof(item_code) | typeof("whsle_px_rmb-kg") | count(*)
+integer | text | integer | real | 55982
+
+### typeof_cat_loss  (2 rows, 0.00s)
+t | typeof("index") | typeof(item_code) | typeof(item_name) | typeof(category_code) | typeof(category_name) | count(*)
+cat | integer | integer | text | integer | text | 251
+loss | integer | integer | text | real | '' | 251
+
+### index_columns  (4 rows, 0.12s)
+t | min("index") | max("index") | count(*) | count(distinct "index") | idx_eq_rowid_minus_1
+txn | 0 | 878502 | 878503 | 878503 | 878503
+whsle | 0 | 55981 | 55982 | 55982 | 55982
+cat | 0 | 250 | 251 | 251 | 251
+loss | 0 | 250 | 251 | 251 | 251
+
+### date_formats  (2 rows, 0.31s)
+t | l | suffix | count(*) | min(txn_date) | max(txn_date)
+txn | 19 |  00:00:00 | 878503 | 2020-07-01 00:00:00 | 2023-06-30 00:00:00
+whsle | 19 |  00:00:00 | 55982 | 2020-07-01 00:00:00 | 2023-06-30 00:00:00
+
+### time_formats  (1 rows, 0.18s)
+l | count(*) | min(txn_time) | max(txn_time) | hhmmss
+8 | 878503 | 08:14:12 | 23:11:47 | 878503
+
+### subsecond_times  (1 rows, 0.03s)
+count(*)
+0
+
+### key_cat  (1 rows, 0.00s)
+n | items | names | cats | cat_names
+251 | 251 | 247 | 6 | 6
+
+### key_loss  (1 rows, 0.00s)
+n | items | names
+251 | 251 | 247
+
+### categories  (6 rows, 0.00s)
+category_code | category_name | items
+1011010101 | Flower/Leaf Vegetables | 100
+1011010201 | Cabbage | 5
+1011010402 | Aquatic Tuberous Vegetables | 19
+1011010501 | Solanum | 10
+1011010504 | Capsicum | 45
+1011010801 | Edible Mushroom | 72
+
+### loss_vs_cat_items  (1 rows, 0.00s)
+loss_not_in_cat | cat_not_in_loss | same_name | diff_name
+0 | 0 | 251 | 0
+
+### loss_name_differences  (0 rows, 0.00s)
+item_code | cat_name | loss_name
+
+### duplicate_item_names_cat  (4 rows, 0.00s)
+item_name | count(*) | group_concat(item_code)
+Apricot Bao Mushroom (Bag) | 2 | 102900011012994,102900011031599
+Broccoli | 2 | 102900051000890,102900005116714
+Chinese Cabbage | 2 | 102900005115793,102900005115960
+Chinese Caterpillar Fungus Flowers (Bag) | 2 | 102900011018095,102900011031926
+
+### row_order_cat_vs_loss  (1 rows, 0.00s)
+same_position | n
+6 | 251
+
+### cat_sorted_by  (1 rows, 0.00s)
+pairs | sorted_cat_item | sorted_item
+250 | 250 | 245
+
+### loss_sorted_by  (1 rows, 0.00s)
+pairs | sorted_item
+250 | 250
+
+### orphans  (1 rows, 3.87s)
+txn_orphans | txn_items | whsle_orphans | whsle_items | cat_never_sold | cat_never_priced
+0 | 246 | 0 | 251 | 5 | 0
+
+### whsle_key  (1 rows, 0.01s)
+n | d
+55982 | 55982
+
+### txn_dup_full_rows  (1 rows, 1.14s)
+n | d
+878503 | 873208
+
+### txn_rowid_order  (1 rows, 0.88s)
+pairs | nondecreasing | backwards
+878502 | 878502 | 0
+
+### whsle_rowid_order  (1 rows, 0.06s)
+pairs | sorted_date_item | date_nondecreasing
+55981 | 55981 | 55981
+
+### day_of_week_check  (1 rows, 0.12s)
+n | dow_ok
+878503 | 878503
+
+### sale_return_values  (2 rows, 0.15s)
+sale/return | count(*) | min("qty_sold(kg)") | max("qty_sold(kg)")
+return | 461 | -9.082 | -0.025
+sale | 878042 | 0.003 | 160.0
+
+### discount_values  (1 rows, 0.07s)
+discount(%) | count(*)
+1 | 878503
+
+### null_counts  (1 rows, 0.12s)
+txn_nulls | whsle_nulls
+0 | 0
+

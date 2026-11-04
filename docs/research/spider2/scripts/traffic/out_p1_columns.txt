@@ -1,0 +1,128 @@
+## collisions  rows=94243
+case_id [REAL] types={'real': 94243} empty=0 distinct=94243 min=11.0 max=9.870011106100015e+18 top=9.870011106100015e+18:1; 9.870010801150011e+18:1; 9.870010526083015e+18:1; 9.870010413184516e+18:1; 9.870010323204512e+18:1; 9.87001020319551e+18:1
+jurisdiction [REAL] types={'real': 94122, 'null': 121} empty=0 distinct=467 min=100.0 max=9870.0 top=1942.0:7580; 1900.0:4047; 9550.0:1638; 9675.0:1553; 9590.0:1472; 9840.0:1408
+officer_id [TEXT] types={'text': 94034, 'null': 209} empty=0 distinct=30277 min='#13193' max='`015342' top=None:209; '34426':52; '415':50; '30452':46; '288':43; '99999':41
+reporting_district [TEXT] types={'null': 55424, 'text': 38819} empty=0 distinct=6259 min="'" max='`2' top=None:55424; '0':3630; '2':651; '1':608; '3':392; '4':272
+chp_shift [TEXT] types={'text': 94243} empty=0 distinct=5 min='0600 thru 1359' max='not chp' top='not chp':50956; '1400 thru 2159':19812; '0600 thru 1359':16394; '2200 thru 0559':6799; 'chp not stated':282
+population [TEXT] types={'text': 94224, 'null': 19} empty=0 distinct=8 min='10000 to 25000' max='unincorporated' top='>250000':23436; 'unincorporated':22095; '100000 to 250000':17700; '50000 to 100000':16957; '25000 to 50000':8438; '10000 to 25000':3846
+county_city_location [INTEGER] types={'integer': 94243} empty=0 distinct=525 min=100 max=5802 top=1942:10944; 1900:3421; 3400:2015; 3711:1990; 109:1672; 4313:1463
+county_location [TEXT] types={'text': 94243} empty=0 distinct=58 min='alameda' max='yuba' top='los angeles':28653; 'orange':7229; 'san bernardino':5658; 'san diego':5296; 'riverside':5053; 'alameda':4722
+special_condition [REAL] types={'real': 89047, 'null': 5196} empty=0 distinct=2 min=0.0 max=1.0 top=0.0:88670; None:5196; 1.0:377
+beat_type [TEXT] types={'text': 94243} empty=0 distinct=5 min='chp county roadarea' max='schoolbus on city roadway' top='not chp':50956; 'chp state highway':30446; 'chp county roadarea':8124; 'chp county roadline':4479; 'schoolbus on city roadway':238
+chp_beat_type [TEXT] types={'text': 94243} empty=0 distinct=8 min='administrative' max='us highway' top='not chp':50956; 'interstate':15291; 'state route':11474; 'county road area':8133; 'county road line':4390; 'us highway':3638
+city_division_lapd [TEXT] types={'null': 88167, 'text': 6076} empty=0 distinct=18 min='A' max='R' top=None:88167; 'L':464; 'J':411; 'Q':409; 'O':401; 'G':381
+chp_beat_class [TEXT] types={'text': 94217, 'null': 26} empty=0 distinct=3 min='chp other' max='not chp' top='not chp':50956; 'chp other':36378; 'chp primary':6883; None:26
+beat_number [TEXT] types={'text': 86168, 'null': 8075} empty=0 distinct=5049 min='0 2' max='ZONE3' top=None:8075; '002':4684; '001':4682; '003':3826; '004':2859; '005':1743
+primary_road [TEXT] types={'text': 94243} empty=0 distinct=21661 min="'MISSION BL" max=']STRATFORD LN' top='RT 101':2239; 'RT 5':2175; 'RT 10':1356; 'RT 405':1063; 'RT 80':967; 'RT 99':944
+secondary_road [TEXT] types={'text': 94242, 'null': 1} empty=0 distinct=33560 min='#1 TURN THROUGH' max='\\MONTAGUE EXPWY' top='MAIN ST':370; 'RT 101':260; '4TH ST':248; 'CENTRAL AV':245; 'RT 5':235; 'BROADWAY':230
+distance [REAL] types={'real': 94243} empty=0 distinct=2121 min=0.0 max=5575680.0 top=0.0:23879; 100.0:3206; 200.0:2549; 528.0:2322; 1056.0:2310; 50.0:2101
+direction [TEXT] types={'text': 70677, 'null': 23566} empty=0 distinct=4 min='east' max='west' top=None:23566; 'south':19444; 'north':19178; 'east':16095; 'west':15960
+intersection [REAL] types={'real': 93301, 'null': 942} empty=0 distinct=2 min=0.0 max=1.0 top=0.0:71354; 1.0:21947; None:942
+weather_1 [TEXT] types={'text': 93774, 'null': 469} empty=0 distinct=7 min='clear' max='wind' top='clear':77489; 'cloudy':12330; 'raining':3301; None:469; 'fog':389; 'snowing':134
+weather_2 [TEXT] types={'null': 91616, 'text': 2627} empty=0 distinct=6 min='cloudy' max='wind' top=None:91616; 'raining':1963; 'wind':270; 'cloudy':175; 'other':83; 'snowing':70
+state_highway_indicator [REAL] types={'real': 94214, 'null': 29} empty=0 distinct=2 min=0.0 max=1.0 top=0.0:58953; 1.0:35261; None:29
+caltrans_county [TEXT] types={'null': 68771, 'text': 25472} empty=0 distinct=58 min='alameda' max='yuba' top=None:68771; 'los angeles':6545; 'orange':2309; 'san bernardino':1702; 'san diego':1684; 'riverside':1391
+caltrans_district [REAL] types={'null': 65442, 'real': 28801} empty=0 distinct=13 min=0.0 max=12.0 top=None:65442; 7.0:7147; 4.0:5082; 0.0:3329; 8.0:3093; 12.0:2312
+state_route [REAL] types={'null': 65442, 'real': 28801} empty=0 distinct=227 min=0.0 max=980.0 top=None:65442; 0.0:3329; 101.0:2503; 5.0:2300; 10.0:1438; 405.0:1103
+route_suffix [TEXT] types={'null': 92259, 'text': 1984} empty=0 distinct=3 min='B' max='U' top=None:92259; 'B':1898; 'S':60; 'U':26
+postmile_prefix [TEXT] types={'null': 85156, 'text': 9087} empty=0 distinct=10 min='B' max='T' top=None:85156; 'R':7126; 'B':1324; 'M':349; 'L':135; 'T':126
+postmile [REAL] types={'null': 65442, 'real': 28801} empty=0 distinct=8755 min=0.0 max=608.611 top=None:65442; 0.0:3348; 0.2:21; 1.88:20; 0.83:19; 0.02:19
+location_type [TEXT] types={'null': 68771, 'text': 25472} empty=0 distinct=3 min='highway' max='ramp' top=None:68771; 'highway':20125; 'ramp':3743; 'intersection':1604
+ramp_intersection [TEXT] types={'null': 84049, 'text': 10194} empty=0 distinct=8 min='highway' max='ramp exit, last 50 feet' top=None:84049; 'not state highway':3329; 'highway':1519; 'not state highway, ramp-related, within 100 feet':1337; 'intersection':1217; 'mid-ramp':1120
+side_of_highway [TEXT] types={'null': 68771, 'text': 25472} empty=0 distinct=4 min='eastbound' max='westbound' top=None:68771; 'northbound':7973; 'southbound':7925; 'westbound':4823; 'eastbound':4751
+tow_away [REAL] types={'real': 93575, 'null': 668} empty=0 distinct=2 min=0.0 max=1.0 top=1.0:47305; 0.0:46270; None:668
+collision_severity [TEXT] types={'text': 94243} empty=0 distinct=5 min='fatal' max='severe injury' top='property damage only':57175; 'pain':22565; 'other injury':11660; 'severe injury':2213; 'fatal':630
+killed_victims [REAL] types={'real': 94220, 'null': 23} empty=0 distinct=6 min=0.0 max=13.0 top=0.0:93590; 1.0:584; 2.0:34; None:23; 3.0:8; 4.0:3
+injured_victims [REAL] types={'real': 94220, 'null': 23} empty=0 distinct=16 min=0.0 max=31.0 top=0.0:57534; 1.0:26114; 2.0:7180; 3.0:2204; 4.0:750; 5.0:270
+party_count [REAL] types={'real': 94243} empty=0 distinct=10 min=1.0 max=10.0 top=2.0:64165; 1.0:17768; 3.0:9676; 4.0:2031; 5.0:443; 6.0:112
+primary_collision_factor [TEXT] types={'text': 93679, 'null': 564} empty=0 distinct=5 min='fell asleep' max='vehicle code violation' top='vehicle code violation':88339; 'unknown':2562; 'other than driver':2002; 'other improper driving':685; None:564; 'fell asleep':91
+pcf_violation_code [TEXT] types={'null': 89419, 'text': 4824} empty=0 distinct=5 min="'" max='vehicle' top=None:89419; 'vehicle':4813; 'A':5; 'city ordinance':4; 'D':1; "'":1
+pcf_violation_category [TEXT] types={'text': 92641, 'null': 1602} empty=0 distinct=23 min='automobile right of way' max='wrong side of road' top='speeding':28773; 'improper turning':16490; 'automobile right of way':11227; 'dui':6977; 'unsafe lane change':6642; 'traffic signals and signs':5108
+pcf_violation [REAL] types={'real': 87648, 'null': 6595} empty=0 distinct=193 min=0.0 max=83123.0 top=22350.0:28758; 22107.0:15423; 23152.0:6780; 21658.0:6666; None:6595; 21801.0:4569
+pcf_violation_subsection [TEXT] types={'null': 60352, 'text': 33891} empty=0 distinct=13 min='1' max='I' top=None:60352; 'A':31496; 'B':1165; '1':377; 'C':302; 'D':228
+hit_and_run [TEXT] types={'text': 94243} empty=0 distinct=3 min='felony' max='not hit and run' top='not hit and run':75820; 'misdemeanor':15810; 'felony':2613
+type_of_collision [TEXT] types={'text': 93477, 'null': 766} empty=0 distinct=8 min='broadside' max='sideswipe' top='rear end':30895; 'broadside':18510; 'sideswipe':16962; 'hit object':15334; 'head-on':4102; 'other':2647
+motor_vehicle_involved_with [TEXT] types={'text': 93743, 'null': 500} empty=0 distinct=11 min='2' max='train' top='other motor vehicle':61336; 'fixed object':14717; 'parked motor vehicle':7071; 'pedestrian':2677; 'non-collision':2605; 'bicycle':2299
+pedestrian_action [TEXT] types={'text': 94184, 'null': 59} empty=0 distinct=7 min='crossing in intersection crosswalk' max='using school bus' top='no pedestrian involved':91454; 'crossing in intersection crosswalk':1184; 'crossing not in crosswalk':770; 'in road':501; 'not in road':210; 'crossing non-intersection crosswalk':62
+road_surface [TEXT] types={'text': 93375, 'null': 868} empty=0 distinct=5 min='H' max='wet' top='dry':85050; 'wet':7790; None:868; 'snowy':430; 'slippery':103; 'H':2
+road_condition_1 [TEXT] types={'text': 93409, 'null': 834} empty=0 distinct=8 min='construction' max='reduced width' top='normal':90556; 'construction':1475; None:834; 'other':396; 'obstruction':377; 'holes':270
+road_condition_2 [TEXT] types={'null': 93870, 'text': 373} empty=0 distinct=8 min='construction' max='reduced width' top=None:93870; 'normal':173; 'reduced width':142; 'construction':24; 'other':19; 'obstruction':6
+lighting [TEXT] types={'text': 93675, 'null': 568} empty=0 distinct=5 min='dark with no street lights' max='dusk or dawn' top='daylight':62901; 'dark with street lights':19652; 'dark with no street lights':7551; 'dusk or dawn':3386; None:568; 'dark with street lights not functioning':185
+control_device [TEXT] types={'text': 93654, 'null': 589} empty=0 distinct=4 min='functioning' max='obscured' top='none':62402; 'functioning':30907; None:589; 'not functioning':282; 'obscured':63
+chp_road_type [TEXT] types={'text': 94243} empty=0 distinct=11 min='0' max='7' top='0':76425; '1':15503; '6':1137; '5':841; '0.0':147; '4':131
+pedestrian_collision [INTEGER] types={'integer': 94243} empty=0 distinct=2 min=0 max=1 top=0:91445; 1:2798
+bicycle_collision [INTEGER] types={'integer': 94243} empty=0 distinct=2 min=0 max=1 top=0:91652; 1:2591
+motorcycle_collision [INTEGER] types={'integer': 94243} empty=0 distinct=2 min=0 max=1 top=0:91447; 1:2796
+truck_collision [INTEGER] types={'integer': 94243} empty=0 distinct=2 min=0 max=1 top=0:88738; 1:5505
+not_private_property [REAL] types={'real': 94243} empty=0 distinct=1 min=1.0 max=1.0 top=1.0:94243
+alcohol_involved [REAL] types={'null': 84832, 'real': 9411} empty=0 distinct=1 min=1.0 max=1.0 top=None:84832; 1.0:9411
+statewide_vehicle_type_at_fault [TEXT] types={'text': 75333, 'null': 18910} empty=0 distinct=15 min='bicycle' max='truck or truck tractor with trailer' top='passenger car':56217; None:18910; 'pickup or panel truck':10660; 'motorcycle or scooter':1586; 'truck or truck tractor with trailer':1487; 'bicycle':1435
+chp_vehicle_type_at_fault [TEXT] types={'text': 68799, 'null': 25444} empty=0 distinct=76 min='0.0' max='youth bus' top='passenger car, station':36877; None:25444; 'pickups & panels':8951; 'sport utility vehicle':7917; 'unknown hit and run vehicle involvement':3464; 'mini-vans':2225
+severe_injury_count [INTEGER] types={'integer': 94243} empty=0 distinct=8 min=0 max=10 top=0:91919; 1:2100; 2:176; 3:31; 4:14; 10:1
+other_visible_injury_count [INTEGER] types={'integer': 94243} empty=0 distinct=10 min=0 max=20 top=0:82030; 1:10641; 2:1256; 3:227; 4:66; 5:11
+complaint_of_pain_injury_count [INTEGER] types={'integer': 94243} empty=0 distinct=11 min=0 max=20 top=0:68314; 1:18964; 2:5046; 3:1312; 4:408; 5:129
+pedestrian_killed_count [INTEGER] types={'integer': 94243} empty=0 distinct=4 min=0 max=3 top=0:94090; 1:151; 3:1; 2:1
+pedestrian_injured_count [INTEGER] types={'integer': 94243} empty=0 distinct=7 min=0 max=8 top=0:91713; 1:2419; 2:93; 3:14; 4:2; 8:1
+bicyclist_killed_count [INTEGER] types={'integer': 94243} empty=0 distinct=2 min=0 max=1 top=0:94213; 1:30
+bicyclist_injured_count [INTEGER] types={'integer': 94243} empty=0 distinct=5 min=0 max=4 top=0:91918; 1:2289; 2:34; 4:1; 3:1
+motorcyclist_killed_count [INTEGER] types={'integer': 94243} empty=0 distinct=3 min=0 max=2 top=0:94158; 1:80; 2:5
+motorcyclist_injured_count [REAL] types={'real': 94243} empty=0 distinct=5 min=0.0 max=4.0 top=0.0:92131; 1.0:1981; 2.0:120; 3.0:9; 4.0:2
+primary_ramp [TEXT] types={'null': 92543, 'text': 1700} empty=0 distinct=13 min='CN' max='westbound on-ramp' top=None:92543; 'TO':1032; 'FR':432; 'northbound off-ramp':41; 'southbound off-ramp':40; 'TR':30
+secondary_ramp [TEXT] types={'null': 93319, 'text': 924} empty=0 distinct=13 min='CN' max='westbound on-ramp' top=None:93319; 'northbound off-ramp':165; 'southbound off-ramp':162; 'northbound on-ramp':117; 'southbound on-ramp':110; 'westbound off-ramp':88
+latitude [REAL] types={'null': 67280, 'real': 26963} empty=0 distinct=24977 min=32.50558 max=41.92628 top=None:67280; 38.49347:7; 38.0:7; 33.85413:7; 34.02933:6; 33.9019:6
+longitude [REAL] types={'null': 67280, 'real': 26963} empty=0 distinct=25670 min=-124.34577 max=-114.17703 top=None:67280; -121.54347:7; -121.0:6; -117.10254:4; -117.67181:4; -117.84633:4
+collision_date [TEXT] types={'text': 94243} empty=0 distinct=7454 min='2001-01-01' max='2021-05-30' top='2005-02-11':34; '2002-12-13':34; '2002-11-08':34; '2002-11-05':31; '2004-09-24':30; '2002-12-20':30
+collision_time [TEXT] types={'text': 93439, 'null': 804} empty=0 distinct=1440 min='00:00:00' max='23:59:00' top=None:804; '16:00:00':641; '15:30:00':622; '17:00:00':612; '17:30:00':581; '18:00:00':569
+process_date [TEXT] types={'text': 94243} empty=0 distinct=5432 min='2001-04-12' max='2021-06-03' top='2015-10-19':263; '2001-05-11':197; '2001-09-28':172; '2002-02-15':150; '2002-03-15':140; '2002-03-08':140
+
+## case_ids  rows=94243
+case_id [REAL] types={'real': 94243} empty=0 distinct=94242 min=45.0 max=9.87001070215351e+18 top=1.9420110081630351e+18:2; 9.87001070215351e+18:1; 9.865011220175014e+18:1; 9.865011006204516e+18:1; 9.865010728095015e+18:1; 9.865010719034513e+18:1
+db_year [INTEGER] types={'integer': 94243} empty=0 distinct=4 min=2017 max=2021 top=2021:52813; 2018:36903; 2020:4526; 2017:1
+
+## parties  rows=186692
+id [INTEGER] types={'integer': 186692} empty=0 distinct=185858 min=34 max=16432232 top=10387857:2; 10387454:2; 10044884:2; 8903189:2; 8238028:2; 8076876:2
+case_id [REAL] types={'real': 186692} empty=0 distinct=185584 min=15.0 max=9.870011212175014e+18 top=90329532.0:3; 9.855010117093007e+18:2; 9.76501032609101e+18:2; 9.760010929132511e+18:2; 9.725010926073012e+18:2; 9.725010518073012e+18:2
+party_number [INTEGER] types={'integer': 186692} empty=0 distinct=17 min=1 max=92 top=1:94438; 2:76453; 3:12214; 4:2727; 5:601; 6:170
+party_type [TEXT] types={'text': 186261, 'null': 431} empty=0 distinct=5 min='bicyclist' max='pedestrian' top='driver':167908; 'parked vehicle':12048; 'pedestrian':3072; 'bicyclist':2613; 'other':620; None:431
+at_fault [INTEGER] types={'integer': 186692} empty=0 distinct=2 min=0 max=1 top=0:100175; 1:86517
+party_sex [TEXT] types={'text': 161655, 'null': 25037} empty=0 distinct=3 min='X' max='male' top='male':99012; 'female':62606; None:25037; 'X':37
+party_age [REAL] types={'real': 157549, 'null': 29143} empty=0 distinct=107 min=0.0 max=110.0 top=None:29143; 19.0:4972; 21.0:4797; 20.0:4729; 23.0:4652; 22.0:4616
+party_sobriety [TEXT] types={'text': 181169, 'null': 5523} empty=0 distinct=6 min='had been drinking, impairment unknown' max='not applicable' top='had not been drinking':142248; 'impairment unknown':17610; 'not applicable':11594; 'had been drinking, under influence':7065; None:5523; 'had been drinking, impairment unknown':1453
+party_drug_physical [TEXT] types={'null': 156360, 'text': 30332} empty=0 distinct=5 min='G' max='under drug influence' top=None:156360; 'G':16684; 'not applicable':11611; 'sleepy/fatigued':953; 'under drug influence':846; 'impairment - physical':238
+direction_of_travel [TEXT] types={'text': 181484, 'null': 5208} empty=0 distinct=4 min='east' max='west' top='south':48874; 'north':48686; 'west':42133; 'east':41791; None:5208
+party_safety_equipment_1 [TEXT] types={'text': 155254, 'null': 31438} empty=0 distinct=23 min='air bag deployed' max='unknown' top='air bag not deployed':84163; 'lap/shoulder harness used':31856; None:31438; 'air bag deployed':20508; 'unknown':7403; 'not required':7322
+party_safety_equipment_2 [TEXT] types={'text': 116565, 'null': 70127} empty=0 distinct=23 min='air bag deployed' max='unknown' top='lap/shoulder harness used':105052; None:70127; 'unknown':5139; 'driver, motorcycle helmet used':2030; 'lap/shoulder harness not used':872; 'lap belt used':855
+financial_responsibility [TEXT] types={'text': 171443, 'null': 15249} empty=0 distinct=4 min='no proof of insurance obtained' max='proof of insurance obtained' top='proof of insurance obtained':136626; 'not applicable':18326; 'no proof of insurance obtained':16467; None:15249; 'officer called away before obtained':24
+hazardous_materials [REAL] types={'null': 186331, 'real': 361} empty=0 distinct=1 min=1.0 max=1.0 top=None:186331; 1.0:361
+cellphone_in_use [REAL] types={'real': 129758, 'null': 56934} empty=0 distinct=2 min=0.0 max=1.0 top=0.0:127103; None:56934; 1.0:2655
+cellphone_use_type [TEXT] types={'text': 143476, 'null': 43216} empty=0 distinct=6 min='4' max='no cellphone/unknown' top='cellphone not in use':127103; None:43216; 'no cellphone/unknown':13698; 'cellphone in use (hands-free)':1391; 'cellphone in use (handheld)':846; 'cellphone in use':418
+school_bus_related [REAL] types={'null': 186163, 'real': 529} empty=0 distinct=1 min=1.0 max=1.0 top=None:186163; 1.0:529
+oaf_violation_code [TEXT] types={'null': 185889, 'text': 803} empty=0 distinct=4 min='A' max='vehicle' top=None:185889; 'vehicle':786; 'A':13; 'business and professions':3; 'city health and safety':1
+oaf_violation_category [TEXT] types={'null': 173903, 'text': 12789} empty=0 distinct=28 min='automobile right-of-way' max='wrong side of road' top=None:173903; 'unsafe speed':4276; 'improper turning':3601; 'wrong side of road':742; 'hit and run':587; 'automobile right-of-way':475
+oaf_violation_section [REAL] types={'null': 164317, 'real': 22375} empty=0 distinct=161 min=0.0 max=47207.0 top=None:164317; 0.0:9516; 22350.0:4254; 22107.0:3410; 20002.0:493; 21658.0:457
+oaf_violation_suffix [TEXT] types={'null': 182554, 'text': 4138} empty=0 distinct=16 min='0' max='I' top=None:182554; 'A':2912; '0':567; 'B':270; '1':131; 'D':101
+other_associate_factor_1 [TEXT] types={'text': 175541, 'null': 11151} empty=0 distinct=18 min='defective vehicle equipment' max='vision obscurements' top='none apparent':143967; 'violation':13545; None:11151; 'inattention':5580; 'stop and go traffic':5448; 'entering/leaving ramp':1695
+other_associate_factor_2 [TEXT] types={'null': 183158, 'text': 3534} empty=0 distinct=13 min='defective vehicle equipment' max='vision obscurements' top=None:183158; 'none apparent':1824; 'inattention':506; 'stop and go traffic':299; 'entering/leaving ramp':245; 'other':189
+party_number_killed [INTEGER] types={'integer': 186692} empty=0 distinct=5 min=0 max=6 top=0:186013; 1:632; 2:43; 3:3; 6:1
+party_number_injured [INTEGER] types={'integer': 186692} empty=0 distinct=13 min=0 max=33 top=0:142985; 1:36884; 2:5202; 3:1107; 4:355; 5:108
+movement_preceding_collision [TEXT] types={'text': 183348, 'null': 3344} empty=0 distinct=19 min='S' max='traveling wrong way' top='proceeding straight':85348; 'stopped':26150; 'making left turn':13664; 'parked':11555; 'slowing/stopping':10283; 'changing lanes':7061
+vehicle_year [REAL] types={'real': 168935, 'null': 17757} empty=0 distinct=96 min=1905.0 max=2918.0 top=None:17757; 2000.0:9968; 2001.0:9889; 2003.0:8915; 2002.0:8837; 1999.0:8301
+vehicle_make [TEXT] types={'text': 167139, 'null': 19553} empty=0 distinct=349 min='20002' max='yamaha' top='toyota':27740; 'ford':24014; 'honda':20097; None:19553; 'chevrolet':17202; 'nissan':10821
+statewide_vehicle_type [TEXT] types={'text': 165737, 'null': 20955} empty=0 distinct=15 min='bicycle' max='truck or truck tractor with trailer' top='passenger car':124944; 'pickup or panel truck':22147; None:20955; 'truck or truck tractor with trailer':3436; 'pedestrian':2999; 'motorcycle or scooter':2791
+chp_vehicle_type_towing [TEXT] types={'text': 146567, 'null': 40125} empty=0 distinct=82 min='0' max='youth bus' top='passenger car, station':79494; None:40125; 'sport utility vehicle':18262; 'pickups & panels':18035; 'mini-vans':5479; '00':4281
+chp_vehicle_type_towed [TEXT] types={'text': 95753, 'null': 90939} empty=0 distinct=50 min='0' max='utility' top=None:90939; '00':89309; 'semi':1967; '0':1605; 'utility':614; '0.0':503
+party_race [TEXT] types={'text': 142855, 'null': 43837} empty=0 distinct=5 min='asian' max='white' top='white':58995; 'hispanic':50035; None:43837; 'black':12737; 'asian':11558; 'other':9530
+
+## victims  rows=96393
+id [INTEGER] types={'integer': 96393} empty=0 distinct=95894 min=5 max=8817516 top=5028813:2; 4462075:2; 4435532:2; 4261014:2; 4060265:2; 4057858:2
+case_id [REAL] types={'real': 96393} empty=0 distinct=95458 min=26.0 max=9.87001120812451e+18 top=90238608.0:3; 8794852.0:3; 6005616.0:3; 5904878.0:3; 4990548.0:3; 4949856.0:3
+party_number [INTEGER] types={'integer': 96393} empty=0 distinct=14 min=1 max=84 top=2:45270; 1:44290; 3:5579; 4:949; 5:221; 6:48
+victim_role [TEXT] types={'text': 96392, 'null': 1} empty=0 distinct=6 min='bicyclist' max='pedestrian' top='passenger':54810; 'driver':33197; 'non-injured party':2974; 'pedestrian':2968; 'bicyclist':2344; 'other':99
+victim_sex [TEXT] types={'text': 94053, 'null': 2340} empty=0 distinct=4 min='2' max='male' top='female':47056; 'male':46995; None:2340; '4':1; '2':1
+victim_age [REAL] types={'real': 93202, 'null': 3191} empty=0 distinct=109 min=0.0 max=999.0 top=None:3191; 18.0:2982; 19.0:2980; 20.0:2763; 21.0:2721; 17.0:2587
+victim_degree_of_injury [TEXT] types={'text': 96393} empty=0 distinct=8 min='complaint of pain' max='suspected serious injury' top='no injury':42655; 'complaint of pain':33400; 'other visible injury':12932; 'possible injury':2696; 'severe injury':2215; 'suspected minor injury':1378
+victim_seating_position [TEXT] types={'text': 96209, 'null': 184} empty=0 distinct=10 min='driver' max='station wagon rear' top='driver':35067; 'passenger seat 3':28911; 'passenger seat 6':10317; 'passenger seat 4':8314; 'position unknown':5245; 'passenger seat 5':3476
+victim_safety_equipment_1 [TEXT] types={'text': 90851, 'null': 5542} empty=0 distinct=23 min='air bag deployed' max='unknown' top='air bag not deployed':35615; 'lap/shoulder harness used':18477; 'not required':15242; 'air bag deployed':14400; None:5542; 'child restraint in vehicle used':1480
+victim_safety_equipment_2 [TEXT] types={'text': 65299, 'null': 31094} empty=0 distinct=24 min='Z' max='unknown' top='lap/shoulder harness used':52423; None:31094; 'child restraint in vehicle used':4052; 'driver, motorcycle helmet used':2050; 'lap/shoulder harness not used':1175; 'unknown':1035
+victim_ejected [TEXT] types={'text': 95956, 'null': 437} empty=0 distinct=4 min='fully ejected' max='unknown' top='not ejected':85677; 'unknown':6886; 'fully ejected':3037; None:437; 'partially ejected':356
+

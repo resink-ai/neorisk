@@ -1,0 +1,151 @@
+### typeof  (1 rows, 0.00s)
+a | b | c | d | n
+text | text | text | text | 236
+
+### formats  (1 rows, 0.00s)
+ld | lt | n | min(EventDate) | max(EventDate) | min(EventTime) | max(EventTime)
+10 | 5 | 236 | 2013-01-02 | 2013-03-12 | 07:30 | 18:25
+
+### parse  (1 rows, 0.00s)
+unparsable | bad_time
+0 | 0
+
+### members  (1 rows, 0.00s)
+members | enters | exits
+26 | 123 | 113
+
+### per_member  (26 rows, 0.00s)
+StaffMember | n | ent | ex
+A | 11 | 8 | 3
+B | 10 | 7 | 3
+C | 10 | 4 | 6
+D | 10 | 3 | 7
+E | 10 | 9 | 1
+F | 10 | 1 | 9
+G | 10 | 10 | 0
+H | 10 | 0 | 10
+I | 10 | 10 | 0
+J | 10 | 0 | 10
+K | 9 | 9 | 0
+L | 10 | 2 | 8
+M | 9 | 7 | 2
+N | 9 | 2 | 7
+O | 9 | 7 | 2
+P | 9 | 2 | 7
+Q | 8 | 8 | 0
+R | 8 | 0 | 8
+S | 8 | 8 | 0
+T | 8 | 0 | 8
+U | 8 | 8 | 0
+V | 8 | 1 | 7
+W | 8 | 7 | 1
+X | 8 | 1 | 7
+Y | 8 | 7 | 1
+Z | 8 | 2 | 6
+
+### dups  (1 rows, 0.00s)
+full_dups | same_moment
+0 | 0
+
+### dup_rows  (0 rows, 0.00s)
+StaffMember | EventDate | EventTime | types | n
+
+### alternation  (1 rows, 0.00s)
+enter_enter | exit_exit | alternations | starts_with_exit
+87 | 82 | 41 | 11
+
+### same_day_pairs  (1 rows, 0.00s)
+same_day | cross_day
+2 | 18
+
+### shift_hours  (10 rows, 0.00s)
+hrs | n
+700.33 | 1
+530.83 | 1
+527.08 | 1
+454.33 | 1
+391.58 | 1
+390.17 | 1
+292.5 | 1
+258.33 | 1
+220.08 | 1
+196.42 | 1
+
+### rowid_order  (1 rows, 0.00s)
+desc_pairs | pairs
+121 | 235
+
+### per_date  (3 rows, 0.00s)
+ym | n
+2013-01 | 87
+2013-02 | 87
+2013-03 | 62
+
+### minute_grid  (1 rows, 0.00s)
+on5 | n
+1 | 236
+
+### hours  (22 rows, 0.00s)
+EventType | hh | n
+Enter | 07 | 18
+Enter | 08 | 39
+Enter | 09 | 28
+Enter | 10 | 12
+Enter | 11 | 8
+Enter | 12 | 5
+Enter | 13 | 2
+Enter | 14 | 7
+Enter | 15 | 2
+Enter | 16 | 2
+Exit | 07 | 2
+Exit | 08 | 5
+Exit | 09 | 3
+Exit | 10 | 5
+Exit | 11 | 13
+Exit | 12 | 17
+Exit | 13 | 20
+Exit | 14 | 21
+Exit | 15 | 15
+Exit | 16 | 5
+Exit | 17 | 4
+Exit | 18 | 3
+
+### rows_tail  (36 rows, 0.00s)
+rowid | StaffMember | EventDate | EventTime | EventType
+201 | B | 2013-03-09 | 08:10 | Enter
+202 | D | 2013-02-28 | 14:55 | Exit
+203 | E | 2013-01-24 | 07:50 | Enter
+204 | F | 2013-03-04 | 13:40 | Exit
+205 | G | 2013-02-15 | 08:30 | Enter
+206 | H | 2013-01-20 | 14:10 | Exit
+207 | I | 2013-02-27 | 09:45 | Enter
+208 | J | 2013-03-11 | 13:20 | Exit
+209 | K | 2013-01-29 | 08:45 | Enter
+210 | L | 2013-02-18 | 13:20 | Exit
+211 | M | 2013-03-07 | 14:35 | Enter
+212 | N | 2013-01-17 | 09:35 | Exit
+213 | O | 2013-02-27 | 11:25 | Enter
+214 | P | 2013-01-23 | 08:10 | Exit
+215 | Q | 2013-03-06 | 15:00 | Enter
+216 | R | 2013-02-11 | 12:20 | Exit
+217 | S | 2013-01-28 | 09:30 | Enter
+218 | T | 2013-03-12 | 16:45 | Exit
+219 | U | 2013-02-15 | 10:25 | Enter
+220 | V | 2013-01-29 | 15:35 | Exit
+221 | W | 2013-03-02 | 08:55 | Enter
+222 | X | 2013-02-17 | 11:05 | Exit
+223 | Y | 2013-01-20 | 13:10 | Enter
+224 | Z | 2013-02-28 | 16:50 | Exit
+225 | A | 2013-02-26 | 09:50 | Enter
+226 | C | 2013-01-23 | 14:05 | Exit
+227 | B | 2013-03-07 | 08:15 | Enter
+228 | D | 2013-02-20 | 10:50 | Exit
+229 | E | 2013-01-18 | 07:40 | Enter
+230 | F | 2013-03-08 | 11:45 | Exit
+231 | G | 2013-02-12 | 08:05 | Enter
+232 | H | 2013-01-30 | 13:35 | Exit
+233 | I | 2013-02-13 | 08:50 | Enter
+234 | J | 2013-03-10 | 14:40 | Exit
+235 | K | 2013-01-27 | 09:50 | Enter
+236 | L | 2013-02-22 | 12:25 | Exit
+

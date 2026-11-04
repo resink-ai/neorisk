@@ -1,0 +1,49 @@
+## per league: matches, home/draw/away %, goals per match (home, away)
+   ('Belgium Jupiler League', 1728, 46.9, 24.6, 28.5, 1.609, 1.192)
+   ('England Premier League', 3040, 45.7, 25.8, 28.5, 1.551, 1.16)
+   ('France Ligue 1', 3040, 44.7, 28.3, 27.0, 1.403, 1.04)
+   ('Germany 1. Bundesliga', 2448, 45.2, 24.4, 30.4, 1.627, 1.275)
+   ('Italy Serie A', 3017, 46.6, 26.4, 27.0, 1.501, 1.116)
+   ('Netherlands Eredivisie', 2448, 47.8, 23.7, 28.4, 1.78, 1.301)
+   ('Poland Ekstraklasa', 1920, 45.3, 27.3, 27.3, 1.395, 1.03)
+   ('Portugal Liga ZON Sagres', 2052, 44.2, 26.0, 29.8, 1.408, 1.126)
+   ('Scotland Premier League', 1824, 41.7, 24.5, 33.8, 1.429, 1.204)
+   ('Spain LIGA BBVA', 3040, 48.8, 23.2, 28.0, 1.631, 1.136)
+   ('Switzerland Super League', 1422, 45.7, 24.3, 30.0, 1.663, 1.267)
+
+## goals: is a Poisson fit plausible? mean and variance per side
+   home_team_goal: mean 1.5446 var 1.6826
+   away_team_goal: mean 1.1609 var 1.3044
+   P(0-0): 0.0761
+
+## B365 favourite: implied probability vs outcome
+   ('A', 6154, 0.5067)
+   ('D', 30, 0.5667)
+   ('H', 16408, 0.5432)
+   bookmaker coverage (matches with a quote): (22592, 22575, 22520, 22556, 11168, 22571, 17097, 22568, 14162, 14161)
+   bookmaker quote triplets in total: 191970
+   matches with no odds at all: 3382
+
+## player ratings
+   overall_rating quantiles: {0.01: 51, 0.1: 60, 0.25: 64, 0.5: 69, 0.75: 73, 0.9: 77, 0.99: 84} mean 68.6
+   potential - rating quantiles: {0.01: 0, 0.1: 0, 0.25: 1, 0.5: 4, 0.75: 7, 0.9: 11, 0.99: 19}
+   rating change between consecutive snapshots: quantiles {0.01: -4, 0.1: -1, 0.25: 0, 0.5: 0, 0.75: 0, 0.9: 2, 0.99: 8} share 0: 0.588
+   snapshots per player: quantiles {0.01: 2, 0.1: 5, 0.25: 8, 0.5: 16, 0.75: 23, 0.9: 29, 0.99: 40} mean 16.63
+   preferred foot right share: 0.7557
+
+## players
+   birth year quantiles: {0.01: 1974, 0.1: 1979, 0.25: 1983, 0.5: 1987, 0.75: 1991, 0.9: 1994, 0.99: 1997}
+   height cm quantiles: {0.01: 167.64, 0.1: 172.72, 0.25: 177.8, 0.5: 182.88, 0.75: 185.42, 0.9: 190.5, 0.99: 195.58}
+   weight lb quantiles: {0.01: 134, 0.1: 150, 0.25: 159, 0.5: 168, 0.75: 179, 0.9: 187, 0.99: 205}
+   lineup appearances per player: quantiles {0.01: 1, 0.1: 2, 0.25: 9, 0.5: 30, 0.75: 73, 0.9: 126, 0.99: 216} max 300
+
+## teams
+   seasons per team: {1: 52, 2: 26, 3: 27, 4: 30, 5: 20, 6: 23, 7: 30, 8: 91}
+
+## sizes
+   XML characters in Match (8 columns): 268858266
+
+## creation rule check
+   players: first PA date <= first lineup date for all? see q3:player_first_seen
+   teams: n, created by first TA (before first match), min/max created_at: (299, 51, '2008-07-18 00:00:00', '2015-08-16 00:00:00')
+   leagues' first match: [(24558, '2008-07-18 00:00:00'), (15722, '2008-08-08 00:00:00'), (4769, '2008-08-09 00:00:00'), (19694, '2008-08-09 00:00:00'), (7809, '2008-08-15 00:00:00'), (1, '2008-08-16 00:00:00'), (1729, '2008-08-16 00:00:00'), (17642, '2008-08-22 00:00:00'), (13274, '2008-08-29 00:00:00'), (10257, '2008-08-30 00:00:00'), (21518, '2008-08-30 00:00:00')]

@@ -1,0 +1,116 @@
+### status_grade_rule  (1 rows, 0.00s)
+rows_ | completed_iff_grade_pos | non_completed_zero
+120 | 120 | 52
+
+### status_vs_term  (3 rows, 0.00s)
+term | ClassStatus | count(*)
+fall | 2 | 68
+fall | 3 | 2
+spring | 1 | 50
+
+### faculty_is_staff_subset  (1 rows, 0.00s)
+faculty | pos_faculty
+24 | 24
+
+### staff_positions  (4 rows, 0.00s)
+Position | count(*) | in_faculty
+Faculty | 24 | 24
+Graduate Advisor | 1 | 0
+Registrar | 1 | 0
+Secretary | 1 | 0
+
+### faculty_attrs  (6 rows, 0.00s)
+Title | Status | Tenured | count(*)
+Associate Professor | Full Time | 0 | 1
+Associate Professor | Full Time | 1 | 4
+Instructor | Full Time | 1 | 7
+Instructor | Part Time | 0 | 1
+Professor | Full Time | 1 | 10
+Professor | On Leave | 1 | 1
+
+### classes_without_faculty  (2 rows, 0.00s)
+ClassID | SubjectID | StartDate
+1642 | 29 | 2017-09-12
+4642 | 29 | 2018-01-16
+
+### teacher_lacking_subject  (5 rows, 0.00s)
+ClassID | StaffID | SubjectID
+2431 | 98012 | 27
+2895 | 98013 | 45
+4196 | 98062 | 39
+5431 | 98012 | 27
+5895 | 98013 | 45
+
+### gpa_not_derived  (1 rows, 0.00s)
+avg_completed_match | count(*)
+0 | 18
+
+### grades_dist  (7 rows, 0.00s)
+band | count(*)
+65 | 12
+70 | 12
+75 | 7
+80 | 4
+85 | 15
+90 | 11
+95 | 7
+
+### grade_moments  (1 rows, 0.00s)
+avg(Grade) | min(Grade) | max(Grade)
+81.81 | 65.8 | 99.83
+
+### class_size  (10 rows, 0.00s)
+n | count(*)
+1 | 2
+2 | 8
+3 | 12
+4 | 1
+5 | 3
+6 | 1
+7 | 2
+8 | 1
+9 | 1
+10 | 1
+
+### subject_code_mismatch  (1 rows, 0.00s)
+SubjectID | CategoryID | SubjectCode
+28 | CSC | CIS 142
+
+### student_major_null  (1 rows, 0.00s)
+StudentID | StudFirstName | StudLastName | StudGPA | StudMajor
+1019 | Daffy | Dumbwit | 0.0 | None
+
+### start_times  (17 rows, 0.00s)
+StartTime | count(*)
+07:00:00 | 2
+07:30:00 | 2
+08:00:00 | 16
+09:00:00 | 18
+10:00:00 | 16
+10:30:00 | 2
+11:00:00 | 16
+11:30:00 | 2
+12:00:00 | 11
+13:00:00 | 15
+13:30:00 | 7
+14:00:00 | 9
+14:30:00 | 2
+15:00:00 | 11
+15:30:00 | 2
+16:00:00 | 14
+18:00:00 | 2
+
+### room_conflict_pairs  (11 rows, 0.00s)
+ClassID | ClassID | ClassRoomID | StartDate | StartTime | Duration | StartTime | Duration
+2213 | 2223 | 1532 | 2017-09-11 | 10:00:00 | 140 | 12:00:00 | 50
+3070 | 3123 | 3346 | 2017-09-11 | 10:30:00 | 140 | 12:00:00 | 140
+3085 | 3090 | 3346 | 2017-09-11 | 15:00:00 | 50 | 13:30:00 | 140
+3090 | 3123 | 3346 | 2017-09-11 | 13:30:00 | 140 | 12:00:00 | 140
+4031 | 4880 | 1231 | 2018-01-15 | 14:00:00 | 50 | 13:30:00 | 110
+5213 | 5223 | 1532 | 2018-01-15 | 10:00:00 | 140 | 12:00:00 | 50
+6030 | 6040 | 3352 | 2018-01-15 | 09:00:00 | 140 | 11:00:00 | 50
+6030 | 6120 | 3352 | 2018-01-15 | 09:00:00 | 140 | 10:00:00 | 50
+6070 | 6123 | 3346 | 2018-01-15 | 10:30:00 | 140 | 12:00:00 | 140
+6085 | 6090 | 3346 | 2018-01-15 | 15:00:00 | 50 | 13:30:00 | 140
+6090 | 6123 | 3346 | 2018-01-15 | 13:30:00 | 140 | 12:00:00 | 140
+

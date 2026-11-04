@@ -1,0 +1,124 @@
+## Buildings  rows=6
+   pk=['BuildingCode']  rowid order == pk order: 6/6
+   BuildingCode             TEXT             [text:6] empty=0 \N=0 ws=0 distinct=6 min='AS' max='TB'
+   BuildingName             TEXT             [text:6] empty=0 \N=0 ws=0 distinct=6 min='Arts and Sciences' max='Technology Building'
+   NumberOfFloors           INTEGER          [integer:6] empty=0 \N=0 ws=0 distinct=3 min=1 max=3
+   ElevatorAccess           BOOLEAN          [integer:6] empty=0 \N=0 ws=0 distinct=2 min=0 max=1
+   SiteParkingAvailable     BOOLEAN          [integer:6] empty=0 \N=0 ws=0 distinct=2 min=0 max=1
+
+## Categories  rows=19
+   pk=['CategoryID']  rowid order == pk order: 19/19
+   CategoryID               TEXT             [text:19] empty=0 \N=0 ws=0 distinct=19 min='ACC' max='PSY'
+   CategoryDescription      TEXT             [text:19] empty=0 \N=0 ws=0 distinct=19 min='Accounting' max='Psychology'
+   DepartmentID             INTEGER          [integer:19] empty=0 \N=0 ws=0 distinct=5 min=1 max=5
+
+## Class_Rooms  rows=47
+   pk=['ClassRoomID']  rowid order == pk order: 47/47
+   ClassRoomID              INTEGER          [integer:47] empty=0 \N=0 ws=0 distinct=47 min=1131 max=3455
+   BuildingCode             TEXT             [text:47] empty=0 \N=0 ws=0 distinct=5 min='AS' max='TB'
+   PhoneAvailable           BOOLEAN          [integer:47] empty=0 \N=0 ws=0 distinct=2 min=0 max=1
+
+## Classes  rows=147
+   pk=['ClassID']  rowid order == pk order: 147/147
+   ClassID                  INTEGER          [integer:147] empty=0 \N=0 ws=0 distinct=147 min=1000 max=6600
+   SubjectID                INTEGER          [integer:147] empty=0 \N=0 ws=0 distinct=52 min=1 max=56
+   ClassRoomID              INTEGER          [integer:147] empty=0 \N=0 ws=0 distinct=39 min=1131 max=3446
+   Credits                  INTEGER          [integer:147] empty=0 \N=0 ws=0 distinct=4 min=2 max=5
+   StartDate                DATE             [text:147] empty=0 \N=0 ws=0 distinct=6 min='2017-09-11' max='2018-01-20'
+   StartTime                TIME             [text:147] empty=0 \N=0 ws=0 distinct=17 min='07:00:00' max='18:00:00'
+   Duration                 INTEGER          [integer:147] empty=0 \N=0 ws=0 distinct=5 min=50 max=280
+   MondaySchedule           BOOLEAN          [integer:147] empty=0 \N=0 ws=0 distinct=2 min=0 max=1
+   TuesdaySchedule          BOOLEAN          [integer:147] empty=0 \N=0 ws=0 distinct=2 min=0 max=1
+   WednesdaySchedule        BOOLEAN          [integer:147] empty=0 \N=0 ws=0 distinct=2 min=0 max=1
+   ThursdaySchedule         BOOLEAN          [integer:147] empty=0 \N=0 ws=0 distinct=2 min=0 max=1
+   FridaySchedule           BOOLEAN          [integer:147] empty=0 \N=0 ws=0 distinct=2 min=0 max=1
+   SaturdaySchedule         BOOLEAN          [integer:147] empty=0 \N=0 ws=0 distinct=2 min=0 max=1
+
+## Departments  rows=5
+   pk=['DepartmentID']  rowid order == pk order: 5/5
+   DepartmentID             INTEGER          [integer:5] empty=0 \N=0 ws=0 distinct=5 min=1 max=5
+   DeptName                 TEXT             [text:5] empty=0 \N=0 ws=0 distinct=5 min='Business Administration' max='Social Sciences'
+   DeptChair                INTEGER          [integer:5] empty=0 \N=0 ws=0 distinct=5 min=98005 max=98059
+
+## Faculty  rows=24
+   pk=['StaffID']  rowid order == pk order: 24/24
+   StaffID                  INTEGER          [integer:24] empty=0 \N=0 ws=0 distinct=24 min=98005 max=98064
+   Title                    TEXT             [text:24] empty=0 \N=0 ws=0 distinct=3 min='Associate Professor' max='Professor'
+   Status                   TEXT             [text:24] empty=0 \N=0 ws=0 distinct=3 min='Full Time' max='Part Time'
+   Tenured                  BOOLEAN          [integer:24] empty=0 \N=0 ws=0 distinct=2 min=0 max=1
+
+## Faculty_Categories  rows=76
+   pk=['StaffID', 'CategoryID']  rowid order == pk order: 76/76
+   StaffID                  INTEGER          [integer:76] empty=0 \N=0 ws=0 distinct=24 min=98005 max=98064
+   CategoryID               TEXT             [text:76] empty=0 \N=0 ws=0 distinct=16 min='ACC' max='POL'
+
+## Faculty_Classes  rows=145
+   pk=['ClassID', 'StaffID']  rowid order == pk order: 145/145
+   ClassID                  INTEGER          [integer:145] empty=0 \N=0 ws=0 distinct=145 min=1000 max=6600
+   StaffID                  INTEGER          [integer:145] empty=0 \N=0 ws=0 distinct=23 min=98005 max=98064
+
+## Faculty_Subjects  rows=110
+   pk=['StaffID', 'SubjectID']  rowid order == pk order: 110/110
+   StaffID                  INTEGER          [integer:110] empty=0 \N=0 ws=0 distinct=24 min=98005 max=98064
+   SubjectID                INTEGER          [integer:110] empty=0 \N=0 ws=0 distinct=55 min=1 max=56
+   ProficiencyRating        REAL             [real:110] empty=0 \N=0 ws=0 distinct=3 min=8.0 max=10.0
+
+## Majors  rows=7
+   pk=['MajorID']  rowid order == pk order: 7/7
+   MajorID                  INTEGER          [integer:7] empty=0 \N=0 ws=0 distinct=7 min=1 max=7
+   Major                    TEXT             [text:7] empty=0 \N=0 ws=0 distinct=7 min='Accounting' max='Music'
+
+## Staff  rows=27
+   pk=['StaffID']  rowid order == pk order: 27/27
+   StaffID                  INTEGER          [integer:27] empty=0 \N=0 ws=0 distinct=27 min=98005 max=98064
+   StfFirstName             TEXT             [text:27] empty=0 \N=0 ws=0 distinct=26 min='Alaina' max='Tim'
+   StfLastname              TEXT             [text:27] empty=0 \N=0 ws=0 distinct=19 min='Abolrous' max='Wilson'
+   StfStreetAddress         TEXT             [text:27] empty=0 \N=0 ws=0 distinct=22 min='101 NE 88th' max='Route 2, Box 203B'
+   StfCity                  TEXT             [text:27] empty=0 \N=0 ws=0 distinct=15 min='Auburn' max='Tacoma'
+   StfState                 TEXT             [text:27] empty=0 \N=0 ws=0 distinct=4 min='CA' max='WA'
+   StfZipCode               TEXT             [text:27] empty=0 \N=0 ws=0 distinct=19 min='77201' max='98413'
+   StfAreaCode              TEXT             [text:27] empty=0 \N=0 ws=0 distinct=10 min='206' max='915'
+   StfPhoneNumber           TEXT             [text:27] empty=0 \N=0 ws=0 distinct=27 min='555-0037' max='555-2726'
+   Salary                   REAL             [real:27] empty=0 \N=0 ws=0 distinct=13 min=25000.0 max=60000.0
+   DateHired                DATE             [text:27] empty=0 \N=0 ws=0 distinct=27 min='1982-11-20' max='1992-02-10'
+   Position                 TEXT             [text:27] empty=0 \N=0 ws=0 distinct=4 min='Faculty' max='Secretary'
+
+## Student_Class_Status  rows=3
+   pk=['ClassStatus']  rowid order == pk order: 3/3
+   ClassStatus              INTEGER          [integer:3] empty=0 \N=0 ws=0 distinct=3 min=1 max=3
+   ClassStatusDescription   TEXT             [text:3] empty=0 \N=0 ws=0 distinct=3 min='Completed' max='Withdrew'
+
+## Student_Schedules  rows=120
+   pk=['StudentID', 'ClassID']  rowid order == pk order: 120/120
+   StudentID                INTEGER          [integer:120] empty=0 \N=0 ws=0 distinct=18 min=1001 max=1018
+   ClassID                  INTEGER          [integer:120] empty=0 \N=0 ws=0 distinct=32 min=1000 max=6082
+   ClassStatus              INTEGER          [integer:120] empty=0 \N=0 ws=0 distinct=3 min=1 max=3
+   Grade                    REAL             [real:120] empty=0 \N=0 ws=0 distinct=68 min=0.0 max=99.83
+
+## Students  rows=19
+   pk=['StudentID']  rowid order == pk order: 19/19
+   StudentID                INTEGER          [integer:19] empty=0 \N=0 ws=0 distinct=19 min=1001 max=1019
+   StudFirstName            TEXT             [text:19] empty=0 \N=0 ws=0 distinct=19 min='Betsy' max='Steve'
+   StudLastName             TEXT             [text:19] empty=0 \N=0 ws=0 distinct=19 min='Bishop' max='Wier'
+   StudStreetAddress        TEXT             [text:19] empty=0 \N=0 ws=0 distinct=17 min='12330 Larchlemont Lane' max='Route 2, Box 203B'
+   StudCity                 TEXT             [text:19] empty=0 \N=0 ws=0 distinct=13 min='Bellevue' max='Tacoma'
+   StudState                TEXT             [text:19] empty=0 \N=0 ws=0 distinct=4 min='CA' max='WA'
+   StudZipCode              TEXT             [text:19] empty=0 \N=0 ws=0 distinct=15 min='75204' max='98413'
+   StudAreaCode             TEXT             [text:19] empty=0 \N=0 ws=0 distinct=10 min='206' max='972'
+   StudPhoneNumber          TEXT             [text:19] empty=0 \N=0 ws=0 distinct=19 min='555-0399' max='555-9938'
+   StudGPA                  REAL             [real:19] empty=0 \N=0 ws=0 distinct=19 min=0.0 max=89.5
+   StudMajor                INTEGER          [integer:18,null:1] empty=0 \N=0 ws=0 distinct=7 min=1 max=7
+
+## Subjects  rows=56
+   pk=['SubjectID']  rowid order == pk order: 56/56
+   SubjectID                INTEGER          [integer:56] empty=0 \N=0 ws=0 distinct=56 min=1 max=56
+   CategoryID               TEXT             [text:56] empty=0 \N=0 ws=0 distinct=16 min='ACC' max='POL'
+   SubjectCode              TEXT             [text:56] empty=0 \N=0 ws=0 distinct=56 min='ACC 210' max='POL 213'
+   SubjectName              TEXT             [text:56] empty=0 \N=0 ws=0 distinct=56 min='Advanced English Grammar' max='World History to 1500'
+   SubjectPreReq            TEXT             [null:47,text:9] empty=0 \N=0 ws=0 distinct=7 min='ACC 210' max='PHY 201'
+   SubjectDescription       TEXT             [text:56] empty=0 \N=0 ws=0 distinct=56 min='American history from the colonial period through Reconstruction. Emphasis on the American Revolution, the National Period, slavery, territorial expansion, the Civil War and Reconstruction.' max='With the aid of a counselor, a feasibility plan will be developed which will be the basis or start of your business plan. Must be concurrently enrolled in BUS 151.'
+
+## sqlite_sequence  rows=7
+   name                                      [text:7] empty=0 \N=0 ws=0 distinct=7 min='Class_Rooms' max='Subjects'
+   seq                                       [integer:7] empty=0 \N=0 ws=0 distinct=7 min=3 max=98064
+

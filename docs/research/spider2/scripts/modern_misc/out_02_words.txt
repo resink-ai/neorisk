@@ -1,0 +1,55 @@
+## duplicate block: are rows 1..3702 all words that recur later?
+rows_1_3702|recur_later|nulls
+3702|3701|0
+rows_after|distinct_after|nonnull_after
+370102|370100|370100
+## duplicates entirely within rows 3703.. (should be 0 if the base list is a set)
+count(*)
+1
+## the duplicate word whose first copy is deep in the table
+## NULL words: where, and are the words null / nan / na / none present?
+rowid|words|prev|next
+200413||nammo|nana
+213169||nul|nullable
+w|n
+null|0
+nan|0
+na|1
+none|1
+nul|1
+nana|1
+true|0
+false|0
+## words with an upper-case letter
+rowid|words
+113221|FALSE
+335218|TRUE
+## descents in the base block (rows 3703..): count, and samples
+desc_
+17477
+rowid|words|words
+3737|abacay|abacas
+3768|abayah|abaisance
+3882|abbacy|abbacies
+3886|abbaye|abbandono
+3901|abbeystede|abbes
+3907|abby|abbie
+3909|abraser|abboccato
+3913|abbotcy|abbotcies
+## is the base block sorted by a different collation? descents when comparing lower(), and by (length) no
+desc_lower
+17475
+## corrected block boundary: rows 1..3701 are the prepended copies (3701 = round(1% of 370103))
+rows_1_3701|recur_later
+3701|3701
+base_rows|base_distinct_nonnull|base_nulls
+370103|370101|2
+dup_nonnull_within_base
+0
+## row 3702 (first base row) and its neighbours
+rowid|words
+3700|instructs
+3701|ageists
+3702|a
+3703|aa
+3704|aaa

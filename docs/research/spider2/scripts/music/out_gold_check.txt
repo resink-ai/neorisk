@@ -1,0 +1,2 @@
+local244: mine 3 rows, gold 3 rows, equal as multiset: True
+local244_chinook: mine 3 rows, gold 3 rows, equal as multiset: True

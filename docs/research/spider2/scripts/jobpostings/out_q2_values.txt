@@ -1,0 +1,296 @@
+### setup_indexes  (setup, 0.17s)
+
+### posted_date_format  (1 rows, 0.02s)
+iso_sec | valid | n | min(job_posted_date) | max(job_posted_date)
+78769 | 78769 | 78769 | 2022-12-31 06:03:30 | 2023-12-31 03:18:00
+
+### posted_by_month  (13 rows, 0.02s)
+m | count(*)
+2022-12 | 181
+2023-01 | 9241
+2023-02 | 6499
+2023-03 | 6466
+2023-04 | 6206
+2023-05 | 5185
+2023-06 | 6116
+2023-07 | 6322
+2023-08 | 7609
+2023-09 | 6216
+2023-10 | 6564
+2023-11 | 6469
+2023-12 | 5695
+
+### posted_seconds  (1 rows, 0.01s)
+sec00 | minsec00 | n
+1257 | 58 | 78769
+
+### posted_hour  (24 rows, 0.02s)
+h | count(*)
+00 | 5088
+01 | 1067
+02 | 1233
+03 | 1010
+04 | 925
+05 | 545
+06 | 3402
+07 | 6141
+08 | 4635
+09 | 4274
+10 | 4674
+11 | 4335
+12 | 4028
+13 | 3766
+14 | 3800
+15 | 4139
+16 | 4265
+17 | 4302
+18 | 3418
+19 | 2904
+20 | 2465
+21 | 2225
+22 | 2068
+23 | 4060
+
+### duplicate_timestamps  (1 rows, 0.03s)
+n_rows | distinct_ts
+78769 | 75984
+
+### title_short  (10 rows, 0.02s)
+job_title_short | count(*) | with_year_salary | avg_year
+Data Analyst | 19743 | 558 | 94035.0
+Data Engineer | 18878 | 456 | 130181.0
+Data Scientist | 17189 | 570 | 134748.0
+Business Analyst | 4948 | 61 | 89693.0
+Software Engineer | 4459 | 42 | 115658.0
+Senior Data Engineer | 4411 | 155 | 145680.0
+Senior Data Scientist | 3679 | 162 | 153709.0
+Senior Data Analyst | 2891 | 110 | 111533.0
+Machine Learning Engineer | 1405 | 50 | 122590.0
+Cloud Engineer | 1166 | 10 | 124190.0
+
+### salary_rate_vs_columns  (6 rows, 0.01s)
+salary_rate | count(*) | year_set | hour_set
+None | 75480 | 0 | 0
+year | 2174 | 2174 | 0
+hour | 1090 | 0 | 1090
+month | 23 | 0 | 0
+week | 1 | 0 | 0
+day | 1 | 0 | 0
+
+### salary_cents_grid  (1 rows, 0.01s)
+year_off_cent_grid | year_non_integer | count(salary_year_avg) | hour_off_cent_grid | hour_non_integer | count(salary_hour_avg)
+23 | 101 | 2174 | 325 | 612 | 1090
+
+### salary_hour_decimals  (5 rows, 0.00s)
+decimals | count(*)
+1 | 762
+2 | 3
+3 | 5
+12 | 34
+13 | 286
+
+### salary_year_decimals  (8 rows, 0.00s)
+decimals | count(*)
+1 | 2148
+2 | 3
+3 | 1
+4 | 1
+5 | 3
+6 | 10
+7 | 6
+8 | 2
+
+### salary_float_noise  (10 rows, 0.00s)
+salary_year_avg | printf('%.17g', salary_year_avg)
+176460.65625 | 176460.65625
+100696.8125 | 100696.8125
+39551.19921875 | 39551.19921875
+91509.6015625 | 91509.6015625
+90460.109375 | 90460.109375
+78582.9921875 | 78582.9921875
+115653.984375 | 115653.984375
+79559.0390625 | 79559.0390625
+48938.390625 | 48938.390625
+122422.59375 | 122422.59375
+
+### salary_hour_examples  (10 rows, 0.00s)
+salary_hour_avg | printf('%.17g', salary_hour_avg) | count(*)
+16.510000228881836 | 16.51000022888184 | 7
+16.770000457763672 | 16.77000045776367 | 1
+17.09000015258789 | 17.09000015258789 | 2
+17.939998626708984 | 17.93999862670898 | 1
+17.959999084472656 | 17.95999908447266 | 1
+18.165000915527344 | 18.16500091552734 | 1
+18.709999084472656 | 18.70999908447266 | 1
+18.795000076293945 | 18.79500007629395 | 2
+18.89999961853028 | 18.89999961853028 | 1
+18.940000534057617 | 18.94000053405762 | 1
+
+### booleans  (1 rows, 0.00s)
+wfh | no_degree | health | n
+7014 | 24220 | 8566 | 78769
+
+### wfh_vs_location  (1 rows, 0.00s)
+job_work_from_home | job_location | count(*)
+1 | Anywhere | 7014
+
+### via_prefix  (3 rows, 0.02s)
+prefix | count(*)
+via  | 78760
+melalui  | 6
+NULL | 3
+
+### via_top  (8 rows, 0.02s)
+job_via | count(*)
+via LinkedIn | 18733
+via BeBee | 10385
+via Trabajo.org | 6139
+via Indeed | 4334
+via Recruit.net | 2328
+via ZipRecruiter | 1605
+via Jobs Trabajo.org | 1018
+via Snagajob | 953
+
+### schedule  (10 rows, 0.02s)
+job_schedule_type | count(*)
+Full-time | 70308
+Contractor | 3547
+None | 1300
+Internship | 866
+Part-time | 769
+Full-time and Part-time | 629
+Full-time and Temp work | 273
+Full-time and Internship | 240
+Contractor and Temp work | 239
+Full-time and Contractor | 209
+
+### country_vs_search  (1 rows, 0.01s)
+same | diff | null_country | count(*)
+58115 | 20648 | 6 | 78769
+
+### search_location_top  (8 rows, 0.02s)
+search_location | count(*)
+India | 5198
+New York, United States | 4404
+United Kingdom | 4185
+France | 4121
+California, United States | 3788
+Illinois, United States | 3486
+Georgia | 3327
+Texas, United States | 3117
+
+### country_top  (8 rows, 0.02s)
+job_country | count(*)
+United States | 20648
+India | 5198
+United Kingdom | 4185
+France | 4121
+Germany | 2593
+Spain | 2534
+Singapore | 2397
+Sudan | 2104
+
+### title_whitespace  (1 rows, 0.01s)
+job_id | '['||job_title||']'
+129599 | [Data Engineer     ]
+
+### null_title  (1 rows, 0.00s)
+job_id | job_title_short | job_title | job_posted_date
+15425 | Data Engineer | None | 2023-02-28 06:09:15
+
+### company_text  (1 rows, 0.00s)
+link_null | thumb_null | lg_null | lg_google | count(*)
+8648 | 5884 | 5 | 13998 | 14003
+
+### company_link_google_contains_name  (1 rows, 0.00s)
+contains_name_plus | count(link_google)
+12869 | 13998
+
+### postings_per_company  (12 rows, 0.01s)
+n | companies
+1 | 24376
+2 | 5073
+3 | 1934
+4 | 996
+5 | 639
+6 | 386
+7 | 247
+8 | 172
+9 | 141
+10 | 106
+11 | 97
+12 | 65
+
+### postings_per_company_max  (5 rows, 0.00s)
+company_id | n
+572 | 666
+1148 | 282
+162 | 253
+49 | 246
+156 | 228
+
+### skills_per_job_in_links  (9 rows, 0.05s)
+n | jobs
+1 | 190539
+2 | 57150
+3 | 14559
+4 | 3350
+5 | 734
+6 | 184
+7 | 27
+8 | 9
+9 | 1
+
+### skills_per_matched_job  (8 rows, 0.03s)
+n | jobs
+1 | 19316
+2 | 5761
+3 | 1410
+4 | 325
+5 | 72
+6 | 17
+7 | 6
+8 | 1
+
+### link_skill_freq_top  (12 rows, 0.02s)
+skill_id | skills | count(*)
+0 | None | 38582
+1 | python | 38155
+76 | None | 14605
+74 | None | 13289
+5 | None | 13080
+181 | None | 12926
+182 | None | 12709
+92 | None | 11383
+183 | None | 9782
+4 | None | 8545
+97 | None | 6498
+3 | None | 5739
+
+### link_skill_found_freq  (24 rows, 0.01s)
+skills | type | count(*)
+python | programming | 38155
+sas | programming | 4176
+javascript | programming | 2568
+qlik | analyst_tools | 1712
+alteryx | analyst_tools | 1270
+confluence | async | 1063
+spss | analyst_tools | 1030
+bash | programming | 988
+sharepoint | analyst_tools | 923
+t-sql | programming | 858
+dynamodb | databases | 669
+perl | programming | 456
+ruby | programming | 422
+vmware | cloud | 280
+ibm cloud | cloud | 172
+mariadb | databases | 125
+firebase | databases | 103
+vue.js | webframeworks | 62
+sqlite | databases | 43
+heroku | cloud | 28
+twilio | sync | 22
+lua | programming | 19
+objective-c | programming | 14
+blazor | webframeworks | 7
+

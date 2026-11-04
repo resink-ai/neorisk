@@ -1,0 +1,286 @@
+### date_published_shape  (1 rows, 0.00s)
+len | time_part | n | min(date_published) | max(date_published)
+19 |  00:00:00 | 7997 | 2017-01-01 00:00:00 | 2019-12-27 00:00:00
+
+### year_vs_published_year  (1 rows, 0.00s)
+n | same_year | year_before | year_after
+7997 | 7997 | 0 | 0
+
+### year_mismatch_samples  (0 rows, 0.00s)
+id | title | year | date_published
+
+### movies_per_year  (3 rows, 0.00s)
+year | n | min(date_published) | max(date_published)
+2017 | 3052 | 2017-01-01 00:00:00 | 2017-12-30 00:00:00
+2018 | 2944 | 2018-01-01 00:00:00 | 2018-12-31 00:00:00
+2019 | 2001 | 2019-01-01 00:00:00 | 2019-12-27 00:00:00
+
+### rowid_order_within_year  (1 rows, 0.01s)
+pairs | id_incr | id_drops | date_nondecr
+7994 | 7968 | 26 | 4038
+
+### movies_id_drops_at_year_change  (1 rows, 0.00s)
+drops | at_year_change
+28 | 2
+
+### published_per_month  (36 rows, 0.00s)
+ym | n
+2017-01 | 291
+2017-02 | 228
+2017-03 | 298
+2017-04 | 249
+2017-05 | 205
+2017-06 | 226
+2017-07 | 188
+2017-08 | 246
+2017-09 | 327
+2017-10 | 303
+2017-11 | 276
+2017-12 | 215
+2018-01 | 302
+2018-02 | 215
+2018-03 | 285
+2018-04 | 247
+2018-05 | 229
+2018-06 | 193
+2018-07 | 167
+2018-08 | 247
+2018-09 | 276
+2018-10 | 324
+2018-11 | 252
+2018-12 | 207
+2019-01 | 211
+2019-02 | 197
+2019-03 | 241
+2019-04 | 184
+2019-05 | 191
+2019-06 | 161
+2019-07 | 138
+2019-08 | 185
+2019-09 | 206
+2019-10 | 174
+2019-11 | 97
+2019-12 | 16
+
+### published_weekday  (7 rows, 0.00s)
+dow | n
+0 | 241
+1 | 310
+2 | 698
+3 | 978
+4 | 1652
+5 | 3693
+6 | 425
+
+### published_day1  (1 rows, 0.00s)
+day1 | n
+598 | 7997
+
+### gross_prefixes  (1 rows, 0.00s)
+prefix | n
+$  | 4273
+
+### gross_digits_only  (1 rows, 0.00s)
+n | nondigit | leading_zero | mn | mx
+4273 | 0 | 0 | 37 | 2797800564
+
+### gross_samples  (0 rows, 0.00s)
+worlwide_gross_income
+
+### duration_stats  (1 rows, 0.00s)
+min(duration) | max(duration) | avg(duration) | under_60 | over_240
+41 | 808 | 103.8935850944104 | 24 | 1
+
+### country_multi  (13 rows, 0.00s)
+commas | n
+None | 20
+0 | 6422
+1 | 991
+2 | 360
+3 | 113
+4 | 43
+5 | 29
+6 | 12
+7 | 3
+8 | 1
+10 | 1
+12 | 1
+24 | 1
+
+### country_top  (10 rows, 0.00s)
+country | n
+USA | 2260
+India | 1007
+UK | 387
+Canada | 209
+Japan | 202
+France | 195
+Turkey | 166
+Germany | 146
+South Korea | 127
+Italy | 123
+
+### languages_multi  (12 rows, 0.00s)
+commas | count(*)
+None | 198
+0 | 6278
+1 | 968
+2 | 344
+3 | 137
+4 | 42
+5 | 14
+6 | 6
+7 | 4
+8 | 4
+9 | 1
+13 | 1
+
+### list_separator_shape  (3 rows, 0.00s)
+c | comma_space | sum(country like '%,[^ ]%') | padded
+country | 1555 | 0 | 0
+languages | 1521 | 0 | 0
+production_company | 28 | 0 | 0
+
+### comma_no_space  (2 rows, 0.00s)
+c | sum(replace(country, ', ', '') like '%,%')
+country | 0
+languages | 0
+
+### genre_values  (13 rows, 0.00s)
+genre | n
+Drama | 4285
+Comedy | 2412
+Thriller | 1484
+Action | 1289
+Horror | 1208
+Romance | 906
+Crime | 813
+Adventure | 591
+Mystery | 555
+Sci-Fi | 375
+Fantasy | 342
+Family | 302
+Others | 100
+
+### genres_per_movie  (3 rows, 0.00s)
+c | movies
+1 | 3289
+2 | 2751
+3 | 1957
+
+### category_values  (2 rows, 0.00s)
+category | count(*)
+actor | 9362
+actress | 6253
+
+### roles_per_movie  (10 rows, 0.00s)
+c | movies
+1 | 11
+2 | 29
+3 | 47
+4 | 3380
+5 | 76
+6 | 85
+7 | 64
+8 | 40
+9 | 23
+10 | 2
+
+### directors_per_movie  (6 rows, 0.00s)
+c | movies
+1 | 3363
+2 | 177
+3 | 21
+4 | 4
+5 | 1
+6 | 11
+
+### role_order_within_movie  (1 rows, 0.02s)
+pairs | by_name_id | by_category
+11858 | 6342 | 8863
+
+### role_sorted_by_cat_then_id  (1 rows, 0.02s)
+pairs | sorted_cat_id
+11858 | 6163
+
+### director_order_within_movie  (1 rows, 0.00s)
+pairs | by_name_id
+290 | 151
+
+### genre_order_within_movie  (1 rows, 0.01s)
+pairs | alpha
+6665 | 1
+
+### height_stats  (1 rows, 0.00s)
+min(height) | max(height) | fractional | n
+76.0 | 201.0 | 0 | 8400
+
+### dob_shape  (3 rows, 0.00s)
+len | n | min(date_of_birth) | max(date_of_birth)
+None | 13431 | None | None
+4 | 904 | 1887 | 2006
+10 | 11400 | 1872-12-25 | October 29
+
+### dob_after_2019  (1 rows, 0.00s)
+count(*)
+1
+
+### names_rowid_order  (1 rows, 0.02s)
+drops
+1595
+
+### ratings_shapes  (1 rows, 0.00s)
+min(avg_rating) | max(avg_rating) | non_tenths | frac_median | min(median_rating) | max(median_rating) | min(total_votes) | max(total_votes)
+1.0 | 10.0 | 0 | 74 | 1.0 | 10.0 | 100 | 725138
+
+### avg_vs_median  (1 rows, 0.00s)
+within1 | avg_gt | avg_lt | count(*)
+6591 | 1322 | 6192 | 7997
+
+### votes_quantiles  (1 rows, 0.01s)
+p5 | p25 | p50 | p75 | p95 | mx
+115 | 206 | 471 | 1623 | 23886 | 725138
+
+### median_hist  (18 rows, 0.00s)
+median_rating | count(*)
+1.0 | 94
+2.0 | 119
+2.5 | 4
+3.0 | 279
+3.5 | 7
+4.0 | 472
+4.5 | 14
+5.0 | 971
+5.5 | 12
+6.0 | 1963
+6.5 | 22
+7.0 | 2235
+7.5 | 9
+8.0 | 1021
+8.5 | 5
+9.0 | 424
+9.5 | 1
+10.0 | 345
+
+### votes_by_year  (3 rows, 0.00s)
+year | count(*) | avg_votes | avg_r
+2017 | 3052 | 7859.0 | 5.75
+2018 | 2944 | 6753.0 | 5.76
+2019 | 2001 | 5112.0 | 5.96
+
+### title_dups  (1 rows, 0.00s)
+titles | movies
+60 | 125
+
+### whitespace  (1 rows, 0.00s)
+title_pad | name_pad | genre_pad
+0 | 0 | 0
+
+### nonascii  (1 rows, 0.01s)
+titles | names
+491 | 1964
+
+### production_company_count  (1 rows, 0.00s)
+companies | movies
+5332 | 7469
+

@@ -1,0 +1,5 @@
+2_create_tables.sql     1768 bytes
+3_modify_tables.sql     2599 bytes
+README.md    12708 bytes
+3_top_demanded_skills.sql     1456 bytes
+licence: none

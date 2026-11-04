@@ -1,0 +1,58 @@
+### local068  (6 rows, 0.02s)
+year | month | monthly_total | running_total | monthly_yoy | running_yoy
+2022 | 4 | 1437 | 2945 | -4.708223 | 95.291777
+2022 | 5 | 1459 | 2968 | -3.313453 | 96.686547
+2022 | 6 | 1411 | 2806 | 1.146953 | 101.146953
+2023 | 4 | 1402 | 4347 | -2.43563 | 47.606112
+2023 | 5 | 1389 | 4357 | -4.797807 | 46.799191
+2023 | 6 | 1432 | 4238 | 1.488306 | 51.0335
+
+### local070_streaks  (4 rows, 0.00s)
+start | stop | len
+2021-07-03 | 2021-07-10 | 8
+2021-07-12 | 2021-07-13 | 2
+2021-07-15 | 2021-07-17 | 3
+2021-07-19 | 2021-07-31 | 13
+
+### local070_cities_per_day  (7 rows, 0.00s)
+insert_date | n | min_id | names
+2021-07-12 | 5 | 143 | xiaoganzhan | qingyang | guangshui | gaotan | hejiaji
+2021-07-13 | 1 | 16277 | yaopu
+2021-07-19 | 3 | 13564 | yuquan | rencun | bakeshiyingcun
+2021-07-23 | 3 | 5808 | yunfu | lanxi | shilan
+2021-07-27 | 4 | 3066 | dongxing | shiji | minquan | dangcheng
+2021-07-29 | 2 | 24644 | tongzhou | hushihacun
+2021-07-30 | 2 | 4779 | tumen | shuilou
+
+### local070_pick_min_id  (15 rows, 0.03s)
+dt | first_by_id | last_by_id
+2021-07-12 | Xiaoganzhan | Hejiaji
+2021-07-13 | Yaopu | Yaopu
+2021-07-19 | Yuquan | Bakeshiyingcun
+2021-07-20 | Nanyang | Xinyu
+2021-07-21 | Chengjiao chengguanzhen | Chengjiao chengguanzhen
+2021-07-22 | Hanzhong | Longshan
+2021-07-23 | Yunfu | Shilan
+2021-07-24 | Huichang | Tianchang
+2021-07-25 | Beichengqu | Xingcheng
+2021-07-26 | Xinqing | Xinqing
+2021-07-27 | Dongxing | Dangcheng
+2021-07-28 | Bengbu | Yangtangxu
+2021-07-29 | Tongzhou | Hushihacun
+2021-07-30 | Tumen | Shuilou
+2021-07-31 | Xihuachi | Yanshuiguan
+
+### local071  (3 rows, 0.00s)
+cc | best
+br | 30
+in | 30
+us | 30
+
+### local072  (1 rows, 0.00s)
+cc | st | en | len | rows_in_period | capital_rows | pct
+ir | 2022-01-20 | 2022-01-22 | 3 | 5 | 1 | 20.0
+
+### local072_candidates  (1 rows, 0.00s)
+country_code_2 | days
+ir | 9
+
