@@ -1,0 +1,7 @@
+# NYC trees: the 2015 NYC Street Tree Census and an ACS income lookup, two tables of Spider2's modern_data.
+file = "modern_data.sqlite"
+note = "No source times: T0 = N = 2015-01-01 00:00 UTC (a rule). Injected duplicate rows come back from source_row_duplicated."
+
+[tables]
+trees = ["tree_id"]
+income_trees = ["zipcode"]
