@@ -1,0 +1,12 @@
+# AtliQ Hardware: Codebasics' course company (Resume Project Challenge #4), Spider2's
+# education_business `hardware_*` tables (6 of the file's 16).
+file = "education_business.sqlite"
+note = "Monthly sales at the month's first day, read as UTC. Rule times: prices, costs and deductions at their fiscal year's start (09-01), customers and unsold products at 2019-09-01."
+
+[tables]
+hardware_dim_customer = ["customer_code"]
+hardware_dim_product = ["product_code"]
+hardware_fact_gross_price = ["product_code", "fiscal_year"]
+hardware_fact_manufacturing_cost = ["product_code", "cost_year"]
+hardware_fact_pre_invoice_deductions = ["customer_code", "fiscal_year"]
+hardware_fact_sales_monthly = ["date", "product_code", "customer_code"]
