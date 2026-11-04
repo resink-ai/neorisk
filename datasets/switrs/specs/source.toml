@@ -1,0 +1,10 @@
+# SWITRS (California Highway Patrol collision records, Alex Gude's Kaggle SQLite, CC0), as
+# Spider2's California_Traffic_Collision catalog: each of the 4 tables an independent ~1% sample.
+file = "California_Traffic_Collision.sqlite"
+note = "Dates and times read as UTC. Rule times: parties, victims and case_ids rows take their collision's time, else the 2001 id's encoded time, else N = 2021-06-03."
+
+[tables]
+collisions = ["case_id"]
+case_ids = ["case_id"]
+parties = ["case_id", "party_number"]
+victims = ["case_id", "party_number"]
