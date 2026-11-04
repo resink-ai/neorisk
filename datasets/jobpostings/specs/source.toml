@@ -1,0 +1,10 @@
+# Data-job postings from Google Jobs, 2023 (Luke Barousse's SQL course data), as independent
+# ~10% samples per table: 4 of city_legislation's tables.
+file = "city_legislation.sqlite"
+note = "Times to the second, read as UTC. Rule times: companies at their first posting, links at their posting, else the catalog start 2022-12-31 06:03:30."
+
+[tables]
+job_postings_fact = ["job_id"]
+job_company = ["company_id"]
+skills_dim = ["skill_id"]
+skills_job_dim = ["job_id", "skill_id"]
