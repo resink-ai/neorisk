@@ -1,0 +1,21 @@
+name = "baseball"
+version = "v1"
+kind = "spider2"
+
+[recipe]
+
+[results.mixed]
+all_star = ["gp", "starting_pos"]
+appearances = ["g_all", "gs", "g_defense", "g_dh", "g_ph", "g_pr"]
+player_award_vote = ["votes_first"]
+batting = ["ab", "r", "h", "double", "triple", "hr", "rbi", "sb", "cs", "bb", "so", "ibb", "hbp", "sh", "sf", "g_idp"]
+batting_postseason = ["cs", "ibb", "hbp", "sh", "sf", "g_idp"]
+fielding = ["gs", "inn_outs", "po", "a", "e", "dp", "pb", "wp", "sb", "cs", "zr"]
+fielding_outfield = ["glf", "gcf", "grf"]
+fielding_postseason = ["gs", "inn_outs", "pb", "sb", "cs"]
+hall_of_fame = ["ballots", "needed", "votes"]
+manager = ["rank"]
+player = ["birth_year", "birth_month", "birth_day", "death_year", "death_month", "death_day", "weight", "height"]
+pitching = ["ipouts", "baopp", "era", "ibb", "wp", "hbp", "bfp", "gf", "sh", "sf", "g_idp"]
+pitching_postseason = ["era", "ibb", "wp", "hbp", "bk", "bfp", "sh", "sf", "g_idp"]
+team = ["ghome", "so", "sb", "cs", "hbp", "sf", "dp", "attendance"]
