@@ -46,3 +46,16 @@ def test_cli_verify_failure_exit_1(shop_cli, capsys):
     b.write_text(b.read_text().replace("p.total / 100.0", "p.total / 10.0"))
     assert cli.main(["verify", "shop"]) == 1
     assert _last(capsys)["failed"] == ["recipe", "orders", "q1"]
+
+
+def test_context_prints_catalogue_from_build(shop_cli, capsys):
+    assert cli.main(["context", "shop"]) == 2                 # not built yet
+    cli.main(["build", "shop", "--db", str(shop_cli)])
+    capsys.readouterr()
+    assert cli.main(["context", "shop"]) == 0
+    out = capsys.readouterr().out
+    assert "The input is one ordered event log of 7 events" in out
+    assert "| `customers_created` | entity | 2 | `customer_id`, `ext_id`, `city` |" in out
+    assert "| `orders` | 3 | 6 | none |" in out
+    assert "(`q1`)" in out
+    assert "uv run dataset build shop" in out

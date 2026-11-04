@@ -4,6 +4,7 @@
     dataset build NAME [--db SRC] [--record]
     dataset verify NAME [--json FILE]
     dataset resolve NAME/VERSION[/PATH]
+    dataset context NAME
 
 Exit codes: 0 success, 1 a difference (or a build that differs from its lock), 2 a usage
 error, an unknown name, a missing source or input.
@@ -37,6 +38,8 @@ def build_parser() -> argparse.ArgumentParser:
     v.add_argument("--json", default=None, help="write the full report here")
     r = sub.add_parser("resolve", help="where a data name lives under the data root")
     r.add_argument("name")
+    c = sub.add_parser("context", help="CONTEXT.md's counted sections, from the built version")
+    c.add_argument("name")
     return parser
 
 
@@ -130,10 +133,24 @@ def _resolve(args) -> int:
     return 0
 
 
+def _context(args) -> int:
+    from dataset.context import render
+    from dataset.names import resolve
+    try:
+        cfg = _load(args.name)
+    except (FileNotFoundError, ValueError) as e:
+        return _err(str(e))
+    root = resolve(f"{cfg.name}/{cfg.version}")
+    if not (root / "manifest.json").exists():
+        return _err(f"{cfg.name} {cfg.version} is not built; run: uv run dataset build {cfg.name}")
+    print(render(cfg, root))
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     return {"list": _list, "build": _build, "verify": _verify,
-            "resolve": _resolve}[args.cmd](args)
+            "resolve": _resolve, "context": _context}[args.cmd](args)
 
 
 if __name__ == "__main__":
