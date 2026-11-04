@@ -1,0 +1,9 @@
+# Unicorn companies: the CB Insights list (Maven Analytics), the companies_* tables of Spider2's
+# modern_data. Rows 1-11 of each table are copies Spider2 prepended.
+file = "modern_data.sqlite"
+note = "Join dates are midnight, read as UTC. Snapshot and duplicate-marker times are a rule: N = 2022-04-05, the last join."
+
+[tables]
+companies_funding = ["company_id"]
+companies_dates = ["company_id"]
+companies_industries = ["company_id"]
