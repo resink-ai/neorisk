@@ -1,0 +1,21 @@
+# school: the School Scheduling sample database of Viescas and Hernandez, *SQL Queries for
+# Mere Mortals*, as Spider2's school_scheduling.sqlite; a fall 2017 and a spring 2018 term.
+file = "school_scheduling.sqlite"
+note = "Class starts and hire dates are text, read as UTC. sqlite_sequence is not data."
+
+[tables]
+Buildings = ["BuildingCode"]
+Class_Rooms = ["ClassRoomID"]
+Departments = ["DepartmentID"]
+Categories = ["CategoryID"]
+Subjects = ["SubjectID"]
+Majors = ["MajorID"]
+Student_Class_Status = ["ClassStatus"]
+Staff = ["StaffID"]
+Faculty = ["StaffID"]
+Faculty_Categories = ["StaffID", "CategoryID"]
+Faculty_Subjects = ["StaffID", "SubjectID"]
+Classes = ["ClassID"]
+Faculty_Classes = ["ClassID", "StaffID"]
+Students = ["StudentID"]
+Student_Schedules = ["StudentID", "ClassID"]
