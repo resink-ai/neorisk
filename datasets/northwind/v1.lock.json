@@ -1,0 +1,91 @@
+{
+  "name": "northwind",
+  "version": "v1",
+  "kind": "spider2",
+  "writer": {
+    "polars": "2.0.0",
+    "pyarrow": "26.0.0"
+  },
+  "recipe_sha256": "3d3197d7a3bfd4ce8e7ea08972c28693035ec9c32418389599542a97e2ca8ea2",
+  "source_sha256": "80a1d9591da7aeaaa439ba0002023d5ab69d3f15a3d8b2ac9389dfd30543c1e7",
+  "files": {
+    "expected/queries/local081.parquet": {
+      "sha256": "cd2d40825dfa3ad431c5a301879d445c04803d91154fa4bdc1dcc1c73e58b660",
+      "rows": 4
+    },
+    "expected/queries/local085.parquet": {
+      "sha256": "fdc1213d13dc24fabb08690092f7e871a161a2c0439f7b7bc50cedfe3a4b8306",
+      "rows": 3
+    },
+    "log/part-00000.parquet": {
+      "sha256": "6fa4332d3a68b54839249c9a8168b94aed13cfe23cdce7ddda370a6f429d5f7d",
+      "rows": 4387
+    },
+    "results/categories.parquet": {
+      "sha256": "2756cb901b8661ae8136f83a5e1dd39b893e6f5cf9fc8132bc9b394b557206c4",
+      "rows": 8
+    },
+    "results/customercustomerdemo.parquet": {
+      "sha256": "1f0bc1dbf82092e70acc702562f319fa4930e7a1cd1d1ee06ab772e154b4eab4",
+      "rows": 0
+    },
+    "results/customerdemographics.parquet": {
+      "sha256": "a974f29fac37587d12fdc3b9fcd67bd44b92ea07b6dce317409e59a2ea568a33",
+      "rows": 0
+    },
+    "results/customergroupthreshold.parquet": {
+      "sha256": "82af975ab89cd29a1f264feacf01b9b1eac495c69500fc24a0b87b7a783bbbc7",
+      "rows": 4
+    },
+    "results/customers.parquet": {
+      "sha256": "db1fa445e4bf2733f5aaa69c67836f831ccecbc482e2a5e1d6e319b26428b3ef",
+      "rows": 91
+    },
+    "results/employees.parquet": {
+      "sha256": "b82a2fe99d3d370d3ae3a97354fceb2f7553f5120c1c01c25c34c480496dd123",
+      "rows": 9
+    },
+    "results/employeeterritories.parquet": {
+      "sha256": "82736ac4cb688b80e93bd6581845fc45d7cda3764cee55de2147177482b4d0e1",
+      "rows": 49
+    },
+    "results/order_details.parquet": {
+      "sha256": "b92486b62706050d65026359c6655846711ab9e86cd7b92ba97ca7c19ac75dbe",
+      "rows": 2155
+    },
+    "results/orders.parquet": {
+      "sha256": "5947986bd6cd018a195eaca4479fb849fc75ebd61d691bbd2b57dba5ebc27efb",
+      "rows": 830
+    },
+    "results/products.parquet": {
+      "sha256": "679113d58b772b952006131b3b7b4c19b53450c0e9994c84f9377f7be92de917",
+      "rows": 77
+    },
+    "results/region.parquet": {
+      "sha256": "1d1925b806fb3fd5b6d75474e2c27dfb41c388cd62ac353811340d9eba25567d",
+      "rows": 4
+    },
+    "results/shippers.parquet": {
+      "sha256": "eff0c9e5dd90427a6d65163a3a189081507abb2e517233ca72c4849d45bfc9e3",
+      "rows": 6
+    },
+    "results/suppliers.parquet": {
+      "sha256": "4c8bfd71236f50cc4b100cd28ecc8b52d479d2b3dff8644e8cb4ffd8ec1a62b5",
+      "rows": 29
+    },
+    "results/territories.parquet": {
+      "sha256": "16376167a2bd1b2fdd05aa5689efc1031aaa28ced5f8789a2ee79d42d03a41dc",
+      "rows": 53
+    },
+    "results/usstates.parquet": {
+      "sha256": "aa93c276029489bcffd3148ca7d6ac5af5e04d4a19696a3782a3bd1b337c374c",
+      "rows": 51
+    },
+    "schema/events.json": {
+      "sha256": "6c6d55fd52108f6535d2e7946edbc4e7ea80f7ffac0ebd941a1dbfe5ff34b457"
+    },
+    "schema/results.json": {
+      "sha256": "d4db38590bcf6469da38a9325999fa6f39fdcfb30927e42b24865ec774e052be"
+    }
+  }
+}
