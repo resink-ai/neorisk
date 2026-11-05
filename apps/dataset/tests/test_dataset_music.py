@@ -2,14 +2,17 @@ COUNTS = {
     "albums_created": 347,
     "artists_created": 275,
     "customers_created": 59,
-    "employees_created": 8,
+    "customers_snapshot": 59,
+    "employee_hired": 8,
+    "employees_snapshot": 8,
     "genres_created": 25,
     "invoice_issued": 412,
     "invoice_line_added": 2240,
     "media_types_created": 5,
     "playlist_track_created": 8715,
     "playlists_created": 18,
-    "tracks_created": 3503
+    "tracks_created": 3503,
+    "tracks_snapshot": 3503
 }
 
 
