@@ -1,0 +1,43 @@
+{
+  "name": "nyctrees",
+  "version": "v1",
+  "kind": "spider2",
+  "writer": {
+    "polars": "2.0.0",
+    "pyarrow": "26.0.0"
+  },
+  "recipe_sha256": "a8636d550367c914d83a751f08daf205bb883f54771d03c390dbd658549d1775",
+  "source_sha256": "d4910db155d7be8070d14cab6e44862d0fa74d71e6588d114c4bacb4225942e4",
+  "files": {
+    "expected/queries/local040.parquet": {
+      "sha256": "269ce9fff87baa7c16297b6d23533f6f0d3343fdf2d9948f3cbcc5d8b47654cf",
+      "rows": 3
+    },
+    "expected/queries/local041.parquet": {
+      "sha256": "5176357852f8bb966eca5024551b15698c6a2f0aab6e6e3348f9361f7e4103ae",
+      "rows": 1
+    },
+    "log/part-00000.parquet": {
+      "sha256": "f72b71cbf36cb925f03ddab42ae38e99aa10d011d56d59a6032ca04766260abe",
+      "rows": 1000000
+    },
+    "log/part-00001.parquet": {
+      "sha256": "fe074e4928d3eaf7b5a7dcf2259b5e3db198fe20f25c87b66ae6a5243cc80dc3",
+      "rows": 374982
+    },
+    "results/income_trees.parquet": {
+      "sha256": "630fae8ac5ac77f3e5316e0d5479ee6b0c98b35ef1e9f7462001d42c81e95290",
+      "rows": 220
+    },
+    "results/trees.parquet": {
+      "sha256": "cffff123189370da01f9048eb3b0981ab92e9ded4c5dc77e32871ee97a5bff16",
+      "rows": 690626
+    },
+    "schema/events.json": {
+      "sha256": "e4dd8a9479d40ce17e2a74cd0965da89216bb37f210f60d39dbeb12c891c6748"
+    },
+    "schema/results.json": {
+      "sha256": "c89c023d4cb4b77a7081aa6c2823126538b4ba39f5e2d30b0278b81bd8b9976b"
+    }
+  }
+}

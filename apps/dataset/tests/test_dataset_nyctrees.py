@@ -3,7 +3,8 @@ COUNTS = {
     "species_created": 132,
     "trees_created": 683788,
     "trees_snapshot": 683788,
-    "zip_incomes_created": 216
+    "zip_incomes_created": 216,
+    "zip_incomes_snapshot": 216
 }
 
 

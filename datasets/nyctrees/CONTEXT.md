@@ -4,7 +4,7 @@
 
 The 2015 NYC Street Tree Census, one row per street tree (species, size, status, health, address and location), with a per-ZIP household-income lookup.
 
-Version `v1`, kind `spider2`. The input is one ordered event log of 1,374,766 events; the output is the 2 source tables, rebuilt exactly, and the answers to 2 saved Spider 2.0 questions.
+Version `v1`, kind `spider2`. The input is one ordered event log of 1,374,982 events; the output is the 2 source tables, rebuilt exactly, and the answers to 2 saved Spider 2.0 questions.
 
 ## Raw data
 
@@ -16,7 +16,7 @@ The reverse-engineering research, with the queries behind every number, is in [`
 
 ## How the log was made
 
-Each tree is an entity, created with its fixed traits: `idx`, species, address, ZIP, borough, NTA and coordinates. What the surveyor saw (`tree_dbh`, `stump_diam`, `status`, `health`) is a `trees_snapshot` event owned by the tree, in `idx` order. The 132 species are an entity keyed by `spc_latin`; a tree's species is a ref, NULL on 31,938 rows. Each ZIP's six income figures are a `zip_incomes` entity. ZIP is a plain integer on the tree, not a ref: 6 tree ZIPs (Central Park's 83 among them) have no income row. `borocode` and `state` are not carried: `specs/build.sql` derives borocode from boroname (Manhattan 1 to Staten Island 5) and writes `state` as the constant 'New York'.
+Each tree is an entity, created with its fixed traits: `idx`, species, address, ZIP, borough, NTA and coordinates. What the surveyor saw (`tree_dbh`, `stump_diam`, `status`, `health`) is a `trees_snapshot` event owned by the tree, in `idx` order. The 132 species are an entity keyed by `spc_latin`; a tree's species is a ref, NULL on 31,938 rows. Each ZIP with an income row is a `zip_incomes` entity, and its six ACS figures are a `zip_incomes_snapshot` event owned by the ZIP. ZIP is a plain integer on the tree, not a ref: 6 tree ZIPs (Central Park's 83 among them) have no income row. `borocode` and `state` are not carried: `specs/build.sql` derives borocode from boroname (Manhattan 1 to Staten Island 5) and writes `state` as the constant 'New York'.
 
 Of each set of identical rows, the last by rowid is the entity, and every earlier copy is one `source_row_duplicated` event naming its table, its tree id or ZIP and its source rowid: 6,838 for `trees`, 4 for `income_trees`. `specs/build.sql` adds one more copy of the row for each. Three of the four reproduced gold answers count these copies, so they are kept, not dropped.
 
@@ -28,13 +28,38 @@ Of each set of identical rows, the last by rowid is the entity, and every earlie
 |---|---|---:|---|
 | `species_created` | entity | 132 | `species_key`, `ext_id`, `spc_common` |
 | `trees_created` | entity | 683,788 | `tree_key`, `ext_id`, `idx`, `species`, `address`, `zipcode`, `boroname`, `nta_name`, `latitude`, `longitude` |
-| `zip_incomes_created` | entity | 216 | `zip_key`, `ext_id`, `estimate_total`, `moe_total`, `estimate_median_income`, `moe_median_income`, `estimate_mean_income`, `moe_mean_income` |
+| `zip_incomes_created` | entity | 216 | `zip_key`, `ext_id` |
 | `trees_snapshot` | business | 683,788 | `tree_id`, `tree_dbh`, `stump_diam`, `status`, `health` |
+| `zip_incomes_snapshot` | business | 216 | `zipcode`, `estimate_total`, `moe_total`, `estimate_median_income`, `moe_median_income`, `estimate_mean_income`, `moe_mean_income` |
 | `source_row_duplicated` | business | 6,842 | `source_table`, `ext_id`, `src_rowid` |
 
 ## Times set by rule
 
 Every time is a rule, since the source has none. Trees, species and ZIP incomes are created at T0, and snapshots and duplicate markers happen at N, with T0 = N = 2015-01-01 00:00:00 UTC (the census ran in 2015–2016). No order of events in this log is data.
+
+N is the existing rule time 2015-01-01 00:00:00; both snapshot events sit there, and no event is later.
+
+## Snapshot columns
+
+| Entity | Snapshot event | At (UTC) | Rows | Columns |
+|---|---|---|---:|---|
+| `trees` | `trees_snapshot` | 2015-01-01 00:00:00 | 683,788 | `tree_dbh`, `stump_diam`, `status`, `health` |
+| `zip_incomes` | `zip_incomes_snapshot` | 2015-01-01 00:00:00 | 216 | `estimate_total`, `moe_total`, `estimate_median_income`, `moe_median_income`, `estimate_mean_income`, `moe_mean_income` |
+
+| Column | Verdict | Reason |
+|---|---|---|
+| `species.spc_latin` (`ext_id`), `spc_common` | creation | The key and the given common name of a species. |
+| `trees.tree_id` (`ext_id`), `idx` | creation | The key and the source's pandas index, fixed per row; `idx` also orders the snapshots. |
+| `trees.species` | creation | An immutable ref: a tree's species does not change. |
+| `trees.address`, `zipcode`, `boroname`, `nta_name`, `latitude`, `longitude` | creation | A street tree cannot move, so its address and location labels are fixed by its position. The rubric's "addresses" are those of parties that move. |
+| `trees.borocode`, `state` | derived | `specs/build.sql` derives borocode from boroname and writes the constant 'New York'. |
+| `trees.tree_dbh`, `stump_diam`, `status`, `health` | snapshot | What the surveyor saw; they change over a tree's life (research §2). |
+| `zip_incomes.zipcode` (`ext_id`) | creation | The key. |
+| `zip_incomes` `Estimate_Total`, `Margin_of_Error_Total`, `Estimate_Median_income`, `Margin_of_Error_Median_income`, `Estimate_Mean_income`, `Margin_of_Error_Mean_income` | snapshot | Ruling: ACS estimates of a ZIP's households and income, of an unknown vintage, are known only as of the extract and change with each release; when in doubt, snapshot. Research kept them on creation and named this as an open question (§7). |
+
+No snapshot column decides an event's time: every time is the rule T0 = N. The rebuild LEFT JOINs each snapshot on its entity key. The 4 income duplicate markers copy the rebuilt row, snapshot values included.
+
+No domain name: the source shows no planting or listing act, so every entity keeps `<entity>_created`.
 
 ## Expected output
 
