@@ -4,10 +4,10 @@ COUNTS = {
     "erd_created": 25,
     "movie_genre_tagged": 14662,
     "movie_rated": 7997,
-    "movies_created": 7997,
+    "movie_released": 7997,
     "movies_snapshot": 4273,
     "names_created": 25735,
-    "names_snapshot": 10509
+    "names_snapshot": 15852
 }
 
 

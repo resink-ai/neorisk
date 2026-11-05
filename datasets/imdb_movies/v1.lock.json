@@ -1,0 +1,59 @@
+{
+  "name": "imdb_movies",
+  "version": "v1",
+  "kind": "spider2",
+  "writer": {
+    "polars": "2.0.0",
+    "pyarrow": "26.0.0"
+  },
+  "recipe_sha256": "88fdc6f431623e6e47033ca96321a0855437df443a7a7081db5da1c75e4797e6",
+  "source_sha256": "175c1da2deb00fe28d70608f7839aea5abc214dca15bb3e8622c9b7258c25b9e",
+  "files": {
+    "expected/queries/local152.parquet": {
+      "sha256": "2475334cd3719491a0f79ae0b13a177e7f3b9a27663ef9ef0738275f0ee4fd55",
+      "rows": 9
+    },
+    "expected/queries/local230.parquet": {
+      "sha256": "5b728c6c09ecd582bf45cc0d8d5498dda21449c2412ced4a96ffa7d351693c96",
+      "rows": 4
+    },
+    "log/part-00000.parquet": {
+      "sha256": "2773183fd0318912cadcb699a296658aa151dc625efacc6485798f64213f88a3",
+      "rows": 96023
+    },
+    "results/ERD.parquet": {
+      "sha256": "3c5139465f908e362ba6e497c5923123c96ce82499ed5f7f1ba3d4c9a54cf425",
+      "rows": 25
+    },
+    "results/director_mapping.parquet": {
+      "sha256": "828bc9b79af0d86cb699c933e4db264d35851debf9daca3173c0a0e9efa02b5e",
+      "rows": 3867
+    },
+    "results/genre.parquet": {
+      "sha256": "ee53f7cf21607335aaa83c520bd795e37dfb897eff01e1b8270f912b30271964",
+      "rows": 14662
+    },
+    "results/movies.parquet": {
+      "sha256": "ae11b02bedf0abf06a109cb94d3c336de72cfdc9046dea9058e871f11790bd3c",
+      "rows": 7997
+    },
+    "results/names.parquet": {
+      "sha256": "9b41a4d56ea940694167cc1fea45bef6b6bcef716ab616869de1c72027cb147d",
+      "rows": 25735
+    },
+    "results/ratings.parquet": {
+      "sha256": "f65b5e1bc1a0d591d308e7134170f2f2dc96ad7af506e24f304f7aa28f340f5a",
+      "rows": 7997
+    },
+    "results/role_mapping.parquet": {
+      "sha256": "e3709302d40eb1ff63fb9bc1317ac87a70c9765ddde834840448fc12850b227c",
+      "rows": 15615
+    },
+    "schema/events.json": {
+      "sha256": "0be4975cc077563db773324af04ff0fefaa40e334016beb3c69eaf6f82708331"
+    },
+    "schema/results.json": {
+      "sha256": "1b058beb36d12aa010530e70f10395fab15bc6606a6c99d30ed60996665b8fce"
+    }
+  }
+}

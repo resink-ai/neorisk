@@ -30,7 +30,7 @@ SELECT m.ext_id AS movie_id, n.ext_id AS name_id, r.category AS category
 FROM cast_credited r JOIN movies m USING (movie_id) JOIN names n ON n.name_id = r.person_id;
 
 -- table: names
-SELECT n.ext_id AS id, n.name AS name, CAST(n.height AS DOUBLE) AS height,
+SELECT n.ext_id AS id, n.name AS name, CAST(s.height AS DOUBLE) AS height,
        n.date_of_birth AS date_of_birth, s.known_for_movies AS known_for_movies
 FROM names n LEFT JOIN names_snapshot s USING (name_id);
 

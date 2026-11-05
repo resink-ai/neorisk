@@ -2,7 +2,7 @@
 -- Times (docs/research/spider2/imdbmovies.md §2): a movie at its date_published (natural);
 -- its genre tags and credits at the same time (a rule); a person at their first credited
 -- publication, else at the catalog start 2017-01-01 like the ERD rows (rules); ratings,
--- gross and known-for lists at N = 2020-01-01 (a rule).
+-- gross, heights and known-for lists at N = 2020-01-01 (a rule).
 
 -- entity: erd
 SELECT "table" || '.' || "column" AS ext_id, '2017-01-01 00:00:00' AS created_at,
@@ -17,10 +17,10 @@ first AS (SELECT c.name_id, min(m.date_published) AS dp
           FROM credit c JOIN movies m ON m.id = c.movie_id GROUP BY c.name_id)
 SELECT n.id AS ext_id, coalesce(iso_time(f.dp, '%Y-%m-%d %H:%M:%S'), '2017-01-01 00:00:00')
          AS created_at,
-       n.name AS name, CAST(n.height AS INTEGER) AS height, n.date_of_birth AS date_of_birth
+       n.name AS name, n.date_of_birth AS date_of_birth
 FROM names n LEFT JOIN first f ON f.name_id = n.id ORDER BY n.id;
 
--- entity: movies
+-- entity: movies event=movie_released
 SELECT id AS ext_id, iso_time(date_published, '%Y-%m-%d %H:%M:%S') AS created_at,
        title, duration, country, languages, production_company
 FROM movies ORDER BY date_published, id;
@@ -50,5 +50,6 @@ SELECT '2020-01-01 00:00:00' AS event_time, id AS movie_id,
 FROM movies WHERE worlwide_gross_income IS NOT NULL ORDER BY id;
 
 -- event: names_snapshot owner=name_id
-SELECT '2020-01-01 00:00:00' AS event_time, id AS name_id, known_for_movies
-FROM names WHERE known_for_movies IS NOT NULL ORDER BY id;
+SELECT '2020-01-01 00:00:00' AS event_time, id AS name_id, CAST(height AS INTEGER) AS height,
+       known_for_movies
+FROM names WHERE height IS NOT NULL OR known_for_movies IS NOT NULL ORDER BY id;
