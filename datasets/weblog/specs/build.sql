@@ -85,13 +85,16 @@ FROM u WHERE k = 1 AND NOT EXISTS (
     AND d.event_time >= u.event_time AND d.event_time < TIMESTAMPTZ '2017-01-01 00:00:00+00');
 
 -- table: app1_mst_users
-SELECT ext_id AS user_id, name, email FROM app1_users;
+SELECT u.ext_id AS user_id, u.name, n.email
+FROM app1_users u LEFT JOIN app1_users_snapshot n USING (app1_users_key);
 
 -- table: app2_mst_users
-SELECT ext_id AS user_id, name, phone FROM app2_users;
+SELECT u.ext_id AS user_id, u.name, n.phone
+FROM app2_users u LEFT JOIN app2_users_snapshot n USING (app2_users_key);
 
 -- table: mst_users_with_card_number
-SELECT ext_id AS user_id, card_number FROM user_cards;
+SELECT u.ext_id AS user_id, n.card_number
+FROM user_cards u LEFT JOIN user_cards_snapshot n USING (user_card_key);
 
 -- table: purchase_log
 SELECT purchase_id, user_id, amount,
@@ -99,4 +102,5 @@ SELECT purchase_id, user_id, amount,
 FROM purchase_logged ORDER BY src_rowid;
 
 -- table: product_sales
-SELECT category_name, ext_id AS product_id, sales FROM product_sales;
+SELECT p.category_name, p.ext_id AS product_id, n.sales
+FROM product_sales p LEFT JOIN product_sales_snapshot n USING (product_sales_key);

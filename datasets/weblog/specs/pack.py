@@ -9,7 +9,7 @@ order among equal stamps that the benchmark questions depend on. Money is whole 
 
 from dataclasses import dataclass
 
-from neorisk_simkit.spec import Pack, i64, opt, text
+from neorisk_simkit.spec import Pack, i64, opt, ref, text
 
 SCHEMA_VERSION = 1
 
@@ -28,12 +28,20 @@ def define(p: Pack) -> None:
     row = {"src_rowid": i64(doc="Source rowid: the order among equal stamps")}
     for name, doc in (("app1_users", "app1_mst_users"), ("app2_users", "app2_mst_users")):
         other = "email" if name == "app1_users" else "phone"
-        p.entity(name, key=f"{name}_key", doc=f"{doc}; untimed, created by rule at 2016-01-01",
-                 cols={"ext_id": text(doc="user_id"), "name": t(), other: t()})
-    p.entity("user_cards", key="user_card_key", doc="Masked card numbers ('dddd' + 12 'x')",
-             cols={"ext_id": text(doc="user_id"), "card_number": t()})
-    p.entity("product_sales", key="product_sales_key", doc="An untimed sales aggregate",
-             cols={"ext_id": text(doc="product_id"), "category_name": t(), "sales": opt(i64())})
+        p.entity(name, key=f"{name}_key",
+                 doc=f"{doc}; untimed, created by rule at 2016-01-01; the {other} is a snapshot",
+                 cols={"ext_id": text(doc="user_id"), "name": t()})
+        p.event(f"{name}_snapshot", doc=f"State at N: the {other}",
+                cols={f"{name}_key": ref(name), other: t()})
+    p.entity("user_cards", key="user_card_key", doc="Card holders; the card is a snapshot",
+             cols={"ext_id": text(doc="user_id")})
+    p.event("user_cards_snapshot", doc="State at N: the masked card number ('dddd' + 12 'x')",
+            cols={"user_card_key": ref("user_cards"), "card_number": t()})
+    p.entity("product_sales", key="product_sales_key",
+             doc="An untimed sales aggregate; the total is a snapshot",
+             cols={"ext_id": text(doc="product_id"), "category_name": t()})
+    p.event("product_sales_snapshot", doc="State at N: the lifetime sales total",
+            cols={"product_sales_key": ref("product_sales"), "sales": opt(i64())})
     p.event("access_logged", doc="19 rows are column-shifted: the time is in `session`",
             cols={"user_id": t(), "session": t(), "action": t(),
                   "shifted": i64(doc="1 when stamp holds a path, not a time"),
