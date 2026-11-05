@@ -36,7 +36,17 @@ None. Every event time is a source date.
 
 ## Snapshot columns
 
-Classified in PR 2. Until then every entity attribute travels in its creation event.
+None: every entity attribute travels in its creation event.
+
+| Column | Verdict | Reason |
+|---|---|---|
+| `regions.ext_id` | creation | The source key (`region_id`). |
+| `regions.region_name` | creation | A given name; a static lookup. |
+| `customers.ext_id` | creation | The source key (`customer_id`). |
+| `customers.created_at` | creation | The first node start date (equal to the first transaction date for 500 of 500); it is the event's time. |
+| `customers.region_id` | creation | An immutable ref: every one of a customer's 7 dated node rows, from the first, carries the same region, so the source shows it at creation, not only as of the extract. |
+
+No column qualifies: the node, the one value that changes, already travels on `account_opened` and `node_reassigned`, and balances are derived from `transaction_posted`. There are no snapshot events, so there is no snapshot time N. The creation event keeps `customers_created`: the act of opening is already the `account_opened` event at the same time.
 
 ## Expected output
 
