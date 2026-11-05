@@ -1,5 +1,6 @@
 COUNTS = {
-    "cities_created": 44622,
+    "cities_snapshot": 44622,
+    "city_inserted": 44622,
     "countries_created": 241,
     "countries_snapshot": 241,
     "currencies_created": 254,

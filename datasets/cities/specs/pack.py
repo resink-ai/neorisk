@@ -3,7 +3,8 @@ currency and language lookups (Jaime M. Shaker's SQL Coding Challenge). Stage 1,
 the entities are ingested from the Spider2 tables (docs/research/spider2/cities.md); stage 2
 adds the behavior.
 
-A city's creation is its insertion, at `insert_date`. The source's `latitude` holds longitudes
+A city's creation is its insertion (`city_inserted`), at `insert_date`. Its capital flag and
+population are snapshot columns at N = 2024-07-18, the countries' `created_on`. The source's `latitude` holds longitudes
 and `longitude` latitudes; both are carried as stored, never repaired.
 """
 
@@ -36,7 +37,9 @@ def define(p: Pack) -> None:
                    "city_name": opt(text(doc="NULL for city 9272, the town 'nan'")),
                    "latitude": f64(doc="Holds the longitude, as stored"),
                    "longitude": f64(doc="Holds the latitude, as stored"),
-                   "country": ref("countries"), "capital": i64(doc="0 or 1"),
-                   "population": opt(i64(doc="Whole people; the source stores REAL"))})
+                   "country": ref("countries")})
     p.event("countries_snapshot", doc="The load stamp created_on: the event's date, 2024-07-18",
             cols={"country": ref("countries")})
+    p.event("cities_snapshot", doc="State at N: the capital flag and the population",
+            cols={"city": ref("cities"), "capital": i64(doc="0 or 1"),
+                  "population": opt(i64(doc="Whole people; the source stores REAL"))})
