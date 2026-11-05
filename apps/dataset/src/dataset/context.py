@@ -11,6 +11,7 @@ import json
 from pathlib import Path
 
 from dataset.config import DatasetConfig
+from dataset.snapshots import SUFFIX
 
 ENVELOPE = ("event_id", "sim_seq", "partition_id", "cause_id", "action_id")
 
@@ -19,6 +20,35 @@ def _log_counts(root: Path) -> dict[str, int]:
     import duckdb
     return dict(duckdb.sql(f"SELECT event_type, count(*) FROM read_parquet('{root}/log/*.parquet') "
                            "GROUP BY 1").fetchall())
+
+
+def _snapshot_times(root: Path, names: list[str]) -> dict[str, str]:
+    import duckdb
+    if not names:
+        return {}
+    return dict(duckdb.sql(
+        f"SELECT event_type, strftime(min(event_time) AT TIME ZONE 'UTC', '%Y-%m-%d %H:%M:%S') "
+        f"FROM read_parquet('{root}/log/*.parquet') WHERE event_type IN "
+        f"({', '.join(repr(n) for n in names)}) GROUP BY 1").fetchall())
+
+
+def _snapshots(events: list[dict], counts: dict[str, int], root: Path) -> list[str]:
+    """The snapshot-only columns: each `<entity>_snapshot` event's payload, minus the key."""
+    keys = {e["entity"]: e["key"] for e in events if e["kind"] == "entity_created"}
+    snaps = [e for e in events if e["kind"] == "event" and e["name"].endswith(SUFFIX)
+             and e["name"][:-len(SUFFIX)] in keys]
+    out = ["", "## Snapshot columns", ""]
+    if not snaps:
+        return out + ["None: every entity attribute travels in its creation event."]
+    at = _snapshot_times(root, [e["name"] for e in snaps])
+    out += ["| Entity | Snapshot event | At (UTC) | Rows | Columns |", "|---|---|---|---:|---|"]
+    for e in snaps:
+        ent = e["name"][:-len(SUFFIX)]
+        cols = [f["name"] for f in e["fields"]
+                if f["name"] not in ENVELOPE and f.get("ref") != ent]
+        out.append(f"| `{ent}` | `{e['name']}` | {at.get(e['name'], '')} | "
+                   f"{counts.get(e['name'], 0):,} | " + ", ".join(f"`{c}`" for c in cols) + " |")
+    return out
 
 
 def _intro(version: str, kind: str, events: int, tables: int, queries: int) -> str:
@@ -45,6 +75,7 @@ def render(cfg: DatasetConfig, root: Path) -> str:
         fields = [f["name"] for f in e["fields"] if kind == "entity" or f["name"] not in ENVELOPE]
         out.append(f"| `{e['name']}` | {kind} | {counts.get(e['name'], 0):,} | "
                    + ", ".join(f"`{f}`" for f in fields) + " |")
+    out += _snapshots(events, counts, root)
     out += ["", "## Expected output", "",
             "| Table | Rows | Columns | Mixed columns |", "|---|---:|---:|---|"]
     for t, m in tables.items():
