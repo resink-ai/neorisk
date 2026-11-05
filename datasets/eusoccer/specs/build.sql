@@ -17,7 +17,7 @@ FROM teams;
 -- table: Player
 SELECT p.player_row_id AS id, CAST(p.ext_id AS BIGINT) AS player_api_id, p.player_name,
        p.player_fifa_api_id, p.birthday, s.height, s.weight
-FROM players p JOIN players_snapshot s USING (player_id);
+FROM players p LEFT JOIN players_snapshot s USING (player_id);
 
 -- table: Match
 -- country_id is the league's country.

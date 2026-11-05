@@ -39,7 +39,31 @@ The XML is 268,858,266 characters, 90% of the source. It comes back byte for byt
 
 ## Times set by rule
 
-Countries and leagues are created at their first match (2008-07-18 to 2008-08-30). Teams are created at the earlier of their first match and their first team rating (51 teams are rated before they first play). Players are created at their first rating (2007-02-22 for 11,059 players, 2007-08-30 for one). Height and weight are snapshot at N = 2016-07-07, the last rating date.
+Countries and leagues are created at their first match (2008-07-18 to 2008-08-30). Teams are created at the earlier of their first match and their first team rating (51 teams are rated before they first play). Players are created at their first rating (2007-02-22 for 11,059 players, 2007-08-30 for one). Height and weight are snapshot at N = 2016-07-07 00:00:00, the dataset's existing snapshot time: the last rating date and the latest event time in the log.
+
+## Snapshot columns
+
+| Entity | Snapshot event | At (UTC) | Rows | Columns |
+|---|---|---|---:|---|
+| `players` | `players_snapshot` | 2016-07-07 00:00:00 | 11,060 | `height`, `weight` |
+
+| Column | Verdict | Reason |
+|---|---|---|
+| `Country.id` (`ext_id`), `Country.name` | creation | The source key and a given name. |
+| `League.id` (`ext_id`), `League.name` | creation | The source key and a given name. |
+| `League.country_id` | creation | An immutable ref. |
+| `Team.team_api_id` (`ext_id`), `Team.id` (`team_row_id`) | creation | Source keys. |
+| `Team.team_fifa_api_id` | creation | An external id fixed with the row (unique per sofifa club; NULL for the 11 never rated). |
+| `Team.team_long_name`, `team_short_name` | creation | Given names. |
+| `Player.player_api_id` (`ext_id`), `Player.id` (`player_row_id`) | creation | Source keys. |
+| `Player.player_fifa_api_id` | creation | An external id fixed with the row; the rating rows carry their own, verbatim. |
+| `Player.player_name` | creation | A given name. |
+| `Player.birthday` | creation | A birth date. |
+| `Player.height`, `Player.weight` | snapshot | sofifa's 2016 values on a player created in 2007; a body measure changes over a career (research §3; when in doubt, snapshot). |
+
+No snapshot column decides an event's time or order: players are created at their first rating, teams at min(first match, first rating), countries and leagues at their first match.
+
+No domain name: every entity is created by rule at its first appearance, and the real acts (a match, a rating) are already their own events, so all keep `<entity>_created`.
 
 ## Expected output
 
