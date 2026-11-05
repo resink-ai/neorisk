@@ -2,10 +2,14 @@ COUNTS = {
     "channels_created": 5,
     "countries_created": 35,
     "customers_created": 55500,
+    "customers_snapshot": 55500,
     "demographics_created": 4500,
+    "demographics_snapshot": 4500,
     "price_quoted": 82112,
     "products_created": 75,
+    "products_snapshot": 24,
     "promotions_created": 503,
+    "promotions_snapshot": 503,
     "times_created": 1826,
     "unit_sold": 918843
 }

@@ -1,0 +1,91 @@
+{
+  "name": "oraclesh",
+  "version": "v1",
+  "kind": "spider2",
+  "writer": {
+    "polars": "2.0.0",
+    "pyarrow": "26.0.0"
+  },
+  "recipe_sha256": "6f6755acb04a0494b7763bbd47b26484146a769c0bf05ea22edf9fec25645df8",
+  "source_sha256": "2244dbd99d5205941353024332eb62b1754d3383bcd7c8c20361344d736be00c",
+  "files": {
+    "expected/queries/local050.parquet": {
+      "sha256": "c03235cafbdcbca461a30312a78e136d91c2cb8365aff1688919c7fccf920b20",
+      "rows": 1
+    },
+    "expected/queries/local060.parquet": {
+      "sha256": "edbed6f3cf755fa1707ffd3e2fa19422079eb60f4c098dc7483ed45c0f646dee",
+      "rows": 4
+    },
+    "expected/queries/local061.parquet": {
+      "sha256": "8d5d9fac0f08c4a30f54151727be0694348dffde6ff6fdc1224e829f644a8e66",
+      "rows": 12
+    },
+    "expected/queries/local062.parquet": {
+      "sha256": "2b1a29956bdbf9b8acef03ae2b5558dcfa2429395756d7bd653a1a5d3f39e919",
+      "rows": 10
+    },
+    "expected/queries/local063.parquet": {
+      "sha256": "35e8c266ec74cbf9ecb29b72c9e17f50bb02dd9e6b00284f6990fb8bc673c38e",
+      "rows": 1
+    },
+    "expected/queries/local067.parquet": {
+      "sha256": "8ce622fae141174129ee72bdad1c52905196f6bbe5be78d14bfcdf7cc2480231",
+      "rows": 10
+    },
+    "log/part-00000.parquet": {
+      "sha256": "1b289f287d530713c2ceef95327ddd2d1a1a158f00ae155f67671f6d85f1f531",
+      "rows": 1000000
+    },
+    "log/part-00001.parquet": {
+      "sha256": "e96b42315b662b4f941ecf9fe944d9bd012b6860e129250533a98d08c9e871d1",
+      "rows": 123926
+    },
+    "results/channels.parquet": {
+      "sha256": "bf229882ce22832e6dcf67cb5c0d297764aa0496b65326d7f013df620151af10",
+      "rows": 5
+    },
+    "results/costs.parquet": {
+      "sha256": "e38461247d211cfc19e7d46b29368990c93414e0ce52ecc03c1d479477829f72",
+      "rows": 82112
+    },
+    "results/countries.parquet": {
+      "sha256": "44b775240d3c16b4288b24146f2828062ab94375b02b0727189fe109ff74062f",
+      "rows": 35
+    },
+    "results/currency.parquet": {
+      "sha256": "ba53a2a87c08558b7ecc4cd90e77542ac31df852064d932be7a77a07e40bcbfd",
+      "rows": 1260
+    },
+    "results/customers.parquet": {
+      "sha256": "809c1b2e20287a1d86d5703d0c23d4dd6db805fbe484051c625ce154f6bc1b2a",
+      "rows": 55500
+    },
+    "results/products.parquet": {
+      "sha256": "39b265ca79c44c967fff80850953852953c5f08107cd364c3f377a17fc15a2f5",
+      "rows": 24
+    },
+    "results/promotions.parquet": {
+      "sha256": "65d82185d98060d5d3a8519586eaa20da66349bc86e662721052591b0a8c890d",
+      "rows": 503
+    },
+    "results/sales.parquet": {
+      "sha256": "e695d471f95e8416c0b0446da4d2bccab8031d6b0719bce2350210b7b956b70a",
+      "rows": 918843
+    },
+    "results/supplementary_demographics.parquet": {
+      "sha256": "247934023ca10e414e007d74a86c9fff89a4fec3d9ca78dd7a52ebfb140738de",
+      "rows": 4500
+    },
+    "results/times.parquet": {
+      "sha256": "1ef9031c27853e65c97759652a162b9b93247926a007bc09f08cfa7fdaf8f27e",
+      "rows": 1826
+    },
+    "schema/events.json": {
+      "sha256": "b6e27d32c912ddc5bef9e09d9a813a7561199db2b6ca526bf1a15f776159b080"
+    },
+    "schema/results.json": {
+      "sha256": "9620e4c8ebfe138ed13363d0fe83f92037ac135d8ccf174858e1e2cf8dd9937a"
+    }
+  }
+}
