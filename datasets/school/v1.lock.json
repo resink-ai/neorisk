@@ -1,0 +1,87 @@
+{
+  "name": "school",
+  "version": "v1",
+  "kind": "spider2",
+  "writer": {
+    "polars": "2.0.0",
+    "pyarrow": "26.0.0"
+  },
+  "recipe_sha256": "0e2e945f0c93b0d5960d87d8d8b5d4f1af636dd7a50b28399afb964a19b963b2",
+  "source_sha256": "bf37030ee170906bfa6bf5958766cf2a63dc0ad8168b3892ad96940be838fe63",
+  "files": {
+    "expected/queries/local130.parquet": {
+      "sha256": "2c0b8951ee8d6793535ac217e0dc0af08f5904bfef3413e04c95337724ae385a",
+      "rows": 18
+    },
+    "log/part-00000.parquet": {
+      "sha256": "8fcc16714f2c485b92b5f01473ca9e41a2aa9757eef5d1a12e553bf6eb754b85",
+      "rows": 1119
+    },
+    "results/Buildings.parquet": {
+      "sha256": "60c06c4de9bfd33206f1841903e1391246d3330f589d457f335e78e40da899e6",
+      "rows": 6
+    },
+    "results/Categories.parquet": {
+      "sha256": "2cba959f9a241d342f498d4a1e56d66a53f5ad5b1ddec939e19357490a433829",
+      "rows": 19
+    },
+    "results/Class_Rooms.parquet": {
+      "sha256": "3cad0894c9c86c417a5d1fa8a7e83fcdb065690268cfb030cd8edaa9ffac7a6e",
+      "rows": 47
+    },
+    "results/Classes.parquet": {
+      "sha256": "3f595c7ea5f28b3e2dd59413b5a67a1b874156f0f8645005def856d6ff08db07",
+      "rows": 147
+    },
+    "results/Departments.parquet": {
+      "sha256": "3d220843bf607c85c87ee3709aee97387e15384f55180e203a7b07c54651c9a1",
+      "rows": 5
+    },
+    "results/Faculty.parquet": {
+      "sha256": "a24d04c512b0d3eab58ec77f6853ca7e90d9eaa55f83182ab7b9d66eeb11eef0",
+      "rows": 24
+    },
+    "results/Faculty_Categories.parquet": {
+      "sha256": "e3a37521d0845a29b92f485ea777b3ec5ac5645d7e21ed8099156e8f00a04fde",
+      "rows": 76
+    },
+    "results/Faculty_Classes.parquet": {
+      "sha256": "3a7b38095954e6acb21572850742a71520bc8a889af62d26dd7a495cccaceaa2",
+      "rows": 145
+    },
+    "results/Faculty_Subjects.parquet": {
+      "sha256": "f13be2fb58cdd5687c945c4bce8b1205611787bbb271d668ed4e2f37037e2010",
+      "rows": 110
+    },
+    "results/Majors.parquet": {
+      "sha256": "3c9519c59427388deea13b17b7d6c65635ff3c3ef838980a22e3830f36bb412c",
+      "rows": 7
+    },
+    "results/Staff.parquet": {
+      "sha256": "c3f1e5a5382e11826ab523547183f9a4843781acf68085fb761f6d6bab4772cb",
+      "rows": 27
+    },
+    "results/Student_Class_Status.parquet": {
+      "sha256": "35a59cc8565323a70da9094255684ec8a855f6558b7b230aa26462058079ea97",
+      "rows": 3
+    },
+    "results/Student_Schedules.parquet": {
+      "sha256": "3dd5f8b71094bf5cea5ce25f4ee8eb7cce62f2715a2640044f11df29ab9aa659",
+      "rows": 120
+    },
+    "results/Students.parquet": {
+      "sha256": "9884ec0c317b27768e525f453913b70b5275050cf72908058ae980dd08171c28",
+      "rows": 19
+    },
+    "results/Subjects.parquet": {
+      "sha256": "cefd959db6c402c4155fd6ccd73a880daa1b25e07b69ec3542d42025043da1b3",
+      "rows": 56
+    },
+    "schema/events.json": {
+      "sha256": "3ea8504a2ec51fad842344adab1c62b01618590eed4041bfc18d607cf50a3ac0"
+    },
+    "schema/results.json": {
+      "sha256": "a26957567802e2d78212d8be98b8da6dd9d0be70a5ffb9a52910c4438e990755"
+    }
+  }
+}

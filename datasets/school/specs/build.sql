@@ -1,19 +1,22 @@
 -- school: events → source tables (refdata rebuild, DuckDB).
 
 -- table: Buildings
-SELECT ext_id AS BuildingCode, building_name AS BuildingName, number_of_floors AS NumberOfFloors,
-       elevator_access AS ElevatorAccess, site_parking_available AS SiteParkingAvailable
-FROM buildings;
+SELECT b.ext_id AS BuildingCode, b.building_name AS BuildingName,
+       b.number_of_floors AS NumberOfFloors, n.elevator_access AS ElevatorAccess,
+       n.site_parking_available AS SiteParkingAvailable
+FROM buildings b LEFT JOIN buildings_snapshot n USING (building_id);
 
 -- table: Class_Rooms
 SELECT CAST(r.ext_id AS BIGINT) AS ClassRoomID, b.ext_id AS BuildingCode,
-       r.phone_available AS PhoneAvailable
-FROM class_rooms r LEFT JOIN buildings b USING (building_id);
+       n.phone_available AS PhoneAvailable
+FROM class_rooms r LEFT JOIN buildings b USING (building_id)
+LEFT JOIN class_rooms_snapshot n USING (class_room_id);
 
 -- table: Departments
 SELECT CAST(d.ext_id AS BIGINT) AS DepartmentID, d.dept_name AS DeptName,
        CAST(s.ext_id AS BIGINT) AS DeptChair
-FROM departments d LEFT JOIN staff s ON s.staff_id = d.dept_chair;
+FROM departments d LEFT JOIN departments_snapshot n USING (department_id)
+LEFT JOIN staff s ON s.staff_id = n.dept_chair;
 
 -- table: Categories
 SELECT c.ext_id AS CategoryID, c.description AS CategoryDescription,
@@ -34,19 +37,19 @@ SELECT CAST(ext_id AS BIGINT) AS ClassStatus, description AS ClassStatusDescript
 FROM student_class_status;
 
 -- table: Staff
--- Salary is the snapshot at N.
+-- Address, phone, salary and position are the snapshot at N.
 SELECT CAST(s.ext_id AS BIGINT) AS StaffID, s.first_name AS StfFirstName,
-       s.last_name AS StfLastname, s.street_address AS StfStreetAddress, s.city AS StfCity,
-       s.state AS StfState, s.zip AS StfZipCode, s.area_code AS StfAreaCode,
-       s.phone AS StfPhoneNumber, n.salary AS Salary,
-       strftime(s.created_at AT TIME ZONE 'UTC', '%Y-%m-%d') AS DateHired, s.position AS Position
-FROM staff s JOIN staff_snapshot n USING (staff_id);
+       s.last_name AS StfLastname, n.street_address AS StfStreetAddress, n.city AS StfCity,
+       n.state AS StfState, n.zip AS StfZipCode, n.area_code AS StfAreaCode,
+       n.phone AS StfPhoneNumber, n.salary AS Salary,
+       strftime(s.created_at AT TIME ZONE 'UTC', '%Y-%m-%d') AS DateHired, n.position AS Position
+FROM staff s LEFT JOIN staff_snapshot n USING (staff_id);
 
 -- table: Faculty
 -- Title, Status and Tenured are the snapshot at N.
 SELECT CAST(s.ext_id AS BIGINT) AS StaffID, n.title AS Title, n.status AS Status,
        n.tenured AS Tenured
-FROM faculty f JOIN staff s USING (staff_id) JOIN faculty_snapshot n USING (faculty_id);
+FROM faculty f JOIN staff s USING (staff_id) LEFT JOIN faculty_snapshot n USING (faculty_id);
 
 -- table: Faculty_Categories
 SELECT CAST(f.ext_id AS BIGINT) AS StaffID, c.ext_id AS CategoryID
@@ -54,8 +57,9 @@ FROM faculty_categories x JOIN faculty f USING (faculty_id) JOIN categories c US
 
 -- table: Faculty_Subjects
 SELECT CAST(f.ext_id AS BIGINT) AS StaffID, CAST(s.ext_id AS BIGINT) AS SubjectID,
-       x.proficiency_rating AS ProficiencyRating
-FROM faculty_subjects x JOIN faculty f USING (faculty_id) JOIN subjects s USING (subject_id);
+       n.proficiency_rating AS ProficiencyRating
+FROM faculty_subjects x JOIN faculty f USING (faculty_id) JOIN subjects s USING (subject_id)
+LEFT JOIN faculty_subjects_snapshot n USING (fs_id);
 
 -- table: Classes
 SELECT CAST(c.ext_id AS BIGINT) AS ClassID, CAST(s.ext_id AS BIGINT) AS SubjectID,
@@ -72,12 +76,13 @@ SELECT CAST(c.ext_id AS BIGINT) AS ClassID, CAST(s.ext_id AS BIGINT) AS StaffID
 FROM faculty_classes x JOIN classes c USING (class_id) JOIN staff s USING (staff_id);
 
 -- table: Students
--- StudGPA is the snapshot at N.
+-- Address, phone, major and StudGPA are the snapshot at N.
 SELECT CAST(s.ext_id AS BIGINT) AS StudentID, s.first_name AS StudFirstName,
-       s.last_name AS StudLastName, s.street_address AS StudStreetAddress, s.city AS StudCity,
-       s.state AS StudState, s.zip AS StudZipCode, s.area_code AS StudAreaCode,
-       s.phone AS StudPhoneNumber, n.stud_gpa AS StudGPA, CAST(m.ext_id AS BIGINT) AS StudMajor
-FROM students s JOIN students_snapshot n USING (student_id) LEFT JOIN majors m USING (major_id);
+       s.last_name AS StudLastName, n.street_address AS StudStreetAddress, n.city AS StudCity,
+       n.state AS StudState, n.zip AS StudZipCode, n.area_code AS StudAreaCode,
+       n.phone AS StudPhoneNumber, n.stud_gpa AS StudGPA, CAST(m.ext_id AS BIGINT) AS StudMajor
+FROM students s LEFT JOIN students_snapshot n USING (student_id)
+LEFT JOIN majors m ON m.major_id = n.major_id;
 
 -- table: Student_Schedules
 -- ClassStatus: 2 when completed, 3 when withdrawn, else 1 (still enrolled at N).
