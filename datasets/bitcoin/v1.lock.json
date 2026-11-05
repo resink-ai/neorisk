@@ -1,0 +1,43 @@
+{
+  "name": "bitcoin",
+  "version": "v1",
+  "kind": "spider2",
+  "writer": {
+    "polars": "2.0.0",
+    "pyarrow": "26.0.0"
+  },
+  "recipe_sha256": "f212b31725fa0811cd0c52ff1f0d77d4d4e44b3eb04aabd71f7c3b84bff3a0df",
+  "source_sha256": "10c8b8136486902a19c3f974f210e9fb7c8f98918ae0313114c720219b02e18c",
+  "files": {
+    "expected/queries/local156.parquet": {
+      "sha256": "74bfa95f32204e3891a7010d4500f2f359248af876eb068b8170fccfe33169d7",
+      "rows": 20
+    },
+    "expected/queries/local157.parquet": {
+      "sha256": "98dab8a314f07a3bbf6c8c410b12be209781b35b5fe8c1094b7b77a386f2ed01",
+      "rows": 20
+    },
+    "log/part-00000.parquet": {
+      "sha256": "14c034bea6fd61128812194cd433841de8d163aa64b88f7329bb513c0d2f3ee3",
+      "rows": 26352
+    },
+    "results/bitcoin_members.parquet": {
+      "sha256": "78955d02df860bc92a807ee0545cb94c274de8e1f5dc0463526731a2e285e403",
+      "rows": 14
+    },
+    "results/bitcoin_prices.parquet": {
+      "sha256": "43293668744bc675ff74e6473c39d9f9981fe8618c4cc235d968dbefb508fbb9",
+      "rows": 3404
+    },
+    "results/bitcoin_transactions.parquet": {
+      "sha256": "e914d37311ebb0b9c71f56159b5b725012b7094d81200f668e5a557137f770d8",
+      "rows": 22918
+    },
+    "schema/events.json": {
+      "sha256": "0f19f5cfdc916f4242f88ee9e6ee577e5bb5caabb608bf4f0592836c7b505436"
+    },
+    "schema/results.json": {
+      "sha256": "f97f1ee36759086a9cc118405ebe9ad3681918d525f051b6bc9154a4b165fc6f"
+    }
+  }
+}

@@ -2,6 +2,7 @@ COUNTS = {
     "trade": 22918,
     "price_published": 3404,
     "members_created": 14,
+    "members_snapshot": 14,
     "tickers_created": 2
 }
 
