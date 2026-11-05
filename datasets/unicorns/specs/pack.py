@@ -28,7 +28,7 @@ class Config:
 
 def define(p: Pack) -> None:
     p.entity("companies", key="company_key",
-             doc="A unicorn; created_at = date_joined (natural, midnight)",
+             doc="A unicorn; company_became_unicorn at date_joined (natural, midnight)",
              cols={"ext_id": text(doc="Source company_id"),
                    "industry": cat(*INDUSTRIES, doc="Verbatim, the quoted label included"),
                    "year_founded": i32(doc="A year only; once later than the join")})

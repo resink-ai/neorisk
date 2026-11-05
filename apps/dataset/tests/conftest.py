@@ -29,6 +29,29 @@ def make_shop(base: Path, mixed: str = "") -> Path:
     return d
 
 
+def snapshot_shop(d: Path, *, ref_owner: bool = True) -> None:
+    """Re-cut the shop so `city` travels in a `customers_snapshot` event at N, after every
+    order. With `ref_owner=False` the owner is plain text, which breaks the snapshot contract."""
+    owner = 'ref("customers")' if ref_owner else "text()"
+    pack = d / "specs" / "pack.py"
+    pack.write_text(pack.read_text()
+                    .replace('cols={"ext_id": text(), "city": text()})',
+                             'cols={"ext_id": text()})')
+                    + f'    p.event("customers_snapshot", cols={{"customer_id": {owner}, '
+                      f'"city": opt(text())}})\n')
+    ing = d / "specs" / "ingest.sql"
+    ing.write_text(ing.read_text().replace("SELECT cid AS ext_id, city FROM customers",
+                                           "SELECT cid AS ext_id FROM customers")
+                   + "-- event: customers_snapshot owner=customer_id\n"
+                     "SELECT '2021-01-04 00:00:00' AS event_time, cid AS customer_id, city\n"
+                     "FROM customers ORDER BY cid;\n")
+    b = d / "specs" / "build.sql"
+    b.write_text(b.read_text().replace(
+        "SELECT ext_id AS cid, city FROM customers;",
+        "SELECT c.ext_id AS cid, s.city FROM customers c\n"
+        "LEFT JOIN customers_snapshot s ON s.customer_id = c.customer_id;"))
+
+
 @pytest.fixture
 def shop_dataset(tmp_path, monkeypatch):
     """(config, source db) for the shop dataset; NEORISK_DATA_ROOT is tmp_path/root."""

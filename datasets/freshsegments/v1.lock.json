@@ -1,0 +1,39 @@
+{
+  "name": "freshsegments",
+  "version": "v1",
+  "kind": "spider2",
+  "writer": {
+    "polars": "2.0.0",
+    "pyarrow": "26.0.0"
+  },
+  "recipe_sha256": "d6489d70f7f86ab1bad541c756aaec78fef592785bbe31d26baf0145fc52d08d",
+  "source_sha256": "10c8b8136486902a19c3f974f210e9fb7c8f98918ae0313114c720219b02e18c",
+  "files": {
+    "expected/queries/local077.parquet": {
+      "sha256": "d152aa2101b87b6748d961a3720ff5cdf3dce61d3d88638447e223e5c83cff46",
+      "rows": 12
+    },
+    "expected/queries/local078.parquet": {
+      "sha256": "0ea1c064c618c765185dbb9fd380bed4c4041b4898c781211f829fe844931c98",
+      "rows": 20
+    },
+    "log/part-00000.parquet": {
+      "sha256": "66253bbb0bf25b7b211e971042a67e48267cc0c9ba9a7d5f784a2922c71804d0",
+      "rows": 17400
+    },
+    "results/interest_map.parquet": {
+      "sha256": "cd8010484523652a508de4368bef8ec961a1d0349ee142e53e1b4d1e33961ac8",
+      "rows": 1209
+    },
+    "results/interest_metrics.parquet": {
+      "sha256": "caf631de610bc24a7317480b648c25c9373d4f0a88434fcadeb9a673e3f68438",
+      "rows": 14273
+    },
+    "schema/events.json": {
+      "sha256": "79796fe8247ae5763bc4959ee0ed254bc457fd2a484b863706a3af04ddba5f31"
+    },
+    "schema/results.json": {
+      "sha256": "fc9b7453e6a60fda1acc77f15e649e0552af3349d73bfaa920869a165aefe0d1"
+    }
+  }
+}

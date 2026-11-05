@@ -1,43 +1,46 @@
 -- AdventureWorks: events → source tables (refdata rebuild, DuckDB).
 
 -- table: productcategory
-SELECT CAST(ext_id AS BIGINT) AS productcategoryid, name, rowguid, modifieddate
-FROM product_categories;
+SELECT CAST(c.ext_id AS BIGINT) AS productcategoryid, c.name, c.rowguid, x.modifieddate
+FROM product_categories c LEFT JOIN product_categories_snapshot x USING (product_category_id);
 
 -- table: productsubcategory
 SELECT CAST(s.ext_id AS BIGINT) AS productsubcategoryid, CAST(c.ext_id AS BIGINT) AS productcategoryid,
-       s.name, s.rowguid, s.modifieddate
-FROM product_subcategories s JOIN product_categories c USING (product_category_id);
+       s.name, s.rowguid, x.modifieddate
+FROM product_subcategories s JOIN product_categories c USING (product_category_id)
+LEFT JOIN product_subcategories_snapshot x USING (product_subcategory_id);
 
 -- table: product
-SELECT CAST(ext_id AS BIGINT) AS productid, name AS NAME, productnumber, makeflag,
-       finishedgoodsflag, color, safetystocklevel, reorderpoint, standardcost, listprice, size,
-       sizeunitmeasurecode, weightunitmeasurecode, weight, daystomanufacture, productline,
-       class, style, productsubcategoryid, productmodelid, sellstartdate, sellenddate,
-       discontinueddate, rowguid, modifieddate
-FROM products;
+SELECT CAST(p.ext_id AS BIGINT) AS productid, p.name AS NAME, p.productnumber, x.makeflag,
+       p.finishedgoodsflag, p.color, x.safetystocklevel, x.reorderpoint, x.standardcost,
+       x.listprice, p.size, p.sizeunitmeasurecode, p.weightunitmeasurecode, p.weight,
+       x.daystomanufacture, p.productline, p.class, p.style, p.productsubcategoryid,
+       p.productmodelid, p.sellstartdate, x.sellenddate, x.discontinueddate, p.rowguid,
+       x.modifieddate
+FROM products p LEFT JOIN products_snapshot x USING (product_id);
 
 -- table: productdescription
-SELECT CAST(ext_id AS BIGINT) AS productdescriptionid, description, rowguid, modifieddate
-FROM product_descriptions;
+SELECT CAST(d.ext_id AS BIGINT) AS productdescriptionid, d.description, d.rowguid, x.modifieddate
+FROM product_descriptions d LEFT JOIN product_descriptions_snapshot x USING (product_description_id);
 
 -- table: productmodelproductdescriptionculture
-SELECT productmodelid, CAST(ext_id AS BIGINT) AS productdescriptionid, cultureid,
-       link_modifieddate AS modifieddate
-FROM product_descriptions;
+SELECT d.productmodelid, CAST(d.ext_id AS BIGINT) AS productdescriptionid, d.cultureid,
+       x.link_modifieddate AS modifieddate
+FROM product_descriptions d LEFT JOIN product_descriptions_snapshot x USING (product_description_id);
 
 -- table: salesterritory
-SELECT CAST(ext_id AS BIGINT) AS territoryid, name, countryregioncode, "group", salesytd,
-       saleslastyear, costytd, costlastyear, rowguid, modifieddate
-FROM territories;
+SELECT CAST(t.ext_id AS BIGINT) AS territoryid, t.name, t.countryregioncode, t."group",
+       x.salesytd, x.saleslastyear, x.costytd, x.costlastyear, t.rowguid, x.modifieddate
+FROM territories t LEFT JOIN territories_snapshot x USING (territory_id);
 
 -- table: salesperson
-SELECT CAST(ext_id AS BIGINT) AS businessentityid, territoryid, salesquota, bonus,
-       commissionpct, salesytd, saleslastyear, rowguid, modifieddate
-FROM salespersons;
+SELECT CAST(s.ext_id AS BIGINT) AS businessentityid, x.territoryid, x.salesquota, x.bonus,
+       x.commissionpct, x.salesytd, x.saleslastyear, s.rowguid, x.modifieddate
+FROM salespersons s LEFT JOIN salespersons_snapshot x USING (salesperson_id);
 
 -- table: countryregioncurrency
-SELECT countryregioncode, currencycode, modifieddate FROM country_currencies;
+SELECT c.countryregioncode, c.currencycode, x.modifieddate
+FROM country_currencies c LEFT JOIN country_currencies_snapshot x USING (country_currency_id);
 
 -- table: salesorderheader
 -- subtotal = the line sum rounded half-up to 1e-4; totaldue adds integers and divides once.

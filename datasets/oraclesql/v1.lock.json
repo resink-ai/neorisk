@@ -1,0 +1,207 @@
+{
+  "name": "oraclesql",
+  "version": "v1",
+  "kind": "spider2",
+  "writer": {
+    "polars": "2.0.0",
+    "pyarrow": "26.0.0"
+  },
+  "recipe_sha256": "7d9509bef2ee44f42467ba27190d22057deaead999da5388b33f03e00c8666a0",
+  "source_sha256": "ace68ede8f7fddc523d522e938ccfeee1f54c11888fd2c956ebc27892fc595fe",
+  "files": {
+    "expected/queries/local269.parquet": {
+      "sha256": "614cfae650f2747428f935dbb46042b939c79ef23417bec22fa25208f8f406d8",
+      "rows": 1
+    },
+    "expected/queries/local270.parquet": {
+      "sha256": "ad5b6ba53b2b6e4c41a9ebac14dcd4aeeab48f41f2f23c482fbf0524936f9877",
+      "rows": 4
+    },
+    "expected/queries/local272.parquet": {
+      "sha256": "6e2a8c672c6421852ead6c31a49435f5911141e6696073ef0eb4969591d90195",
+      "rows": 4
+    },
+    "expected/queries/local273.parquet": {
+      "sha256": "690c647287fd5830a5273ea510fd9a0dcbeb7f18dd2c50b34a604d0f26829ba7",
+      "rows": 6
+    },
+    "expected/queries/local274.parquet": {
+      "sha256": "9194272edd45a84cea4a14456d1f4ab8748f8cce50c428b62bd06bc6638b5cb1",
+      "rows": 2
+    },
+    "expected/queries/local275.parquet": {
+      "sha256": "40d0537e18a0867a2165433fb7c056e8da73f8f60765fe0c64feb7d72e8b9243",
+      "rows": 0
+    },
+    "expected/queries/local277.parquet": {
+      "sha256": "6a016080f2a10b88116736c65e1a247ded1b32c8a00914beaa31b18b087df35a",
+      "rows": 1
+    },
+    "expected/queries/local279.parquet": {
+      "sha256": "f56d7fe0ccd3f27ace72455a32cb09a1d94ae85bda62cd792cd0c02b86d74b3f",
+      "rows": 2
+    },
+    "log/part-00000.parquet": {
+      "sha256": "867d98e9fe9e435b655b25471d239d4faaa5c15eec77f3ff7dadf0368f81b610",
+      "rows": 1102
+    },
+    "results/breweries.parquet": {
+      "sha256": "17102b997ddc4b8ffd2bb46f1e49919f3488576943ac40f544e9a7731ed62d6f",
+      "rows": 3
+    },
+    "results/channels_dim.parquet": {
+      "sha256": "97f16a3b0bf3fd282c880315e3070eef2255f48789498c957e1f1c17a7d22b1c",
+      "rows": 2
+    },
+    "results/conway_gen_zero.parquet": {
+      "sha256": "9ae521b287cddfb8f89ca52763e8a5698a1c84fe6516ce633a1e6fada086a169",
+      "rows": 0
+    },
+    "results/customer_favorites.parquet": {
+      "sha256": "4589f2f38c56a31fbc9ce19bef75b4e18c1b67ef02a042f9906706f4856a5e38",
+      "rows": 4
+    },
+    "results/customer_reviews.parquet": {
+      "sha256": "65008b1cb9c7f03954ac2384432cdc84af3dd5b6f7b03dca5ce63adc93103129",
+      "rows": 4
+    },
+    "results/customers.parquet": {
+      "sha256": "740e86e846e1742ef76d14e21747d45973a5d9ce918c15c6129e3e0be99e8394",
+      "rows": 4
+    },
+    "results/emp_hire_periods.parquet": {
+      "sha256": "56c2d9297bf1740203a1bbfc767b6dd657fa4f6c1619256e0288e4ccb3940ddb",
+      "rows": 15
+    },
+    "results/employees.parquet": {
+      "sha256": "725c42698624d715c167e6b571f7a7f6d97ad0f382a3feac6aeef5fd21d99997",
+      "rows": 14
+    },
+    "results/favorite_coll_type.parquet": {
+      "sha256": "60c9a536349bf6a0bdc8632eacd64e75cf4557e4e63286f56f08477539e647cd",
+      "rows": 0
+    },
+    "results/gender_dim.parquet": {
+      "sha256": "8b2e8be9f0aa1a3151a3f178bb00b1db6a1cab8649cfff5750f86672f6bdad8f",
+      "rows": 2
+    },
+    "results/id_name_coll_entries.parquet": {
+      "sha256": "cca2f726e919c69761f8120412ecf6e4646646c023b57681751375ab82fa4925",
+      "rows": 0
+    },
+    "results/id_name_coll_type.parquet": {
+      "sha256": "f3a2c490ec185a2f22eb334eaf5ca02e626aef15e531e4ee986164edad1a1ab5",
+      "rows": 0
+    },
+    "results/id_name_type.parquet": {
+      "sha256": "89f0db29cf827a8756d0561b52a6e62dfd9da6934348dfcbb2fdf533520eda7c",
+      "rows": 0
+    },
+    "results/inventory.parquet": {
+      "sha256": "5d145b93f24c7173518481564a6125eb486b911280fbee78d63a73e8ee26ea5a",
+      "rows": 113
+    },
+    "results/locations.parquet": {
+      "sha256": "61e3d7a7d41003e5c2d2048b5e3531e6c4f116b4538fb16c971c968cef667a68",
+      "rows": 256
+    },
+    "results/monthly_budget.parquet": {
+      "sha256": "3677c3e024f960e6220c8aea9f591b1a8c2c8d62a556c5d95f2fe1c1e159de58",
+      "rows": 48
+    },
+    "results/monthly_sales.parquet": {
+      "sha256": "2d4bb9c8add90e1364a13308a46668ddf53cf5644436406b3ab9354a16feeaaf",
+      "rows": 360
+    },
+    "results/orderlines.parquet": {
+      "sha256": "8efed4238e50ec793cddadfd282025429841f20871fe96190cd93eff83ac822f",
+      "rows": 18
+    },
+    "results/orders.parquet": {
+      "sha256": "8f794ad9fd975f8e4f4a74a1b5038962d3865c635667852dd55fbd8c3468cca9",
+      "rows": 10
+    },
+    "results/packaging.parquet": {
+      "sha256": "3dab6bcc0a8914199957e3b0be7625642c69c6c1225b0f841d794a502e389eca",
+      "rows": 11
+    },
+    "results/packaging_relations.parquet": {
+      "sha256": "e0c9877705a5eed55cb19bf734580eb1478df9c3a51157c85b52a16ca7415ed6",
+      "rows": 12
+    },
+    "results/picking_line.parquet": {
+      "sha256": "9e2f05088fd7f00f4c87b5b0171a914112f75182c7a33cfdd2fee7efb6f8ef70",
+      "rows": 21
+    },
+    "results/picking_list.parquet": {
+      "sha256": "03720148668735f35ebe848ca27b4a9e0cbe6945052bcce97dd20c75c3e5a2de",
+      "rows": 2
+    },
+    "results/picking_log.parquet": {
+      "sha256": "cb1e5ef2af0956d3260f263c7509e3e73765bf48abfeaab1c8beb990015ae301",
+      "rows": 63
+    },
+    "results/product_alcohol.parquet": {
+      "sha256": "668bd744e1c3b5f8c419e7f3e04ff37491962c2ff8e2f05f53c92fc04e11333c",
+      "rows": 10
+    },
+    "results/product_groups.parquet": {
+      "sha256": "77bed7107fe4b8707669aeecc41ba7a971e3e16c8b24d775f41eb768be064f8e",
+      "rows": 4
+    },
+    "results/product_minimums.parquet": {
+      "sha256": "eeb87de5a2a5b37b18f3abab84c4ea744516857caf60186a122fcb461a61b8dd",
+      "rows": 2
+    },
+    "results/products.parquet": {
+      "sha256": "4823d2ee55b16e68ed53266f9ba788e6af76e4141c0c8988fc9cca567d4dbbbc",
+      "rows": 10
+    },
+    "results/purchases.parquet": {
+      "sha256": "058aa990dc4d6cb0bc7484916b119bf4bbc2fccb4975003c7b06b7c028b0cf99",
+      "rows": 180
+    },
+    "results/server_heartbeat.parquet": {
+      "sha256": "f7adaf0dd1a4a5adc7cb26e668e2e0336d9dd9753ad5d39f2aa575a29122b300",
+      "rows": 14
+    },
+    "results/stock.parquet": {
+      "sha256": "0c24a1efda8a8c7e39822a738ccb513aab51313328115f6888f3416c4c7ab1c8",
+      "rows": 1
+    },
+    "results/ticker.parquet": {
+      "sha256": "a1402d16d47be76a6bb725fc6cc39f63134093b3793d484f40e4d10cfc35b037",
+      "rows": 15
+    },
+    "results/web_apps.parquet": {
+      "sha256": "da18de1f2b0fc7470c82da2e956a4e78fdad0ba7ff48be60638da7ae420c652f",
+      "rows": 1
+    },
+    "results/web_counter_hist.parquet": {
+      "sha256": "a016531b886583007ff7763330fab37ec6f5ed24e8817fd73c6e3c1338a083aa",
+      "rows": 120
+    },
+    "results/web_demographics.parquet": {
+      "sha256": "2d1f01f6d2e0ef4bbeae0a28ef89bf349037a345b4cc86c1e255c87ee21c0f23",
+      "rows": 2
+    },
+    "results/web_devices.parquet": {
+      "sha256": "3c61002644870bc6c052b9912d519bdf7d0a504978a7d2cdf9e2ed299764aa87",
+      "rows": 2
+    },
+    "results/web_page_visits.parquet": {
+      "sha256": "2dd85bb81cf0dd713ac56ad0b693a21ae044b7155078797a409c1140a1690434",
+      "rows": 23
+    },
+    "results/web_pages.parquet": {
+      "sha256": "8c17b6ce71a948d241a958dd181eef68d9ea1a9978270dfe0984e5b8d42f658b",
+      "rows": 4
+    },
+    "schema/events.json": {
+      "sha256": "0419e5b730b94a19836755450eb0b31b9b63dea1a3738f75c1ca3ac265ce14d6"
+    },
+    "schema/results.json": {
+      "sha256": "b15e23665cc84c569224c60c9c94268e600c830607dfd86365ddc5b3d78793f5"
+    }
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "name": "wordlist",
+  "version": "v1",
+  "kind": "spider2",
+  "writer": {
+    "polars": "2.0.0",
+    "pyarrow": "26.0.0"
+  },
+  "recipe_sha256": "e453db0b9012c3651d51ac6eb0a344ef82bc11403458aa49b963abe7e57e0e7e",
+  "source_sha256": "d4910db155d7be8070d14cab6e44862d0fa74d71e6588d114c4bacb4225942e4",
+  "files": {
+    "expected/queries/local201.parquet": {
+      "sha256": "58557fd8b3f127fc6fc099ac270c4b99accb43b1f13a6481e1b51c6240f6cb30",
+      "rows": 10
+    },
+    "expected/queries/local201_b.parquet": {
+      "sha256": "512ad7119b9ecc077c39f3c484f3f8594881838259348e9ec9f2dee8f57d497d",
+      "rows": 10
+    },
+    "log/part-00000.parquet": {
+      "sha256": "320d82d9ca112a38e3250edf92ab6cd993f3f6266c3cee044ce4dc31bfa3d389",
+      "rows": 373804
+    },
+    "results/word_list.parquet": {
+      "sha256": "c2ae4c8918974c925e9a1d06720d9da8ced6ec9a0cc85ac28ef00cf3558b303c",
+      "rows": 373804
+    },
+    "schema/events.json": {
+      "sha256": "4c63c35394451cfda2e3b0700187a2955710f845316039489b776aa9072a0a5a"
+    },
+    "schema/results.json": {
+      "sha256": "d454e6364381aa8b4d395263c8cb39f6260aa15acdaa1611c05fda62745bb3a0"
+    }
+  }
+}

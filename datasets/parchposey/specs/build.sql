@@ -6,12 +6,14 @@ SELECT CAST(ext_id AS BIGINT) AS id, name FROM region;
 
 -- table: web_sales_reps
 SELECT CAST(s.ext_id AS BIGINT) AS id, s.name, CAST(r.ext_id AS BIGINT) AS region_id
-FROM sales_reps s JOIN region r ON r.region_key = s.region_id;
+FROM sales_reps s LEFT JOIN sales_reps_snapshot n USING (rep_key)
+LEFT JOIN region r ON r.region_key = n.region_id;
 
 -- table: web_accounts
-SELECT CAST(a.ext_id AS BIGINT) AS id, a.name, a.website, a.lat, a.long, a.primary_poc,
+SELECT CAST(a.ext_id AS BIGINT) AS id, a.name, n.website, n.lat, n.long, n.primary_poc,
        CAST(s.ext_id AS BIGINT) AS sales_rep_id
-FROM accounts a JOIN sales_reps s ON s.rep_key = a.sales_rep_id;
+FROM accounts a LEFT JOIN accounts_snapshot n USING (account_key)
+LEFT JOIN sales_reps s ON s.rep_key = n.sales_rep_id;
 
 -- table: web_events
 SELECT e.web_event_id AS id, CAST(a.ext_id AS BIGINT) AS account_id,

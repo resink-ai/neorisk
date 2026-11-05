@@ -262,7 +262,9 @@ There is one design, delivered as four pull requests in order. Each leaves `main
    - classify each dataset's snapshot-only columns and move them into `<entity>_snapshot` events;
    - add domain names for creation events where they fit, such as `customer_signed_up`;
    - finish `CONTEXT.md`;
-   - record and commit `v1.lock.json` for all 13.
+   - record and commit `v1.lock.json` for all of them.
+
+   By the user's decision of 2026-11-05, this covers all 43 Spider2 datasets: the 13 of PR 1 plus batches 2 and 3. Domain names use an `event=` option on `-- entity:` blocks. The build checks the snapshot rule: one `<entity>_snapshot` per key, keyed by its entity, all at one time N that no other event follows.
 3. **Synthetic datasets:**
    - dimension and fact table designs and `build.sql` for the six projects;
    - the independent check against simkit's tables;

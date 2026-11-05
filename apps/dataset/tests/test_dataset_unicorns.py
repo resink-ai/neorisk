@@ -1,6 +1,6 @@
 COUNTS = {
-    "companies_created": 1074,
     "companies_snapshot": 1074,
+    "company_became_unicorn": 1074,
     "source_row_duplicated": 33
 }
 

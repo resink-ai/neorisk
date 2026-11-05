@@ -1,0 +1,79 @@
+{
+  "name": "chinook",
+  "version": "v1",
+  "kind": "spider2",
+  "writer": {
+    "polars": "2.0.0",
+    "pyarrow": "26.0.0"
+  },
+  "recipe_sha256": "dc1b7d85890d665d0f750e91baaacc0bc366ff96254faeabffdc2cbc1443a33a",
+  "source_sha256": "d6c11e2ccda2a36883af57f031f76fbd55e247f3be1710c4c8aaa72ec06a18cb",
+  "files": {
+    "expected/queries/local054.parquet": {
+      "sha256": "55f1ab624376612040ba4d2763b17c611880bb7ec287833dfe1b58a4d121f52b",
+      "rows": 5
+    },
+    "expected/queries/local055.parquet": {
+      "sha256": "39981dfeb843f7583249812c241a6968f9e321996bdc9858a0fd10af912a2d98",
+      "rows": 1
+    },
+    "expected/queries/local198.parquet": {
+      "sha256": "bce3412bb62780eb3bc96a1fc6b2d4bab2097bf5b9f22b80273a1f791ae6c28c",
+      "rows": 1
+    },
+    "log/part-00000.parquet": {
+      "sha256": "13ea5cc4b724d7a662ef363a2bcfc274c66f30b5ff385caaf9ad29f1875fc26a",
+      "rows": 19177
+    },
+    "results/albums.parquet": {
+      "sha256": "1e7437ce444780e90fd97fc90346dcc9c4b057d1a137f9a57bcb8838b4f4c214",
+      "rows": 347
+    },
+    "results/artists.parquet": {
+      "sha256": "d5d39d18ae44ee7ce2e65678886d7f7580e496ec0351aeccfd79caaf7c7a5641",
+      "rows": 275
+    },
+    "results/customers.parquet": {
+      "sha256": "389bf9fb421bb503b37b603398af685806d291f4dab73d79c5b8fa0839fce3b2",
+      "rows": 59
+    },
+    "results/employees.parquet": {
+      "sha256": "a6807e190116e2432dbb17cbea5eb69fc93eefb6a98cb028b4c48c70e3855479",
+      "rows": 8
+    },
+    "results/genres.parquet": {
+      "sha256": "3141c2ee9ebb7ac73b6c7bb1b7dd76e3a4c290adbc1f39d7f10c700015cbc18f",
+      "rows": 25
+    },
+    "results/invoice_items.parquet": {
+      "sha256": "96ffe3736ec5de538c5ea686f2eedfdf1a66d52b1a5b13bf3957aec37ba14d11",
+      "rows": 2240
+    },
+    "results/invoices.parquet": {
+      "sha256": "6eaef4b9bcfbaaf6984a7ac3dab693342ebfcc197f575ba9146536dd9965f75a",
+      "rows": 412
+    },
+    "results/media_types.parquet": {
+      "sha256": "a18e68c6230387e53cb1a73c6b100d8222c0f243966dfff58123f9610155edf1",
+      "rows": 5
+    },
+    "results/playlist_track.parquet": {
+      "sha256": "11ce2ebbb949fe12b453922ce60faed36cdc11d435553da9b1ec35bc8658bcb2",
+      "rows": 8715
+    },
+    "results/playlists.parquet": {
+      "sha256": "acd12a0161c1b7194ffcc34ca7ff021489634def0603e7582285fe125390d39a",
+      "rows": 18
+    },
+    "results/tracks.parquet": {
+      "sha256": "34f91fdc5fbbd12b90f7e1e3481858cd0998c5dfa0d970305faa42f99657c3e1",
+      "rows": 3503
+    },
+    "schema/events.json": {
+      "sha256": "b1ea3c1535ab8e390ba67585be2526325b390e5024fd107e97b48ff2aad597d7"
+    },
+    "schema/results.json": {
+      "sha256": "acc772322bb54f15f22478f18b32858ecfe9fe1797cf943acf32ea2309ee1284"
+    }
+  }
+}

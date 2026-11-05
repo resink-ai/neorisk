@@ -4,7 +4,7 @@
 
 Members of the US Congress, 1789–2020: each legislator's terms in the House or the Senate, each one starting and, unless it is still open, ending.
 
-Version `v1`, kind `spider2`. The input is one ordered event log of 100,107 events; the output is the 3 source tables, rebuilt exactly, and the answers to 4 saved Spider 2.0 questions.
+Version `v1`, kind `spider2`. The input is one ordered event log of 112,625 events; the output is the 3 source tables, rebuilt exactly, and the answers to 4 saved Spider 2.0 questions.
 
 ## Raw data
 
@@ -16,7 +16,7 @@ The reverse-engineering research, with the queries behind every number, is in [`
 
 ## How the log was made
 
-Each term is a `term_started` event owned by its legislator, at `term_start`. Each of the 43,526 terms that ended by N is also a `term_ended` event, at `term_end`. The other 537 terms are still open at N: their scheduled end rides on the start event as `scheduled_end`, so no event carries an early or irregular end before it happens. Start events sort with `ord = 2 · term_number` and end events with `2 · term_number + 1`, so on the 7,882 days where one term ends and the next begins, the end comes first. Legislators are entities, with their biography and cross-reference ids. `term_id` is rebuilt as `id_bioguide || '-' || term_number`.
+Each term is a `term_started` event owned by its legislator, at `term_start`. Each of the 43,526 terms that ended by N is also a `term_ended` event, at `term_end`. The other 537 terms are still open at N: their scheduled end rides on the start event as `scheduled_end`, so no event carries an early or irregular end before it happens. Start events sort with `ord = 2 · term_number` and end events with `2 · term_number + 1`, so on the 7,882 days where one term ends and the next begins, the end comes first. Legislators are entities, with their birth names, birthday, gender and the stable cross-reference ids. The current official and last names, the name-change record and the modern cross-reference ids are snapshot columns, so they ride on one `legislators_snapshot` event per legislator at N. `term_id` is rebuilt as `id_bioguide || '-' || term_number`.
 
 The source's REAL columns (`district`, `class`, `id_icpsr`, `id_house_history`, `id_house_history_alternate`, `id_thomas`, `id_cspan`, `id_votesmart`) hold only integers, so they travel as `i64` and are cast back to REAL. `other_names_middle` is NULL in every row and is rebuilt as a NULL REAL. `legislation_date_dim` has no events: `specs/build.sql` generates every day from 1917-01-01 to 1999-12-31 with its English month name and day number.
 
@@ -26,13 +26,40 @@ The source's REAL columns (`district`, `class`, `id_icpsr`, `id_house_history`, 
 
 | Event | Kind | Rows | Payload fields |
 |---|---|---:|---|
-| `legislators_created` | entity | 12,518 | `legislator_id`, `ext_id`, `full_name`, `first_name`, `last_name`, `middle_name`, `nickname`, `suffix`, `other_names_end`, `other_names_last`, `birthday`, `gender`, `id_bioguide_previous_0`, `id_govtrack`, `id_icpsr`, `id_wikipedia`, `id_wikidata`, `id_google_entity_id`, `id_house_history`, `id_house_history_alternate`, `id_thomas`, `id_cspan`, `id_votesmart`, `id_lis`, `id_ballotpedia`, `id_opensecrets`, `id_fec_0`, `id_fec_1`, `id_fec_2` |
+| `legislators_created` | entity | 12,518 | `legislator_id`, `ext_id`, `first_name`, `middle_name`, `nickname`, `suffix`, `birthday`, `gender`, `id_bioguide_previous_0`, `id_govtrack`, `id_icpsr`, `id_wikidata`, `id_google_entity_id`, `id_house_history`, `id_house_history_alternate` |
+| `legislators_snapshot` | business | 12,518 | `legislator_id`, `full_name`, `last_name`, `other_names_end`, `other_names_last`, `id_wikipedia`, `id_thomas`, `id_cspan`, `id_votesmart`, `id_lis`, `id_ballotpedia`, `id_opensecrets`, `id_fec_0`, `id_fec_1`, `id_fec_2` |
 | `term_started` | business | 44,063 | `legislator_id`, `term_number`, `term_type`, `state`, `district`, `class`, `party`, `how`, `url`, `address`, `phone`, `fax`, `contact_form`, `office`, `state_rank`, `rss_url`, `caucus`, `scheduled_end` |
 | `term_ended` | business | 43,526 | `legislator_id`, `term_number` |
 
 ## Times set by rule
 
-A legislator is created at their first term start (1789-03-04 to 2020-05-19). Every term start and end is a source date.
+A legislator is created at their first term start (1789-03-04 to 2020-05-19). Every term start and end is a source date. The snapshot time N is 2020-05-22 00:00:00, the dataset's existing snapshot (the last term end that has already happened); it is also the latest event time in the log.
+
+## Snapshot columns
+
+| Entity | Snapshot event | At (UTC) | Rows | Columns |
+|---|---|---|---:|---|
+| `legislators` | `legislators_snapshot` | 2020-05-22 00:00:00 | 12,518 | `full_name`, `last_name`, `other_names_end`, `other_names_last`, `id_wikipedia`, `id_thomas`, `id_cspan`, `id_votesmart`, `id_lis`, `id_ballotpedia`, `id_opensecrets`, `id_fec_0`, `id_fec_1`, `id_fec_2` |
+
+| Column | Verdict | Reason |
+|---|---|---|
+| `legislators.id_bioguide` (`ext_id`) | creation | The source key. |
+| `legislators.first_name`, `middle_name`, `nickname`, `suffix` | creation | Given names. |
+| `legislators.birthday` | creation | A birth date. |
+| `legislators.gender` | creation | Recorded once; nothing in the source changes it. |
+| `legislators.id_bioguide_previous_0` | creation | The Bioguide id the member was first filed under (3 rows); a former key, not a current value. |
+| `legislators.id_govtrack`, `id_icpsr`, `id_house_history`, `id_house_history_alternate`, `id_wikidata`, `id_google_entity_id` | creation | Stable identity ids that every era has (research): they alias the person and never change once given. |
+| `legislators.full_name` | snapshot | Ruling: `name_official_full` as of the 2020 export, a name held now. Research kept it on creation but left the call open. |
+| `legislators.last_name` | snapshot | Ruling: the surname held at the export; it changed after creation for 4 members (e.g. Bono → Bono Mack in 2007, first seated 1998). Research kept it on creation. |
+| `legislators.other_names_end`, `other_names_last` | snapshot | Ruling: the record of a name change; `other_names_end` falls after the first term start for 4 of the 5 rows, so on creation it would be a value from the future. Research kept them on creation. |
+| `legislators.id_wikipedia` | snapshot | Ruling: a Wikipedia page title, which can be renamed, known only as of the export. Research kept it on creation. |
+| `legislators.id_thomas`, `id_cspan`, `id_votesmart`, `id_lis`, `id_ballotpedia`, `id_opensecrets`, `id_fec_0`, `id_fec_1`, `id_fec_2` | snapshot | Modern ids assigned by agencies long after most careers began; none of the 10,009 members who left before 1971 has one (research). |
+| `legislators.other_names_middle` | derived | NULL in every row; `build.sql` makes it a NULL REAL. |
+| `legislation_date_dim.*` | derived | A generated calendar, built by `build.sql`. |
+
+No snapshot column decides an event time: creation takes the first term start from `legislators_terms`.
+
+No domain name: the creation time is a rule (the first term start), and that act is already its own `term_started` event, so legislators keep `legislators_created`.
 
 ## Expected output
 

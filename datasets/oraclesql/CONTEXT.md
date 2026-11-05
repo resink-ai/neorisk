@@ -65,6 +65,59 @@ Product groups, products (with `product_alcohol` folded in), breweries, customer
 
 Masters are created at 2016-01-01, the first purchase; employees at their first hire period's start (6 of 14), else 2016-01-01. Inventory lots take their purchase's date, budgets Jan 1 of their year, and planned pick lines their pick list's creation time. Monthly sales and the daily counters, device and demographic counts are stamped at their period's first instant. The 20 snapshot rows take N = 2019-05-02, the last observed day. The web devices and demographics carry the one web app, 542, as owner.
 
+## Snapshot columns
+
+| Entity | Snapshot event | At (UTC) | Rows | Columns |
+|---|---|---|---:|---|
+| `customers` | `customers_snapshot` | 2019-05-02 00:00:00 | 4 | `favorite_list`, `review_list` |
+| `employees` | `employees_snapshot` | 2019-05-02 00:00:00 | 14 | `title`, `supervisor_id` |
+| `products` | `products_snapshot` | 2019-05-02 00:00:00 | 2 | `qty_minimum`, `qty_purchase` |
+
+No further column moved: the snapshot events were already in place, and every column left on creation is a key, a given name, a fixed product property or an immutable ref.
+
+| Column | Verdict | Reason |
+|---|---|---|
+| `product_groups.ext_id` | creation | The source key (`id`). |
+| `product_groups.name` | creation | A given name. |
+| `products.ext_id` | creation | The source key (`id`). |
+| `products.name` | creation | A given name. |
+| `products.group_id` | creation | The group the product was created in; the source shows no change. |
+| `products.sales_volume` | creation | The bottle size in ml (330 or 500, from `product_alcohol`): part of what the product is. |
+| `products.abv` | creation | The beer's strength (from `product_alcohol`): part of what the product is. |
+| `products.qty_minimum` | snapshot | A stock-keeping setting (`product_minimums`) with no time; it can change. |
+| `products.qty_purchase` | snapshot | A stock-keeping setting (`product_minimums`) with no time; it can change. |
+| `breweries.ext_id` | creation | The source key (`id`). |
+| `breweries.name` | creation | A given name. |
+| `customers.ext_id` | creation | The source key (`id`). |
+| `customers.name` | creation | A given name. |
+| `customers.favorite_list` | snapshot | The current favourites (`customer_favorites`), with no time. |
+| `customers.review_list` | snapshot | The current reviews (`customer_reviews`), with no time. |
+| `packaging.ext_id` | creation | The source key (`id`). |
+| `packaging.name` | creation | A given name. |
+| `packaging_relations.ext_id` | creation | The link's two source ids. |
+| `packaging_relations.packaging_id` | creation | An immutable ref: the outer packaging. |
+| `packaging_relations.contains_id` | creation | An immutable ref: the inner packaging. |
+| `packaging_relations.qty` | creation | How many the packaging holds: it defines the relation. |
+| `employees.ext_id` | creation | The source key (`id`). |
+| `employees.name` | creation | A given name. |
+| `employees.title` | snapshot | A title held; 142 has held it only since 2012-04-01 but was created 2010-07-01. |
+| `employees.supervisor_id` | snapshot | The reporting line, current state with no time. |
+| `web_apps.ext_id` | creation | The source key (`id`). |
+| `web_apps.name` | creation | A given name. |
+| `web_pages.ext_id` | creation | The app id and page number joined by `:`. |
+| `web_pages.app_id` | creation | An immutable ref: the app the page belongs to. |
+| `web_pages.page_no` | creation | The page's number within the app. |
+| `web_pages.friendly_url` | creation | The page's given name (`/Shop`, `/About`); the source shows no change. |
+| `stock.ext_id` | creation | The source key (`symbol`). |
+| `stock.company` | creation | A given name. |
+| `channels_dim.ext_id` | creation | The source key (`id`). |
+| `channels_dim.name` | creation | A given name. |
+| `channels_dim.shortcut` | creation | A given code (`tw`, `fb`). |
+| `gender_dim.ext_id` | creation | The source key (`letter`). |
+| `gender_dim.name` | creation | A given name. |
+
+No creation event takes a domain name. Employees are created at their first hire period's start for only 6 of 14 (the rest by rule at 2016-01-01), and that start is already the `hire_period_started` event; every other master is created by rule.
+
 ## Expected output
 
 `results/` holds every source table, as the source stores it. Each column's type follows the values it holds: text, int64 or float64. A mixed column holds text and numbers together, so it is stored as SQLite's own text rendering and declared in `dataset.toml`.

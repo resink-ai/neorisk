@@ -16,7 +16,7 @@ The reverse-engineering research, with the queries behind every number, is in [`
 
 ## How the log was made
 
-Each ordered pizza is an event owned by its order, in source row order; pickups, deliveries and cancellations are events on the order too. Runners, pizzas, toppings and customers are entities. The clean and helper tables are rebuilt by SQL from the raw ones.
+Each ordered pizza is an event owned by its order, in source row order; pickups, deliveries and cancellations are events on the order too. Runners, pizzas, toppings and customers are entities. A runner's creation event is `runner_registered`, at its `registration_date`; the source records that act. Customers are created at their first order, which is not a sign-up, so they keep `customers_created`. The clean and helper tables are rebuilt by SQL from the raw ones.
 
 `uv run dataset build pizzarunner` runs `specs/ingest.sql` on the read-only source to make a simkit dataset (an internal stage), then writes it as one log. Entity rows become `<entity>_created` events at their creation time; business events keep their columns. The log is in `seq` order: event time, then entities before events at the same instant. Each row's `payload` is a JSON object whose fields are listed in `schema/events.json`.
 
@@ -24,7 +24,7 @@ Each ordered pizza is an event owned by its order, in source row order; pickups,
 
 | Event | Kind | Rows | Payload fields |
 |---|---|---:|---|
-| `runners_created` | entity | 4 | `runner_id`, `ext_id` |
+| `runner_registered` | entity | 4 | `runner_id`, `ext_id` |
 | `pizzas_created` | entity | 2 | `pizza_id`, `ext_id`, `pizza_name`, `toppings` |
 | `toppings_created` | entity | 12 | `topping_id`, `ext_id`, `topping_name` |
 | `customers_created` | entity | 5 | `customer_id`, `ext_id` |
@@ -37,9 +37,22 @@ Each ordered pizza is an event owned by its order, in source row order; pickups,
 
 Deliveries are pickup + duration minutes; cancellations take the order's time.
 
+There are no snapshot events, so there is no snapshot time N. If one is added, N must be at least 2021-01-15 00:00:00: runner 4 registers then, after the last delivery (2021-01-11 19:00:20).
+
 ## Snapshot columns
 
-Classified in PR 2. Until then every entity attribute travels in its creation event.
+None: every entity attribute travels in its creation event.
+
+| Column | Verdict | Reason |
+|---|---|---|
+| `runners.ext_id` | creation | The source key. |
+| `runners.created_at` (`registration_date`) | creation | The registration date; it is the event's time. |
+| `pizzas.ext_id` | creation | The source key. |
+| `pizzas.pizza_name` | creation | A given name. |
+| `pizzas.toppings` | creation | The recipe defines the menu item it was created as; the questions apply it to every order line as the recipe at order time, and the source shows no change. |
+| `toppings.ext_id` | creation | The source key. |
+| `toppings.topping_name` | creation | A given name. |
+| `customers.ext_id` | creation | The source key; customers carry no other attribute. |
 
 ## Expected output
 

@@ -16,10 +16,9 @@ SELECT CAST(language_id AS TEXT) AS ext_id, language, country_code_2 AS country,
        '2021-01-01 00:00:00' AS created_at
 FROM cities_languages ORDER BY language_id;
 
--- entity: cities
--- population is REAL holding whole numbers only; it travels as an integer.
+-- entity: cities event=city_inserted
 SELECT CAST(city_id AS TEXT) AS ext_id, city_name, latitude, longitude,
-       country_code_2 AS country, capital, CAST(population AS INTEGER) AS population,
+       country_code_2 AS country,
        iso_time(insert_date, '%Y-%m-%d') AS created_at
 FROM cities ORDER BY insert_date, city_id;
 
@@ -27,3 +26,10 @@ FROM cities ORDER BY insert_date, city_id;
 -- created_on is the date the tables were built, after every insert: the snapshot time N.
 SELECT iso_time(created_on, '%Y-%m-%d') AS event_time, country_code_2 AS country
 FROM cities_countries ORDER BY country_code_2;
+
+-- event: cities_snapshot owner=city
+-- capital and population as of the build day N = 2024-07-18 (the countries' created_on).
+-- population is REAL holding whole numbers only; it travels as an integer.
+SELECT '2024-07-18 00:00:00' AS event_time, CAST(city_id AS TEXT) AS city, capital,
+       CAST(population AS INTEGER) AS population
+FROM cities ORDER BY city_id;

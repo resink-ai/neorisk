@@ -1,7 +1,8 @@
 -- Bitcoin trading: events → source tables (refdata rebuild, DuckDB).
 
 -- table: bitcoin_members
-SELECT ext_id AS member_id, first_name, region FROM members;
+SELECT m.ext_id AS member_id, m.first_name, n.region
+FROM members m LEFT JOIN members_snapshot n USING (member_id);
 
 -- table: bitcoin_transactions
 SELECT t.txn_id, m.ext_id AS member_id, k.ext_id AS ticker,

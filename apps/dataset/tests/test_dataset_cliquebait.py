@@ -1,6 +1,6 @@
 COUNTS = {
     "campaigns_created": 3,
-    "cookies_created": 1782,
+    "cookie_issued": 1782,
     "event_kinds_created": 5,
     "page_event": 32734,
     "pages_created": 13

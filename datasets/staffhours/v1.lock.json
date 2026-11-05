@@ -1,0 +1,27 @@
+{
+  "name": "staffhours",
+  "version": "v1",
+  "kind": "spider2",
+  "writer": {
+    "polars": "2.0.0",
+    "pyarrow": "26.0.0"
+  },
+  "recipe_sha256": "a1534a370704e2c4545ac8ce9fb3b684c5b09ab79a22312db0f5d125bbdf8cec",
+  "source_sha256": "d3498b07f44a4ac1757798d70f4cac7c44d16082c0608c58a74d5aa0d6d058f9",
+  "files": {
+    "log/part-00000.parquet": {
+      "sha256": "7858e49a16d6a853a8f92f076eb3309e8dac2b4e0cfa7973deb632cccc63376c",
+      "rows": 262
+    },
+    "results/StaffHours.parquet": {
+      "sha256": "d78e527595a1b25546978c16a8102afac44fd299a81fd1f976e10890113973a7",
+      "rows": 236
+    },
+    "schema/events.json": {
+      "sha256": "9f910eb46fe36e088b707a8971e6944f507accaee47bcc68dad7476dc3f08dbf"
+    },
+    "schema/results.json": {
+      "sha256": "7631981f39e9b372fcb77a011f24654e2fb234625b6fbc3068f1c4d314c44d31"
+    }
+  }
+}

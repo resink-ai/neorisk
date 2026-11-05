@@ -1,6 +1,6 @@
 -- Clique Bait: source tables → events (refdata ingest).
 
--- entity: cookies
+-- entity: cookies event=cookie_issued
 SELECT cookie_id AS ext_id, user_id, start_date || ' 00:00:00' AS created_at
 FROM shopping_cart_users ORDER BY cookie_id;
 

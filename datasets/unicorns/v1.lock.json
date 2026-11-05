@@ -1,0 +1,43 @@
+{
+  "name": "unicorns",
+  "version": "v1",
+  "kind": "spider2",
+  "writer": {
+    "polars": "2.0.0",
+    "pyarrow": "26.0.0"
+  },
+  "recipe_sha256": "3053e55be676629bbab19b41a72f9a2fd422bb6c65b73ed83457a237ad9dc0d8",
+  "source_sha256": "d4910db155d7be8070d14cab6e44862d0fa74d71e6588d114c4bacb4225942e4",
+  "files": {
+    "expected/queries/local049.parquet": {
+      "sha256": "9d9c6ab14f2fea51c2547d7d9f776245045d17b23b37fcb7ef7db3b2dad5f447",
+      "rows": 1
+    },
+    "expected/queries/local049_b.parquet": {
+      "sha256": "fd3d2994d42627dcab68966a3c5f586c4ac8b3083bcc864ad0d427378cb158e9",
+      "rows": 1
+    },
+    "log/part-00000.parquet": {
+      "sha256": "af084daa10fc9a209c90f2372d4467d2bb3373e3654e9aaeb7ccd523a116a67e",
+      "rows": 2181
+    },
+    "results/companies_dates.parquet": {
+      "sha256": "b8458125db7e531adeac2fa48b2d078d439ebe100367a7024ff9871aba9b6e5f",
+      "rows": 1085
+    },
+    "results/companies_funding.parquet": {
+      "sha256": "e5b1c4c9fc06208827c566aedff2ae507a07e9df703d7b879518577a6cb1527b",
+      "rows": 1085
+    },
+    "results/companies_industries.parquet": {
+      "sha256": "7b9c6cc0f332ca9f9cd38cd44eed1e148c5578349e7db05dbfff7c0c5fc255a9",
+      "rows": 1085
+    },
+    "schema/events.json": {
+      "sha256": "67f10cf7f602c75042ea71f23900c3b365b25f6c42fba31cefc40d30f1e45a6d"
+    },
+    "schema/results.json": {
+      "sha256": "f187ed8a915151462fed1578ee8ea7d546650724ca152b2119bc6ce8faa66d38"
+    }
+  }
+}

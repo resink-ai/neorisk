@@ -1,7 +1,7 @@
 -- Pizza Runner: source tables → events (refdata ingest). The clean_* and get_* tables are not
 -- read: views derive them from the raw ones.
 
--- entity: runners
+-- entity: runners event=runner_registered
 SELECT CAST(runner_id AS TEXT) AS ext_id, registration_date || ' 00:00:00' AS created_at
 FROM pizza_runners ORDER BY runner_id;
 

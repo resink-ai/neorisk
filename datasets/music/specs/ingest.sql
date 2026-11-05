@@ -1,5 +1,6 @@
 -- music: source tables → events (refdata ingest). Money is in cents.
 -- chinook's blocks, with the FROM/JOIN names changed to the PascalCase source tables.
+-- Snapshots at N = 2013-12-22 00:00:00, the last invoice (a rule).
 
 -- entity: genres
 SELECT CAST(GenreId AS TEXT) AS ext_id, Name AS name FROM Genre ORDER BY GenreId;
@@ -17,8 +18,7 @@ FROM Album ORDER BY AlbumId;
 -- entity: tracks
 SELECT CAST(TrackId AS TEXT) AS ext_id, Name AS name, CAST(AlbumId AS TEXT) AS album_id,
        CAST(MediaTypeId AS TEXT) AS media_type_id, CAST(GenreId AS TEXT) AS genre_id,
-       Composer AS composer, Milliseconds AS milliseconds, Bytes AS bytes,
-       CAST(round(UnitPrice * 100) AS INTEGER) AS unit_price
+       Composer AS composer, Milliseconds AS milliseconds, Bytes AS bytes
 FROM Track ORDER BY TrackId;
 
 -- entity: playlists
@@ -29,19 +29,16 @@ SELECT PlaylistId || '/' || TrackId AS ext_id, CAST(PlaylistId AS TEXT) AS playl
        CAST(TrackId AS TEXT) AS track_id
 FROM PlaylistTrack ORDER BY PlaylistId, TrackId;
 
--- entity: employees
+-- entity: employees event=employee_hired
 SELECT CAST(EmployeeId AS TEXT) AS ext_id, HireDate AS created_at, LastName AS last_name,
-       FirstName AS first_name, Title AS title, CAST(ReportsTo AS TEXT) AS reports_to,
-       BirthDate AS birth_date, Address AS address, City AS city, State AS state,
-       Country AS country, PostalCode AS postal_code, Phone AS phone, Fax AS fax, Email AS email
+       FirstName AS first_name, BirthDate AS birth_date
 FROM Employee ORDER BY EmployeeId;
 
 -- entity: customers
 SELECT CAST(c.CustomerId AS TEXT) AS ext_id,
        (SELECT MIN(InvoiceDate) FROM Invoice i WHERE i.CustomerId = c.CustomerId) AS created_at,
-       FirstName AS first_name, LastName AS last_name, Company AS company, Address AS address,
-       City AS city, State AS state, Country AS country, PostalCode AS postal_code,
-       Phone AS phone, Fax AS fax, Email AS email, CAST(SupportRepId AS TEXT) AS support_rep_id
+       FirstName AS first_name, LastName AS last_name, Address AS address, City AS city,
+       State AS state, Country AS country, PostalCode AS postal_code
 FROM Customer c ORDER BY CustomerId;
 
 -- event: invoice_issued owner=customer_id
@@ -53,3 +50,21 @@ SELECT i.InvoiceDate AS event_time, CAST(i.CustomerId AS TEXT) AS customer_id, l
        l.InvoiceLineId AS invoice_line_id, CAST(l.TrackId AS TEXT) AS track_id,
        CAST(round(l.UnitPrice * 100) AS INTEGER) AS unit_price, l.Quantity AS quantity
 FROM InvoiceLine l JOIN Invoice i USING (InvoiceId) ORDER BY l.InvoiceLineId;
+
+-- event: tracks_snapshot owner=track_id
+SELECT '2013-12-22 00:00:00' AS event_time, CAST(TrackId AS TEXT) AS track_id,
+       CAST(round(UnitPrice * 100) AS INTEGER) AS unit_price
+FROM Track ORDER BY TrackId;
+
+-- event: employees_snapshot owner=employee_id
+SELECT '2013-12-22 00:00:00' AS event_time, CAST(EmployeeId AS TEXT) AS employee_id,
+       Title AS title, CAST(ReportsTo AS TEXT) AS reports_to, Address AS address, City AS city,
+       State AS state, Country AS country, PostalCode AS postal_code, Phone AS phone, Fax AS fax,
+       Email AS email
+FROM Employee ORDER BY EmployeeId;
+
+-- event: customers_snapshot owner=customer_id
+SELECT '2013-12-22 00:00:00' AS event_time, CAST(CustomerId AS TEXT) AS customer_id,
+       Company AS company, Phone AS phone, Fax AS fax, Email AS email,
+       CAST(SupportRepId AS TEXT) AS support_rep_id
+FROM Customer ORDER BY CustomerId;

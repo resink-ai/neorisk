@@ -1,7 +1,8 @@
 -- Fresh Segments: source tables → events (refdata ingest). Stamps are read as UTC.
+-- Snapshots at N = 2019-09-01 00:00:00, the close of 08-2019 (a rule).
 
 -- entity: interests
-SELECT CAST(id AS TEXT) AS ext_id, interest_name, interest_summary, created_at
+SELECT CAST(id AS TEXT) AS ext_id, created_at
 FROM interest_map ORDER BY id;
 
 -- event: interest_modified owner=interest_key
@@ -18,3 +19,8 @@ SELECT coalesce(date(substr(month_year, 4, 4) || '-' || substr(month_year, 1, 2)
        index_value, ranking
 FROM interest_metrics
 ORDER BY event_time, ranking, rowid;
+
+-- event: interests_snapshot owner=interest_key
+SELECT '2019-09-01 00:00:00' AS event_time, CAST(id AS TEXT) AS interest_key, interest_name,
+       interest_summary
+FROM interest_map ORDER BY id;

@@ -29,7 +29,20 @@ Each row is a `salary_listing` entity (company, job title, city; `ext_id` is `in
 
 ## Times set by rule
 
-Every listing is created, and its aggregate reported, at 2022-01-01 00:00:00, the dataset's nominal publication year (unverified). The collection window is unknown. Events at that one instant keep `index` order.
+Every listing is created, and its aggregate reported, at 2022-01-01 00:00:00, the dataset's nominal publication year (unverified). The collection window is unknown. Events at that one instant keep `index` order. There are no snapshot events, so there is no snapshot time N.
+
+## Snapshot columns
+
+None: every entity attribute travels in its creation event.
+
+| Column | Verdict | Reason |
+|---|---|---|
+| `salary_listing.ext_id` | creation | The source key (`index`). |
+| `salary_listing.company_name` | creation | A given name; part of what identifies the listing. |
+| `salary_listing.job_title` | creation | The title the listing was created for, not a title held by a person; part of what identifies the listing. |
+| `salary_listing.location` | creation | The city the listing was created for; part of what identifies the listing. |
+
+No column qualifies: a listing is defined by its company, title and city, and the only values known as of the extract (the number of salaries and the average) already travel on `salary_aggregate_reported`, not on the entity. The creation event keeps `salary_listing_created`: the source shows no real-world act, and every listing is created by rule.
 
 ## Expected output
 

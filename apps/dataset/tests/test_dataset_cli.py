@@ -69,3 +69,45 @@ def test_context_intro_counts_read_naturally():
     assert _intro("v1", "spider2", 1, 2, 1).endswith(
         "of 1 event; the output is the 2 source tables, rebuilt exactly, and the answer to 1 "
         "saved Spider 2.0 question.")
+
+
+def test_context_snapshot_section_lists_columns(shop_cli, tmp_path, capsys):
+    from conftest import snapshot_shop
+    snapshot_shop(tmp_path / "datasets" / "shop")
+    assert cli.main(["build", "shop", "--db", str(shop_cli)]) == 0
+    capsys.readouterr()
+    assert cli.main(["context", "shop"]) == 0
+    out = capsys.readouterr().out
+    assert "## Snapshot columns" in out
+    assert out.index("## Event catalogue") < out.index("## Snapshot columns") < out.index(
+        "## Expected output")
+    assert ("| `customers` | `customers_snapshot` | 2021-01-04 00:00:00 | 2 | `city` |"
+            in out)
+
+
+def test_context_snapshot_section_none(shop_cli, capsys):
+    cli.main(["build", "shop", "--db", str(shop_cli)])
+    capsys.readouterr()
+    assert cli.main(["context", "shop"]) == 0
+    out = capsys.readouterr().out
+    assert "## Snapshot columns\n\nNone: every entity attribute travels in its creation event." in out
+
+
+def test_context_snapshot_keeps_self_refs(tmp_path):
+    from dataset.context import _snapshots
+    events = [{"name": "faculty_created", "kind": "entity_created", "entity": "faculty",
+               "key": "faculty_id", "fields": []},
+              {"name": "faculty_snapshot", "kind": "event", "entity": None, "key": None,
+               "fields": [{"name": "event_id", "type": "i64", "nullable": False},
+                          {"name": "fac_id", "type": "ref", "nullable": False, "ref": "faculty"},
+                          {"name": "salary", "type": "f64", "nullable": True},
+                          {"name": "supervisor_id", "type": "ref", "nullable": True,
+                           "ref": "faculty"}]}]
+    import dataset.context as ctx
+    ctx_times = ctx._snapshot_times
+    ctx._snapshot_times = lambda root, names: {"faculty_snapshot": "2010-08-31 00:00:00"}
+    try:
+        out = "\n".join(_snapshots(events, {"faculty_snapshot": 3}, tmp_path))
+    finally:
+        ctx._snapshot_times = ctx_times
+    assert "| `salary`, `supervisor_id` |" in out

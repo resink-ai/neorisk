@@ -7,22 +7,19 @@ SELECT CourseNo AS ext_id, CrsDesc AS crs_desc, CrsUnits AS crs_units,
        '2009-07-01 00:00:00' AS created_at
 FROM university_course ORDER BY CourseNo;
 
--- entity: faculty
+-- entity: faculty event=faculty_hired
 SELECT CAST(FacNo AS TEXT) AS ext_id, FacFirstName AS first_name, FacLastName AS last_name,
-       FacCity AS city, FacState AS state, FacDept AS dept, CAST(FacSupervisor AS INTEGER) AS supervisor_id,
-       FacZipCode AS zip, FacHireDate || ' 00:00:00' AS created_at
+       FacHireDate || ' 00:00:00' AS created_at
 FROM university_faculty ORDER BY FacNo;
 
 -- entity: student
 SELECT CAST(StdNo AS TEXT) AS ext_id, StdFirstName AS first_name, StdLastName AS last_name,
-       StdCity AS city, StdState AS state, StdZip AS zip, StdMajor AS major,
        '2009-07-01 00:00:00' AS created_at
 FROM university_student ORDER BY StdNo;
 
 -- entity: offering
 SELECT CAST(OfferNo AS TEXT) AS ext_id, CourseNo AS course_id, OffTerm AS term, OffYear AS year,
-       OffLocation AS location, OffTime AS time, CAST(FacNo AS INTEGER) AS faculty_id,
-       OffDays AS days,
+       OffLocation AS location, OffTime AS time, OffDays AS days,
        OffYear || CASE OffTerm WHEN 'WINTER' THEN '-01-01' WHEN 'SPRING' THEN '-04-01'
                                WHEN 'SUMMER' THEN '-07-01' WHEN 'FALL' THEN '-09-01' END
            || ' 00:00:00' AS created_at
@@ -47,11 +44,18 @@ ORDER BY e.OfferNo, e.StdNo;
 
 -- event: faculty_snapshot owner=faculty_id
 -- At N = 2010-08-31, the rule end of Summer 2010, the last term with an offering.
-SELECT '2010-08-31 00:00:00' AS event_time, FacNo AS faculty_id, FacRank AS rank,
-       FacSalary AS salary
+SELECT '2010-08-31 00:00:00' AS event_time, FacNo AS faculty_id, FacCity AS city,
+       FacState AS state, FacZipCode AS zip, FacDept AS dept,
+       CAST(FacSupervisor AS INTEGER) AS supervisor_id, FacRank AS rank, FacSalary AS salary
 FROM university_faculty ORDER BY FacNo;
 
 -- event: student_snapshot owner=student_id
-SELECT '2010-08-31 00:00:00' AS event_time, StdNo AS student_id, StdClass AS class,
+SELECT '2010-08-31 00:00:00' AS event_time, StdNo AS student_id, StdCity AS city,
+       StdState AS state, StdZip AS zip, StdMajor AS major, StdClass AS class,
        CAST(round(StdGPA * 10) AS INTEGER) AS gpa_tenths
 FROM university_student ORDER BY StdNo;
+
+-- event: offering_snapshot owner=offering_id
+SELECT '2010-08-31 00:00:00' AS event_time, OfferNo AS offering_id,
+       CAST(FacNo AS INTEGER) AS faculty_id
+FROM university_offering ORDER BY OfferNo;

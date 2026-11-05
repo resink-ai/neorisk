@@ -1,0 +1,71 @@
+{
+  "name": "eusoccer",
+  "version": "v1",
+  "kind": "spider2",
+  "writer": {
+    "polars": "2.0.0",
+    "pyarrow": "26.0.0"
+  },
+  "recipe_sha256": "02526692527a8d687036950686c676fe4cbf31a95116824a33b33e486d27a6b2",
+  "source_sha256": "b4ebd079625bb9cd20437eaae1ccd0fc82f0f390567cfe3ee1df78fa08ad5f9a",
+  "files": {
+    "expected/queries/local218.parquet": {
+      "sha256": "81d53a23469ceb65d5d7ea0524871bf66d7914b962ae9e7d9c8fb92e723ab5c6",
+      "rows": 1
+    },
+    "expected/queries/local219.parquet": {
+      "sha256": "6bc4e9b57f1f7144bbb30161799c290c0fcc4a32d8fa9d1cb7e61c8adca5cb79",
+      "rows": 11
+    },
+    "expected/queries/local220.parquet": {
+      "sha256": "ac41a6d0db97390952035d0eee28f4943bf4287fd62fa7e37000ef6545c58086",
+      "rows": 2
+    },
+    "expected/queries/local221.parquet": {
+      "sha256": "40019f648b35a54c82fe033dfd996927e0dcfa55fc3b2a42df8cef687cdca44e",
+      "rows": 10
+    },
+    "expected/queries/local283.parquet": {
+      "sha256": "94e40d2d63f046c13966a39cde0b3fc946bd5bfefff39e1d6664251632ab667c",
+      "rows": 88
+    },
+    "log/part-00000.parquet": {
+      "sha256": "bf9c7d6204f4e392d7d3d3c6b6da0277d6828bbde74d3c6f47d6a06e3ce43bce",
+      "rows": 233856
+    },
+    "results/Country.parquet": {
+      "sha256": "e829ce469ed7e2e62aff2934c4e34c7d34e5b64a32806662cc16e0a885b97b2c",
+      "rows": 11
+    },
+    "results/League.parquet": {
+      "sha256": "b2331ef801c852703a937a1290a59c05e19b65140729b63253ee095b0f15c94c",
+      "rows": 11
+    },
+    "results/Match.parquet": {
+      "sha256": "d5c6337896b0291e369b9126774a28d92dd5f190e1690c727e24badd1dedcf3b",
+      "rows": 25979
+    },
+    "results/Player.parquet": {
+      "sha256": "2014ad858bdc7295be89086c5380e39261d8517f853c2b9e44479d1e71ffb670",
+      "rows": 11060
+    },
+    "results/Player_Attributes.parquet": {
+      "sha256": "aad7a366b9104df2366ec3df81243cb77e07861a9035929dfd6cabdc3a9827ea",
+      "rows": 183978
+    },
+    "results/Team.parquet": {
+      "sha256": "d21884ea9bd2c2cf2f994c30b669e164eeb4b4ae1b88346c1faa997b0566bb68",
+      "rows": 299
+    },
+    "results/Team_Attributes.parquet": {
+      "sha256": "f1644a24f50e0f62d293329bf58440b3304ee35d3c816ba345c0918515231927",
+      "rows": 1458
+    },
+    "schema/events.json": {
+      "sha256": "8a344f52f7fee14bbd784c0667db38c9bc9b7c8bb82f1b76def4a8a05fc2d2e5"
+    },
+    "schema/results.json": {
+      "sha256": "7c9b2087eb7c1ac66460d2d87397d2fef6e5bef2bb095e32e56ecb78ed62f41b"
+    }
+  }
+}

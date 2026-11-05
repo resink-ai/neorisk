@@ -5,25 +5,22 @@
 
 -- entity: buildings
 SELECT BuildingCode AS ext_id, '2017-09-11 00:00:00' AS created_at,
-       BuildingName AS building_name, NumberOfFloors AS number_of_floors,
-       ElevatorAccess AS elevator_access, SiteParkingAvailable AS site_parking_available
+       BuildingName AS building_name, NumberOfFloors AS number_of_floors
 FROM Buildings ORDER BY BuildingCode;
 
 -- entity: class_rooms
 SELECT CAST(ClassRoomID AS TEXT) AS ext_id, '2017-09-11 00:00:00' AS created_at,
-       BuildingCode AS building_id, PhoneAvailable AS phone_available
+       BuildingCode AS building_id
 FROM Class_Rooms ORDER BY ClassRoomID;
 
--- entity: staff
+-- entity: staff event=staff_hired
 SELECT CAST(StaffID AS TEXT) AS ext_id, DateHired || ' 00:00:00' AS created_at,
-       StfFirstName AS first_name, StfLastname AS last_name, StfStreetAddress AS street_address,
-       StfCity AS city, StfState AS state, StfZipCode AS zip, StfAreaCode AS area_code,
-       StfPhoneNumber AS phone, Position AS position
+       StfFirstName AS first_name, StfLastname AS last_name
 FROM Staff ORDER BY StaffID;
 
 -- entity: departments
 SELECT CAST(DepartmentID AS TEXT) AS ext_id, '2017-09-11 00:00:00' AS created_at,
-       DeptName AS dept_name, CAST(DeptChair AS TEXT) AS dept_chair
+       DeptName AS dept_name
 FROM Departments ORDER BY DepartmentID;
 
 -- entity: categories
@@ -46,7 +43,7 @@ SELECT CAST(ClassStatus AS TEXT) AS ext_id, '2017-09-11 00:00:00' AS created_at,
        ClassStatusDescription AS description
 FROM Student_Class_Status ORDER BY ClassStatus;
 
--- entity: faculty
+-- entity: faculty event=faculty_hired
 SELECT CAST(f.StaffID AS TEXT) AS ext_id, s.DateHired || ' 00:00:00' AS created_at,
        CAST(f.StaffID AS TEXT) AS staff_id
 FROM Faculty f JOIN Staff s USING (StaffID) ORDER BY f.StaffID;
@@ -58,8 +55,7 @@ FROM Faculty_Categories ORDER BY StaffID, CategoryID;
 
 -- entity: faculty_subjects
 SELECT StaffID || '/' || SubjectID AS ext_id, '2017-09-11 00:00:00' AS created_at,
-       CAST(StaffID AS TEXT) AS faculty_id, CAST(SubjectID AS TEXT) AS subject_id,
-       ProficiencyRating AS proficiency_rating
+       CAST(StaffID AS TEXT) AS faculty_id, CAST(SubjectID AS TEXT) AS subject_id
 FROM Faculty_Subjects ORDER BY StaffID, SubjectID;
 
 -- entity: classes
@@ -77,10 +73,7 @@ FROM Faculty_Classes x JOIN Classes c USING (ClassID) ORDER BY x.ClassID, x.Staf
 
 -- entity: students
 SELECT CAST(StudentID AS TEXT) AS ext_id, '2017-09-11 00:00:00' AS created_at,
-       StudFirstName AS first_name, StudLastName AS last_name,
-       StudStreetAddress AS street_address, StudCity AS city, StudState AS state,
-       StudZipCode AS zip, StudAreaCode AS area_code, StudPhoneNumber AS phone,
-       CAST(StudMajor AS TEXT) AS major_id
+       StudFirstName AS first_name, StudLastName AS last_name
 FROM Students ORDER BY StudentID;
 
 -- event: student_enrolled owner=student_id ord=class
@@ -98,13 +91,38 @@ SELECT '2018-01-14 00:00:00' AS event_time, ClassID AS class,
        CAST(StudentID AS TEXT) AS student_id, CAST(ClassID AS TEXT) AS class_id
 FROM Student_Schedules WHERE ClassStatus = 3 ORDER BY StudentID, ClassID;
 
+-- event: buildings_snapshot owner=building_id
+SELECT '2018-01-20 09:00:00' AS event_time, BuildingCode AS building_id, ElevatorAccess AS elevator_access,
+       SiteParkingAvailable AS site_parking_available
+FROM Buildings ORDER BY BuildingCode;
+
+-- event: class_rooms_snapshot owner=class_room_id
+SELECT '2018-01-20 09:00:00' AS event_time, CAST(ClassRoomID AS TEXT) AS class_room_id,
+       PhoneAvailable AS phone_available
+FROM Class_Rooms ORDER BY ClassRoomID;
+
+-- event: departments_snapshot owner=department_id
+SELECT '2018-01-20 09:00:00' AS event_time, CAST(DepartmentID AS TEXT) AS department_id,
+       CAST(DeptChair AS TEXT) AS dept_chair
+FROM Departments ORDER BY DepartmentID;
+
+-- event: faculty_subjects_snapshot owner=fs_id
+SELECT '2018-01-20 09:00:00' AS event_time, StaffID || '/' || SubjectID AS fs_id,
+       ProficiencyRating AS proficiency_rating
+FROM Faculty_Subjects ORDER BY StaffID, SubjectID;
+
 -- event: students_snapshot owner=student_id
 SELECT '2018-01-20 09:00:00' AS event_time, CAST(StudentID AS TEXT) AS student_id,
-       StudGPA AS stud_gpa
+       StudStreetAddress AS street_address, StudCity AS city, StudState AS state,
+       StudZipCode AS zip, StudAreaCode AS area_code, StudPhoneNumber AS phone,
+       CAST(StudMajor AS TEXT) AS major_id, StudGPA AS stud_gpa
 FROM Students ORDER BY StudentID;
 
 -- event: staff_snapshot owner=staff_id
-SELECT '2018-01-20 09:00:00' AS event_time, CAST(StaffID AS TEXT) AS staff_id, Salary AS salary
+SELECT '2018-01-20 09:00:00' AS event_time, CAST(StaffID AS TEXT) AS staff_id,
+       StfStreetAddress AS street_address, StfCity AS city, StfState AS state,
+       StfZipCode AS zip, StfAreaCode AS area_code, StfPhoneNumber AS phone,
+       Position AS position, Salary AS salary
 FROM Staff ORDER BY StaffID;
 
 -- event: faculty_snapshot owner=faculty_id

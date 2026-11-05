@@ -1,0 +1,79 @@
+{
+  "name": "adventureworks",
+  "version": "v1",
+  "kind": "spider2",
+  "writer": {
+    "polars": "2.0.0",
+    "pyarrow": "26.0.0"
+  },
+  "recipe_sha256": "828b1e42d8524fcb57c8aa44ab3eac8590a710e662f67cb1f0b9691ce3402f89",
+  "source_sha256": "f8bb86bfde5fca5636030fa9490ad37d4397b0b21591ee62c7aca363a64f2653",
+  "files": {
+    "expected/queries/local141.parquet": {
+      "sha256": "c5d179b7f4eff7e8b4d0e5784c2e83613dd68d895dfb763af6bde8a53f0648fb",
+      "rows": 58
+    },
+    "log/part-00000.parquet": {
+      "sha256": "60aa8c5fb1de7243bc388a7ce3f9864114cc4c275ea84fc6cd1f5d2551d56afc",
+      "rows": 200832
+    },
+    "results/SalesPersonQuotaHistory.parquet": {
+      "sha256": "d511498c87c153254ad83d60e92b62c0fc4f9f6929c70bd9874f78fffcb66439",
+      "rows": 163
+    },
+    "results/countryregioncurrency.parquet": {
+      "sha256": "10119100e6ba052b56b653b4f577485a24ff42a4ca5a24c275019267fc7321a8",
+      "rows": 109
+    },
+    "results/currencyrate.parquet": {
+      "sha256": "a05afa0e84c747c8fcb42f47535d9372b84edd0a428d7527341d7de7f2b2b6a0",
+      "rows": 13532
+    },
+    "results/product.parquet": {
+      "sha256": "fd1fb473d9cd79b0460ae749693e759ddf713e443d514c03f3b5fd1fa682b6f2",
+      "rows": 504
+    },
+    "results/productcategory.parquet": {
+      "sha256": "ed6595c40e07f7322a489ba6ef761fc2b1a78b0b7a995aaa4fc4584eb808d68e",
+      "rows": 4
+    },
+    "results/productdescription.parquet": {
+      "sha256": "9d51202f0ac65d951d14e00f1c00d4f4d3ba65abd5f74646446b9d07e124b8b7",
+      "rows": 762
+    },
+    "results/productmodelproductdescriptionculture.parquet": {
+      "sha256": "d7fa8e4a73f001501c0fdba444995dd7c04b8dadadddaa3846a9fb969beaac2b",
+      "rows": 762
+    },
+    "results/productreview.parquet": {
+      "sha256": "2bd9a7a478b98d36d33e4b46832e56e9e2733f1f2fa23881ec43029ff351b401",
+      "rows": 4
+    },
+    "results/productsubcategory.parquet": {
+      "sha256": "22b5452d27752cb82b7a91f47ad453ccd9930381035ae64c043f2c3ddbf3c1bd",
+      "rows": 37
+    },
+    "results/salesorderdetail.parquet": {
+      "sha256": "acb62c8eecb91af2f15ca93b46ed857b762a68dec4ce8dfe0f853e6c40a07dd9",
+      "rows": 121317
+    },
+    "results/salesorderheader.parquet": {
+      "sha256": "bd78f40662ddd86d1a970c2422229baaac7051aa5b6f7b168b8cd82b0b79542f",
+      "rows": 31465
+    },
+    "results/salesperson.parquet": {
+      "sha256": "e8ff6e22f2e705417a822b344c7378165220d3bcd2095592f5a261d44ad6cf88",
+      "rows": 17
+    },
+    "results/salesterritory.parquet": {
+      "sha256": "7d5abacf340af0a5704442d37831c05bb8b6265edda93b1084fce662b2d5105e",
+      "rows": 10
+    },
+    "schema/events.json": {
+      "sha256": "f1a4f12588ff73a38d8f357ae13b4a2ad5c8dfe512dfad0b5f585898a95e132f"
+    },
+    "schema/results.json": {
+      "sha256": "dc935da1d6bd4caf7dd9749129dcc3db5d57d9ffc19e7f31b7e9ef9f4e034e07"
+    }
+  }
+}

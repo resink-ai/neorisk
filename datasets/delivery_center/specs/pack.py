@@ -34,17 +34,22 @@ def define(p: Pack) -> None:
     p.entity("hubs", key="hub_key", doc="Delivery hubs",
              cols={"ext_id": text(doc="Source hub_id"), "hub_name": text(), "hub_city": text(),
                    "hub_state": text(), "hub_latitude": f64(), "hub_longitude": f64()})
-    p.entity("stores", key="store_key", doc="Stores; each sits in one hub",
+    p.entity("stores", key="store_key",
+             doc="Stores; each sits in one hub; plan price and coordinates are a snapshot",
              cols={"ext_id": text(doc="Source store_id"), "hub_key": ref("hubs"),
                    "store_name": text(doc="Byte-exact: some have trailing spaces"),
-                   "store_segment": text(), "store_plan_price": opt(f64()),
-                   "store_latitude": opt(f64()), "store_longitude": opt(f64())})
+                   "store_segment": text()})
     p.entity("channels", key="channel_key", doc="Sales channels",
              cols={"ext_id": text(doc="Source channel_id"), "channel_name": text(),
                    "channel_type": text()})
-    p.entity("drivers", key="driver_key", doc="Drivers (bikers, motoboys; freelance, logistic "
-             "operator)", cols={"ext_id": text(doc="Source driver_id"), "driver_modal": text(),
-                                "driver_type": text()})
+    p.entity("drivers", key="driver_key", doc="Drivers; modal and type are a snapshot",
+             cols={"ext_id": text(doc="Source driver_id")})
+    p.event("stores_snapshot", doc="A store's plan price and coordinates as of the extract, at N",
+            cols={"store_key": ref("stores"), "store_plan_price": opt(f64()),
+                  "store_latitude": opt(f64()), "store_longitude": opt(f64())})
+    p.event("drivers_snapshot", doc="A driver's modal (biker, motoboy) and type (freelance, "
+            "logistic operator) as of the extract, at N",
+            cols={"driver_key": ref("drivers"), "driver_modal": text(), "driver_type": text()})
 
     p.event("order_created", doc="A store receives an order",
             cols={"order_id": i64(doc="Source order_id"), "store_key": ref("stores"),

@@ -11,6 +11,10 @@ travel as SQLite's own CAST AS TEXT, which also hides baopp's 17-digit float noi
 Times are rules except debuts, home-game spans and all-star game dates: S(y) = <y>-11-01 for
 the regular season, P(y) = <y>-11-02 for the postseason, A(y) = <y>-11-30 for awards,
 H(y) = <y>-01-15 for Hall of Fame ballots; T0 = 1871-01-01 and N = 2016-02-18.
+
+Values that are current names or lifetime state (a player's weight, height, batting side,
+final game and death; a franchise's or park's current name; a college's current name) ride
+on one <entity>_snapshot event per row at N, so no creation carries a later name.
 """
 
 from dataclasses import dataclass
@@ -61,21 +65,18 @@ def define(p: Pack) -> None:
                    "stub": cat("0", "1", doc="1: an orphan id, not in player"),
                    **_n("birth_year birth_month birth_day"),
                    **_ot("birth_country birth_state birth_city name_first name_last name_given"),
-                   **_n("weight height"), **_ot("bats throws"),
+                   **_ot("throws"),
                    "debut": opt(text(doc="YYYY-MM-DD or ''; later than created_at for 49")),
                    **_ot("retro_id bbref_id")})
     p.entity("team_franchise", key="franchise_key",
              doc="created_at: Jan 1 of its first team-season (rule)",
-             cols={"ext_id": text(doc="franchise_id"),
-                   **_t("franchise_name"), "active": text(doc="Y, N or '': its state at N"),
-                   **_t("na_assoc")})
+             cols={"ext_id": text(doc="franchise_id"), **_t("na_assoc")})
     p.entity("park", key="park_key", doc="created_at: its first home game, else T0",
-             cols={"ext_id": text(doc="park_id"),
-                   **_t("park_name park_alias city state country")})
+             cols={"ext_id": text(doc="park_id"), **_t("city state country")})
     p.entity("college", key="college_key", doc="All at T0 (rule)",
              cols={"ext_id": text(doc="college_id"),
                    "stub": cat("0", "1", doc="1: an unknown id in player_college"),
-                   **_ot("name_full city state country")})
+                   **_ot("city state country")})
     p.entity("season", key="season_key", doc="An owner shard only; no results table",
              cols={"ext_id": text(doc="The year")})
 
@@ -162,7 +163,15 @@ def define(p: Pack) -> None:
                   **_n("ballots needed votes"), **_t("inducted category needed_note")})
     p.event("college_attended", doc="A college year, at the player's creation (rule)",
             cols={"player_id": ref("player"), "college_id": ref("college"), **_i("year")})
-    p.event("player_snapshot_taken", doc="Lifetime values, at N = 2016-02-18",
-            cols={"player_id": ref("player"), **_t("final_game"),
+    p.event("player_snapshot", doc="A source player's state at N = 2016-02-18: listed body "
+                                   "and batting side, final game and death (no stubs)",
+            cols={"player_id": ref("player"), **_n("weight height"), **_t("bats final_game"),
                   **_n("death_year death_month death_day"),
                   **_t("death_country death_state death_city")})
+    p.event("team_franchise_snapshot", doc="A franchise's current name and active flag, at N",
+            cols={"franchise_id": ref("team_franchise"),
+                  **_t("franchise_name"), "active": text(doc="Y, N or ''")})
+    p.event("park_snapshot", doc="A park's current name and its earlier names, at N",
+            cols={"park_id": ref("park"), **_t("park_name park_alias")})
+    p.event("college_snapshot", doc="A source college's current name, at N (no stubs)",
+            cols={"college_id": ref("college"), **_t("name_full")})

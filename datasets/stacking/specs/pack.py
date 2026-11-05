@@ -22,7 +22,7 @@ def define(p: Pack) -> None:
              cols={"ext_id": text(doc="name"), "path": text(),
                    "type": cat("classification", "regression"),
                    "target": text(doc="Verbatim; concrete's ends in a space")})
-    p.entity("solutions", key="run_key", doc="One run (problem, version), at the run clock",
+    p.entity("solutions", key="run_key", doc="One run (problem, version): run_configured at the run clock",
              cols={"ext_id": text(doc="name || '#' || version"), "problem": ref("problems"),
                    "version": i32(), "correlation": f64(), "nb_model": i32(),
                    "nb_feature": i32(), "score": f64(), "test_size": f64(),

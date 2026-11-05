@@ -3,7 +3,8 @@
 -- table: Teams
 SELECT CAST(t.ext_id AS BIGINT) AS TeamID, t.team_name AS TeamName,
        CAST(c.ext_id AS BIGINT) AS CaptainID
-FROM teams t JOIN bowlers c ON c.bowler_id = t.captain_id;
+FROM teams t LEFT JOIN teams_snapshot n USING (team_id)
+LEFT JOIN bowlers c ON c.bowler_id = n.captain_id;
 
 -- table: Bowlers
 -- The 4 stats are as of tournament 13: the scores of tournaments dated up to 2017-11-27, a
@@ -16,12 +17,13 @@ WITH s AS (SELECT g.bowler_id, sum(g.raw_score) AS pins, count(*) AS games
 a AS (SELECT bowler_id, pins, games, (2 * pins + games) // (2 * games) AS avg FROM s)
 SELECT CAST(b.ext_id AS BIGINT) AS BowlerID, b.last_name AS BowlerLastName,
        b.first_name AS BowlerFirstName, b.middle_init AS BowlerMiddleInit,
-       b.address AS BowlerAddress, b.city AS BowlerCity, b.state AS BowlerState,
-       b.zip AS BowlerZip, b.phone AS BowlerPhoneNumber, CAST(t.ext_id AS BIGINT) AS TeamID,
+       n.address AS BowlerAddress, n.city AS BowlerCity, n.state AS BowlerState,
+       n.zip AS BowlerZip, n.phone AS BowlerPhoneNumber, CAST(t.ext_id AS BIGINT) AS TeamID,
        coalesce(a.pins, 0) AS BowlerTotalPins, coalesce(a.games, 0) AS BowlerGamesBowled,
        coalesce(a.avg, 0) AS BowlerCurrentAverage,
        coalesce((9 * (200 - a.avg) + 5) // 10, 0) AS BowlerCurrentHcp
-FROM bowlers b JOIN teams t USING (team_id) LEFT JOIN a USING (bowler_id);
+FROM bowlers b LEFT JOIN bowlers_snapshot n USING (bowler_id)
+LEFT JOIN teams t ON t.team_id = n.team_id LEFT JOIN a USING (bowler_id);
 
 -- table: Tournaments
 SELECT CAST(ext_id AS BIGINT) AS TourneyID, tourney_date AS TourneyDate,

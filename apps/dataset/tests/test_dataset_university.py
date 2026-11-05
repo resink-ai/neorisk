@@ -1,9 +1,10 @@
 COUNTS = {
     "course_created": 7,
-    "faculty_created": 8,
+    "faculty_hired": 8,
     "faculty_snapshot": 8,
     "grade_recorded": 37,
     "offering_created": 13,
+    "offering_snapshot": 13,
     "student_created": 11,
     "student_enrolled": 37,
     "student_snapshot": 11

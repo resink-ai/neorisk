@@ -4,7 +4,7 @@
 
 The Indian Premier League, seasons 1 to 9 (2008-04-18 to 2016-05-29), ball by ball: 567 matches and 134,704 deliveries. Each match is scheduled, the toss is decided and the team sheets are named; then each innings starts and every delivery is bowled; then the result is recorded.
 
-Version `v1`, kind `spider2`. The input is one ordered event log of 150,518 events; the output is the 8 source tables, rebuilt exactly, and the answers to 11 saved Spider 2.0 questions.
+Version `v1`, kind `spider2`. The input is one ordered event log of 150,986 events; the output is the 8 source tables, rebuilt exactly, and the answers to 11 saved Spider 2.0 questions.
 
 ## Raw data
 
@@ -16,7 +16,7 @@ The reverse-engineering research, with the queries behind every number, is in [`
 
 ## How the log was made
 
-Every event is owned by its match. The fixture, toss and result come from the `match` row, each team-sheet line is an event, each innings start is an event, and each delivery is one event. A delivery is the union of the four ball tables' keys: 134,704 deliveries, one more than `ball_by_ball`, because the first delivery of the file (335987, innings 1, 1.1, a leg-bye) has an `extra_runs` row but no ball row. A delivery's runs, extras and wicket parts are NULL when their table has no row for it, so `batsman_scored`, `extra_runs` and `wicket_taken` rebuild as the deliveries whose part is present, and `ball_by_ball` as those with `has_ball_row = 1`. Players and teams are entities.
+Every event is owned by its match. The fixture, toss and result come from the `match` row, each team-sheet line is an event, each innings start is an event, and each delivery is one event. A delivery is the union of the four ball tables' keys: 134,704 deliveries, one more than `ball_by_ball`, because the first delivery of the file (335987, innings 1, 1.1, a leg-bye) has an `extra_runs` row but no ball row. A delivery's runs, extras and wicket parts are NULL when their table has no row for it, so `batsman_scored`, `extra_runs` and `wicket_taken` rebuild as the deliveries whose part is present, and `ball_by_ball` as those with `has_ball_row = 1`. Players and teams are entities. A player's bowling skill and country are snapshot columns: they ride on one `players_snapshot` event per listed player at N.
 
 Three ids are used but have no row:
 - **Team 1** (Kolkata, by its venues) and **player 35** are placeholder entities with NULL attributes and `listed = 0`, so every ref resolves. The `team` and `player` tables keep only `listed = 1`.
@@ -31,7 +31,8 @@ The batting side of an innings is the team its strikers are named for. In 3 matc
 | Event | Kind | Rows | Payload fields |
 |---|---|---:|---|
 | `teams_created` | entity | 13 | `team_key`, `ext_id`, `name`, `listed` |
-| `players_created` | entity | 469 | `player_key`, `ext_id`, `player_name`, `dob`, `batting_hand`, `bowling_skill`, `country_name`, `listed` |
+| `players_created` | entity | 469 | `player_key`, `ext_id`, `player_name`, `dob`, `batting_hand`, `listed` |
+| `players_snapshot` | business | 468 | `player_key`, `bowling_skill`, `country_name` |
 | `match_scheduled` | business | 567 | `match_id`, `team_1`, `team_2`, `season_id`, `venue` |
 | `toss_decided` | business | 567 | `match_id`, `toss_winner`, `toss_decision` |
 | `player_named` | business | 12,495 | `match_id`, `player_id`, `team_id`, `role` |
@@ -45,10 +46,32 @@ The batting side of an innings is the team its strikers are named for. In 3 matc
 - Match 419136 has no date: it is placed on 2010-03-29, the free day between its id neighbours 419135 (2010-03-28) and 419137 (2010-03-30).
 - The fixture, toss and team sheet are at start − 30 min, in that order.
 - Delivery k (1..n per innings, in over and ball order) is at start + (innings − 1) × 110 min + (k − 1) × 40 s. An innings starts at its first delivery. No two deliveries share a time, and no match crosses midnight.
-- The result is at the last delivery + 5 min. The last one, N, is 2016-05-29 23:17:00.
+- The result is at the last delivery + 5 min. The last one, N, is 2016-05-29 23:17:00: the dataset's existing snapshot time and the latest event time in the log. The player snapshots are at N.
 - A team is created at 00:00 of its first match, a player at 00:00 of his first team sheet. Player 448 is on no sheet and takes the first match day, 2008-04-18.
 
 Only the dates reach the tables (`match_date` is the fixture's date), so the clock cannot change any table. Only the order is real; stage 2 must not fit gaps between deliveries from it.
+
+## Snapshot columns
+
+| Entity | Snapshot event | At (UTC) | Rows | Columns |
+|---|---|---|---:|---|
+| `players` | `players_snapshot` | 2016-05-29 23:17:00 | 468 | `bowling_skill`, `country_name` |
+
+| Column | Verdict | Reason |
+|---|---|---|
+| `team.team_id` (`ext_id`) | creation | The source key. |
+| `team.name` | creation | A given name; a renamed franchise would be another row. |
+| `player.player_id` (`ext_id`) | creation | The source key. |
+| `player.player_name` | creation | A given name. |
+| `player.dob` | creation | A birth date. |
+| `player.batting_hand` | creation | A physical trait the player debuts with; nothing in the source changes it. |
+| `player.bowling_skill` | snapshot | Ruling: the bowling style recorded as of the extract; a style can be changed or added during a career, so it is not fixed at the first team sheet. Research called it static biography. |
+| `player.country_name` | snapshot | Ruling: the nationality held as of the extract, which can change (when in doubt, snapshot). Research called it static biography. |
+| `listed` (teams, players) | creation | A structural flag: 0 marks the placeholder of a missing id (team 1, player 35), which has no snapshot row. |
+
+No snapshot column decides an event's time or order: teams and players are created at their first match or team sheet.
+
+No domain name: teams and players are created by rule at 00:00 of first use; the real act (being named on a team sheet) is already its own `player_named` event, so they keep `<entity>_created`.
 
 ## Expected output
 

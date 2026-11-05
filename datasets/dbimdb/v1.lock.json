@@ -1,0 +1,95 @@
+{
+  "name": "dbimdb",
+  "version": "v1",
+  "kind": "spider2",
+  "writer": {
+    "polars": "2.0.0",
+    "pyarrow": "26.0.0"
+  },
+  "recipe_sha256": "aead1062f3098506a563ae088883a43af16748f7ec9cb6f3059e9087ab57f758",
+  "source_sha256": "34b043fffa7e10a152c8d1536bb54e5365df102ac9d8c09d4549ef0d9ef6aadf",
+  "files": {
+    "expected/queries/local096.parquet": {
+      "sha256": "846bc3fe46044715152fbff8c98d08b6884d7bcb30d2ade3f6095a22cf675607",
+      "rows": 78
+    },
+    "expected/queries/local097.parquet": {
+      "sha256": "ef99cc943a7f4aa3e78e7bee378e25f374da02cf5c4578a9959171571eef7064",
+      "rows": 1
+    },
+    "expected/queries/local098.parquet": {
+      "sha256": "4feb515f53040689428d0a6d7c95c895092dc6bb6e23e46a5c9b50ea1e5c5e07",
+      "rows": 1
+    },
+    "expected/queries/local099.parquet": {
+      "sha256": "668bbca43e717626202c0da51035414494d1fdfc098efdda2b2e4f5dcafe5c87",
+      "rows": 1
+    },
+    "expected/queries/local100.parquet": {
+      "sha256": "3ed9cf8827f4655593c2ce2551f78ef48e72ff66c93ba87030b7feaa319efe2c",
+      "rows": 1
+    },
+    "log/part-00000.parquet": {
+      "sha256": "19968bec2c12643ca2c1b153d081d3a0e9ea359531901ad822b8aa6a6a77e9e1",
+      "rows": 177621
+    },
+    "results/Country.parquet": {
+      "sha256": "a72f0e23fad13f39b95ccbaeeaafc08e722d9a38a3d68825138e174ac9ea753a",
+      "rows": 34
+    },
+    "results/Genre.parquet": {
+      "sha256": "d79a154447949446c79eab5b9b3c928b4b892b1d9c3926bdad3011de0186f54c",
+      "rows": 328
+    },
+    "results/Language.parquet": {
+      "sha256": "ec91c7afa8e126427639770462c745b9db81e41e3247a7c9bc3b61b3f3dc07a2",
+      "rows": 32
+    },
+    "results/Location.parquet": {
+      "sha256": "d16e5dd1511e5b264a644004b63f3293c32d1474a38e31f8f7ea90dffec11f1d",
+      "rows": 559
+    },
+    "results/M_Cast.parquet": {
+      "sha256": "8e9afead3382a68a4dc2320a6dfe949b315b91d6cb0acf752641d2411b35a6de",
+      "rows": 82837
+    },
+    "results/M_Country.parquet": {
+      "sha256": "207d0f8190488fb1cc2b951f67a9a47e4647b4da75fee10df1bd17d89e6e06ef",
+      "rows": 3475
+    },
+    "results/M_Director.parquet": {
+      "sha256": "6d148427684267b4fb15e6fcb9d17e85786ab3f590f047decd34f74e0a32512f",
+      "rows": 3475
+    },
+    "results/M_Genre.parquet": {
+      "sha256": "4c12795c30a96600d558cf2daabc014314d2c29b50532b1fa2283b1dc5076eb1",
+      "rows": 3475
+    },
+    "results/M_Language.parquet": {
+      "sha256": "f6d8f847f0040eff33cefc49817dc66f101f6eb33a979707155115279a49423a",
+      "rows": 3475
+    },
+    "results/M_Location.parquet": {
+      "sha256": "1cd62d13170d9d8835aedd170eabba7f728645e7cc53a84efe1c8610f8a10840",
+      "rows": 3475
+    },
+    "results/M_Producer.parquet": {
+      "sha256": "62a803df9793d4af54b08e40012076373d048e7472f33300c2f36f85d99440e9",
+      "rows": 11751
+    },
+    "results/Movie.parquet": {
+      "sha256": "804b660378fcd427d0831b7f2743919b2891cc642c0b0ee4b253867f9f0106d3",
+      "rows": 3475
+    },
+    "results/Person.parquet": {
+      "sha256": "9edda89f391756369bef663e3a939f77cbd2faa3cab16f7bdfc86841a3474474",
+      "rows": 38285
+    },
+    "schema/events.json": {
+      "sha256": "d560e5e62dc2ceb16523faf4438863a851d5ad50a95cf1f27e8b60db63fe3d7e"
+    },
+    "schema/results.json": {
+      "sha256": "57974d4c867e10de895c06b281b437810368b45664c2100fa1784925e6c8eab7"
+    }
+  }
+}

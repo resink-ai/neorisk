@@ -1,8 +1,10 @@
 COUNTS = {
     "accounts_created": 351,
+    "accounts_snapshot": 351,
     "order_placed": 6912,
     "region_created": 4,
     "sales_reps_created": 50,
+    "sales_reps_snapshot": 50,
     "web_visited": 9073
 }
 

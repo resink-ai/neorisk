@@ -3,20 +3,25 @@
 
 -- entity: legislators
 -- Created at the first term start (a rule).
-SELECT l.id_bioguide AS ext_id, l.full_name, l.first_name, l.last_name, l.middle_name,
-       l.nickname, l.suffix, l.other_names_end, l.other_names_last, l.birthday, l.gender,
-       l.id_bioguide_previous_0, l.id_govtrack, CAST(l.id_icpsr AS INTEGER) AS id_icpsr,
-       l.id_wikipedia, l.id_wikidata, l.id_google_entity_id,
+SELECT l.id_bioguide AS ext_id, l.first_name, l.middle_name, l.nickname, l.suffix,
+       l.birthday, l.gender, l.id_bioguide_previous_0, l.id_govtrack,
+       CAST(l.id_icpsr AS INTEGER) AS id_icpsr, l.id_wikidata, l.id_google_entity_id,
        CAST(l.id_house_history AS INTEGER) AS id_house_history,
        CAST(l.id_house_history_alternate AS INTEGER) AS id_house_history_alternate,
-       CAST(l.id_thomas AS INTEGER) AS id_thomas, CAST(l.id_cspan AS INTEGER) AS id_cspan,
-       CAST(l.id_votesmart AS INTEGER) AS id_votesmart, l.id_lis, l.id_ballotpedia,
-       l.id_opensecrets, l.id_fec_0, l.id_fec_1, l.id_fec_2,
        iso_time(f.first_start, '%Y-%m-%d') AS created_at
 FROM legislators l
 JOIN (SELECT id_bioguide, min(term_start) AS first_start FROM legislators_terms
       GROUP BY id_bioguide) f USING (id_bioguide)
 ORDER BY l.id_bioguide;
+
+-- event: legislators_snapshot owner=legislator_id
+-- One per legislator at N: names and ids known only as of the 2020 export.
+SELECT '2020-05-22 00:00:00' AS event_time, id_bioguide AS legislator_id, full_name,
+       last_name, other_names_end, other_names_last, id_wikipedia,
+       CAST(id_thomas AS INTEGER) AS id_thomas, CAST(id_cspan AS INTEGER) AS id_cspan,
+       CAST(id_votesmart AS INTEGER) AS id_votesmart, id_lis, id_ballotpedia, id_opensecrets,
+       id_fec_0, id_fec_1, id_fec_2
+FROM legislators ORDER BY id_bioguide;
 
 -- event: term_started owner=legislator_id ord=k
 -- A term still open at N carries its scheduled end.

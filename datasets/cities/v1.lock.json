@@ -1,0 +1,55 @@
+{
+  "name": "cities",
+  "version": "v1",
+  "kind": "spider2",
+  "writer": {
+    "polars": "2.0.0",
+    "pyarrow": "26.0.0"
+  },
+  "recipe_sha256": "84166c1fefb18e96dc85423496cd2b1a9aba1c342fe9c6afc7f478d4aa842972",
+  "source_sha256": "6a9714f9fe11676691c38bb6e2cd048ab877415d28c358a2647ff1b8b8bfe763",
+  "files": {
+    "expected/queries/local068.parquet": {
+      "sha256": "e70288d7a6ae2e33d07788c6c78698a7852eec7b3c10ff0dfb43f45ba18a06cc",
+      "rows": 6
+    },
+    "expected/queries/local070.parquet": {
+      "sha256": "493ce0212b87f1ac567223edca8ea916c3d8f23209ca6b4dfd8ed5d483cd2ecd",
+      "rows": 15
+    },
+    "expected/queries/local071.parquet": {
+      "sha256": "b3d29a50784a29067bb4d1d29b605cbc774a274efb2947ad69ddde39e58f99c3",
+      "rows": 3
+    },
+    "expected/queries/local072.parquet": {
+      "sha256": "ad2085c819876908e7a721f98c6f0f0cf8af6b5f4aadf195287e480e3ae4d9ad",
+      "rows": 1
+    },
+    "log/part-00000.parquet": {
+      "sha256": "6805780a81904afd00f4e9b825e1ccb68cbff39fab74e9efde81fa28b23ce3dd",
+      "rows": 90588
+    },
+    "results/cities.parquet": {
+      "sha256": "91c7e4c18f7d1b8d76b563230bd4c8cbfc653c33b321bc7d40bea2258d8a99a2",
+      "rows": 44622
+    },
+    "results/cities_countries.parquet": {
+      "sha256": "8b7e8001dad4d1a4586ac70548670c46d90bb64d55bed42ebd8467892d956325",
+      "rows": 241
+    },
+    "results/cities_currencies.parquet": {
+      "sha256": "68812b550e1cee172dfd8be224591767a417f033661d7fd47c7c5343a95a2a9c",
+      "rows": 254
+    },
+    "results/cities_languages.parquet": {
+      "sha256": "5c39add508b9f6edd9051477fb32642ddb15680900e397253afb2e19ac52711c",
+      "rows": 608
+    },
+    "schema/events.json": {
+      "sha256": "15871955a4f4776f0d27563f5c619c14b6410e92b3f23d4de34bf9ee6da5e451"
+    },
+    "schema/results.json": {
+      "sha256": "9dff3d9b0956dbf659c332c272f26de142c5fd408bd00b4df592e3f5215969aa"
+    }
+  }
+}

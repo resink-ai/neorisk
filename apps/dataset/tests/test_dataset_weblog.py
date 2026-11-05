@@ -17,7 +17,11 @@ COUNTS = {
     "app1_users_created": 2,
     "app2_users_created": 2,
     "user_cards_created": 3,
-    "product_sales_created": 10
+    "product_sales_created": 10,
+    "app1_users_snapshot": 2,
+    "app2_users_snapshot": 2,
+    "user_cards_snapshot": 3,
+    "product_sales_snapshot": 10
 }
 
 

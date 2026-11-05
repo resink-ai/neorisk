@@ -4,7 +4,7 @@
 
 The "RSVP Movies" IMDb case study: 7,997 movies published from 2017 to 2019, tagged with genres, credited with directors and top-billed actors, and rated on IMDb at the scrape.
 
-Version `v1`, kind `spider2`. The input is one ordered event log of 90,680 events; the output is the 7 source tables, rebuilt exactly, and the answers to 2 saved Spider 2.0 questions.
+Version `v1`, kind `spider2`. The input is one ordered event log of 96,023 events; the output is the 7 source tables, rebuilt exactly, and the answers to 2 saved Spider 2.0 questions.
 
 ## Raw data
 
@@ -16,27 +16,55 @@ The reverse-engineering research, with the queries behind every number, is in [`
 
 ## How the log was made
 
-Movies, names and the ERD rows are entities. Each genre tag, director credit and cast credit is an event owned by its movie. A movie's rating is one `movie_rated` event at N. The gross (4,273 movies, as integer dollars) and the known-for lists (10,509 names, verbatim) are snapshot values, in `movies_snapshot` and `names_snapshot` events at N. `year` and `date_published` are both rebuilt from the movie's creation time; height travels as integer centimetres and is rebuilt as REAL.
+Movies, names and the ERD rows are entities; a movie's creation event is `movie_released`. Each genre tag, director credit and cast credit is an event owned by its movie. A movie's rating is one `movie_rated` event at N. The gross (4,273 movies, as integer dollars), and a person's height and known-for list (15,852 names with either), are snapshot values, in `movies_snapshot` and `names_snapshot` events at N. `year` and `date_published` are both rebuilt from the movie's creation time; height travels as integer centimetres and is rebuilt as REAL.
 
-`uv run dataset build imdb_movies` runs `specs/ingest.sql` on the read-only source to make a simkit dataset (an internal stage), then writes it as one log. Entity rows become `<entity>_created` events at their creation time; business events keep their columns. The log is in `seq` order: event time, then entities before events at the same instant. Each row's `payload` is a JSON object whose fields are listed in `schema/events.json`.
+`uv run dataset build imdb_movies` runs `specs/ingest.sql` on the read-only source to make a simkit dataset (an internal stage), then writes it as one log. Entity rows become `<entity>_created` events (or the domain name the recipe gives) at their creation time; business events keep their columns. The log is in `seq` order: event time, then entities before events at the same instant. Each row's `payload` is a JSON object whose fields are listed in `schema/events.json`.
 
 ## Event catalogue
 
 | Event | Kind | Rows | Payload fields |
 |---|---|---:|---|
 | `erd_created` | entity | 25 | `erd_id`, `ext_id`, `table`, `column`, `u6`, `u9`, `u12` |
-| `names_created` | entity | 25,735 | `name_id`, `ext_id`, `name`, `height`, `date_of_birth` |
-| `movies_created` | entity | 7,997 | `movie_id`, `ext_id`, `title`, `duration`, `country`, `languages`, `production_company` |
+| `names_created` | entity | 25,735 | `name_id`, `ext_id`, `name`, `date_of_birth` |
+| `movie_released` | entity | 7,997 | `movie_id`, `ext_id`, `title`, `duration`, `country`, `languages`, `production_company` |
 | `movie_genre_tagged` | business | 14,662 | `movie_id`, `genre` |
 | `director_credited` | business | 3,867 | `movie_id`, `person_id` |
 | `cast_credited` | business | 15,615 | `movie_id`, `person_id`, `category` |
 | `movie_rated` | business | 7,997 | `movie_id`, `avg_rating`, `total_votes`, `median_rating` |
 | `movies_snapshot` | business | 4,273 | `movie_id`, `worldwide_gross_usd` |
-| `names_snapshot` | business | 10,509 | `name_id`, `known_for_movies` |
+| `names_snapshot` | business | 15,852 | `name_id`, `height`, `known_for_movies` |
 
 ## Times set by rule
 
-A movie is created at its `date_published`, the only time in the source. Its genre tags and credits take that time. A person is created at their first credited publication; the 9,590 uncredited people and the 25 ERD rows are created at the catalog start, 2017-01-01. Ratings, gross and known-for lists are snapshot values at N = 2020-01-01, just after the last publication (2019-12-27).
+A movie is created at its `date_published`, the only time in the source. Its genre tags and credits take that time. A person is created at their first credited publication; the 9,590 uncredited people and the 25 ERD rows are created at the catalog start, 2017-01-01. Ratings, gross, heights and known-for lists are snapshot values at N = 2020-01-01 00:00:00, just after the last publication (2019-12-27).
+
+## Snapshot columns
+
+| Entity | Snapshot event | At (UTC) | Rows | Columns |
+|---|---|---|---:|---|
+| `movies` | `movies_snapshot` | 2020-01-01 00:00:00 | 4,273 | `worldwide_gross_usd` |
+| `names` | `names_snapshot` | 2020-01-01 00:00:00 | 15,852 | `height`, `known_for_movies` |
+
+| Column | Verdict | Reason |
+|---|---|---|
+| `erd.ext_id`, `table`, `column` | creation | The spreadsheet cell's key and given labels. |
+| `erd.u6`, `u9`, `u12` | creation | Static spreadsheet text, fixed with the document. |
+| `names.ext_id` | creation | The source key (`nm…`). |
+| `names.name` | creation | A given name. |
+| `names.date_of_birth` | creation | A birth date. |
+| `names.height` | snapshot | Ruling: IMDb's profile value as of the scrape, not a fact fixed at the person's first credit; when in doubt, snapshot. No event or question reads it. Research kept it on creation. |
+| `names.known_for_movies` | snapshot | IMDb's current list, which grows with later films (research). |
+| `movies.ext_id` | creation | The source key (`tt…`). |
+| `movies.title` | creation | A given title. |
+| `movies.date_published` | creation | It decides the creation time; `year` is derived from it. |
+| `movies.year` | derived | The year of `date_published` on every row (research). |
+| `movies.duration` | creation | The runtime, fixed with the release; local152 sums it. |
+| `movies.country`, `languages` | creation | The production countries and languages, fixed with the film. |
+| `movies.production_company` | creation | Fixed with the production. |
+| `movies.worlwide_gross_income` | snapshot | A lifetime total as of the scrape (research). |
+| `ratings.*` | snapshot | IMDb's rating on the scrape day; it travels as the business event `movie_rated` at N (research). |
+
+Domain name: `movie_released`, the publication that `date_published` records and the name the research gives (it is a re-release date for some classics). People are created at their first credit or at the catalog start by rule, which shows no real-world act, so they keep `names_created`; the ERD rows keep `erd_created`.
 
 ## Expected output
 

@@ -3,7 +3,7 @@ COUNTS = {
     "order_picked_up": 8,
     "order_delivered": 8,
     "order_cancelled": 2,
-    "runners_created": 4,
+    "runner_registered": 4,
     "pizzas_created": 2,
     "toppings_created": 12,
     "customers_created": 5

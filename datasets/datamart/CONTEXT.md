@@ -30,6 +30,12 @@ Each `weekly_sales` row is one reported event, owned by its region, at its week'
 
 The source has no reporting time. Each cell is stamped at its `week_date`, the Monday the week starts, at 00:00 UTC, so `week_date` is a pure format of the event time. The snapshot time N is 2020-08-31, the last week.
 
+## Snapshot columns
+
+None: every entity attribute travels in its creation event.
+
+The dataset has no entities, so no column is classified. Regions, platforms, segments and customer types are categorical fields of each weekly cell, not entities: none has an attribute of its own, and every measure (`transactions`, `sales`) is dated to its week, not known only at N. The `cleaned_weekly_sales` columns are derived in `build.sql`.
+
 ## Expected output
 
 `results/` holds every source table, as the source stores it. Each column's type follows the values it holds: text, int64 or float64. A mixed column holds text and numbers together, so it is stored as SQLite's own text rendering and declared in `dataset.toml`.

@@ -21,14 +21,20 @@ class Config:
 
 
 def define(p: Pack) -> None:
-    p.entity("sellers", key="seller_key", doc="Sellers (S1)",
-             cols={"ext_id": text(doc="Source seller_id"), "zip_code_prefix": i64(),
-                   "city": text(), "state": text()})
-    p.entity("products", key="product_key", doc="Products (S2); the source spells 'lenght'",
-             cols={"ext_id": text(doc="Source product_id"), "category": opt(text()),
-                   "name_length": opt(f64()), "description_length": opt(f64()),
-                   "photos_qty": opt(f64()), "weight_g": opt(f64()), "length_cm": opt(f64()),
-                   "height_cm": opt(f64()), "width_cm": opt(f64())})
+    p.entity("sellers", key="seller_key", doc="Sellers (S1); the address is a snapshot",
+             cols={"ext_id": text(doc="Source seller_id")})
+    p.entity("products", key="product_key",
+             doc="Products (S2); listing text lengths, photos and measures are a snapshot",
+             cols={"ext_id": text(doc="Source product_id"), "category": opt(text())})
+    p.event("sellers_snapshot", doc="A seller's address as of the extract, at N",
+            cols={"seller_id": ref("sellers"), "zip_code_prefix": i64(), "city": text(),
+                  "state": text()})
+    p.event("products_snapshot",
+            doc="A listing as of the extract, at N; the source spells 'lenght'",
+            cols={"product_id": ref("products"), "name_length": opt(f64()),
+                  "description_length": opt(f64()), "photos_qty": opt(f64()),
+                  "weight_g": opt(f64()), "length_cm": opt(f64()), "height_cm": opt(f64()),
+                  "width_cm": opt(f64())})
     p.entity("geolocation", key="geo_key", doc="Zip-prefix coordinates (S3), verbatim with "
              "duplicates", cols={"ext_id": text(doc="Source rowid"), "zip_code_prefix": i64(),
                                  "lat": f64(), "lng": f64(), "city": text(), "state": text()})

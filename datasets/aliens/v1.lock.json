@@ -1,0 +1,43 @@
+{
+  "name": "aliens",
+  "version": "v1",
+  "kind": "spider2",
+  "writer": {
+    "polars": "2.0.0",
+    "pyarrow": "26.0.0"
+  },
+  "recipe_sha256": "65f3d9822d05013151feac0e4624229a25210e5fd19d84f6381f93bf83c18871",
+  "source_sha256": "6a9714f9fe11676691c38bb6e2cd048ab877415d28c358a2647ff1b8b8bfe763",
+  "files": {
+    "expected/queries/local202.parquet": {
+      "sha256": "d23b05aa9c0644e00a89091e52c38871e0f23c7b8ef2500642405f8a975f7247",
+      "rows": 1
+    },
+    "log/part-00000.parquet": {
+      "sha256": "7768da37b3220d80e273f15a6d22f1fe6ebdaaee4922ec8e9f8742b768b14b54",
+      "rows": 100000
+    },
+    "results/alien_data.parquet": {
+      "sha256": "12c2b79a48c8b6c787d3115a7d524edff777d52ed3e7b26672c4d8f759ded536",
+      "rows": 50000
+    },
+    "results/aliens.parquet": {
+      "sha256": "9a626c760d09a5ff9648d4ab655220b1e729e479dfc39ccb6fdab7ff2344d833",
+      "rows": 50000
+    },
+    "results/aliens_details.parquet": {
+      "sha256": "b2f99824c2c204fabf0632d3e6af00267f988666bf09a6dd384b99f7a32679c9",
+      "rows": 50000
+    },
+    "results/aliens_location.parquet": {
+      "sha256": "4fd48eb4c046bd41c263b77675368b2281c161ceb999a2672bfe9dfa38227d05",
+      "rows": 50000
+    },
+    "schema/events.json": {
+      "sha256": "e3f81e1175855bf1c62b930c7672149e7f5ebb5ed5e1b9415b8e7f41a63df78e"
+    },
+    "schema/results.json": {
+      "sha256": "6354ee4462fee8969db98688412e7a3d207b2a3a395ec40ac4b4bec15578badb"
+    }
+  }
+}

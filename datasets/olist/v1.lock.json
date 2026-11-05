@@ -1,0 +1,119 @@
+{
+  "name": "olist",
+  "version": "v1",
+  "kind": "spider2",
+  "writer": {
+    "polars": "2.0.0",
+    "pyarrow": "26.0.0"
+  },
+  "recipe_sha256": "b6d0c0142f98652f98dac5c0941a991e5320ecf335746797b4b50d16646af21b",
+  "source_sha256": "49446afd935721ee12fc95316fbee9666a3e1bd4872dfa194fe4625d6762a81a",
+  "files": {
+    "expected/queries/local002.parquet": {
+      "sha256": "4e890ff6dda80bf87a6a97b209cefd8971b48b1bbb84c9517e910435d2b7acaf",
+      "rows": 1
+    },
+    "expected/queries/local003.parquet": {
+      "sha256": "6e24890db40bb8964dfa911d74d383321623263d2e91c54dc6c245d7384e1394",
+      "rows": 11
+    },
+    "expected/queries/local004.parquet": {
+      "sha256": "484f7165e1c57efcdd0e0c950b768309d2e1196e2cf78d4419d8aed0e5095542",
+      "rows": 3
+    },
+    "expected/queries/local028.parquet": {
+      "sha256": "2ce4cbcc960bcd17eb6d90228c433958392eff042942151ffe04b485291ff0df",
+      "rows": 12
+    },
+    "expected/queries/local029.parquet": {
+      "sha256": "62437d37160c96ba55dcc857cac70e9484742439235657885495ede5954dd600",
+      "rows": 3
+    },
+    "expected/queries/local030.parquet": {
+      "sha256": "d6cdc3d29644e6bb62c693edda00f604d51c9f412178c299c47202553660e48e",
+      "rows": 1
+    },
+    "expected/queries/local031.parquet": {
+      "sha256": "55a67b6fa166e8563f5713f87cfe25b8b7178c158324172834e373f39f70e0e3",
+      "rows": 1
+    },
+    "expected/queries/local032.parquet": {
+      "sha256": "08f9ca4bfcc00a9a5276386515ad728f098aadb5222ac716aa587590a7edd138",
+      "rows": 4
+    },
+    "expected/queries/local034.parquet": {
+      "sha256": "c0dd837a26ad4f2e440baf2f5e709284b696214b6ec789543eba6d68009c8142",
+      "rows": 1
+    },
+    "expected/queries/local035.parquet": {
+      "sha256": "d314d55745fa502ca880ba5d3d0dedaef33dc819371041e7b198849c0f4f3508",
+      "rows": 1
+    },
+    "expected/queries/local037.parquet": {
+      "sha256": "24a2140459bd2055cd97ed70acaa9d158cb51aee4247bb801afd0ccaf6b5926f",
+      "rows": 3
+    },
+    "expected/queries/local286.parquet": {
+      "sha256": "98f39b07a18f8471385c6d9a0155af639cac3ceb7d15bcdb422c4a4ffca34512",
+      "rows": 236
+    },
+    "log/part-00000.parquet": {
+      "sha256": "60557029a9e4c4bfd156d6f0d8c262277c5645c7eaae79d6f56f737bbb9f5318",
+      "rows": 1000000
+    },
+    "log/part-00001.parquet": {
+      "sha256": "46a96fa5b4c00e2b63ffd54258fba02682fb1721340b12a11ea9de2b4e6f1e64",
+      "rows": 990875
+    },
+    "results/customers.parquet": {
+      "sha256": "7d38fa0ded65d80a8f046689e20c13981332ae371d000b32cd2583e14bb1f36f",
+      "rows": 99441
+    },
+    "results/geolocation.parquet": {
+      "sha256": "241fc9671ff8ebc703bea35fcd12a9acd10a81ac4848db90c0a25cf3941396aa",
+      "rows": 1000163
+    },
+    "results/leads_closed.parquet": {
+      "sha256": "4986221d6aedaba08e43128f55740db51ea635e8167e5b9e85b01353d0b56bd3",
+      "rows": 842
+    },
+    "results/leads_qualified.parquet": {
+      "sha256": "01b6a10f5f8e4ce5b5f10465d10e3a20ac0bc684d6386db4754392cbc1ec4843",
+      "rows": 8000
+    },
+    "results/order_items.parquet": {
+      "sha256": "7f165b755aa7956541538339e8c5a3d7dabd09252380d9216c54561a2a74b39c",
+      "rows": 112650
+    },
+    "results/order_payments.parquet": {
+      "sha256": "3d7be8e9810a94e87b6356f456b3698d6423d5521161124705dea128cab73217",
+      "rows": 103886
+    },
+    "results/order_reviews.parquet": {
+      "sha256": "919b0a6e4723c837e938ae4f6fd239322ecab118f36ecf16f79dec8aaa6cccbf",
+      "rows": 99224
+    },
+    "results/orders.parquet": {
+      "sha256": "d47c2889b6ad5233f63f1342eed47eef5acaaee4c103da7a94ad16bd7b935115",
+      "rows": 99441
+    },
+    "results/product_category_name_translation.parquet": {
+      "sha256": "1809227a77f623def62c01346f53fe2d13d1d40d8b452682cf0cc09797f7bda8",
+      "rows": 71
+    },
+    "results/products.parquet": {
+      "sha256": "262f2898a5c51814da95b83be5a0c4fcaff77e4bbaadc4aba8d7f2b526e5556d",
+      "rows": 32951
+    },
+    "results/sellers.parquet": {
+      "sha256": "7eb9fa03c9379ab18efbb18530ccaca4b340a93b497ff9f6dc43ce0bc745b7c1",
+      "rows": 3095
+    },
+    "schema/events.json": {
+      "sha256": "665dd650e166e3c36d19494998a89350ae14c5bea53bb7738d22b16c2384b405"
+    },
+    "schema/results.json": {
+      "sha256": "443f7624688120c41e4a050028dd6bab066ca7fcfe61c865474155450990357e"
+    }
+  }
+}

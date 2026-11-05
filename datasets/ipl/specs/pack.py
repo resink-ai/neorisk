@@ -6,7 +6,8 @@ ingested from the Spider2 tables (docs/research/spider2/ipl.md); stage 2 adds th
 The source has dates only, so every time of day is a rule. Team 1 and player 35 are used
 thousands of times but have no row: they are placeholder entities with `listed = 0`. Match
 419136 has balls and a team sheet but no match row, so it has no scheduling, toss or result.
-A delivery's optional parts are NULL when the source table has no row for it.
+A delivery's optional parts are NULL when the source table has no row for it. A player's
+bowling skill and country ride on one snapshot per listed player at N, the last result.
 """
 
 from dataclasses import dataclass
@@ -32,8 +33,10 @@ def define(p: Pack) -> None:
     p.entity("players", key="player_key", doc="Player 35 is a placeholder",
              cols={"ext_id": text(doc="player_id"), "player_name": opt(text()),
                    "dob": opt(text(doc="YYYY-MM-DD, verbatim")),
-                   "batting_hand": opt(cat("Left-hand bat", "Right-hand bat")),
-                   "bowling_skill": opt(text()), "country_name": opt(text()), **listed})
+                   "batting_hand": opt(cat("Left-hand bat", "Right-hand bat")), **listed})
+    p.event("players_snapshot", doc="State at N = 2016-05-29 23:17: bowling skill and country",
+            cols={"player_key": ref("players"), "bowling_skill": opt(text()),
+                  "country_name": opt(text())})
     p.event("match_scheduled", doc="Its date is the match_date",
             cols={"match_id": i64(), "team_1": ref("teams"), "team_2": ref("teams"),
                   "season_id": i32(), "venue": text()})

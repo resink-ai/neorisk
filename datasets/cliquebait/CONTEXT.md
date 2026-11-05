@@ -16,15 +16,15 @@ The reverse-engineering research, with the queries behind every number, is in [`
 
 ## How the log was made
 
-The source is already an event log: each row of `shopping_cart_events` is one `page_event`, owned by the visit. Cookies (with their user), pages, event kinds and campaigns are entities.
+The source is already an event log: each row of `shopping_cart_events` is one `page_event`, owned by the visit. Cookies (with their user), pages, event kinds and campaigns are entities. A cookie's creation event is named `cookie_issued`.
 
-`uv run dataset build cliquebait` runs `specs/ingest.sql` on the read-only source to make a simkit dataset (an internal stage), then writes it as one log. Entity rows become `<entity>_created` events at their creation time; business events keep their columns. The log is in `seq` order: event time, then entities before events at the same instant. Each row's `payload` is a JSON object whose fields are listed in `schema/events.json`.
+`uv run dataset build cliquebait` runs `specs/ingest.sql` on the read-only source to make a simkit dataset (an internal stage), then writes it as one log. Entity rows become `<entity>_created` events (or the domain name the recipe gives) at their creation time; business events keep their columns. The log is in `seq` order: event time, then entities before events at the same instant. Each row's `payload` is a JSON object whose fields are listed in `schema/events.json`.
 
 ## Event catalogue
 
 | Event | Kind | Rows | Payload fields |
 |---|---|---:|---|
-| `cookies_created` | entity | 1,782 | `cookie_key`, `ext_id`, `user_id` |
+| `cookie_issued` | entity | 1,782 | `cookie_key`, `ext_id`, `user_id` |
 | `pages_created` | entity | 13 | `page_key`, `ext_id`, `page_name`, `product_category`, `product_id` |
 | `event_kinds_created` | entity | 5 | `event_kind_key`, `ext_id`, `event_name` |
 | `campaigns_created` | entity | 3 | `campaign_key`, `ext_id`, `products`, `campaign_name`, `start_date`, `end_date` |
@@ -32,11 +32,30 @@ The source is already an event log: each row of `shopping_cart_events` is one `p
 
 ## Times set by rule
 
-None. Event times are the source's, with microseconds.
+Page events carry the source's times, with microseconds. A cookie is issued at 00:00:00 UTC of its source `start_date` (the date of its first event). Pages, event kinds and campaigns have no creation time in the source; they are created at the first event time, 2020-01-01 07:44:56.541202. There are no snapshot events, so there is no N.
 
 ## Snapshot columns
 
-Classified in PR 2. Until then every entity attribute travels in its creation event.
+None: every entity attribute travels in its creation event.
+
+| Column | Verdict | Reason |
+|---|---|---|
+| `cookies.ext_id` | creation | The source key (`cookie_id`). |
+| `cookies.user_id` | creation | The user the cookie was issued to; a cookie never changes owner (one user per cookie). |
+| `cookies.start_date` | creation | It decides the creation time (`created_at`); the research shows it is the date of the cookie's first event. |
+| `pages.ext_id` | creation | The source key (`page_id`). |
+| `pages.page_name` | creation | A given name. |
+| `pages.product_category` | creation | The category the page was made with; the hierarchy is static (research). |
+| `pages.product_id` | creation | An immutable ref from a product page to its product. |
+| `event_kinds.ext_id` | creation | The source key (`event_type`). |
+| `event_kinds.event_name` | creation | A given name. |
+| `campaigns.ext_id` | creation | The source key (`campaign_id`). |
+| `campaigns.campaign_name` | creation | A given name. |
+| `campaigns.products` | creation | The product range the campaign was defined for; static (research). |
+| `campaigns.start_date` | creation | The planned window, fixed when the campaign is defined; static (research). |
+| `campaigns.end_date` | creation | As `start_date`: a planned end, not one observed later. No event carries it, and the research treats campaigns as static labels. |
+
+Domain name: `cookie_issued`, the act the research names for a cookie's first appearance (its `start_date`). Pages, event kinds and campaigns are created at the log's start by rule, which shows no real-world act, so they keep `<entity>_created`.
 
 ## Expected output
 

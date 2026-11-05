@@ -24,8 +24,7 @@ def define(p: Pack) -> None:
              cols={"ext_id": text(doc="category_code"), "category_name": text()})
     p.entity("items", key="item_key", doc="Created at its first wholesale quote (a rule)",
              cols={"ext_id": text(doc="item_code, a 13-15 digit barcode"), "item_name": text(),
-                   "category_key": ref("categories"),
-                   "loss_rate_bp": i64(doc="loss_rate_% x 100; one figure for the period")})
+                   "category_key": ref("categories")})
     p.event("wholesale_price_quoted", doc="One per item and day, at 00:00 (a rule)",
             cols={"item_key": ref("items"), "price": amount("CNY", doc="Fen per kg")})
     line = {"item_key": ref("items"),
@@ -35,3 +34,6 @@ def define(p: Pack) -> None:
             "src_index": i64(doc="Source `index`: the order among equal times")}
     p.event("item_sold", doc="A POS line with qty > 0", cols=line)
     p.event("item_returned", doc="A POS line with qty < 0, not linked to a sale", cols=line)
+    p.event("items_snapshot", doc="State at N = 2023-06-30 21:40:48, the last POS line",
+            cols={"item_key": ref("items"),
+                  "loss_rate_bp": i64(doc="loss_rate_% x 100; one figure for the period")})

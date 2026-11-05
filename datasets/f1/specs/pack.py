@@ -9,6 +9,10 @@ Spider2's 11 derived tables (`*_ext`, `lap_time_stats`, `team_driver_ranks`, `dr
 generated columns (`drivers.full_name`, `lap_times.seconds`, `pit_stops.seconds`) are computed
 by SQLite. `race_id` is a plain id in every event: races are the `race_scheduled` event, not
 an entity.
+
+Values known only as of the mid-2024 dump ride on one `<entity>_snapshot` event per row at
+N = 2024-07-08: every Wikipedia `url`, a circuit's current name, a driver's permanent number
+and code, and a livery's end year.
 """
 
 from dataclasses import dataclass
@@ -47,19 +51,17 @@ def _standing(owner: str, key: str) -> dict:
 
 def define(p: Pack) -> None:
     p.entity("circuits", key="circuit_id",
-             cols={"ext_id": text(doc="Ergast circuitId"), "circuit_ref": text(), "name": text(),
+             cols={"ext_id": text(doc="Ergast circuitId"), "circuit_ref": text(),
                    "location": opt(text()), "country": opt(text()), "lat": opt(f64()),
-                   "lng": opt(f64()), "alt": opt(i64()), "url": text()})
+                   "lng": opt(f64()), "alt": opt(i64())})
     p.entity("constructors", key="constructor_id",
              cols={"ext_id": text(doc="Ergast constructorId"), "constructor_ref": text(),
-                   "name": text(), "nationality": opt(text()), "url": text()})
-    p.entity("drivers", key="driver_id", doc="number and code are today's (snapshot values)",
+                   "name": text(), "nationality": opt(text())})
+    p.entity("drivers", key="driver_id",
              cols={"ext_id": text(doc="Ergast driverId"), "driver_ref": text(),
-                   "number": opt(i64()), "code": opt(text()), "forename": text(),
-                   "surname": text(), "dob": opt(text(doc="YYYY-MM-DD")),
-                   "nationality": opt(text()), "url": text()})
-    p.entity("seasons", key="season_id",
-             cols={"ext_id": text(doc="The year"), "url": text()})
+                   "forename": text(), "surname": text(), "dob": opt(text(doc="YYYY-MM-DD")),
+                   "nationality": opt(text())})
+    p.entity("seasons", key="season_id", cols={"ext_id": text(doc="The year")})
     p.entity("status", key="status_id", cols={"ext_id": text(), "status": text()})
     p.entity("short_grand_prix_names", key="short_grand_prix_name_id", doc="Editorial lookup",
              cols={"ext_id": text(doc="The full Grand Prix name"), "short_name": text()})
@@ -68,14 +70,24 @@ def define(p: Pack) -> None:
              cols={"ext_id": text(doc="The constructor_ref"), "short_name": text()})
     p.entity("liveries", key="livery_id", doc="3 rows name 'benneton', no constructor",
              cols={"ext_id": text(doc="'<constructor_ref>/<start_year>'"),
-                   "constructor_ref": text(), "start_year": i64(),
-                   "end_year": opt(i64(doc="NULL while the livery is current")),
-                   "primary_hex_code": text()})
+                   "constructor_ref": text(), "start_year": i64(), "primary_hex_code": text()})
     p.entity("tdr_overrides", key="tdr_override_id",
              doc="Hand judgements of a driver's rank in a team-season",
              cols={"ext_id": text(doc="'<year>/<constructor_ref>/<driver_ref>'"), "year": i64(),
                    "constructor_ref": text(), "driver_ref": text(),
                    "team_driver_rank": i64()})
+    p.event("circuits_snapshot", doc="At N: the circuit's current name and Wikipedia link",
+            cols={"circuit_id": ref("circuits"), "name": text(), "url": text()})
+    p.event("constructors_snapshot", doc="At N: the constructor's Wikipedia link",
+            cols={"constructor_id": ref("constructors"), "url": text()})
+    p.event("drivers_snapshot",
+            doc="At N: today's permanent number and code, and the Wikipedia link",
+            cols={"driver_id": ref("drivers"), "number": opt(i64()), "code": opt(text()),
+                  "url": text()})
+    p.event("seasons_snapshot", doc="At N: the season's Wikipedia link",
+            cols={"season_id": ref("seasons"), "url": text()})
+    p.event("liveries_snapshot", doc="At N: the end year, NULL while the livery is current",
+            cols={"livery_id": ref("liveries"), "end_year": opt(i64())})
     p.event("race_scheduled", doc="At Jan 1 of the season (rule)",
             cols={"circuit_id": ref("circuits"), "race_id": i64(), "year": i64(),
                   "round": i64(), "name": text(), "date": text(doc="YYYY-MM-DD"),

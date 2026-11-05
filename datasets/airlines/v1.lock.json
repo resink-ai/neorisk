@@ -1,0 +1,71 @@
+{
+  "name": "airlines",
+  "version": "v1",
+  "kind": "spider2",
+  "writer": {
+    "polars": "2.0.0",
+    "pyarrow": "26.0.0"
+  },
+  "recipe_sha256": "d084a43be5cf8a91336f0f95f254a8cde4a89c028f37150e9223bb335e1c5bf7",
+  "source_sha256": "83dd643367785c6b38b5379eecaf2c37128babac96805a48362783ff0cafc0a1",
+  "files": {
+    "expected/queries/local009.parquet": {
+      "sha256": "4f6aa25b2b9d763bb35e5d7749a0708c3f53f77c75c8a6cdc1fc094883298e81",
+      "rows": 1
+    },
+    "expected/queries/local010.parquet": {
+      "sha256": "5d04f2e3a1674f74d36d4ed0b9683390bc29360209847ff82a0cd181d2270e21",
+      "rows": 1
+    },
+    "log/part-00000.parquet": {
+      "sha256": "04473162bde1a68fb08f8960cfd5dc52728b56e91aace3034a4a2b4e801594b4",
+      "rows": 1000000
+    },
+    "log/part-00001.parquet": {
+      "sha256": "78a21d26971f1a6476b923d7d666de6b4e33a413a47015218369aadd6177a55c",
+      "rows": 1000000
+    },
+    "log/part-00002.parquet": {
+      "sha256": "d079bef32e011ee2fea8a4a1c1eaf9d3d9cc3d586e85f62cf250ff7dead2515e",
+      "rows": 340773
+    },
+    "results/aircrafts_data.parquet": {
+      "sha256": "5719f9c30c62f30de245bcacaf315413eaf802225fc4ba49545e2e502d3a5b93",
+      "rows": 9
+    },
+    "results/airports_data.parquet": {
+      "sha256": "ad7e146297fe36bc5073ed5812b0fb8fa51c64d56441421a48ac304b2f86fdce",
+      "rows": 104
+    },
+    "results/boarding_passes.parquet": {
+      "sha256": "7455946e31546aa2b97dc9b98a767868a6d937694cdb1e292970804edb733776",
+      "rows": 579686
+    },
+    "results/bookings.parquet": {
+      "sha256": "23c337d748dcff8554227c08b4a8b1373c4c769e58c4d07fa290633c65cf4150",
+      "rows": 262788
+    },
+    "results/flights.parquet": {
+      "sha256": "9b508e282283c5ef431fc945d2f48cdb0b63ab426508fce4c9f87a91974432ee",
+      "rows": 33121
+    },
+    "results/seats.parquet": {
+      "sha256": "0546ffc63fcd0609ca06c5fd4e40d20089e74e37e25e6b3408390cbfbf644d2a",
+      "rows": 1339
+    },
+    "results/ticket_flights.parquet": {
+      "sha256": "cc413e8e5397e481abd7611e7bc6a391a512f303c0a8b171b79d25e35c1c465e",
+      "rows": 1045726
+    },
+    "results/tickets.parquet": {
+      "sha256": "2b25dd56677c7a15e397eb58092153181adc0ceabe979a56b50c921bffee3b7c",
+      "rows": 366733
+    },
+    "schema/events.json": {
+      "sha256": "c9a756217caa5489c6cd1dd9ec4a832998d416e0739a7ffb776272412279b3f2"
+    },
+    "schema/results.json": {
+      "sha256": "c752b36f854840302443fe7829ef75c4cfdd66766489cda5c58472ef77fda511"
+    }
+  }
+}

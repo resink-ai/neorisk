@@ -4,7 +4,7 @@
 
 Fresh Segments, an ad-tech firm: a taxonomy of audience interests, and each interest's monthly composition and index value from 07-2018 to 08-2019.
 
-Version `v1`, kind `spider2`. The input is one ordered event log of 16,191 events; the output is the 2 source tables, rebuilt exactly, and the answers to 2 saved Spider 2.0 questions.
+Version `v1`, kind `spider2`. The input is one ordered event log of 17,400 events; the output is the 2 source tables, rebuilt exactly, and the answers to 2 saved Spider 2.0 questions.
 
 ## Raw data
 
@@ -16,7 +16,7 @@ The reverse-engineering research, with the queries behind every number, is in [`
 
 ## How the log was made
 
-Interests are an entity, created at their `created_at`. A `last_modified` later than `created_at` (709 of 1,209) is an `interest_modified` event with no attributes; the other 500 are equal to `created_at`. Each metric row is an `interest_metrics_reported` event carrying `month_year`, the interest and the two values. Its owner is the source interest id as text, or the sentinel `'none'` for the 1,193 rows without one, since a NULL owner gives a NULL log key. `ranking` and `percentile_ranking` are rebuilt in `specs/build.sql` as `RANK()` by `index_value` within `month_year` (the NULL month is one group of 1,194) and `round(100 * (1 - ranking / group size), 2)`; `_month` and `_year` come from `month_year`.
+Interests are an entity, created at their `created_at`; their name and summary travel in one `interests_snapshot` event per interest at N, since 709 interests were edited after creation and the source keeps only the current text. A `last_modified` later than `created_at` (709 of 1,209) is an `interest_modified` event with no attributes; the other 500 are equal to `created_at`. Each metric row is an `interest_metrics_reported` event carrying `month_year`, the interest and the two values. Its owner is the source interest id as text, or the sentinel `'none'` for the 1,193 rows without one, since a NULL owner gives a NULL log key. `ranking` and `percentile_ranking` are rebuilt in `specs/build.sql` as `RANK()` by `index_value` within `month_year` (the NULL month is one group of 1,194) and `round(100 * (1 - ranking / group size), 2)`; `_month` and `_year` come from `month_year`.
 
 `uv run dataset build freshsegments` runs `specs/ingest.sql` on the read-only source to make a simkit dataset (an internal stage), then writes it as one log. Entity rows become `<entity>_created` events at their creation time; business events keep their columns. The log is in `seq` order: event time, then entities before events at the same instant; a month's reports follow the source ranking. Each row's `payload` is a JSON object whose fields are listed in `schema/events.json`.
 
@@ -24,13 +24,33 @@ Interests are an entity, created at their `created_at`. A `last_modified` later 
 
 | Event | Kind | Rows | Payload fields |
 |---|---|---:|---|
-| `interests_created` | entity | 1,209 | `interest_key`, `ext_id`, `interest_name`, `interest_summary` |
+| `interests_created` | entity | 1,209 | `interest_key`, `ext_id` |
 | `interest_modified` | business | 709 | `interest_key` |
 | `interest_metrics_reported` | business | 14,273 | `interest`, `interest_key`, `month_year`, `composition`, `index_value` |
+| `interests_snapshot` | business | 1,209 | `interest_key`, `interest_name`, `interest_summary` |
 
 ## Times set by rule
 
-A month's metrics are stamped at its close, 00:00 UTC on the first day of the next month. In 188 rows the interest was created during the metric month, so a month-start stamp would reference it before its creation; the close never does. The 1,194 month-less rows are stamped at N = 2019-09-01 00:00:00, the close of 08-2019, which is after the last `last_modified` (2019-08-26 11:24:45). Queries must filter on `month_year`, not on the event time.
+A month's metrics are stamped at its close, 00:00 UTC on the first day of the next month. In 188 rows the interest was created during the metric month, so a month-start stamp would reference it before its creation; the close never does. The 1,194 month-less rows are stamped at N = 2019-09-01 00:00:00, the close of 08-2019, which is after the last `last_modified` (2019-08-26 11:24:45). Queries must filter on `month_year`, not on the event time. The interest snapshots are at the same N, the latest event time in the log.
+
+## Snapshot columns
+
+| Entity | Snapshot event | At (UTC) | Rows | Columns |
+|---|---|---|---:|---|
+| `interests` | `interests_snapshot` | 2019-09-01 00:00:00 | 1,209 | `interest_name`, `interest_summary` |
+
+| Column | Verdict | Reason |
+|---|---|---|
+| `interests.ext_id` | creation | The source key (`id`). |
+| `interests.created_at` | creation | The source's own creation stamp; it is the event's time. |
+| `interests.interest_name` | snapshot | Ruling: the rubric keeps given names on creation, but 709 of 1,209 interests have a `last_modified` after `created_at` and the edit is not recorded; the name and summary are the only editable attributes, so the stored name is known only as of the extract. When in doubt, snapshot. Research kept it on creation. |
+| `interests.interest_summary` | snapshot | A description, edited as above; known only as of the extract. Research kept it on creation. |
+| `interest_map.last_modified` | event | Not an entity column: a later stamp is an `interest_modified` event (709), and the table rebuilds it as the latest of those, else `created_at`. |
+| `interest_metrics.ranking` | derived | `RANK()` by `index_value` within `month_year`; computed in `build.sql`. |
+| `interest_metrics.percentile_ranking` | derived | `round(100 * (1 - ranking / group size), 2)`; computed in `build.sql`. |
+| `interest_metrics._month`, `_year` | derived | From `month_year`; computed in `build.sql`. |
+
+No domain name: `created_at` dates an entry in a taxonomy, not a sign-up, listing or release, so the event keeps `interests_created`.
 
 ## Expected output
 

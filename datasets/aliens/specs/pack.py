@@ -4,7 +4,8 @@ lowercased and denormalised copy. Stage 1, schema only: the entities are ingeste
 Spider2 tables (docs/research/spider2/aliens.md); stage 2 adds the behavior.
 
 The catalog has no time column. Every alien is created at the rule time 2024-01-01, the year
-alien_data's `age` is counted from; location and occupation ride on a snapshot at that instant.
+alien_data's `age` is counted from. Location, occupation, e-mail, gender and the habits ride on
+a snapshot at that instant.
 """
 
 from dataclasses import dataclass
@@ -23,15 +24,17 @@ def define(p: Pack) -> None:
     p.entity("aliens", key="alien_id", doc="One alien: aliens + aliens_details (detail_id = id)",
              cols={"ext_id": text(doc="Source id (= detail_id = loc_id)"),
                    "first_name": text(), "last_name": text(),
-                   "email": text(doc="Mockaroo: initial + last name + base36(id - 1) @ domain"),
-                   "gender": cat("Female", "Male", "Agender", "Bigender", "Genderfluid",
-                                 "Genderqueer", "Non-binary", "Polygender"),
                    "type": cat("Flatwoods", "Nordic", "Reptile", "Green", "Grey"),
-                   "birth_year": i64(doc="Uniform on 1672..1972"),
-                   "favorite_food": text(doc="An animal's common name"),
-                   "feeding_frequency": cat("Daily", "Weekly", "Monthly", "Yearly", "Often",
-                                            "Seldom", "Once", "Never"),
-                   "aggressive": i64(doc="0 or 1")})
-    p.event("aliens_snapshot", doc="aliens_location at N = 2024-01-01: where it lives, its job",
-            cols={"alien": ref("aliens"), "current_location": text(doc="A city name, not a key"),
+                   "birth_year": i64(doc="Uniform on 1672..1972")})
+    p.event("aliens_snapshot",
+            doc="State at N = 2024-01-01: e-mail, gender, habits, where it lives, its job",
+            cols={"alien": ref("aliens"),
+                  "email": text(doc="Mockaroo: initial + last name + base36(id - 1) @ domain"),
+                  "gender": cat("Female", "Male", "Agender", "Bigender", "Genderfluid",
+                                "Genderqueer", "Non-binary", "Polygender"),
+                  "favorite_food": text(doc="An animal's common name"),
+                  "feeding_frequency": cat("Daily", "Weekly", "Monthly", "Yearly", "Often",
+                                           "Seldom", "Once", "Never"),
+                  "aggressive": i64(doc="0 or 1"),
+                  "current_location": text(doc="A city name, not a key"),
                   "state": text(), "country": text(), "occupation": text()})

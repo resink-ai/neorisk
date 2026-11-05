@@ -1,19 +1,20 @@
 -- Web and app logs: source tables → events (refdata ingest). Every log keeps its rowid as ord.
+-- Snapshots at N = 2017-03-02 10:00:00, the latest time in the file (purchase_log).
 
 -- entity: app1_users
-SELECT user_id AS ext_id, name, email, '2016-01-01 00:00:00' AS created_at
+SELECT user_id AS ext_id, name, '2016-01-01 00:00:00' AS created_at
 FROM app1_mst_users ORDER BY user_id;
 
 -- entity: app2_users
-SELECT user_id AS ext_id, name, phone, '2016-01-01 00:00:00' AS created_at
+SELECT user_id AS ext_id, name, '2016-01-01 00:00:00' AS created_at
 FROM app2_mst_users ORDER BY user_id;
 
 -- entity: user_cards
-SELECT user_id AS ext_id, card_number, '2016-01-01 00:00:00' AS created_at
+SELECT user_id AS ext_id, '2016-01-01 00:00:00' AS created_at
 FROM mst_users_with_card_number ORDER BY user_id;
 
 -- entity: product_sales
-SELECT product_id AS ext_id, category_name, sales, '2016-01-01 00:00:00' AS created_at
+SELECT product_id AS ext_id, category_name, '2016-01-01 00:00:00' AS created_at
 FROM product_sales ORDER BY product_id;
 
 -- event: access_logged owner=user_id ord=src_rowid
@@ -92,3 +93,19 @@ ORDER BY updated_at, product_id;
 SELECT '2016-12-01 00:00:00' AS event_time, product_id
 FROM mst_products_20161201
 WHERE product_id NOT IN (SELECT product_id FROM mst_products_20170101) ORDER BY product_id;
+
+-- event: app1_users_snapshot owner=app1_users_key
+SELECT '2017-03-02 10:00:00' AS event_time, user_id AS app1_users_key, email
+FROM app1_mst_users ORDER BY user_id;
+
+-- event: app2_users_snapshot owner=app2_users_key
+SELECT '2017-03-02 10:00:00' AS event_time, user_id AS app2_users_key, phone
+FROM app2_mst_users ORDER BY user_id;
+
+-- event: user_cards_snapshot owner=user_card_key
+SELECT '2017-03-02 10:00:00' AS event_time, user_id AS user_card_key, card_number
+FROM mst_users_with_card_number ORDER BY user_id;
+
+-- event: product_sales_snapshot owner=product_sales_key
+SELECT '2017-03-02 10:00:00' AS event_time, product_id AS product_sales_key, sales
+FROM product_sales ORDER BY product_id;

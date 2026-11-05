@@ -1,51 +1,56 @@
 -- entertainment: events → source tables (refdata rebuild, DuckDB).
 
 -- table: Agents
-SELECT CAST(ext_id AS BIGINT) AS AgentID, first_name AS AgtFirstName, last_name AS AgtLastName,
-       street_address AS AgtStreetAddress, city AS AgtCity, state AS AgtState,
-       zip AS AgtZipCode, phone AS AgtPhoneNumber,
-       strftime(created_at AT TIME ZONE 'UTC', '%Y-%m-%d') AS DateHired, salary AS Salary,
-       commission_rate AS CommissionRate
-FROM agents;
+-- Address, phone, salary and commission rate are the snapshot at N.
+SELECT CAST(a.ext_id AS BIGINT) AS AgentID, a.first_name AS AgtFirstName,
+       a.last_name AS AgtLastName, n.street_address AS AgtStreetAddress, n.city AS AgtCity,
+       n.state AS AgtState, n.zip AS AgtZipCode, n.phone AS AgtPhoneNumber,
+       strftime(a.created_at AT TIME ZONE 'UTC', '%Y-%m-%d') AS DateHired, n.salary AS Salary,
+       n.commission_rate AS CommissionRate
+FROM agents a LEFT JOIN agents_snapshot n USING (agent_id);
 
 -- table: Entertainers
-SELECT CAST(ext_id AS BIGINT) AS EntertainerID, stage_name AS EntStageName, ssn AS EntSSN,
-       street_address AS EntStreetAddress, city AS EntCity, state AS EntState,
-       zip AS EntZipCode, phone AS EntPhoneNumber, web_page AS EntWebPage,
-       email AS EntEMailAddress,
-       strftime(created_at AT TIME ZONE 'UTC', '%Y-%m-%d') AS DateEntered
-FROM entertainers;
+-- Address and contact details are the snapshot at N.
+SELECT CAST(e.ext_id AS BIGINT) AS EntertainerID, e.stage_name AS EntStageName, e.ssn AS EntSSN,
+       n.street_address AS EntStreetAddress, n.city AS EntCity, n.state AS EntState,
+       n.zip AS EntZipCode, n.phone AS EntPhoneNumber, n.web_page AS EntWebPage,
+       n.email AS EntEMailAddress,
+       strftime(e.created_at AT TIME ZONE 'UTC', '%Y-%m-%d') AS DateEntered
+FROM entertainers e LEFT JOIN entertainers_snapshot n USING (entertainer_id);
 
 -- table: Members
-SELECT CAST(ext_id AS BIGINT) AS MemberID, first_name AS MbrFirstName, last_name AS MbrLastName,
-       phone AS MbrPhoneNumber, gender AS Gender
-FROM members;
+-- The phone is the snapshot at N.
+SELECT CAST(m.ext_id AS BIGINT) AS MemberID, m.first_name AS MbrFirstName,
+       m.last_name AS MbrLastName, n.phone AS MbrPhoneNumber, m.gender AS Gender
+FROM members m LEFT JOIN members_snapshot n USING (member_id);
 
 -- table: Entertainer_Members
 SELECT CAST(e.ext_id AS BIGINT) AS EntertainerID, CAST(m.ext_id AS BIGINT) AS MemberID,
-       x.status AS Status
-FROM entertainer_members x JOIN entertainers e USING (entertainer_id) JOIN members m USING (member_id);
+       n.status AS Status
+FROM entertainer_members x JOIN entertainers e USING (entertainer_id) JOIN members m USING (member_id)
+LEFT JOIN entertainer_members_snapshot n USING (em_id);
 
 -- table: Musical_Styles
 SELECT CAST(ext_id AS BIGINT) AS StyleID, style_name AS StyleName FROM musical_styles;
 
 -- table: Entertainer_Styles
 SELECT CAST(e.ext_id AS BIGINT) AS EntertainerID, CAST(s.ext_id AS BIGINT) AS StyleID,
-       x.style_strength AS StyleStrength
+       n.style_strength AS StyleStrength
 FROM entertainer_styles x JOIN entertainers e USING (entertainer_id)
-JOIN musical_styles s USING (style_id);
+JOIN musical_styles s USING (style_id) LEFT JOIN entertainer_styles_snapshot n USING (es_id);
 
 -- table: Customers
-SELECT CAST(ext_id AS BIGINT) AS CustomerID, first_name AS CustFirstName,
-       last_name AS CustLastName, street_address AS CustStreetAddress, city AS CustCity,
-       state AS CustState, zip AS CustZipCode, phone AS CustPhoneNumber
-FROM customers;
+-- Address and phone are the snapshot at N.
+SELECT CAST(c.ext_id AS BIGINT) AS CustomerID, c.first_name AS CustFirstName,
+       c.last_name AS CustLastName, n.street_address AS CustStreetAddress, n.city AS CustCity,
+       n.state AS CustState, n.zip AS CustZipCode, n.phone AS CustPhoneNumber
+FROM customers c LEFT JOIN customers_snapshot n USING (customer_id);
 
 -- table: Musical_Preferences
 SELECT CAST(c.ext_id AS BIGINT) AS CustomerID, CAST(s.ext_id AS BIGINT) AS StyleID,
-       p.preference_seq AS PreferenceSeq
+       n.preference_seq AS PreferenceSeq
 FROM musical_preferences p JOIN customers c USING (customer_id)
-JOIN musical_styles s USING (style_id);
+JOIN musical_styles s USING (style_id) LEFT JOIN musical_preferences_snapshot n USING (mp_id);
 
 -- table: Engagements
 -- The event time is the performance start; the end stays as text (17 end after midnight).

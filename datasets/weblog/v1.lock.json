@@ -1,0 +1,119 @@
+{
+  "name": "weblog",
+  "version": "v1",
+  "kind": "spider2",
+  "writer": {
+    "polars": "2.0.0",
+    "pyarrow": "26.0.0"
+  },
+  "recipe_sha256": "1ebff0c393403f11a078bd9293424284dd7cc4421c6b0257cbd81e4b655b4bde",
+  "source_sha256": "800191cd5ba91dcaebb427bb9313dc5bef1571b848b597508f15372e77c2dbd8",
+  "files": {
+    "expected/queries/local329.parquet": {
+      "sha256": "08aa63c4798f92624abeccaa958b6469a2f7f71f08273c19e812bff2a705d341",
+      "rows": 1
+    },
+    "expected/queries/local330.parquet": {
+      "sha256": "6c00deb90d5b83ba712395e4f6c2eda49b4a0eed10026a21faa882830399092f",
+      "rows": 5
+    },
+    "expected/queries/local331.parquet": {
+      "sha256": "473f29ff7fee4afb59862da14c02765b6b96ab76b83637041360c234810ff2e3",
+      "rows": 3
+    },
+    "expected/queries/local358.parquet": {
+      "sha256": "64b11c9235b1383f1aa4665ef9da53bcc191978db57c5f9db0fa13ba266f61ca",
+      "rows": 1
+    },
+    "expected/queries/local360.parquet": {
+      "sha256": "57b220519eeb96b56cc4b77240d560c9c56ec388d8dde7840ba1011667e76387",
+      "rows": 9
+    },
+    "log/part-00000.parquet": {
+      "sha256": "ab87e6c2a9bcf711b47814ce23e52d017caeff88f56551c9d13882568e796079",
+      "rows": 868
+    },
+    "results/access_log.parquet": {
+      "sha256": "25b3c90ad661a3e9806fde4f693a6d6952651cf13510697fc302903a52d38226",
+      "rows": 30
+    },
+    "results/action_log.parquet": {
+      "sha256": "de55fdde9adbb7be3900edefaafa368917f086893ac0fe1a41e1ac798ebb96a4",
+      "rows": 120
+    },
+    "results/action_log_with_ip.parquet": {
+      "sha256": "6ca84cdae48be187c8dba2caa9602d4caaae6f7ced9264a6d690aa840b6fcb7f",
+      "rows": 12
+    },
+    "results/action_log_with_noise.parquet": {
+      "sha256": "17563dac9d7d1a6d0c01d781edb53885e49794883005d3773db718d28824c80b",
+      "rows": 0
+    },
+    "results/activity_log.parquet": {
+      "sha256": "f741dd1be05b1b613641347efd47ef9c22b832d7f516a7d60d53da5671c62189",
+      "rows": 244
+    },
+    "results/app1_mst_users.parquet": {
+      "sha256": "208cb1b457217375ce945acec7204977ead3122f5d46a15c64cc49eacb65fe98",
+      "rows": 2
+    },
+    "results/app2_mst_users.parquet": {
+      "sha256": "e4efcd500f8ecf58d1867d175df521fb38171fc276ce6167519c1c238cd003ee",
+      "rows": 2
+    },
+    "results/dup_action_log.parquet": {
+      "sha256": "0ac84f6ac3389e3ab150357371beb511ea69439c55468e7b415e59ef11114cc0",
+      "rows": 11
+    },
+    "results/form_error_log.parquet": {
+      "sha256": "d2f50cc632f9adfb13e03734eef55e9598d92a149da6d75b4a4e49367556dd73",
+      "rows": 8
+    },
+    "results/form_log.parquet": {
+      "sha256": "274dec829386dd5e47998e1da75bf12cc8aa450e860933237fa42fa867469542",
+      "rows": 45
+    },
+    "results/invalid_action_log.parquet": {
+      "sha256": "bf1b403e04a914b13b01feb90eab974eddd57f35630a6071a5945fe0109b81a8",
+      "rows": 7
+    },
+    "results/mst_categories.parquet": {
+      "sha256": "d38afdfb3541cf4669fa9358e60010ea02a287d4136477c5ccb49b81f48c805b",
+      "rows": 8
+    },
+    "results/mst_products_20161201.parquet": {
+      "sha256": "c400a1069ace5d17631cc8ab407ecdcc5cbc973463c02c18c0333f5fee38b6d9",
+      "rows": 6
+    },
+    "results/mst_products_20170101.parquet": {
+      "sha256": "c528a20c93f28c528f3e722374fabf0914e70322298b2976e392f71b8148787e",
+      "rows": 6
+    },
+    "results/mst_users.parquet": {
+      "sha256": "3ed4e525805c01b1b35d2bafc870861d7f5d6d99af04e43a54ea2cd2a43f70e0",
+      "rows": 320
+    },
+    "results/mst_users_with_card_number.parquet": {
+      "sha256": "eb593ef2127274db61f810c4945299eb026be642dd706f6111e227131ad31eea",
+      "rows": 3
+    },
+    "results/product_sales.parquet": {
+      "sha256": "87401c66d1370031771ef3182a000691e272f5a38d856a33cba71dc9352963ef",
+      "rows": 10
+    },
+    "results/purchase_log.parquet": {
+      "sha256": "89b665c9995053df82b3f1dd5347b796e9323ac2b2bdfcdd74b223f4b0b115a1",
+      "rows": 5
+    },
+    "results/read_log.parquet": {
+      "sha256": "5ac64fa0465ce45755d90764980e7c72c3c830c03388347b86df39b44b6d401e",
+      "rows": 15
+    },
+    "schema/events.json": {
+      "sha256": "e0954628d61fd0d059a8eccee23798d1bb2b59fecf1221c11eddbb39bca43cc9"
+    },
+    "schema/results.json": {
+      "sha256": "6f50fb1964e83c3d5c3f1346327b49367cee0a591aa51bde44056738e30b2e7c"
+    }
+  }
+}

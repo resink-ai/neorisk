@@ -1,10 +1,11 @@
 -- Bitcoin trading: source tables → events (refdata ingest).
+-- Snapshots at N = 2021-08-29 00:00:00, the last price bar (a rule).
 
 -- entity: tickers
 SELECT DISTINCT ticker AS ext_id FROM bitcoin_prices ORDER BY ticker;
 
 -- entity: members
-SELECT member_id AS ext_id, first_name, region FROM bitcoin_members ORDER BY member_id;
+SELECT member_id AS ext_id, first_name FROM bitcoin_members ORDER BY member_id;
 
 -- event: price_published owner=ticker_id
 -- Volume is parsed from its digits: 2 decimals always, so K → ×10 and M → ×10 000 of the integer.
@@ -22,3 +23,7 @@ FROM bitcoin_prices ORDER BY ticker, event_time;
 SELECT iso_time(txn_time, '%Y-%m-%dT%H:%M:%S.%fZ') AS event_time, member_id, ticker AS ticker_id,
        txn_type, quantity, percentage_fee, txn_id
 FROM bitcoin_transactions ORDER BY txn_id;
+
+-- event: members_snapshot owner=member_id
+SELECT '2021-08-29 00:00:00' AS event_time, member_id, region
+FROM bitcoin_members ORDER BY member_id;

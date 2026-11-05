@@ -4,7 +4,7 @@ COUNTS = {
     "model_scored": 2872,
     "model_weighted": 2567,
     "problems_created": 20,
-    "solutions_created": 101,
+    "run_configured": 101,
     "step_completed": 303
 }
 

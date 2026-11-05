@@ -11,17 +11,18 @@ SELECT NULL::VARCHAR AS customerid, NULL::VARCHAR AS customertypeid WHERE false;
 SELECT NULL::VARCHAR AS customertypeid, NULL::VARCHAR AS customerdesc WHERE false;
 
 -- table: customers
-SELECT ext_id AS customerid, companyname, contactname, contacttitle, address, city, region,
-       postalcode, country, phone, fax
-FROM customers;
+SELECT c.ext_id AS customerid, c.companyname, n.contactname, n.contacttitle, n.address, n.city,
+       n.region, n.postalcode, n.country, n.phone, n.fax
+FROM customers c LEFT JOIN customers_snapshot n USING (customer_id);
 
 -- table: employees
-SELECT CAST(e.ext_id AS BIGINT) AS employeeid, e.lastname, e.firstname, e.title,
+SELECT CAST(e.ext_id AS BIGINT) AS employeeid, e.lastname, e.firstname, n.title,
        e.titleofcourtesy, e.birthdate,
-       strftime(e.created_at AT TIME ZONE 'UTC', '%Y-%m-%d') AS hiredate, e.address, e.city,
-       e.region, e.postalcode, e.country, e.homephone, e.extension, e.photo, e.notes,
-       CAST(b.ext_id AS BIGINT) AS reportsto, e.photopath
-FROM employees e LEFT JOIN employees b ON b.employee_id = e.reportsto;
+       strftime(e.created_at AT TIME ZONE 'UTC', '%Y-%m-%d') AS hiredate, n.address, n.city,
+       n.region, n.postalcode, n.country, n.homephone, n.extension, n.photo, n.notes,
+       CAST(b.ext_id AS BIGINT) AS reportsto, n.photopath
+FROM employees e LEFT JOIN employees_snapshot n USING (employee_id)
+LEFT JOIN employees b ON b.employee_id = n.reportsto;
 
 -- table: employeeterritories
 SELECT CAST(e.ext_id AS BIGINT) AS employeeid, t.ext_id AS territoryid
@@ -51,20 +52,22 @@ JOIN shippers v ON v.shipper_id = o.ship_via LEFT JOIN order_shipped s USING (or
 -- table: products
 SELECT CAST(p.ext_id AS BIGINT) AS productid, p.productname, CAST(s.ext_id AS BIGINT) AS supplierid,
        CAST(c.ext_id AS BIGINT) AS categoryid, p.quantityperunit,
-       CAST(printf('%.9g', CAST(p.unitprice / 100.0 AS FLOAT)) AS DOUBLE) AS unitprice,
-       p.unitsinstock, p.unitsonorder, p.reorderlevel, p.discontinued
-FROM products p JOIN suppliers s USING (supplier_id) JOIN categories c USING (category_id);
+       CAST(printf('%.9g', CAST(n.unitprice / 100.0 AS FLOAT)) AS DOUBLE) AS unitprice,
+       n.unitsinstock, n.unitsonorder, n.reorderlevel, n.discontinued
+FROM products p JOIN suppliers s USING (supplier_id) JOIN categories c USING (category_id)
+LEFT JOIN products_snapshot n USING (product_id);
 
 -- table: region
 SELECT CAST(ext_id AS BIGINT) AS regionid, regiondescription FROM region;
 
 -- table: shippers
-SELECT CAST(ext_id AS BIGINT) AS shipperid, companyname, phone FROM shippers;
+SELECT CAST(s.ext_id AS BIGINT) AS shipperid, s.companyname, n.phone
+FROM shippers s LEFT JOIN shippers_snapshot n USING (shipper_id);
 
 -- table: suppliers
-SELECT CAST(ext_id AS BIGINT) AS supplierid, companyname, contactname, contacttitle, address, city,
-       region, postalcode, country, phone, fax, homepage
-FROM suppliers;
+SELECT CAST(s.ext_id AS BIGINT) AS supplierid, s.companyname, n.contactname, n.contacttitle,
+       n.address, n.city, n.region, n.postalcode, n.country, n.phone, n.fax, n.homepage
+FROM suppliers s LEFT JOIN suppliers_snapshot n USING (supplier_id);
 
 -- table: territories
 SELECT t.ext_id AS territoryid, t.territorydescription, CAST(r.ext_id AS BIGINT) AS regionid

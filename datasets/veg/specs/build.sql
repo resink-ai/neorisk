@@ -31,6 +31,6 @@ SELECT row_number() OVER (ORDER BY CAST(c.ext_id AS BIGINT), CAST(i.ext_id AS BI
 FROM items i JOIN categories c USING (category_key) ORDER BY 1;
 
 -- table: veg_loss_rate_df
-SELECT row_number() OVER (ORDER BY CAST(ext_id AS BIGINT)) - 1 AS "index",
-       CAST(ext_id AS BIGINT) AS item_code, item_name, loss_rate_bp / 100.0 AS "loss_rate_%"
-FROM items ORDER BY 1;
+SELECT row_number() OVER (ORDER BY CAST(i.ext_id AS BIGINT)) - 1 AS "index",
+       CAST(i.ext_id AS BIGINT) AS item_code, i.item_name, s.loss_rate_bp / 100.0 AS "loss_rate_%"
+FROM items i LEFT JOIN items_snapshot s USING (item_key) ORDER BY 1;

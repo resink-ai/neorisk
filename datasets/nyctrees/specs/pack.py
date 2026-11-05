@@ -4,7 +4,7 @@ lookup by ZIP. Stage 1, schema only: the events are ingested from the Spider2 ta
 
 Nothing in the source has a time: every tree, species and ZIP is created at T0 and surveyed
 at N, both the rule 2015-01-01 00:00 UTC. A tree's fixed traits travel on its creation, what
-the surveyor saw on its snapshot. borocode and state are rebuilt from boroname and a constant.
+the surveyor saw on its snapshot, and a ZIP's ACS estimates on its snapshot. borocode and state are rebuilt from boroname and a constant.
 Spider2's injected copies (and two upstream repeats in income_trees) come back from
 `source_row_duplicated`, one event per extra identical row.
 """
@@ -38,11 +38,14 @@ def define(p: Pack) -> None:
                   "stump_diam": i32(doc="Inches; 0 unless a stump"),
                   "status": cat("Alive", "Dead", "Stump"),
                   "health": opt(cat("Good", "Fair", "Poor"))})
-    p.entity("zip_incomes", key="zip_key", doc="ACS household income by ZIP; created at T0",
-             cols={"ext_id": text(doc="zipcode"), "estimate_total": i64(), "moe_total": i64(),
-                   "estimate_median_income": i64(doc="250 = top-coded 250,000+"),
-                   "moe_median_income": i64(), "estimate_mean_income": i64(),
-                   "moe_mean_income": i64()})
+    p.entity("zip_incomes", key="zip_key",
+             doc="An NYC ZIP with an ACS income row; created at T0, its estimates a snapshot",
+             cols={"ext_id": text(doc="zipcode")})
+    p.event("zip_incomes_snapshot", doc="ACS household income estimates as of the extract, at N",
+            cols={"zipcode": ref("zip_incomes"), "estimate_total": i64(), "moe_total": i64(),
+                  "estimate_median_income": i64(doc="250 = top-coded 250,000+"),
+                  "moe_median_income": i64(), "estimate_mean_income": i64(),
+                  "moe_mean_income": i64()})
     p.event("source_row_duplicated",
             doc="Spider2 artefact or upstream repeat: one extra identical source row, at N",
             cols={"source_table": cat("trees", "income_trees"),

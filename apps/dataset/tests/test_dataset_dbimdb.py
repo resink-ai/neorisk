@@ -4,9 +4,10 @@ COUNTS = {
     "genres_created": 328,
     "languages_created": 32,
     "locations_created": 559,
-    "movies_created": 3475,
+    "movie_released": 3475,
     "movies_snapshot": 3475,
     "persons_created": 37565,
+    "persons_snapshot": 37565,
     "producer_credited": 11751
 }
 

@@ -150,3 +150,22 @@ def test_empty_block_writes_typed_empty_table(shop, tmp_path):
     con = sqlite3.connect(out)
     assert con.execute("SELECT count(*) FROM orders WHERE paid IS NULL").fetchone() == (3,)
     con.close()
+
+
+def test_created_names_from_entity_block(shop):
+    from refdata.ingest import created_names
+    proj, _ = shop
+    sql = (proj / "specs" / "ingest.sql").read_text()
+    (proj / "specs" / "ingest.sql").write_text(
+        sql.replace("-- entity: customers", "-- entity: customers event=customer_signed_up"))
+    assert created_names(proj) == {"customers": "customer_signed_up"}
+
+
+def test_bad_created_name_refused(shop):
+    from refdata.ingest import created_names
+    proj, _ = shop
+    sql = (proj / "specs" / "ingest.sql").read_text()
+    (proj / "specs" / "ingest.sql").write_text(
+        sql.replace("-- entity: customers", "-- entity: customers event=Customer-Signup"))
+    with pytest.raises(IngestError, match="Customer-Signup"):
+        created_names(proj)

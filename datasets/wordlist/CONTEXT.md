@@ -31,7 +31,20 @@ Each row of the base list is a `words` entity. Its key is its 1-based position i
 
 ## Times set by rule
 
-Every word is created, and every duplicate is marked, at T0 = 2016-01-01 00:00:00, as for weblog's untimed masters. No time is data.
+Every word is created, and every duplicate is marked, at T0 = 2016-01-01 00:00:00, as for weblog's untimed masters. No time is data. There is no snapshot event, so no N is needed.
+
+## Snapshot columns
+
+None: every entity attribute travels in its creation event.
+
+| Column | Verdict | Reason |
+|---|---|---|
+| `ext_id` | creation | The key: the 1-based position in the base list. |
+| `word_list.words` (`word`) | creation | The row's own value, fixed when the list was made; a different word would be a different row. |
+
+No column qualifies as a snapshot column: a word list is a static reference input with no state to change and no extract time.
+
+No domain name: the source has no creation act, so `words` keeps `words_created`.
 
 ## Expected output
 

@@ -125,6 +125,24 @@ def owners(project: Path) -> dict[str, str]:
     return {b.name: b.opts["owner"] for b in blocks if b.kind == "event" and "owner" in b.opts}
 
 
+NAME = re.compile(r"^[a-z][a-z0-9_]*$")
+
+
+def created_names(project: Path) -> dict[str, str]:
+    """Each entity block's `event=` option, from `specs/ingest.sql`: the domain name of its
+    creation event (`customer_signed_up`), in place of `<entity>_created`."""
+    blocks = parse_blocks((Path(project) / "specs" / "ingest.sql").read_text(),
+                          {"event", "entity"})
+    out = {}
+    for b in blocks:
+        if b.kind == "entity" and "event" in b.opts:
+            if not NAME.match(b.opts["event"]):
+                raise IngestError(f"entity {b.name!r}: event={b.opts['event']!r} is not a "
+                                  f"snake_case event name")
+            out[b.name] = b.opts["event"]
+    return out
+
+
 def ingest(project: Path, db: Path, out: Path, *, force: bool = False) -> Path:
     project, db, out = Path(project), Path(db), Path(out)
     if not db.exists():

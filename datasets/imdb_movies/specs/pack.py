@@ -1,6 +1,6 @@
 """imdb_movies: the "RSVP Movies" IMDb case study, movies published 2017–2019.
 Movies are published, tagged with genres and credited with directors and top-billed actors;
-IMDb's ratings, gross and known-for lists are read at the scrape.
+IMDb's ratings, gross, heights and known-for lists are read at the scrape.
 Stage 1, schema only: the events are ingested from the Spider2 tables
 (docs/research/spider2/imdbmovies.md); stage 2 adds the behavior.
 """
@@ -29,7 +29,6 @@ def define(p: Pack) -> None:
     p.entity("names", key="name_id",
              doc="Created at their first credited publication; uncredited at 2017-01-01 (rules)",
              cols={"ext_id": text(doc="The nm… id"), "name": text(),
-                   "height": opt(i32(doc="Centimetres; REAL in the source, always whole")),
                    "date_of_birth": opt(text(doc="Verbatim: YYYY-MM-DD, YYYY or 'October 29'"))})
     p.entity("movies", key="movie_id", doc="Created at date_published (natural)",
              cols={"ext_id": text(doc="The tt… id"), "title": text(), "duration": i32(min=1),
@@ -48,6 +47,7 @@ def define(p: Pack) -> None:
                   "median_rating": f64()})
     p.event("movies_snapshot", doc="Lifetime worldwide gross at N, where known",
             cols={"movie_id": ref("movies"), "worldwide_gross_usd": i64(min=0)})
-    p.event("names_snapshot", doc="IMDb's known-for list at N, where present",
+    p.event("names_snapshot", doc="IMDb's height and known-for list at N, where either is present",
             cols={"name_id": ref("names"),
-                  "known_for_movies": text(doc="Comma-joined tt… ids, verbatim; not refs")})
+                  "height": opt(i32(doc="Centimetres; REAL in the source, always whole")),
+                  "known_for_movies": opt(text(doc="Comma-joined tt… ids, verbatim; not refs"))})

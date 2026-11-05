@@ -18,7 +18,7 @@ The reverse-engineering research, with the queries behind every number, is in [`
 
 ## How the log was made
 
-Each company is an entity created on the day it joined the list, with its industry and founding year. Its valuation, funding and investors are values as of the list's date, not as of joining, so they travel in one `companies_snapshot` event per company at time N. Each of Spider2's 33 copied rows is a `source_row_duplicated` event naming the company and the table; the views add one more copy of that company's row to that table. Stage 2 can drop that event type and keep the rest.
+Each company is an entity created on the day it joined the list, by a `company_became_unicorn` event carrying its industry and founding year. Its valuation, funding and investors are values as of the list's date, not as of joining, so they travel in one `companies_snapshot` event per company at time N. Each of Spider2's 33 copied rows is a `source_row_duplicated` event naming the company and the table; the views add one more copy of that company's row to that table. Stage 2 can drop that event type and keep the rest.
 
 `uv run dataset build unicorns` runs `specs/ingest.sql` on the read-only source to make a simkit dataset (an internal stage), then writes it as one log. Entity rows become `<entity>_created` events at their creation time; business events keep their columns. The log is in `seq` order: event time, then entities before events at the same instant. Each row's `payload` is a JSON object whose fields are listed in `schema/events.json`.
 
@@ -26,13 +26,31 @@ Each company is an entity created on the day it joined the list, with its indust
 
 | Event | Kind | Rows | Payload fields |
 |---|---|---:|---|
-| `companies_created` | entity | 1,074 | `company_key`, `ext_id`, `industry`, `year_founded` |
+| `company_became_unicorn` | entity | 1,074 | `company_key`, `ext_id`, `industry`, `year_founded` |
 | `companies_snapshot` | business | 1,074 | `company_id`, `valuation`, `funding`, `select_investors` |
 | `source_row_duplicated` | business | 33 | `company_id`, `src_table` |
 
 ## Times set by rule
 
 The snapshot and the duplicate markers are at N = 2022-04-05 00:00:00, the last join date. The list's real "as of" date is not in the data.
+
+## Snapshot columns
+
+| Entity | Snapshot event | At (UTC) | Rows | Columns |
+|---|---|---|---:|---|
+| `companies` | `companies_snapshot` | 2022-04-05 00:00:00 | 1,074 | `valuation`, `funding`, `select_investors` |
+
+| Column | Verdict | Reason |
+|---|---|---|
+| `companies.ext_id` | creation | The source key (`company_id`). |
+| `companies.created_at` (`date_joined`) | creation | The day the company joined the list; it is the event's time. |
+| `companies.industry` | creation | The original category the company was listed under; the source shows no change. |
+| `companies.year_founded` | creation | A founding date, fixed before the join. |
+| `companies.valuation` | snapshot | The current valuation, as of the list's date, not as of joining. |
+| `companies.funding` | snapshot | A lifetime total as of the list's date; no log in the file derives it. |
+| `companies.select_investors` | snapshot | The investor list as of the list's date; rounds after the join add to it. |
+
+The creation event is `company_became_unicorn`: joining the list is the real-world act, and the source dates it.
 
 ## Expected output
 

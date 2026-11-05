@@ -4,7 +4,7 @@
 
 A Bitcoin and Ethereum trading desk: member trades and daily price bars.
 
-Version `v1`, kind `spider2`. The input is one ordered event log of 26,338 events; the output is the 3 source tables, rebuilt exactly, and the answers to 2 saved Spider 2.0 questions.
+Version `v1`, kind `spider2`. The input is one ordered event log of 26,352 events; the output is the 3 source tables, rebuilt exactly, and the answers to 2 saved Spider 2.0 questions.
 
 ## Raw data
 
@@ -16,7 +16,7 @@ The reverse-engineering research, with the queries behind every number, is in [`
 
 ## How the log was made
 
-Each trade is an event owned by the member, in transaction id order; each daily price bar is a `price_published` event owned by the ticker. Members and tickers are entities. Volume is parsed to an integer and printed back as K or M.
+Each trade is an event owned by the member, in transaction id order; each daily price bar is a `price_published` event owned by the ticker. Members and tickers are entities; a member's region is a value as of the extract, so it travels in one `members_snapshot` event per member at N. Volume is parsed to an integer and printed back as K or M.
 
 `uv run dataset build bitcoin` runs `specs/ingest.sql` on the read-only source to make a simkit dataset (an internal stage), then writes it as one log. Entity rows become `<entity>_created` events at their creation time; business events keep their columns. The log is in `seq` order: event time, then entities before events at the same instant. Each row's `payload` is a JSON object whose fields are listed in `schema/events.json`.
 
@@ -25,17 +25,29 @@ Each trade is an event owned by the member, in transaction id order; each daily 
 | Event | Kind | Rows | Payload fields |
 |---|---|---:|---|
 | `tickers_created` | entity | 2 | `ticker_id`, `ext_id` |
-| `members_created` | entity | 14 | `member_id`, `ext_id`, `first_name`, `region` |
-| `price_published` | business | 3,404 | `ticker_id`, `price`, `open`, `high`, `low`, `volume`, … (7 in all) |
+| `members_created` | entity | 14 | `member_id`, `ext_id`, `first_name` |
+| `price_published` | business | 3,404 | `ticker_id`, `price`, `open`, `high`, `low`, `volume`, `change_pct` |
 | `trade` | business | 22,918 | `member_id`, `ticker_id`, `txn_type`, `quantity`, `percentage_fee`, `txn_id` |
+| `members_snapshot` | business | 14 | `member_id`, `region` |
 
 ## Times set by rule
 
-None. Prices and trades carry their source dates.
+Prices and trades carry their source dates. Members and tickers have no creation time in the source; they are created at the log's start, 2017-01-01 00:00:00, the first bar and the first trades. Snapshots are at N = 2021-08-29 00:00:00, the last price bar and so the latest event time in the log (the last trade is 2021-08-27 22:26:10.258).
 
 ## Snapshot columns
 
-Classified in PR 2. Until then every entity attribute travels in its creation event.
+| Entity | Snapshot event | At (UTC) | Rows | Columns |
+|---|---|---|---:|---|
+| `members` | `members_snapshot` | 2021-08-29 00:00:00 | 14 | `region` |
+
+| Column | Verdict | Reason |
+|---|---|---|
+| `tickers.ext_id` | creation | The source key (`ticker`, BTC or ETH); a ticker has no other attribute. |
+| `members.ext_id` | creation | The source key (`member_id`). |
+| `members.first_name` | creation | A given name. |
+| `members.region` | snapshot | Where the member is, an address known as of the extract. No trade carries it, so no past event takes it from its future; local156 groups trades by it through the members table, as the source does. Research kept it on creation. |
+
+No domain name: members and tickers are created at the log's start by rule, which shows no sign-up or listing, so they keep `<entity>_created`.
 
 ## Expected output
 

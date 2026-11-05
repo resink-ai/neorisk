@@ -1,0 +1,123 @@
+{
+  "name": "sakila",
+  "version": "v1",
+  "kind": "spider2",
+  "writer": {
+    "polars": "2.0.0",
+    "pyarrow": "26.0.0"
+  },
+  "recipe_sha256": "c4a11dc37d0b78f7d41009fd43af480baefe85b1d6f7a4ce0e75b148a31531d3",
+  "source_sha256": "dbca3837b9965d75fbc2b4af1b2daec57d841f95942e656cea44db997e05da88",
+  "files": {
+    "expected/queries/local038.parquet": {
+      "sha256": "76d8741657bc1233f79dcd49b061fddd948f18acd0320df0040a142c66756fb1",
+      "rows": 1
+    },
+    "expected/queries/local039.parquet": {
+      "sha256": "7107c77ab911a572059c455a8b859d7acbba582bac818cb0b9b5fcba79a8e0c5",
+      "rows": 1
+    },
+    "expected/queries/local056.parquet": {
+      "sha256": "ecf7644b8b4cb0302147f7ca84a6bef04f219cb115fcb9c6e11b1fe8f3e7b5f5",
+      "rows": 3
+    },
+    "expected/queries/local193.parquet": {
+      "sha256": "ec9227f326caf93c68ade85984db746565c6fee3a1721fdf60dab0fbb13683bc",
+      "rows": 1
+    },
+    "expected/queries/local194.parquet": {
+      "sha256": "af834de57e0b53e52310b176c6b49ea5463a7b00a6ef4500b5ecb40dab316a0f",
+      "rows": 9
+    },
+    "expected/queries/local195.parquet": {
+      "sha256": "df4c33a3be6ee9f25d9a4342b1cf3cb322777baa833f8987b932b2b236d9baf8",
+      "rows": 2
+    },
+    "expected/queries/local196.parquet": {
+      "sha256": "dd919403f66a80f04b2cfe7bf6919b8a5e94b283e28fb562af185a33e5186a7d",
+      "rows": 5
+    },
+    "expected/queries/local197.parquet": {
+      "sha256": "f8e553e600f9a0fbc4feeea4b6a8241553bba222c2f182556887dde5ae5cc1cd",
+      "rows": 1
+    },
+    "expected/queries/local199.parquet": {
+      "sha256": "850753a1232391b0c26f75ad4fc5791b67abc6bdbab6a8d44d13005b275fb9b5",
+      "rows": 2
+    },
+    "log/part-00000.parquet": {
+      "sha256": "c109401bfc75b92c85985ff3a0c052ef3ac04e108c89ec9ffe162db6bf737245",
+      "rows": 74314
+    },
+    "results/actor.parquet": {
+      "sha256": "3956082211155635bb5428c482ee04c05363ed7d484e8eafbbb715af9eb2598e",
+      "rows": 200
+    },
+    "results/address.parquet": {
+      "sha256": "c721a395601dd5e685ce1df58e611553b4c076d8dfec04fc426caeb3c77fde6c",
+      "rows": 603
+    },
+    "results/category.parquet": {
+      "sha256": "a88604050a01462104c1e77a83dbe991145ff3857f0df1bd5d6d54de7f1ac5c9",
+      "rows": 16
+    },
+    "results/city.parquet": {
+      "sha256": "ddafc8ccd5d67c1e88da9f7318a5d217eb71c047943c44de3ef2724c73240086",
+      "rows": 600
+    },
+    "results/country.parquet": {
+      "sha256": "5896fd67ae235fd968e7c61c03497a115bff7426a91d647a3a5f838d85f77761",
+      "rows": 109
+    },
+    "results/customer.parquet": {
+      "sha256": "d930df098149e22802fcdb9fd5183cb3fd211570635e5f68a45d841d2f80facd",
+      "rows": 599
+    },
+    "results/film.parquet": {
+      "sha256": "491829b3e387c96f575adf08dc8c8c762b1b535a38d0236bc1759a740d671c8e",
+      "rows": 1000
+    },
+    "results/film_actor.parquet": {
+      "sha256": "200fbdab29840f32e04b898b3862f30182c7235dd3d426339e02eb6b4ae44134",
+      "rows": 5462
+    },
+    "results/film_category.parquet": {
+      "sha256": "7272393dd9c65889b364f58bdec2967df8e3f83545be9d3f55b75b261e2ce397",
+      "rows": 1000
+    },
+    "results/film_text.parquet": {
+      "sha256": "7b8461b941bb16f50cb18d91af9b0d884924f510aae2706ff8d667eb04900686",
+      "rows": 0
+    },
+    "results/inventory.parquet": {
+      "sha256": "590f042992e64b5bd72aa9b0f8155ea1ade17ee9837c64f599e5170b0d008a33",
+      "rows": 4581
+    },
+    "results/language.parquet": {
+      "sha256": "787fd44a4b067f8147e00f5818233f2c679376900659a44bd28367057ce259b9",
+      "rows": 6
+    },
+    "results/payment.parquet": {
+      "sha256": "4ce5abb1f0ed97dfdce79ffee0d3a781cca9140f378c7e47bf465f7931d6656d",
+      "rows": 16049
+    },
+    "results/rental.parquet": {
+      "sha256": "e9eff97365a1cebb17ebb2d4b2d9135792d31781cc235c1422b78d67cd3a1881",
+      "rows": 16044
+    },
+    "results/staff.parquet": {
+      "sha256": "29665017af2f7525da0e93ef77e679de72f2ca7eb6fdd975207a1dce7c9b460a",
+      "rows": 2
+    },
+    "results/store.parquet": {
+      "sha256": "d9d7021b1aeaca1a2345ea50d64ad8c2ef31798ee780768a07213ddc685a2d89",
+      "rows": 2
+    },
+    "schema/events.json": {
+      "sha256": "9a64aecfd60bded815da068d934922cd248539ebdeeb1ae4c2c91969cd22f1ef"
+    },
+    "schema/results.json": {
+      "sha256": "6331ae9ce0098422c5d585a942ffc874674092f09032e65a306d87de668c2c64"
+    }
+  }
+}

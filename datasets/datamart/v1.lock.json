@@ -1,0 +1,39 @@
+{
+  "name": "datamart",
+  "version": "v1",
+  "kind": "spider2",
+  "writer": {
+    "polars": "2.0.0",
+    "pyarrow": "26.0.0"
+  },
+  "recipe_sha256": "80ad00e836ec002c97e5e1e362ec97f32bb37e8282ab5ae2594a48cd240f7733",
+  "source_sha256": "10c8b8136486902a19c3f974f210e9fb7c8f98918ae0313114c720219b02e18c",
+  "files": {
+    "expected/queries/local301.parquet": {
+      "sha256": "126ffdebc39bb26deb50d3e1b16ea0d8a469af802743e9dd89df8a3e2d0f9d50",
+      "rows": 3
+    },
+    "expected/queries/local302.parquet": {
+      "sha256": "44a7d1ce5c455a988be738ae1bca544a6d47b8470ef18b54e1573bd029e0ad8b",
+      "rows": 1
+    },
+    "log/part-00000.parquet": {
+      "sha256": "2fa199ebf7e1955cd511a0b6f8219ffe9c488b87335283fe46095d6d0ec43805",
+      "rows": 17117
+    },
+    "results/cleaned_weekly_sales.parquet": {
+      "sha256": "d5fd9d311664651b625cb7de44386660d306fdc10352cf4af2fc4237b6d615cd",
+      "rows": 17117
+    },
+    "results/weekly_sales.parquet": {
+      "sha256": "67cbb45d7684888288360dc8b8cf101f216af7954112c981a4f084aefb871122",
+      "rows": 17117
+    },
+    "schema/events.json": {
+      "sha256": "ab972385a340d43322b39ab9fc6951fd0b14e3a02b36e7b77b501eaf56282841"
+    },
+    "schema/results.json": {
+      "sha256": "09b6d3fc2c0776087fd7a25c63d334fe9b96719f3541b71bde5ede3680f77699"
+    }
+  }
+}

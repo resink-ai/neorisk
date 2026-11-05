@@ -1,5 +1,5 @@
 -- Job postings: events → source tables (refdata rebuild, DuckDB). Each table is a straight
--- projection; the salaries pass through as REAL.
+-- projection (job_company joins its snapshot); the salaries pass through as REAL.
 
 -- table: job_postings_fact
 SELECT job_id, company_id, job_title_short, job_title, job_location, job_via,
@@ -10,7 +10,8 @@ SELECT job_id, company_id, job_title_short, job_title, job_location, job_via,
 FROM job_posted;
 
 -- table: job_company
-SELECT CAST(ext_id AS BIGINT) AS company_id, name, link, link_google, thumbnail FROM companies;
+SELECT CAST(c.ext_id AS BIGINT) AS company_id, c.name, s.link, s.link_google, s.thumbnail
+FROM companies c LEFT JOIN companies_snapshot s USING (company_key);
 
 -- table: skills_dim
 SELECT CAST(ext_id AS BIGINT) AS skill_id, skills, type FROM skills;

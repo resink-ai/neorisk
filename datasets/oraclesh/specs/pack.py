@@ -35,22 +35,17 @@ def define(p: Pack) -> None:
              cols={
                   "ext_id": text(), "promo_name": text(), "promo_subcategory":
                   text(), "promo_subcategory_id": i64(), "promo_category": text(),
-                  "promo_category_id": i64(), "promo_cost": f64(),
+                  "promo_category_id": i64(),
                   "promo_begin_date": text(), "promo_end_date": text(),
                   "promo_total": text(), "promo_total_id": i64()})
-    p.entity("customers", key="cust_id", doc="Created at cust_eff_from (2019-01-01 for all)",
+    p.entity("customers", key="cust_id",
+             doc="Created at cust_eff_from (2019-01-01 for all); address, contact, marital "
+                 "status, income, credit limit and validity are a snapshot",
              cols={
                   "ext_id": text(), "cust_first_name": text(), "cust_last_name":
                   text(), "cust_gender": text(), "cust_year_of_birth": i64(),
-                  "cust_marital_status": opt(text()), "cust_street_address": text(),
-                  "cust_postal_code": text(), "cust_city": text(), "cust_city_id":
-                  i64(), "cust_state_province": text(), "cust_state_province_id":
-                  i64(), "country_id": ref("countries"), "cust_main_phone_number":
-                  text(), "cust_income_level": opt(text()), "cust_credit_limit":
-                  f64(), "cust_email": text(), "cust_total": text(),
-                  "cust_total_id": i64(), "cust_src_id": opt(i64()),
-                  "cust_eff_from": text(), "cust_eff_to": opt(i64()), "cust_valid":
-                  text()})
+                  "cust_total": text(), "cust_total_id": i64(), "cust_src_id": opt(i64()),
+                  "cust_eff_from": text()})
     p.entity("times", key="time_id", doc="The date dimension, stored: 10 fiscal and id columns are not calendar arithmetic",
              cols={
                   "ext_id": text(), "day_name": text(), "day_number_in_week": i64(),
@@ -77,19 +72,37 @@ def define(p: Pack) -> None:
                    **{c: opt(text()) for c in (
                        "prod_name", "prod_desc", "prod_subcategory", "prod_subcategory_desc",
                        "prod_category", "prod_category_desc", "prod_unit_of_measure",
-                       "prod_pack_size", "prod_status", "prod_total",
-                       "prod_src_id", "prod_eff_from", "prod_eff_to", "prod_valid")},
+                       "prod_pack_size", "prod_total", "prod_src_id", "prod_eff_from")},
                    **{c: opt(i64()) for c in (
                        "prod_subcategory_id", "prod_category_id", "prod_weight_class",
-                       "supplier_id", "prod_total_id")},
-                   "prod_list_price": opt(f64()), "prod_min_price": opt(f64())})
-    p.entity("demographics", key="demographics_id", doc="For 8.1% of customers",
-             cols={"ext_id": text(doc="cust_id"), "customer_id": ref("customers"),
-                   "education": text(), "occupation": text(),
-                   "household_size": text(doc="Text: '2', '4-5', '9+'"), "yrs_residence": i64(),
-                   **{c: i64() for c in ("affinity_card", "cricket", "baseball", "tennis", "soccer",
-                                        "golf", "unknown", "misc")},
-                   "comments": opt(text())})
+                       "prod_total_id")}})
+    p.entity("demographics", key="demographics_id",
+             doc="For 8.1% of customers; every answer is a snapshot",
+             cols={"ext_id": text(doc="cust_id"), "customer_id": ref("customers")})
+    p.event("promotions_snapshot", doc="State at N: the promotion's cost",
+            cols={"promo_id": ref("promotions"), "promo_cost": f64()})
+    p.event("customers_snapshot",
+            doc="State at N: address, contact, marital status, income, credit limit, validity",
+            cols={"cust_id": ref("customers"), "cust_marital_status": opt(text()),
+                  "cust_street_address": text(), "cust_postal_code": text(),
+                  "cust_city": text(), "cust_city_id": i64(), "cust_state_province": text(),
+                  "cust_state_province_id": i64(), "country_id": ref("countries"),
+                  "cust_main_phone_number": text(), "cust_income_level": opt(text()),
+                  "cust_credit_limit": f64(), "cust_email": text(),
+                  "cust_eff_to": opt(i64()), "cust_valid": text()})
+    p.event("products_snapshot",
+            doc="State at N, for the 24 catalogued products: status, prices, supplier, validity",
+            cols={"prod_id": ref("products"), "supplier_id": opt(i64()),
+                  "prod_status": opt(text()), "prod_list_price": opt(f64()),
+                  "prod_min_price": opt(f64()), "prod_eff_to": opt(text()),
+                  "prod_valid": opt(text())})
+    p.event("demographics_snapshot", doc="State at N: the survey answers",
+            cols={"demographics_id": ref("demographics"), "education": text(),
+                  "occupation": text(),
+                  "household_size": text(doc="Text: '2', '4-5', '9+'"), "yrs_residence": i64(),
+                  **{c: i64() for c in ("affinity_card", "cricket", "baseball", "tennis",
+                                       "soccer", "golf", "unknown", "misc")},
+                  "comments": opt(text())})
     p.event("price_quoted", doc="A product's price and cost for a day, channel and promotion",
             cols={"prod_id": ref("products"), "channel_id": ref("channels"),
                   "promo_id": ref("promotions"), "unit_cost": amount("USD", doc="Can be negative"),

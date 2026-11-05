@@ -1,5 +1,7 @@
 -- Delivery Center: source tables → events (refdata ingest). Moments are parsed with
--- iso_time(text, '%m/%d/%Y %I:%M:%S %p'); money in cents.
+-- iso_time(text, '%m/%d/%Y %I:%M:%S %p'); money in cents. Entities are created at the first
+-- order (the default). Snapshots at N = 2021-05-08 00:00, the day after the last event (a
+-- finished moment of 2021-05-07 16:10:17).
 
 -- entity: hubs
 SELECT CAST(hub_id AS TEXT) AS ext_id, hub_name, hub_city, hub_state, hub_latitude,
@@ -8,7 +10,7 @@ FROM hubs ORDER BY hub_id;
 
 -- entity: stores
 SELECT CAST(store_id AS TEXT) AS ext_id, CAST(hub_id AS TEXT) AS hub_key, store_name,
-       store_segment, store_plan_price, store_latitude, store_longitude
+       store_segment
 FROM stores ORDER BY store_id;
 
 -- entity: channels
@@ -16,8 +18,7 @@ SELECT CAST(channel_id AS TEXT) AS ext_id, channel_name, channel_type
 FROM channels ORDER BY channel_id;
 
 -- entity: drivers
-SELECT CAST(driver_id AS TEXT) AS ext_id, driver_modal, driver_type
-FROM drivers ORDER BY driver_id;
+SELECT CAST(driver_id AS TEXT) AS ext_id FROM drivers ORDER BY driver_id;
 
 -- event: order_created owner=order_id
 SELECT iso_time(order_moment_created, '%m/%d/%Y %I:%M:%S %p') AS event_time, order_id,
@@ -82,3 +83,13 @@ SELECT iso_time(COALESCE(o.order_moment_finished, o.order_moment_delivered,
        d.delivery_id, d.delivery_order_id AS order_id, d.delivery_status
 FROM deliveries d JOIN orders o ON o.order_id = d.delivery_order_id
 WHERE d.delivery_status <> 'DELIVERING' ORDER BY d.delivery_id;
+
+-- event: stores_snapshot owner=store_key
+SELECT '2021-05-08 00:00:00' AS event_time, CAST(store_id AS TEXT) AS store_key,
+       store_plan_price, store_latitude, store_longitude
+FROM stores ORDER BY store_id;
+
+-- event: drivers_snapshot owner=driver_key
+SELECT '2021-05-08 00:00:00' AS event_time, CAST(driver_id AS TEXT) AS driver_key,
+       driver_modal, driver_type
+FROM drivers ORDER BY driver_id;

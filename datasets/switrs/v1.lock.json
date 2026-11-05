@@ -1,0 +1,51 @@
+{
+  "name": "switrs",
+  "version": "v1",
+  "kind": "spider2",
+  "writer": {
+    "polars": "2.0.0",
+    "pyarrow": "26.0.0"
+  },
+  "recipe_sha256": "55b625aa4b53f16ff9aebc43349c7f076e5f86216bd3c8d4001f040f39fec737",
+  "source_sha256": "14ace2b5213306081611b24647fe70778426bbcb0d5b30e85beb0386ffcf1020",
+  "files": {
+    "expected/queries/local015.parquet": {
+      "sha256": "71417be2bbd07498d8602e1f5f445063c932596bfaf345b443c683fddb9e30a8",
+      "rows": 2
+    },
+    "expected/queries/local017.parquet": {
+      "sha256": "90e59a14ca903cd310c4571d530db9f3aa784b5dde19878f0e7bca65da7483a9",
+      "rows": 1
+    },
+    "expected/queries/local018.parquet": {
+      "sha256": "67bcf56d369bc836753c378a24a001da2dca831471bdef947cc1312492cba431",
+      "rows": 1
+    },
+    "log/part-00000.parquet": {
+      "sha256": "61b69c8f5f26533f20886d64164bc42dbd59356358680f74bb87a7ca073930a0",
+      "rows": 565814
+    },
+    "results/case_ids.parquet": {
+      "sha256": "9e9f635905abd44cf9e3397b0f93bfe404b39dfffb5bc60d8fcad5af713d632b",
+      "rows": 94243
+    },
+    "results/collisions.parquet": {
+      "sha256": "7639dfddbff4e28d7d76e16aafb8a13f4c46da2226cac1c3729007c3767e7820",
+      "rows": 94243
+    },
+    "results/parties.parquet": {
+      "sha256": "8d39f5063c926244204a6a473d015989e8ec0f3cd80df158869750ecd3a1ae53",
+      "rows": 186692
+    },
+    "results/victims.parquet": {
+      "sha256": "bc0ab5efef107c0983d20b4230609a138fbedc682b53ba8c41d951957ee44a55",
+      "rows": 96393
+    },
+    "schema/events.json": {
+      "sha256": "e5b1b5a1436939bc8966f6bea485f2ff75bee7580880b9635ded49761eaecfb6"
+    },
+    "schema/results.json": {
+      "sha256": "278d4c0450d6b6c975c253be7d8166255ecf4c6009c53a12e28e65d83c3c2dfe"
+    }
+  }
+}

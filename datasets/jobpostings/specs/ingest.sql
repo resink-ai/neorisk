@@ -4,12 +4,18 @@
 
 -- entity: companies
 -- Created at the company's first posting, else at the catalog start (rules).
-SELECT CAST(c.company_id AS TEXT) AS ext_id, c.name, c.link, c.link_google, c.thumbnail,
+SELECT CAST(c.company_id AS TEXT) AS ext_id, c.name,
        coalesce(f.first_posted, '2022-12-31 06:03:30') AS created_at
 FROM job_company c
 LEFT JOIN (SELECT company_id, min(job_posted_date) AS first_posted FROM job_postings_fact
            GROUP BY company_id) f USING (company_id)
 ORDER BY c.company_id;
+
+-- event: companies_snapshot owner=company_key
+-- One per company at N = 2023-12-31 03:18:00, the last posting.
+SELECT '2023-12-31 03:18:00' AS event_time, CAST(company_id AS TEXT) AS company_key, link,
+       link_google, thumbnail
+FROM job_company ORDER BY company_id;
 
 -- entity: skills
 -- No time exists: created at the catalog start (a rule).

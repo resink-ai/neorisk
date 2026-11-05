@@ -4,7 +4,7 @@
 
 Delivery Center, a Brazilian food and goods delivery hub operator, January to April 2021: orders through their stages, payments, deliveries and closes.
 
-Version `v1`, kind `spider2`. The input is one ordered event log of 3,949,932 events; the output is the 7 source tables, rebuilt exactly, and the answers to 3 saved Spider 2.0 questions.
+Version `v1`, kind `spider2`. The input is one ordered event log of 3,955,707 events; the output is the 7 source tables, rebuilt exactly, and the answers to 3 saved Spider 2.0 questions.
 
 ## Raw data
 
@@ -16,7 +16,7 @@ The reverse-engineering research, with the queries behind every number, is in [`
 
 ## How the log was made
 
-Each order moment is an `order_stage` event; creation, payments, delivery assignment and closing are events too, all owned by the order. Channels, hubs, stores and drivers are entities. Moments are `M/D/YYYY h:mm:ss AM` text in UTC.
+Each order moment is an `order_stage` event; creation, payments, delivery assignment and closing are events too, all owned by the order. Channels, hubs, stores and drivers are entities. A store's plan price and coordinates, and a driver's modal and type, ride on one `<entity>_snapshot` event per source row at N. Moments are `M/D/YYYY h:mm:ss AM` text in UTC.
 
 `uv run dataset build delivery_center` runs `specs/ingest.sql` on the read-only source to make a simkit dataset (an internal stage), then writes it as one log. Entity rows become `<entity>_created` events at their creation time; business events keep their columns. The log is in `seq` order: event time, then entities before events at the same instant. Each row's `payload` is a JSON object whose fields are listed in `schema/events.json`.
 
@@ -24,24 +24,52 @@ Each order moment is an `order_stage` event; creation, payments, delivery assign
 
 | Event | Kind | Rows | Payload fields |
 |---|---|---:|---|
-| `hubs_created` | entity | 32 | `hub_key`, `ext_id`, `hub_name`, `hub_city`, `hub_state`, `hub_latitude`, … (7 in all) |
-| `stores_created` | entity | 951 | `store_key`, `ext_id`, `hub_key`, `store_name`, `store_segment`, `store_plan_price`, … (8 in all) |
+| `hubs_created` | entity | 32 | `hub_key`, `ext_id`, `hub_name`, `hub_city`, `hub_state`, `hub_latitude`, `hub_longitude` |
+| `stores_created` | entity | 951 | `store_key`, `ext_id`, `hub_key`, `store_name`, `store_segment` |
 | `channels_created` | entity | 40 | `channel_key`, `ext_id`, `channel_name`, `channel_type` |
-| `drivers_created` | entity | 4,824 | `driver_key`, `ext_id`, `driver_modal`, `driver_type` |
-| `order_created` | business | 368,999 | `order_id`, `store_key`, `channel_key`, `order_amount`, `order_delivery_fee`, `order_created_hour`, … (10 in all) |
+| `drivers_created` | entity | 4,824 | `driver_key`, `ext_id` |
+| `stores_snapshot` | business | 951 | `store_key`, `store_plan_price`, `store_latitude`, `store_longitude` |
+| `drivers_snapshot` | business | 4,824 | `driver_key`, `driver_modal`, `driver_type` |
+| `order_created` | business | 368,999 | `order_id`, `store_key`, `channel_key`, `order_amount`, `order_delivery_fee`, `order_created_hour`, `order_created_minute`, `order_created_day`, `order_created_month`, `order_created_year` |
 | `order_stage` | business | 2,047,790 | `order_id`, `stage`, `stage_no` |
-| `order_closed` | business | 368,999 | `order_id`, `order_status`, `order_delivery_cost`, `order_metric_collected_time`, `order_metric_paused_time`, `order_metric_production_time`, … (10 in all) |
+| `order_closed` | business | 368,999 | `order_id`, `order_status`, `order_delivery_cost`, `order_metric_collected_time`, `order_metric_paused_time`, `order_metric_production_time`, `order_metric_walking_time`, `order_metric_expediton_speed_time`, `order_metric_transit_time`, `order_metric_cycle_time` |
 | `payment_recorded` | business | 400,834 | `payment_id`, `order_id`, `payment_amount`, `payment_fee`, `payment_method`, `payment_status` |
 | `delivery_assigned` | business | 378,843 | `delivery_id`, `order_id`, `driver_key`, `delivery_distance_meters` |
 | `delivery_closed` | business | 378,620 | `delivery_id`, `order_id`, `delivery_status` |
 
 ## Times set by rule
 
-Payments take the order's creation; deliveries the `delivering` moment, else the latest earlier one; closes the `finished` moment, else the last one.
+Payments take the order's creation; deliveries the `delivering` moment, else the latest earlier one; closes the `finished` moment, else the last one. Entities have no creation time in the source, so all four are created at the first order, 2020-12-31 16:01:36 (the ingest default: the dataset's first time).
+
+N = 2021-05-08 00:00:00, the day after the last event (a `finished` moment of 2021-05-07 16:10:17), rounded up to the whole day. Both snapshot events are at N; no event is later.
 
 ## Snapshot columns
 
-Classified in PR 2. Until then every entity attribute travels in its creation event.
+| Entity | Snapshot event | At (UTC) | Rows | Columns |
+|---|---|---|---:|---|
+| `stores` | `stores_snapshot` | 2021-05-08 00:00:00 | 951 | `store_plan_price`, `store_latitude`, `store_longitude` |
+| `drivers` | `drivers_snapshot` | 2021-05-08 00:00:00 | 4,824 | `driver_modal`, `driver_type` |
+
+| Column | Verdict | Reason |
+|---|---|---|
+| `hubs.hub_id` (`ext_id`) | creation | The key. |
+| `hubs.hub_name` | creation | A given name: the shopping centre the hub is in. |
+| `hubs.hub_city`, `hub_state`, `hub_latitude`, `hub_longitude` | creation | The hub is a fixed site (a named shopping centre); its place is part of what it is, not an address that can move. |
+| `stores.store_id` (`ext_id`) | creation | The key. |
+| `stores.hub_id` (`hub_key`) | creation | An immutable ref: the hub the store sits in, one per store. Research: dimensions are never mutated. |
+| `stores.store_name` | creation | A given name, byte-exact with its trailing spaces. |
+| `stores.store_segment` | creation | The original category the store was set up with (FOOD or GOOD). |
+| `stores.store_plan_price` | snapshot | Ruling: the price of the store's current plan, as of the extract (115 NULL); prices change. Research called stores static. |
+| `stores.store_latitude`, `store_longitude` | snapshot | Ruling: the store's geocoded address as of the extract (16 NULL, the rest at or near the hub's); an address can move or be filled in later, and when in doubt, snapshot. Research called stores static. |
+| `channels.channel_id` (`ext_id`) | creation | The key. |
+| `channels.channel_name`, `channel_type` | creation | A given name and the original type (MARKETPLACE or OWN CHANNEL). |
+| `drivers.driver_id` (`ext_id`) | creation | The key. |
+| `drivers.driver_modal` | snapshot | Ruling: the vehicle the driver uses now (BIKER or MOTOBOY); a driver can change it. Research called drivers static. |
+| `drivers.driver_type` | snapshot | Ruling: the driver's current contract (FREELANCE or LOGISTIC OPERATOR); a freelancer can join an operator. When in doubt, snapshot. Research called drivers static. |
+
+No snapshot column decides an event's time, and no event copies one: `delivery_assigned` carries only the driver's key, and `order_created` only the store's. The rebuild LEFT JOINs each snapshot on the entity key; the joins from stores to hubs, from orders to stores and channels and from deliveries to drivers are unchanged.
+
+No domain name: the source shows no opening, sign-up or hire time for hubs, stores, channels or drivers, so every entity keeps `<entity>_created`.
 
 ## Expected output
 

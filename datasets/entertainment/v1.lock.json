@@ -1,0 +1,87 @@
+{
+  "name": "entertainment",
+  "version": "v1",
+  "kind": "spider2",
+  "writer": {
+    "polars": "2.0.0",
+    "pyarrow": "26.0.0"
+  },
+  "recipe_sha256": "9d41c128c5644f3fc408360e74673f6639874442b32fdaa997fffa83addc9414",
+  "source_sha256": "24237bd0232f4b542b3e5c0417c9890c1d02ae8e2434253af58528e517a0fd07",
+  "files": {
+    "expected/queries/local131.parquet": {
+      "sha256": "8dc810c9f5b365a4452d085d6ffc04f8b0214f2ece7fb603bd03804b7ef9f2f4",
+      "rows": 25
+    },
+    "expected/queries/local132.parquet": {
+      "sha256": "04a77ddda2444315abdf0015da12ce9355b831242e8109d98a04c3ea6f26b03b",
+      "rows": 6
+    },
+    "expected/queries/local133.parquet": {
+      "sha256": "7a0de70e7cb9c251d65be44934f5430dcf279d8c1bf666e01980b657ffcca81f",
+      "rows": 20
+    },
+    "log/part-00000.parquet": {
+      "sha256": "967a43a6c5f2594f0dfe2c7c348b617b422ffa65c7f0fe1300ac1ca4468f019f",
+      "rows": 476
+    },
+    "results/Agents.parquet": {
+      "sha256": "509c7f0aacdf9ba1f5eaad1f63782910e68ac20fcf3c147181bbc9ba9ea37ad0",
+      "rows": 9
+    },
+    "results/Customers.parquet": {
+      "sha256": "7e6103b32ef5769b5d636e1aa4f80d89caab1ae5662b0188dbe399dc5a4f0de4",
+      "rows": 15
+    },
+    "results/Engagements.parquet": {
+      "sha256": "bdfd9021996a3087228afe9159e7034c315adb8942e204807bd00ba2fc11ed92",
+      "rows": 111
+    },
+    "results/Entertainer_Members.parquet": {
+      "sha256": "d1ef06c1e8acad1b1be344df13346c36a961cd11d67dc694636fe123e87d22a1",
+      "rows": 40
+    },
+    "results/Entertainer_Styles.parquet": {
+      "sha256": "18785837829565faf5bbfe2998e7fec3b0931ef6f7edfee3719869306b887eed",
+      "rows": 32
+    },
+    "results/Entertainers.parquet": {
+      "sha256": "6439767a05582d035cd8c4286cd5b90a99d8a3d2b653a23f2f704b074debee4f",
+      "rows": 13
+    },
+    "results/Members.parquet": {
+      "sha256": "fcbf8107cb595ccc39cf91815fa6aad77e09565470f4a068d9bf2c4a493d1389",
+      "rows": 25
+    },
+    "results/Musical_Preferences.parquet": {
+      "sha256": "8d6b5b5edd94be846c43869a6d48394b84aa65eb8081c475331a3fedb93982e5",
+      "rows": 36
+    },
+    "results/Musical_Styles.parquet": {
+      "sha256": "8ad478695715769bdef99b508efc2cd384bb2d10788233dadab5a09f1268ed96",
+      "rows": 25
+    },
+    "results/ztblDays.parquet": {
+      "sha256": "4bd099e5a61877aab497b52d7d29fed8114bde4165a24eedeebf0419e0837401",
+      "rows": 1096
+    },
+    "results/ztblMonths.parquet": {
+      "sha256": "89ed965240d6a3881715081da81e1c503684e95a0d6bf29f0e98d23e16bbd2f3",
+      "rows": 36
+    },
+    "results/ztblSkipLabels.parquet": {
+      "sha256": "3bd8af394c051497892e3f75a79d1913795d7225847e945e2606ac0f984034a9",
+      "rows": 60
+    },
+    "results/ztblWeeks.parquet": {
+      "sha256": "8d0c1a803c8cf8cefb001e3377a6995d81e692e84fd42014f491ffc2bee98fef",
+      "rows": 156
+    },
+    "schema/events.json": {
+      "sha256": "a99aac0a7f13d300c139d03ab38b8992f7612c408ff216b6cdd9da9c40644f49"
+    },
+    "schema/results.json": {
+      "sha256": "678a7eade1f4dfe963486facd4d8070f87476358d3d7d9f56e6a053059f59c8b"
+    }
+  }
+}

@@ -10,20 +10,23 @@ SELECT p.ext_id AS player_id, coalesce(CAST(p."birth_year" AS VARCHAR), '') AS "
        coalesce(CAST(s."death_month" AS VARCHAR), '') AS "death_month",
        coalesce(CAST(s."death_day" AS VARCHAR), '') AS "death_day", s."death_country",
        s."death_state", s."death_city", p."name_first", p."name_last", p."name_given",
-       coalesce(CAST(p."weight" AS VARCHAR), '') AS "weight",
-       coalesce(CAST(p."height" AS VARCHAR), '') AS "height", p."bats", p."throws", p."debut",
+       coalesce(CAST(s."weight" AS VARCHAR), '') AS "weight",
+       coalesce(CAST(s."height" AS VARCHAR), '') AS "height", s."bats", p."throws", p."debut",
        s."final_game", p."retro_id", p."bbref_id"
-FROM player p JOIN player_snapshot_taken s ON s.player_id = p.player_key
+FROM player p LEFT JOIN player_snapshot s ON s.player_id = p.player_key
 WHERE p.stub = '0';
 
 -- table: team_franchise
-SELECT ext_id AS franchise_id, franchise_name, active, na_assoc FROM team_franchise;
+SELECT f.ext_id AS franchise_id, s.franchise_name, s.active, f.na_assoc
+FROM team_franchise f LEFT JOIN team_franchise_snapshot s ON s.franchise_id = f.franchise_key;
 
 -- table: park
-SELECT ext_id AS park_id, park_name, park_alias, city, state, country FROM park;
+SELECT p.ext_id AS park_id, s.park_name, s.park_alias, p.city, p.state, p.country
+FROM park p LEFT JOIN park_snapshot s ON s.park_id = p.park_key;
 
 -- table: college
-SELECT ext_id AS college_id, name_full, city, state, country FROM college WHERE stub = '0';
+SELECT c.ext_id AS college_id, s.name_full, c.city, c.state, c.country
+FROM college c LEFT JOIN college_snapshot s ON s.college_id = c.college_key WHERE c.stub = '0';
 
 -- table: team
 SELECT e."year", e."league_id", e."team_id", f.ext_id AS franchise_id, e."div_id", e."rank", e."g",

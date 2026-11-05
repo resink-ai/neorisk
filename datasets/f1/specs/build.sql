@@ -3,18 +3,22 @@
 -- left to SQLite. The derived tables follow docs/research/spider2/scripts/f1/q3_derived.sql.
 
 -- table: circuits
-SELECT CAST(ext_id AS BIGINT) AS circuit_id, circuit_ref, name, location, country, lat, lng, alt, url
-FROM circuits;
+SELECT CAST(c.ext_id AS BIGINT) AS circuit_id, c.circuit_ref, s.name, c.location, c.country, c.lat,
+       c.lng, c.alt, s.url
+FROM circuits c LEFT JOIN circuits_snapshot s USING (circuit_id);
 
 -- table: constructors
-SELECT CAST(ext_id AS BIGINT) AS constructor_id, constructor_ref, name, nationality, url FROM constructors;
+SELECT CAST(c.ext_id AS BIGINT) AS constructor_id, c.constructor_ref, c.name, c.nationality, s.url
+FROM constructors c LEFT JOIN constructors_snapshot s USING (constructor_id);
 
 -- table: drivers
-SELECT CAST(ext_id AS BIGINT) AS driver_id, driver_ref, number, code, forename, surname, dob, nationality, url
-FROM drivers;
+SELECT CAST(d.ext_id AS BIGINT) AS driver_id, d.driver_ref, s.number, s.code, d.forename, d.surname,
+       d.dob, d.nationality, s.url
+FROM drivers d LEFT JOIN drivers_snapshot s USING (driver_id);
 
 -- table: seasons
-SELECT CAST(ext_id AS BIGINT) AS year, url FROM seasons;
+SELECT CAST(x.ext_id AS BIGINT) AS year, s.url
+FROM seasons x LEFT JOIN seasons_snapshot s USING (season_id);
 
 -- table: status
 SELECT CAST(ext_id AS BIGINT) AS status_id, status FROM status;
@@ -26,7 +30,8 @@ SELECT ext_id AS full_name, short_name FROM short_grand_prix_names;
 SELECT ext_id AS constructor_ref, short_name FROM short_constructor_names;
 
 -- table: liveries
-SELECT constructor_ref, start_year, end_year, primary_hex_code FROM liveries;
+SELECT l.constructor_ref, l.start_year, s.end_year, l.primary_hex_code
+FROM liveries l LEFT JOIN liveries_snapshot s USING (livery_id);
 
 -- table: tdr_overrides
 SELECT year, constructor_ref, driver_ref, team_driver_rank FROM tdr_overrides;
@@ -98,23 +103,25 @@ FROM constructor_standings_published x JOIN constructors c USING (constructor_id
 -- table: drivers_ext
 -- A missing code is the first 3 letters of the surname without spaces, upper-cased in ASCII
 -- only (as SQLite's upper()).
-SELECT CAST(ext_id AS BIGINT) AS driver_id, driver_ref, number,
-       coalesce(code, translate(substr(replace(surname, ' ', ''), 1, 3),
-                                'abcdefghijklmnopqrstuvwxyz', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'))
+SELECT CAST(d.ext_id AS BIGINT) AS driver_id, d.driver_ref, s.number,
+       coalesce(s.code, translate(substr(replace(d.surname, ' ', ''), 1, 3),
+                                  'abcdefghijklmnopqrstuvwxyz', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'))
            AS code,
-       forename, surname, forename || ' ' || surname AS full_name, dob, nationality, url
-FROM drivers;
+       d.forename, d.surname, d.forename || ' ' || d.surname AS full_name, d.dob, d.nationality,
+       s.url
+FROM drivers d LEFT JOIN drivers_snapshot s USING (driver_id);
 
 -- table: constructors_ext
-SELECT CAST(c.ext_id AS BIGINT) AS constructor_id, c.constructor_ref, c.name, c.nationality, c.url,
+SELECT CAST(c.ext_id AS BIGINT) AS constructor_id, c.constructor_ref, c.name, c.nationality, u.url,
        coalesce(s.short_name, c.name) AS short_name
-FROM constructors c LEFT JOIN short_constructor_names s ON s.ext_id = c.constructor_ref;
+FROM constructors c LEFT JOIN constructors_snapshot u USING (constructor_id)
+LEFT JOIN short_constructor_names s ON s.ext_id = c.constructor_ref;
 
 -- table: circuits_ext
 -- The race counts include the unraced 2024 rounds.
-SELECT CAST(c.ext_id AS BIGINT) AS circuit_id, c.circuit_ref, c.name, c.location, c.country, c.lat, c.lng,
-       c.alt, c.url, r.last_race_year, r.number_of_races
-FROM circuits c
+SELECT CAST(c.ext_id AS BIGINT) AS circuit_id, c.circuit_ref, s.name, c.location, c.country, c.lat, c.lng,
+       c.alt, s.url, r.last_race_year, r.number_of_races
+FROM circuits c LEFT JOIN circuits_snapshot s USING (circuit_id)
 JOIN (SELECT circuit_id, max(year) AS last_race_year, count(*) AS number_of_races
       FROM race_scheduled GROUP BY circuit_id) r USING (circuit_id);
 

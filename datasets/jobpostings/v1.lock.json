@@ -1,0 +1,43 @@
+{
+  "name": "jobpostings",
+  "version": "v1",
+  "kind": "spider2",
+  "writer": {
+    "polars": "2.0.0",
+    "pyarrow": "26.0.0"
+  },
+  "recipe_sha256": "8c8e804e76a3359bc78428c4e42dc58887f426a98dd9510e9bc37057771805a3",
+  "source_sha256": "6a9714f9fe11676691c38bb6e2cd048ab877415d28c358a2647ff1b8b8bfe763",
+  "files": {
+    "expected/queries/local168.parquet": {
+      "sha256": "a039fd6ae2cea0d2c12337da6d23612add219a4e78c48701c4dfff7e65d67d2d",
+      "rows": 1
+    },
+    "log/part-00000.parquet": {
+      "sha256": "5e3bdf70a5920798fa7f5741fe5408e7a9792399eb57ef44575dd94c05e6e808",
+      "rows": 473761
+    },
+    "results/job_company.parquet": {
+      "sha256": "d5aa3b1b8ba4cfb547943b53b45e4197a9392da8ce95ad623d0e4df0bad00ac5",
+      "rows": 14003
+    },
+    "results/job_postings_fact.parquet": {
+      "sha256": "e58438824d4751ab1fc615a2e6317a9ea0dde0ebb658c0bd15096495064f25fa",
+      "rows": 78769
+    },
+    "results/skills_dim.parquet": {
+      "sha256": "94388979229ea91a36e3a2eae4e08ef5a6a08760c12ae0b1e9952a94d809a861",
+      "rows": 26
+    },
+    "results/skills_job_dim.parquet": {
+      "sha256": "f4c33816c6b2fe0679a581e65746f5253d23dfef23942a582738288d083871a9",
+      "rows": 366960
+    },
+    "schema/events.json": {
+      "sha256": "486c50e493f7c83d0e38393f435bee00092e931a2b0ad70913ef77d525edbfae"
+    },
+    "schema/results.json": {
+      "sha256": "b021e850eb9b9f921bde109699f45f77f364b943ad4acd17ba7f86ae8905bbbb"
+    }
+  }
+}

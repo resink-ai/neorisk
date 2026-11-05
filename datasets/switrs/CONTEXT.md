@@ -40,9 +40,15 @@ Each collision is two events, `collision_occurred` at its date and time and `col
 - A party, victim or `case_ids` row takes the first of these that applies:
   1. its collision's time, when the case is in `collisions` (1,831 parties, 929 victims, 993 case_ids);
   2. for a 2001 date-coded id (≥ 1e17: jurisdiction, then YYMMDDHHMM, then a 5-digit tail), the date and HH:MM it encodes, or 00:00 when HHMM is not a valid time, such as `2500` (10,198, 6,009 and 5,173 rows);
-  3. N = 2021-06-03 00:00:00, the last `process_date` (174,663, 89,455 and 88,077 rows).
+  3. N = 2021-06-03 00:00:00, the last `process_date` and the latest event time in the log (174,663, 89,455 and 88,077 rows). N is also the snapshot time; the dataset has no snapshot events.
 - Rule 3 is imposed: 352,195 events, 62% of the log, sit at N. Stage 2 must not fit the arrival times of these events.
 - The 2001 decode is exact integer arithmetic on the double. SQLite's `printf('%.0f')` is not used, because SQLite 3.47 rounds it to about 16 digits. For 630 ids, the carry out of a `…99999` tail would change the minute.
+
+## Snapshot columns
+
+None: every entity attribute travels in its creation event.
+
+The dataset has no entities, so no column is classified. A case is a text owner on its events, not an entity: 460,904 case ids appear but only 94,243 have a collision, so a case has no row of its own. Every table is a dated report (a collision, its processing, a party, a victim, a dump index), and every column is part of that report as filed, not state known only at N.
 
 ## Expected output
 

@@ -1,0 +1,75 @@
+{
+  "name": "pizzarunner",
+  "version": "v1",
+  "kind": "spider2",
+  "writer": {
+    "polars": "2.0.0",
+    "pyarrow": "26.0.0"
+  },
+  "recipe_sha256": "62d4b61588f04e7799050f673b980b81ee7b38fd623e4a73c688d3196fa60a9d",
+  "source_sha256": "d4910db155d7be8070d14cab6e44862d0fa74d71e6588d114c4bacb4225942e4",
+  "files": {
+    "expected/queries/local065.parquet": {
+      "sha256": "2dec747fc03b4bc75694c0eaf466a87035d55729738c39b69715add8850cd0f1",
+      "rows": 1
+    },
+    "expected/queries/local066.parquet": {
+      "sha256": "6d5671663c0256a5304630945f940d9a22f4a572418e4dfe4f091890ccba019b",
+      "rows": 12
+    },
+    "expected/queries/local073.parquet": {
+      "sha256": "5dfeb4a54fad496efef5c653da7c1a711da7bdecdca92d1012ac2d1f267d5db9",
+      "rows": 14
+    },
+    "log/part-00000.parquet": {
+      "sha256": "6215fa5a54c85fbbf92ffad1b30864fa4afd431b7e25438f5c76b24b0fdc4a1f",
+      "rows": 55
+    },
+    "results/pizza_clean_customer_orders.parquet": {
+      "sha256": "b862bca10bb31e5a7ff810e6cc80d8331df4de840b88258f13d375ec7cc00b2e",
+      "rows": 14
+    },
+    "results/pizza_clean_runner_orders.parquet": {
+      "sha256": "d975e6b2fafaf4c7f3e0da6dee0a5bf82ec0ecd9dadf7a2c9750dfa92cab7fc2",
+      "rows": 10
+    },
+    "results/pizza_customer_orders.parquet": {
+      "sha256": "b862bca10bb31e5a7ff810e6cc80d8331df4de840b88258f13d375ec7cc00b2e",
+      "rows": 14
+    },
+    "results/pizza_get_exclusions.parquet": {
+      "sha256": "86a770e1ae9efa461b5cdafaa8406fb8e54bb5ac944e1ea12ee841ce01846fb6",
+      "rows": 4
+    },
+    "results/pizza_get_extras.parquet": {
+      "sha256": "54edabd3d321a9ec8299ff7366411952ff9a3d2765af95a67444b292c412029f",
+      "rows": 6
+    },
+    "results/pizza_names.parquet": {
+      "sha256": "2527dd4e37ba72bebc4f5bf1c303142ff3060c38bb11a5e502a50f3db867b38e",
+      "rows": 2
+    },
+    "results/pizza_recipes.parquet": {
+      "sha256": "81e07432ec417bcecebe453a9c0dc14d871f6825b483eb499101a8595cd3112b",
+      "rows": 2
+    },
+    "results/pizza_runner_orders.parquet": {
+      "sha256": "2818208d93413556bcc86138d17d0bd4e7609df9576c10ac8e96fe7b0c0eb9cd",
+      "rows": 10
+    },
+    "results/pizza_runners.parquet": {
+      "sha256": "33129e1d7e984c454a93a5f9a48554a4dfb2d3e663fcfe5208bbc617de684982",
+      "rows": 4
+    },
+    "results/pizza_toppings.parquet": {
+      "sha256": "f7a47a37b067cbddb406227dfb41dc53cedcda846c772c817548e4cffa710d5a",
+      "rows": 12
+    },
+    "schema/events.json": {
+      "sha256": "e3712af200962238bdcccbbd76065b50f6e1d90bca1c4cd7d7d6e79f9afab4a8"
+    },
+    "schema/results.json": {
+      "sha256": "f756649010b94feb68f45e13ab72fca80aedfa226e6b72469cbdf0f2249e1e3b"
+    }
+  }
+}

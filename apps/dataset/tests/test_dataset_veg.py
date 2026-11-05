@@ -3,6 +3,7 @@ COUNTS = {
     "item_returned": 461,
     "item_sold": 878042,
     "items_created": 251,
+    "items_snapshot": 251,
     "wholesale_price_quoted": 55982
 }
 

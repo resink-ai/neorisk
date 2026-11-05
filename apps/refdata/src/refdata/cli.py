@@ -134,7 +134,7 @@ def _roundtrip(args) -> int:
     from neorisk_simkit.io import read
     from neorisk_simkit.io.log import LogError, write_log
     from refdata.compare import compare
-    from refdata.ingest import IngestError, ingest, owners
+    from refdata.ingest import IngestError, created_names, ingest, owners
     from refdata.rebuild import rebuild
     project = Path(args.project)
     ref = Path(args.out_dir) if args.out_dir else REF
@@ -147,7 +147,7 @@ def _roundtrip(args) -> int:
             if not args.force:
                 raise FileExistsError(f"{log} exists; pass --force to overwrite")
             shutil.rmtree(log)
-        write_log(read(ds), log, owners=owners(project))
+        write_log(read(ds), log, owners=owners(project), created=created_names(project))
         rebuild(log, project, db, out, force=args.force)
     except (FileNotFoundError, FileExistsError) as e:
         return _err(str(e))

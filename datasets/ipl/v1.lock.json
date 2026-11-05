@@ -1,0 +1,99 @@
+{
+  "name": "ipl",
+  "version": "v1",
+  "kind": "spider2",
+  "writer": {
+    "polars": "2.0.0",
+    "pyarrow": "26.0.0"
+  },
+  "recipe_sha256": "92493b4a8f34fcb5fa16ea8c9379cb21887f264774b39b76a5c8b8ac94913f85",
+  "source_sha256": "bf5ddbf887bbf992a091ef31ee681b9339ba716c327263fce0f3b4da924f22c1",
+  "files": {
+    "expected/queries/local020.parquet": {
+      "sha256": "2e5a58d9038a9dd11de0d8d3074dbfd687b87ca2fdce9d9aa966e91933820a7a",
+      "rows": 1
+    },
+    "expected/queries/local021.parquet": {
+      "sha256": "1d2b341a292b3367bc741d9ac1041ae79e448babd9e04319fab73c1e6cbe5b0c",
+      "rows": 1
+    },
+    "expected/queries/local022.parquet": {
+      "sha256": "501dc679009e4012ed99e04a1b831609658f67f9d0c87fe818c2ce7cb9f6dfdd",
+      "rows": 7
+    },
+    "expected/queries/local023.parquet": {
+      "sha256": "ac890232b3a285ae85901fe133918a817993f140b199a1dd25b1223810d717b0",
+      "rows": 5
+    },
+    "expected/queries/local024.parquet": {
+      "sha256": "66cd06b71396d060a25f64e334ed43767967474bf3ce14d47565d71c6f26e75c",
+      "rows": 5
+    },
+    "expected/queries/local025.parquet": {
+      "sha256": "0785c78de7310a9aa978874d18e4a93297c3ac89152b0e38ef56e5ed0f36e67b",
+      "rows": 568
+    },
+    "expected/queries/local026.parquet": {
+      "sha256": "69ee277017df2d913e95af27fdf72374a9f58fe41f246044ad4ed169c02ef181",
+      "rows": 3
+    },
+    "expected/queries/local228.parquet": {
+      "sha256": "df7a76c2b9de3f7d82af5304cdac4e1d6ba2dcb7863bd0863d22d9f7fe7a59ea",
+      "rows": 27
+    },
+    "expected/queries/local229.parquet": {
+      "sha256": "a6e556e919539a8c42516ba1edf7e12cf687c742778ee3ea1a4b521851e87d7e",
+      "rows": 577
+    },
+    "expected/queries/local258.parquet": {
+      "sha256": "18cbdd0f19e0121d97371823e2ddb3d53e35de490ed2b4f34bf2c73a91ee0dbe",
+      "rows": 329
+    },
+    "expected/queries/local259.parquet": {
+      "sha256": "11b922645d825865261083feda2b4730e0a553de43faf82e9424f07deac79144",
+      "rows": 468
+    },
+    "log/part-00000.parquet": {
+      "sha256": "47e45399c95878b1313a7067d1d062add4bfd2bba932f7b4dfcbcb788a436e5e",
+      "rows": 150986
+    },
+    "results/ball_by_ball.parquet": {
+      "sha256": "a27d38a786726fde93ee3af3ea04f63eabbf28a9baa7575c5bbd88731b12f6c5",
+      "rows": 134703
+    },
+    "results/batsman_scored.parquet": {
+      "sha256": "510bf4832773a70a0dc23d4a6b9e6c0fb2d30b096c2c1f11c1640343aaf7bc2f",
+      "rows": 131259
+    },
+    "results/extra_runs.parquet": {
+      "sha256": "eda33897e50862ec84409bdb340349086d20dd398ec195eef401fd43c4740e38",
+      "rows": 7349
+    },
+    "results/match.parquet": {
+      "sha256": "72024c1f82b7fe1053f96098639941547a96c47d469e8828111eeba27427a5fe",
+      "rows": 567
+    },
+    "results/player.parquet": {
+      "sha256": "23c0230235c53c27bf9fc6eb54de5ca6edba548c66f452bda3e7de7f4b1166e6",
+      "rows": 468
+    },
+    "results/player_match.parquet": {
+      "sha256": "5ac023b1aabd306a19f5855b178eef3b8201619f2d97abc10ba92be4ed8cae7e",
+      "rows": 12495
+    },
+    "results/team.parquet": {
+      "sha256": "a8d8f37ca2b79daa74f8e88e03fb79235d48252518d80795db358009bfb26e71",
+      "rows": 12
+    },
+    "results/wicket_taken.parquet": {
+      "sha256": "7f64975084a5d6cd2fd61aa15d618c43362bd8f6a46d1f3b9923a6f8f652830c",
+      "rows": 6618
+    },
+    "schema/events.json": {
+      "sha256": "2e54ae9684f8af6f015523f4e41ca968b9e2a52f6e7057ccd09b073ed31f05bc"
+    },
+    "schema/results.json": {
+      "sha256": "24144dfe4123c44c365291d69b9dfccd13dc2474fc8e635e6b88ea7bb708f007"
+    }
+  }
+}

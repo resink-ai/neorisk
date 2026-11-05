@@ -1,0 +1,175 @@
+{
+  "name": "f1",
+  "version": "v1",
+  "kind": "spider2",
+  "writer": {
+    "polars": "2.0.0",
+    "pyarrow": "26.0.0"
+  },
+  "recipe_sha256": "8734cc72de9ed3e09ac722686883746f23d04d442b09633d623d15fb0de7be7f",
+  "source_sha256": "35ad3b824678e8435bde02f14bcd554630792874749fdd59fe9ca1385234ce23",
+  "files": {
+    "expected/queries/local309.parquet": {
+      "sha256": "af70a9a8cc307aa7244afb164115b8c7d20fd4bf2ee00e58729939e77cb8e088",
+      "rows": 75
+    },
+    "expected/queries/local310.parquet": {
+      "sha256": "c95c88c1cf9f3a45cc96643517a11730face462ee55977b2acdaf4a500dd9327",
+      "rows": 3
+    },
+    "expected/queries/local311.parquet": {
+      "sha256": "127926cf2813b71e5528859741927c6ea5269340788b0a9f8513bc1017d769fd",
+      "rows": 3
+    },
+    "expected/queries/local335.parquet": {
+      "sha256": "d208be3799e6fab586788c1cfc1b8fe8ad38306a248e9838e960d3c1526b5c58",
+      "rows": 5
+    },
+    "expected/queries/local336.parquet": {
+      "sha256": "09855a756096805a763cc429f4802a9dcae02639c463dc9d6a5e08b2bc18a14e",
+      "rows": 4
+    },
+    "expected/queries/local344.parquet": {
+      "sha256": "905be909d878e68403b8a43ec81bb51233373d8955c6c7b11a75940438624e7c",
+      "rows": 4
+    },
+    "expected/queries/local354.parquet": {
+      "sha256": "d362f95606343be87848c9f8e51377a76f93f1d5abb92b4f76d32d70b3d81526",
+      "rows": 104
+    },
+    "expected/queries/local355.parquet": {
+      "sha256": "5ce5d1e6be79f8503ccdc932426bc6f8623ae4dadc308dc0041e6acd92118821",
+      "rows": 1
+    },
+    "expected/queries/local356.parquet": {
+      "sha256": "6ba43a1ca4c8c9f6c1014a4b7166609752330883660183691c05e00dc00706a1",
+      "rows": 78
+    },
+    "log/part-00000.parquet": {
+      "sha256": "08804187919f423da729fe5376598bc429dcee5246c593d5ef5a53d116985c14",
+      "rows": 687472
+    },
+    "results/circuits.parquet": {
+      "sha256": "97271155cb10971a3ae709a2d93ea311e111fd7bb7d7570ef9ce109f91a9cf56",
+      "rows": 77
+    },
+    "results/circuits_ext.parquet": {
+      "sha256": "454099cedb6beae84b0b3e0d095443a3ae9a6bc62d63484031203fe06332b937",
+      "rows": 77
+    },
+    "results/constructor_results.parquet": {
+      "sha256": "789aca96b98321cc89c7a0f40db423512b75fc11a09b7fbd4e3ef79beaaceebe",
+      "rows": 12505
+    },
+    "results/constructor_standings.parquet": {
+      "sha256": "045b7f667b1e6f85fc301adbbad00b02feb53b22a4b337db514e6cae7324679d",
+      "rows": 13271
+    },
+    "results/constructors.parquet": {
+      "sha256": "d2895f0249312a75018f6cc7726977b83e793a472b2c526e2a7d9d7c0af379f9",
+      "rows": 212
+    },
+    "results/constructors_ext.parquet": {
+      "sha256": "29cf935da09b1eb870d6aff05d4a067c460a3a32cfdf804532897e905d4d4dff",
+      "rows": 212
+    },
+    "results/driver_standings.parquet": {
+      "sha256": "f967567ff9a414d8d19f90d2de7b2d1c3ddbed8e7d8dc1b1c383254acb5b7feb",
+      "rows": 34595
+    },
+    "results/driver_standings_ext.parquet": {
+      "sha256": "978242ab6c7cdafc7f5a99ace3073f9a4cac464353ca0080f794cca4caa531d2",
+      "rows": 35012
+    },
+    "results/drivers.parquet": {
+      "sha256": "490e60cbe6eb2e88d5da54a08ef3b0443f260e8847fbef9e6e9551c6ab06a380",
+      "rows": 859
+    },
+    "results/drivers_ext.parquet": {
+      "sha256": "87144c0698361d7087bf0647c855275e76b2d28c0e2dc26a10fbe9bbc1dd7f57",
+      "rows": 859
+    },
+    "results/drives.parquet": {
+      "sha256": "b266da953ed6e837cd8edfa851f72d135a920359f01f45c690555410e910e040",
+      "rows": 3784
+    },
+    "results/lap_positions.parquet": {
+      "sha256": "445bc930bbdd8ff90a5750b8ddd6e7bde5c74bbcfb85453c5f4b4874ea5b06c9",
+      "rows": 613112
+    },
+    "results/lap_time_stats.parquet": {
+      "sha256": "c96715c77a8f283ee89e805da76d289defeebe29f055e1a9d5cad030a805de12",
+      "rows": 10789
+    },
+    "results/lap_times.parquet": {
+      "sha256": "de2b0f73adb555028639f3953f30bc1e1f5b0265caf0e4787e1a7eeeb4f8309d",
+      "rows": 575029
+    },
+    "results/lap_times_ext.parquet": {
+      "sha256": "99e66e9bf6bd6915da96463ff8098abb4621d9afe2b6a50fdaddedfa0d6353e6",
+      "rows": 575029
+    },
+    "results/liveries.parquet": {
+      "sha256": "b2f59f96d0eb80841774541c01919d5d77559bf2b8020810933524c25f02f0db",
+      "rows": 64
+    },
+    "results/pit_stops.parquet": {
+      "sha256": "66344a5ebdab587de844e54edc4d436c7f5b354d7092374eec799c0e5df7e61f",
+      "rows": 10990
+    },
+    "results/qualifying.parquet": {
+      "sha256": "034a65eeb64e53d9c6b2bdd96771c3863b236a3911e3f339376b101faa4e3c84",
+      "rows": 10254
+    },
+    "results/races.parquet": {
+      "sha256": "5e5527e32c906f39e07581c7a5165c10e2e4d7b59f5bc47d830cf3059fbdc0d1",
+      "rows": 1125
+    },
+    "results/races_ext.parquet": {
+      "sha256": "ffddd95659a7f6d851891d2d2f01ef655b6806ffde6863d545a9ee1d13ba638c",
+      "rows": 1125
+    },
+    "results/results.parquet": {
+      "sha256": "ef3e6097a7c627397cbe04c6bbbb208bfb616776ad3a765e532ef053992aeb96",
+      "rows": 26519
+    },
+    "results/retirements.parquet": {
+      "sha256": "2a2719e2bb91ed03a29387c0771a3085fe7755eb43fded680262f28a49a75043",
+      "rows": 11568
+    },
+    "results/seasons.parquet": {
+      "sha256": "41bed442242cca7013667f22195e2b4b79d42c34229b5d99b86c5991cfae6785",
+      "rows": 75
+    },
+    "results/short_constructor_names.parquet": {
+      "sha256": "6e67c6106d3c000ce7d2cc32c65f7c0e113388682bbcab3ee39e61fc41b69c8f",
+      "rows": 44
+    },
+    "results/short_grand_prix_names.parquet": {
+      "sha256": "5586385f75186cbed7e57f57903fe39c32caab0e8f48f3962c42421401da4936",
+      "rows": 40
+    },
+    "results/sprint_results.parquet": {
+      "sha256": "402c77a3825c8608c5d438bfb22697b5eedd2c3f9007c0c2c784b879cad795c5",
+      "rows": 300
+    },
+    "results/status.parquet": {
+      "sha256": "907dc3b0fe9ca117b192560dbb4f27e49c3e2703c63a629ba45e9d75bab584f6",
+      "rows": 139
+    },
+    "results/tdr_overrides.parquet": {
+      "sha256": "5c407f9659c4c8efa4977c4d3e46e163e3fdb4918f2450acec09a377152b08a9",
+      "rows": 48
+    },
+    "results/team_driver_ranks.parquet": {
+      "sha256": "1ebb6a45f273aa973ce05e2a9bd492b454bc654728f731b8070d3ac3fcf6b7f1",
+      "rows": 3530
+    },
+    "schema/events.json": {
+      "sha256": "8249e36d84bfee3b9cc55d9a6c225e0c85cf1400dbed810752932f088535838a"
+    },
+    "schema/results.json": {
+      "sha256": "8a440137c4302cb69d4ef73e563a5ff60b9a8dac2ac3917cbf1b7c6f25b1ce7d"
+    }
+  }
+}
