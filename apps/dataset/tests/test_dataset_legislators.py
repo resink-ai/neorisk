@@ -1,5 +1,6 @@
 COUNTS = {
     "legislators_created": 12518,
+    "legislators_snapshot": 12518,
     "term_started": 44063,
     "term_ended": 43526,
 }

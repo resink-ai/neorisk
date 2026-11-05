@@ -2,16 +2,16 @@
 -- REAL columns come back from their integers.
 
 -- table: legislators
-SELECT full_name, first_name, last_name, middle_name, nickname, suffix, other_names_end,
-       CAST(NULL AS DOUBLE) AS other_names_middle, other_names_last, birthday, gender,
-       ext_id AS id_bioguide, id_bioguide_previous_0, id_govtrack,
-       CAST(id_icpsr AS DOUBLE) AS id_icpsr, id_wikipedia, id_wikidata, id_google_entity_id,
-       CAST(id_house_history AS DOUBLE) AS id_house_history,
-       CAST(id_house_history_alternate AS DOUBLE) AS id_house_history_alternate,
-       CAST(id_thomas AS DOUBLE) AS id_thomas, CAST(id_cspan AS DOUBLE) AS id_cspan,
-       CAST(id_votesmart AS DOUBLE) AS id_votesmart, id_lis, id_ballotpedia, id_opensecrets,
-       id_fec_0, id_fec_1, id_fec_2
-FROM legislators;
+SELECT s.full_name, l.first_name, s.last_name, l.middle_name, l.nickname, l.suffix,
+       s.other_names_end, CAST(NULL AS DOUBLE) AS other_names_middle, s.other_names_last,
+       l.birthday, l.gender, l.ext_id AS id_bioguide, l.id_bioguide_previous_0, l.id_govtrack,
+       CAST(l.id_icpsr AS DOUBLE) AS id_icpsr, s.id_wikipedia, l.id_wikidata,
+       l.id_google_entity_id, CAST(l.id_house_history AS DOUBLE) AS id_house_history,
+       CAST(l.id_house_history_alternate AS DOUBLE) AS id_house_history_alternate,
+       CAST(s.id_thomas AS DOUBLE) AS id_thomas, CAST(s.id_cspan AS DOUBLE) AS id_cspan,
+       CAST(s.id_votesmart AS DOUBLE) AS id_votesmart, s.id_lis, s.id_ballotpedia,
+       s.id_opensecrets, s.id_fec_0, s.id_fec_1, s.id_fec_2
+FROM legislators l LEFT JOIN legislators_snapshot s USING (legislator_id);
 
 -- table: legislators_terms
 -- term_end is the end event, else the scheduled end of a term open at N.

@@ -1,0 +1,51 @@
+{
+  "name": "legislators",
+  "version": "v1",
+  "kind": "spider2",
+  "writer": {
+    "polars": "2.0.0",
+    "pyarrow": "26.0.0"
+  },
+  "recipe_sha256": "133b819d12a4be2d00b5a5deb0be55f74a9965da22d4881f13b36deada5f01bf",
+  "source_sha256": "6a9714f9fe11676691c38bb6e2cd048ab877415d28c358a2647ff1b8b8bfe763",
+  "files": {
+    "expected/queries/local167.parquet": {
+      "sha256": "6c4890c1d926be407938564e30d344277b8f5af7e1d0761704693d6b659bf28d",
+      "rows": 1
+    },
+    "expected/queries/local169.parquet": {
+      "sha256": "3a2a62a5e8df0c2e75d86f6708a7c137eaa18bf0ddf27edfd7f08bef93f46616",
+      "rows": 20
+    },
+    "expected/queries/local170.parquet": {
+      "sha256": "a6c88a604a099726283b1e2ba0006406ff5a44aae927729e93678a93110f35c2",
+      "rows": 23
+    },
+    "expected/queries/local171.parquet": {
+      "sha256": "fa004af86daf5ba6ce615105d7346dbc1167951bf9a0ef50b8887039626d0f60",
+      "rows": 19
+    },
+    "log/part-00000.parquet": {
+      "sha256": "02e62c858fda4a3d07d991abe3bf5b318234dd7cfae848b5b841a014544aae9e",
+      "rows": 112625
+    },
+    "results/legislation_date_dim.parquet": {
+      "sha256": "ba4d75b31ca094c3910281fba48d28ee3425e33401ad7654f9daeb9c66151f4a",
+      "rows": 30315
+    },
+    "results/legislators.parquet": {
+      "sha256": "8e79f1b72a9e2487903a0bb2e0ad115c3ff2cd5591d4dcd925322b69cd580932",
+      "rows": 12518
+    },
+    "results/legislators_terms.parquet": {
+      "sha256": "6eaeab835707b1460d60e437d2109789ae0b002467e3495fd1d84f795e873ed2",
+      "rows": 44063
+    },
+    "schema/events.json": {
+      "sha256": "499ee4b30653727bc77517656aa9bc7b49e2f9dd45a0b6a1aa18804c51328ebd"
+    },
+    "schema/results.json": {
+      "sha256": "c396c917a1332a7d5374d38c053b5deb4adca7bff4b5745f1263d73d6b46f9f4"
+    }
+  }
+}
