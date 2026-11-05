@@ -1,0 +1,47 @@
+{
+  "name": "veg",
+  "version": "v1",
+  "kind": "spider2",
+  "writer": {
+    "polars": "2.0.0",
+    "pyarrow": "26.0.0"
+  },
+  "recipe_sha256": "dedebcaecab544e27a404c041d23f42ad6c07fd7bf403928a8c999cbbd4dc277",
+  "source_sha256": "10c8b8136486902a19c3f974f210e9fb7c8f98918ae0313114c720219b02e18c",
+  "files": {
+    "expected/queries/local284.parquet": {
+      "sha256": "8abfe5ff09e6d6dd0ca6f9a2500bcb112b4b3ccc69dd29b9188df877cfe6c4a1",
+      "rows": 1
+    },
+    "expected/queries/local285.parquet": {
+      "sha256": "75558aa064e4bf91e025951ca200905c7897295f52f3d4d6574911ddeb8787d4",
+      "rows": 24
+    },
+    "log/part-00000.parquet": {
+      "sha256": "75cfee54f1a129d268e75dee1fbfabf84d280125f7796d3309dbc11c2435e316",
+      "rows": 934993
+    },
+    "results/veg_cat.parquet": {
+      "sha256": "efa1de4defacbdfb32ec1c0ffe2dc2665710155176cf7129e5d66817caa45260",
+      "rows": 251
+    },
+    "results/veg_loss_rate_df.parquet": {
+      "sha256": "b8b25dc30773327c2fc02cb917100bfd91633b047206e3fafa2904d4a9e6533c",
+      "rows": 251
+    },
+    "results/veg_txn_df.parquet": {
+      "sha256": "f92c2e031fb4baae08fa14a4e8f0a52a32ded49ead03eceebc7d0c4c2e617137",
+      "rows": 878503
+    },
+    "results/veg_whsle_df.parquet": {
+      "sha256": "7fcf5414fec971f6ce5222366c5f7affd86f745fab72b7233e5ede4ef67089d1",
+      "rows": 55982
+    },
+    "schema/events.json": {
+      "sha256": "19a71ed975eb56a474cf48bb5862b62572d2af50df4f5dad234473ee4c789ada"
+    },
+    "schema/results.json": {
+      "sha256": "028431bc3d14a6f45768bf8f99397a735b45d6f82ecbccd9df51c1f0c1934edf"
+    }
+  }
+}
