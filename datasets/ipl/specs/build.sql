@@ -1,9 +1,9 @@
 -- IPL: events → source tables (refdata rebuild, DuckDB). Placeholders (listed = 0) are no rows.
 
 -- table: player
-SELECT CAST(ext_id AS BIGINT) AS player_id, player_name, dob, batting_hand, bowling_skill,
-       country_name
-FROM players WHERE listed = 1;
+SELECT CAST(p.ext_id AS BIGINT) AS player_id, p.player_name, p.dob, p.batting_hand,
+       s.bowling_skill, s.country_name
+FROM players p LEFT JOIN players_snapshot s USING (player_key) WHERE p.listed = 1;
 
 -- table: team
 SELECT CAST(ext_id AS BIGINT) AS team_id, name FROM teams WHERE listed = 1;

@@ -5,6 +5,7 @@ COUNTS = {
     "match_scheduled": 567,
     "player_named": 12495,
     "players_created": 469,
+    "players_snapshot": 468,
     "teams_created": 13,
     "toss_decided": 567
 }

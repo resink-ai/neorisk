@@ -20,13 +20,18 @@ ORDER BY ext_id;
 -- Player 35 has no row: a placeholder, listed = 0.
 WITH m AS (SELECT match_id, match_date AS d FROM match UNION ALL SELECT 419136, '2010-03-29'),
 f AS (SELECT pm.player_id, min(m.d) AS d FROM player_match pm JOIN m USING (match_id) GROUP BY 1)
-SELECT CAST(p.player_id AS TEXT) AS ext_id, p.player_name, p.dob, p.batting_hand,
-       p.bowling_skill, p.country_name, 1 AS listed,
+SELECT CAST(p.player_id AS TEXT) AS ext_id, p.player_name, p.dob, p.batting_hand, 1 AS listed,
        coalesce(f.d, '2008-04-18') || ' 00:00:00' AS created_at
 FROM player p LEFT JOIN f USING (player_id)
 UNION ALL
-SELECT '35', NULL, NULL, NULL, NULL, NULL, 0, (SELECT d FROM f WHERE player_id = 35) || ' 00:00:00'
+SELECT '35', NULL, NULL, NULL, 0, (SELECT d FROM f WHERE player_id = 35) || ' 00:00:00'
 ORDER BY ext_id;
+
+-- event: players_snapshot owner=player_key
+-- One per listed player at N = 2016-05-29 23:17:00, the last result. The placeholder has none.
+SELECT '2016-05-29 23:17:00' AS event_time, CAST(player_id AS TEXT) AS player_key,
+       bowling_skill, country_name
+FROM player ORDER BY player_id;
 
 -- event: match_scheduled owner=match_id
 WITH s AS (SELECT match_id, CASE WHEN count(*) OVER (PARTITION BY match_date) = 2
