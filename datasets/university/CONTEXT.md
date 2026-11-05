@@ -42,11 +42,9 @@ A quarter calendar gives each term a span: WINTER y-01-01 to y-03-31, SPRING y-0
 
 | Entity | Snapshot event | At (UTC) | Rows | Columns |
 |---|---|---|---:|---|
-| `faculty` | `faculty_snapshot` | 2010-08-31 00:00:00 | 8 | `city`, `state`, `zip`, `dept`, `rank`, `salary` |
+| `faculty` | `faculty_snapshot` | 2010-08-31 00:00:00 | 8 | `city`, `state`, `zip`, `dept`, `supervisor_id`, `rank`, `salary` |
 | `student` | `student_snapshot` | 2010-08-31 00:00:00 | 11 | `city`, `state`, `zip`, `major`, `class`, `gpa_tenths` |
 | `offering` | `offering_snapshot` | 2010-08-31 00:00:00 | 13 | `faculty_id` |
-
-The counted table leaves out `faculty_snapshot.supervisor_id`: it lists a snapshot's payload minus every ref to its own entity, and the supervisor is a ref to `faculty`. It is a snapshot column too.
 
 | Column | Verdict | Reason |
 |---|---|---|

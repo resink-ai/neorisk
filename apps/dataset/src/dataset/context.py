@@ -44,8 +44,9 @@ def _snapshots(events: list[dict], counts: dict[str, int], root: Path) -> list[s
     out += ["| Entity | Snapshot event | At (UTC) | Rows | Columns |", "|---|---|---|---:|---|"]
     for e in snaps:
         ent = e["name"][:-len(SUFFIX)]
-        cols = [f["name"] for f in e["fields"]
-                if f["name"] not in ENVELOPE and f.get("ref") != ent]
+        payload = [f for f in e["fields"] if f["name"] not in ENVELOPE]
+        owner = next((f["name"] for f in payload if f.get("ref") == ent), None)
+        cols = [f["name"] for f in payload if f["name"] != owner]  # self-refs stay
         out.append(f"| `{ent}` | `{e['name']}` | {at.get(e['name'], '')} | "
                    f"{counts.get(e['name'], 0):,} | " + ", ".join(f"`{c}`" for c in cols) + " |")
     return out

@@ -91,3 +91,23 @@ def test_context_snapshot_section_none(shop_cli, capsys):
     assert cli.main(["context", "shop"]) == 0
     out = capsys.readouterr().out
     assert "## Snapshot columns\n\nNone: every entity attribute travels in its creation event." in out
+
+
+def test_context_snapshot_keeps_self_refs(tmp_path):
+    from dataset.context import _snapshots
+    events = [{"name": "faculty_created", "kind": "entity_created", "entity": "faculty",
+               "key": "faculty_id", "fields": []},
+              {"name": "faculty_snapshot", "kind": "event", "entity": None, "key": None,
+               "fields": [{"name": "event_id", "type": "i64", "nullable": False},
+                          {"name": "fac_id", "type": "ref", "nullable": False, "ref": "faculty"},
+                          {"name": "salary", "type": "f64", "nullable": True},
+                          {"name": "supervisor_id", "type": "ref", "nullable": True,
+                           "ref": "faculty"}]}]
+    import dataset.context as ctx
+    ctx_times = ctx._snapshot_times
+    ctx._snapshot_times = lambda root, names: {"faculty_snapshot": "2010-08-31 00:00:00"}
+    try:
+        out = "\n".join(_snapshots(events, {"faculty_snapshot": 3}, tmp_path))
+    finally:
+        ctx._snapshot_times = ctx_times
+    assert "| `salary`, `supervisor_id` |" in out
