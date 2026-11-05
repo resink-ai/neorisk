@@ -35,7 +35,7 @@ from neorisk_simkit.io import read
 from neorisk_simkit.io.log import LogError, write_log
 from neorisk_simkit.io.writer import WRITER
 from refdata.compare import _ordered, open_indexed
-from refdata.ingest import IngestError, ingest, owners
+from refdata.ingest import IngestError, created_names, ingest, owners
 from refdata.rebuild import build_tables, fill_table
 from refdata.source import load_source
 
@@ -119,7 +119,7 @@ def build_spider2(cfg: DatasetConfig, db: Path, *, record: bool = False) -> dict
         with tempfile.TemporaryDirectory() as work:
             try:
                 ds = ingest(cfg.dir, db, Path(work) / "ds")
-                write_log(read(ds), tmp, owners=owners(cfg.dir))
+                write_log(read(ds), tmp, owners=owners(cfg.dir), created=created_names(cfg.dir))
             except (IngestError, LogError) as e:
                 raise BuildError(f"{cfg.name}: {e}") from e
         problems = check_snapshots(tmp)

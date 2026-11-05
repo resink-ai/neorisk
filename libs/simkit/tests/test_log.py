@@ -146,3 +146,26 @@ def test_write_is_deterministic(tmp_path):
     write_log(run, tmp_path / "a")
     write_log(run, tmp_path / "b")
     assert shas(tmp_path / "a") == shas(tmp_path / "b")
+
+
+def test_created_name_renames_event(tmp_path):
+    created = {"customers": "customer_signed_up"}
+    df = log_frame(_run(), created=created)
+    assert "customer_signed_up" in df["event_type"].to_list()
+    assert "customers_created" not in df["event_type"].to_list()
+    s = events_schema(_run(), created=created)
+    assert (s["events"][0]["name"], s["events"][0]["kind"], s["events"][0]["entity"]) == (
+        "customer_signed_up", "entity_created", "customers")
+    write_log(_run(), tmp_path, created=created)
+    on_disk = json.loads((tmp_path / "schema" / "events.json").read_text())
+    assert on_disk["events"][0]["name"] == "customer_signed_up"
+
+
+def test_created_name_collision_refused():
+    with pytest.raises(LogError, match="order_placed"):
+        log_frame(_run(), created={"customers": "order_placed"})
+
+
+def test_created_name_for_unknown_entity_refused():
+    with pytest.raises(LogError, match="custmers"):
+        events_schema(_run(), created={"custmers": "customer_signed_up"})

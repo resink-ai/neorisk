@@ -1,6 +1,7 @@
 """The single ordered event log: a dataset as one Kafka-like stream with JSON payloads.
 
-Every entity row becomes an `<entity>_created` event at its `created_at`; every business
+Every entity row becomes an `<entity>_created` event at its `created_at` (or a domain name
+the recipe gives, such as `customer_signed_up`); every business
 event keeps its columns. Rows sort by (event_time, entities before events, entity order then
 key / simkit `seq`), and the log's `seq` is the 1-based position in that order.
 
@@ -41,30 +42,42 @@ def _field(c: dict) -> dict:
     return f
 
 
-def _entry(t: dict) -> dict:
+def _entry(t: dict, created: dict[str, str]) -> dict:
     """One events.json entry, with `src` (the frame column) on each field for encoding."""
     if t["group"] == "entity":
         fields = [_field(c) | {"src": c["name"]} for c in t["columns"]
                   if c["name"] != "created_at"]
-        return {"name": f"{t['name']}_created", "kind": "entity_created",
+        return {"name": created.get(t["name"], f"{t['name']}_created"), "kind": "entity_created",
                 "entity": t["name"], "key": t["key"], "fields": fields}
     fields = [{"name": n, "type": k, "nullable": nl, "src": s} for n, s, k, nl in INTERNAL]
     fields += [_field(c) | {"src": c["name"]} for c in t["columns"] if c["name"] not in SKIP]
     return {"name": t["name"], "kind": "event", "entity": None, "key": None, "fields": fields}
 
 
-def _entries(run: RunData) -> list[tuple[dict, dict]]:
+def _entries(run: RunData, created: dict[str, str] | None = None) -> list[tuple[dict, dict]]:
+    """`created` maps an entity to its creation event's domain name."""
+    created = created or {}
     tables = [t for t in run.schema["tables"] if t["group"] in ("entity", "event")]
     ents = [t for t in tables if t["group"] == "entity"]
     evs = [t for t in tables if t["group"] == "event"]
-    return [(t, _entry(t)) for t in ents + evs]
+    unknown = sorted(set(created) - {t["name"] for t in ents})
+    if unknown:
+        raise LogError(f"creation event names given for unknown entities: {unknown}")
+    out = [(t, _entry(t, created)) for t in ents + evs]
+    seen: dict[str, str] = {}
+    for t, e in out:
+        if e["name"] in seen:
+            raise LogError(f"event type {e['name']!r} is both {seen[e['name']]!r} and "
+                           f"{t['name']!r}; give the creation event another name")
+        seen[e["name"]] = t["name"]
+    return out
 
 
-def events_schema(run: RunData) -> dict:
+def events_schema(run: RunData, *, created: dict[str, str] | None = None) -> dict:
     return {"format": 1, "schema_version": int(run.schema["schema_version"]),
             "events": [e | {"fields": [{k: v for k, v in f.items() if k != "src"}
                                        for f in e["fields"]]}
-                       for _, e in _entries(run)]}
+                       for _, e in _entries(run, created)]}
 
 
 def _payload(df: pl.DataFrame, entry: dict) -> pl.Expr:
@@ -96,11 +109,12 @@ def _owner(run: RunData, t: dict, owners: dict[str, str]) -> tuple[pl.Expr, pl.E
     return pl.lit(spec.get("ref") or col), pl.col(col).cast(pl.String)
 
 
-def log_frame(run: RunData, *, owners: dict[str, str] | None = None) -> pl.DataFrame:
+def log_frame(run: RunData, *, owners: dict[str, str] | None = None,
+              created: dict[str, str] | None = None) -> pl.DataFrame:
     owners = owners or {}
     version = int(run.schema["schema_version"])
     parts = []
-    for i, (t, e) in enumerate(_entries(run)):
+    for i, (t, e) in enumerate(_entries(run, created)):
         if e["kind"] == "entity_created":
             df = run.entities[t["name"]]
             kind, rank = 0, pl.col(t["key"])
@@ -128,12 +142,12 @@ def log_frame(run: RunData, *, owners: dict[str, str] | None = None) -> pl.DataF
 
 
 def write_log(run: RunData, out_dir: str | Path, *, owners: dict[str, str] | None = None,
-              part_rows: int = 1_000_000) -> list[Path]:
+              created: dict[str, str] | None = None, part_rows: int = 1_000_000) -> list[Path]:
     """Write `log/part-NNNNN.parquet` (consecutive seq ranges) and `schema/events.json`."""
     if part_rows < 1:
         raise ValueError("part_rows must be at least 1")
     out = Path(out_dir)
-    df = log_frame(run, owners=owners)
+    df = log_frame(run, owners=owners, created=created)
     paths = []
     for n, start in enumerate(range(0, max(df.height, 1), part_rows)):
         p = out / "log" / f"part-{n:05d}.parquet"
@@ -141,5 +155,5 @@ def write_log(run: RunData, out_dir: str | Path, *, owners: dict[str, str] | Non
         paths.append(p)
     sp = out / "schema" / "events.json"
     sp.parent.mkdir(parents=True, exist_ok=True)
-    sp.write_text(json.dumps(events_schema(run), indent=2, ensure_ascii=False) + "\n")
+    sp.write_text(json.dumps(events_schema(run, created=created), indent=2, ensure_ascii=False) + "\n")
     return paths

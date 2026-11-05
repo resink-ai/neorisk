@@ -21,7 +21,7 @@ Everything under `data/` is git-ignored. The sources' licences vary (Olist is CC
 |---|---|
 | `specs/pack.py` | The entities and events (stage 1 declares only these) |
 | `specs/source.toml` | The source file, and each source table's key (used only to sort diff samples) |
-| `specs/ingest.sql` | SQLite SQL, with one `-- event: <name> owner=<col> [ord=<col>]` or `-- entity: <name>` block per pack table |
+| `specs/ingest.sql` | SQLite SQL, with one `-- event: <name> owner=<col> [ord=<col>]` or `-- entity: <name> [event=<event_name>]` block per pack table. `event=` gives the creation event a domain name such as `customer_signed_up`, in place of `<entity>_created`; the log view keeps the entity's name |
 | `specs/build.sql` | DuckDB SQL, with one `-- table: <name>` block per source table, read over the event log (decoded into one view per event type and entity by `refdata.logviews`) |
 | `specs/queries/<id>.sql` | Spider2 questions, run on the source and on the rebuilt file |
 
