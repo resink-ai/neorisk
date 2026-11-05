@@ -2,7 +2,7 @@
 -- the data; a row with an identical copy at a later rowid is a Spider2 duplicate (rows 1-11).
 -- N = 2022-04-05 00:00:00, the last join: the snapshot and the duplicate markers (a rule).
 
--- entity: companies
+-- entity: companies event=company_became_unicorn
 SELECT CAST(d.company_id AS TEXT) AS ext_id, i.industry, d.year_founded,
        iso_time(d.date_joined, '%Y-%m-%dT%H:%M:%S.%f') AS created_at
 FROM (SELECT DISTINCT * FROM companies_dates) d
