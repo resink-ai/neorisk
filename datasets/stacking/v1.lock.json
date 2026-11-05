@@ -1,0 +1,63 @@
+{
+  "name": "stacking",
+  "version": "v1",
+  "kind": "spider2",
+  "writer": {
+    "polars": "2.0.0",
+    "pyarrow": "26.0.0"
+  },
+  "recipe_sha256": "4d66ebdf1f23c61a83ab3847421dbe41f1f699a317d7843d7f74ebea9734ae61",
+  "source_sha256": "eb683890921eb597f176692fe6ac9fb544dde3fd78084d019bf82cd0e6efe780",
+  "files": {
+    "expected/queries/local262.parquet": {
+      "sha256": "644551bfb4b0f18bb6e0b7f64d275e8a07e4b60acf576bf28ef2ef20e9f165cd",
+      "rows": 7
+    },
+    "expected/queries/local263.parquet": {
+      "sha256": "f8dae3beb5d4a1bae6edb19a138250a9f5107b45f94e037447571d5c397fb3ba",
+      "rows": 2
+    },
+    "expected/queries/local264.parquet": {
+      "sha256": "29b928d58b2d5aa3cc8348bb8976d860ce795fbc6258c5448da99847ef1999f7",
+      "rows": 1
+    },
+    "log/part-00000.parquet": {
+      "sha256": "992788fb98ce32cd07c985e19360a0f87c60948cf2adca1d073edf785865972f",
+      "rows": 10297
+    },
+    "results/eda.parquet": {
+      "sha256": "544083d8a32cbeff2d036e3ceb3d8d399ac17450fcceb814da2a7049c34ac820",
+      "rows": 1547
+    },
+    "results/feature_importance.parquet": {
+      "sha256": "98a8ea27e24e7339dd50789c0e3bc10aae06926469d3b51d7a8fe294356127eb",
+      "rows": 2887
+    },
+    "results/model.parquet": {
+      "sha256": "927bfa7a0e3c9555fbeda4f1d241f5a19827dc9d64f67baec4b5e5548b8d99e9",
+      "rows": 303
+    },
+    "results/model_importance.parquet": {
+      "sha256": "2c06e1665ff38ad83cf7f1cf925f6929704a818ebcdbaf925b91703381169363",
+      "rows": 2567
+    },
+    "results/model_score.parquet": {
+      "sha256": "d2e33692edbe378cd0992972b8228631fcce5d4143e9eae853c05ebbc7b2bbe4",
+      "rows": 2872
+    },
+    "results/problem.parquet": {
+      "sha256": "2ed039962fc8402bdf00e8f75bcef32a513fa573212a9c2932393a90db7e7f3b",
+      "rows": 20
+    },
+    "results/solution.parquet": {
+      "sha256": "d37fefa0c81d1e7ab881ed648d0328ea4e96cf1eb257c94621d7db597617ab8e",
+      "rows": 101
+    },
+    "schema/events.json": {
+      "sha256": "5013d571d8ab5612f0e31b1f52a11852a7faecba01c234c3bfcb9e431e4e7c3b"
+    },
+    "schema/results.json": {
+      "sha256": "7747ea94cbf38206510ca619b3242705ca3b431527aafb235647c7f6f38cf61a"
+    }
+  }
+}

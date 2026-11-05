@@ -12,7 +12,7 @@ SELECT p.name AS ext_id,
        p.path AS path, p.type AS type, p.target AS target
 FROM problem p ORDER BY p.rowid;
 
--- entity: solutions
+-- entity: solutions event=run_configured
 SELECT name || '#' || version AS ext_id,
        datetime('2023-01-01 00:00:00', '+' || rowid || ' hours') AS created_at,
        name AS problem, version, correlation, nb_model, nb_feature, score, test_size, resampling
