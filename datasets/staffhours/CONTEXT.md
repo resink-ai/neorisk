@@ -31,6 +31,18 @@ Each row is one `staff_clocked` event owned by its staff member, at its own date
 
 A staff member is created at its first clock event. One source row (rowid 100, `V`, `Exit` at 14:40) has the impossible date `2013-02-29`. Its event time is SQLite's normalisation of that text, 2013-03-01 14:40; the event carries `date_text = '2013-02-29'`, which is written back verbatim. For every other row `date_text` is NULL.
 
+There are no snapshot events, so there is no snapshot time N.
+
+## Snapshot columns
+
+None: every entity attribute travels in its creation event.
+
+| Column | Verdict | Reason |
+|---|---|---|
+| `staff.ext_id` | creation | The source key (`StaffMember`, a letter); staff carry no other attribute, so no column qualifies. |
+
+The creation event keeps the name `staff_created`: a staff member is created at its first clock event by rule, not at a hire the source records.
+
 ## Expected output
 
 `results/` holds every source table, as the source stores it. Each column's type follows the values it holds: text, int64 or float64. A mixed column holds text and numbers together, so it is stored as SQLite's own text rendering and declared in `dataset.toml`.
