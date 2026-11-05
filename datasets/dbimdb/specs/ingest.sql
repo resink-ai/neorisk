@@ -1,7 +1,7 @@
 -- dbimdb: source tables → events (refdata ingest).
 -- Times are rules (docs/research/spider2/dbimdb.md §2): a movie and its credits at Jan 1 of
--- substr(year, -4); a person or lookup row at its first movie's release; the rating snapshot
--- at N = 2019-01-01. The five 1-per-movie link tables are movie attributes, joined by MID.
+-- substr(year, -4); a person or lookup row at its first movie's release; the movie and person
+-- snapshots at N = 2019-01-01. The five 1-per-movie link tables are movie attributes, joined by MID.
 
 -- entity: genres
 SELECT CAST(g.GID AS TEXT) AS ext_id, g.Name AS name,
@@ -38,13 +38,12 @@ first AS (SELECT c.pid, min(substr(m.year, -4)) AS y FROM credit c JOIN Movie m 
           GROUP BY c.pid)
 SELECT p.PID AS ext_id,
        max(CASE WHEN substr(p.Name, 1, 1) = ' ' THEN substr(p.Name, 2) ELSE p.Name END) AS name,
-       max(p.Gender) AS gender, f.y || '-01-01 00:00:00' AS created_at
+       f.y || '-01-01 00:00:00' AS created_at
 FROM Person p JOIN first f ON f.pid = p.PID
 GROUP BY p.PID ORDER BY p.PID;
 
--- entity: movies
+-- entity: movies event=movie_released
 SELECT m.MID AS ext_id, m."index" AS src_index, m.title AS title,
-       CASE WHEN length(m.year) > 4 THEN substr(m.year, 1, length(m.year) - 5) END AS disambig,
        substr(m.year, -4) || '-01-01 00:00:00' AS created_at,
        g.GID AS genre_id, la.LAID AS language_id, CAST(c.CID AS INTEGER) AS country_id,
        CAST(lo.LID AS INTEGER) AS location_id, d.PID AS director_id
@@ -65,5 +64,16 @@ SELECT substr(m.year, -4) || '-01-01 00:00:00' AS event_time, p.MID AS movie_id,
 FROM M_Producer p JOIN Movie m USING (MID) ORDER BY p."index";
 
 -- event: movies_snapshot owner=movie_id
-SELECT '2019-01-01 00:00:00' AS event_time, MID AS movie_id, rating, num_votes
+SELECT '2019-01-01 00:00:00' AS event_time, MID AS movie_id, rating, num_votes,
+       CASE WHEN length(year) > 4 THEN substr(year, 1, length(year) - 5) END AS disambig
 FROM Movie ORDER BY "index";
+
+-- event: persons_snapshot owner=person_id
+-- One per person entity; the 719 people listed twice have the same gender either way.
+WITH credit AS (
+    SELECT trim(PID) AS pid FROM M_Cast WHERE PID IS NOT NULL
+    UNION SELECT trim(PID) FROM M_Producer WHERE PID IS NOT NULL
+    UNION SELECT PID FROM M_Director)
+SELECT '2019-01-01 00:00:00' AS event_time, p.PID AS person_id, max(p.Gender) AS gender
+FROM Person p JOIN credit c ON c.pid = p.PID
+GROUP BY p.PID ORDER BY p.PID;

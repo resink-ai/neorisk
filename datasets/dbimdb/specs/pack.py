@@ -1,5 +1,6 @@
 """dbimdb: Db-IMDB, a scrape of IMDb title and name pages weighted to Hindi cinema.
-Movies are released with a cast, producers and one director; ratings are read at the scrape.
+Movies are released with a cast, producers and one director; ratings, the year disambiguator
+and each person's gender are read at the scrape, so they ride on snapshots at N.
 Stage 1, schema only: the events are ingested from the Spider2 tables
 (docs/research/spider2/dbimdb.md); stage 2 adds the behavior.
 """
@@ -24,13 +25,11 @@ def define(p: Pack) -> None:
                        "name": text(doc="Verbatim; genre names keep their 12 trailing spaces")})
     p.entity("persons", key="person_id", doc="Created at their first credit's release (a rule)",
              cols={"ext_id": text(doc="The PID, without the scraper's leading space"),
-                   "name": text(doc="Without the scraper's leading space"),
-                   "gender": opt(cat("Male", "Female"))})
+                   "name": text(doc="Without the scraper's leading space")})
     p.entity("movies", key="movie_id", doc="Created at Jan 1 of its year (a rule)",
              cols={"ext_id": text(doc="The MID"),
                    "src_index": i64(doc="Movie.index: scrape order, not a function of anything"),
                    "title": text(),
-                   "disambig": opt(text(doc="IMDb's roman-numeral year prefix, I…XVII")),
                    "genre_id": ref("genres"), "language_id": ref("languages"),
                    "country_id": opt(ref("countries")), "location_id": opt(ref("locations")),
                    "director_id": ref("persons")})
@@ -40,5 +39,9 @@ def define(p: Pack) -> None:
     p.event("producer_credited", doc="At its movie's release (a rule), in credit order",
             cols={"movie_id": ref("movies"), "person_id": opt(ref("persons")),
                   "position": i32(min=1)})
-    p.event("movies_snapshot", doc="IMDb's rating and vote count on the scrape day, at N",
-            cols={"movie_id": ref("movies"), "rating": f64(), "num_votes": i64(min=0)})
+    p.event("movies_snapshot",
+            doc="IMDb's rating, vote count and year disambiguator on the scrape day, at N",
+            cols={"movie_id": ref("movies"), "rating": f64(), "num_votes": i64(min=0),
+                  "disambig": opt(text(doc="IMDb's roman-numeral year prefix, I…XVII"))})
+    p.event("persons_snapshot", doc="The gender the scraper recorded, at N",
+            cols={"person_id": ref("persons"), "gender": opt(cat("Male", "Female"))})

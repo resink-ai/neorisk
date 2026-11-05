@@ -4,9 +4,9 @@
 
 -- table: Movie
 SELECT m.src_index AS "index", m.ext_id AS MID, m.title AS title,
-       coalesce(m.disambig || ' ', '') || strftime(m.created_at AT TIME ZONE 'UTC', '%Y') AS year,
+       coalesce(s.disambig || ' ', '') || strftime(m.created_at AT TIME ZONE 'UTC', '%Y') AS year,
        s.rating AS rating, s.num_votes AS num_votes
-FROM movies m JOIN movies_snapshot s USING (movie_id);
+FROM movies m LEFT JOIN movies_snapshot s USING (movie_id);
 
 -- table: Genre
 SELECT CAST(ext_id AS BIGINT) AS "index", name AS Name, CAST(ext_id AS BIGINT) AS GID FROM genres;
@@ -80,5 +80,6 @@ listed AS (
     SELECT 1 AS block, first, person_id FROM credited
     UNION ALL SELECT 2, first, person_id FROM directed)
 SELECT row_number() OVER (ORDER BY l.block, l.first) - 1 AS "index", p.ext_id AS PID,
-       CASE WHEN l.block = 1 THEN ' ' || p.name ELSE p.name END AS Name, p.gender AS Gender
-FROM listed l LEFT JOIN persons p USING (person_id);
+       CASE WHEN l.block = 1 THEN ' ' || p.name ELSE p.name END AS Name, ps.gender AS Gender
+FROM listed l LEFT JOIN persons p ON p.person_id = l.person_id
+LEFT JOIN persons_snapshot ps ON ps.person_id = l.person_id;
