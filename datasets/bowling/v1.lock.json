@@ -1,0 +1,71 @@
+{
+  "name": "bowling",
+  "version": "v1",
+  "kind": "spider2",
+  "writer": {
+    "polars": "2.0.0",
+    "pyarrow": "26.0.0"
+  },
+  "recipe_sha256": "71908543d72fae612e912b2313aedf8abe0474b5e16fc603e4a7fa0b8470ed1f",
+  "source_sha256": "f8ceb5692677a5a4e04d0a08dd495ae8dbebffbacdb2a66dec551613775bc12c",
+  "files": {
+    "expected/queries/local128.parquet": {
+      "sha256": "5a80afa55e28d852182be804ee8d450caccccb6d70f11e96c21c80e624933f21",
+      "rows": 11
+    },
+    "log/part-00000.parquet": {
+      "sha256": "5bd1dde4808b769f956ba83938e856f59e69d1c72ffb6674164bf6f1c5474099",
+      "rows": 2032
+    },
+    "results/Bowler_Scores.parquet": {
+      "sha256": "649e4a1ab9b4b85885c502b066964b369790e1c7cea1b78e7eaeca2665afc01e",
+      "rows": 1344
+    },
+    "results/Bowler_Scores_Archive.parquet": {
+      "sha256": "5e51506bd5badcaca692869fa8a4dd2bce2e131ebdfb72f2468c9a57897c7d7e",
+      "rows": 0
+    },
+    "results/Bowlers.parquet": {
+      "sha256": "8e2860e9ebf511a133595282b9239ec9e3652ff71d1ba242cf739c408e4ccea8",
+      "rows": 34
+    },
+    "results/Match_Games.parquet": {
+      "sha256": "9845fc5a8c7767c3957a8374b9f4f4f4144808eda6127168a46734409e14b0d8",
+      "rows": 168
+    },
+    "results/Match_Games_Archive.parquet": {
+      "sha256": "58bc75834a3d9795c4b9ffac6beca700e62b31e17bedd01d7f5c8a393150fc20",
+      "rows": 0
+    },
+    "results/Teams.parquet": {
+      "sha256": "0b6809d1e36a2db679da90e2a087996005073b9ee69d44f688f0883acfea70bb",
+      "rows": 10
+    },
+    "results/Tournaments.parquet": {
+      "sha256": "68ae0ee20277e692f7314319f2a9002faeeb20ffaa88380291e4d7c87887ce86",
+      "rows": 20
+    },
+    "results/Tournaments_Archive.parquet": {
+      "sha256": "ae0011c0d571c802404be176758817a930026f3f1c95ec585fba13b6c303ff8e",
+      "rows": 0
+    },
+    "results/Tourney_Matches.parquet": {
+      "sha256": "beac405427669a0141fe894f607f135ecf371e3cd2962113df79d0d50814a234",
+      "rows": 57
+    },
+    "results/Tourney_Matches_Archive.parquet": {
+      "sha256": "5566b83a295233109f918134c7f7cc950355f78d096bb73d0224d64623c4030e",
+      "rows": 0
+    },
+    "results/WAZips.parquet": {
+      "sha256": "d80104315dcdb2455ae5d356fe97ddf506de5dff9bbf72fbd6c3ce6fe5a1dc1c",
+      "rows": 523
+    },
+    "schema/events.json": {
+      "sha256": "de8f90afd5d89be28ca0b66630c324ae8a8f233d8bbd93d88680361833bbdcae"
+    },
+    "schema/results.json": {
+      "sha256": "b35cafea4b08d479d01d525b84180266b9633adddb22d6adea59286a4ec160fa"
+    }
+  }
+}

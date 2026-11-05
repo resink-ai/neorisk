@@ -1,8 +1,10 @@
 COUNTS = {
     "bowlers_created": 34,
+    "bowlers_snapshot": 34,
     "game_bowled": 1344,
     "match_scheduled": 57,
     "teams_created": 10,
+    "teams_snapshot": 10,
     "tournaments_created": 20,
     "wazips_created": 523
 }

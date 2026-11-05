@@ -4,7 +4,7 @@
 
 A bowling league: eight teams of four bowlers play a double round robin over 14 weekly tournaments, three games a match, each bowler scored per game with a handicap.
 
-Version `v1`, kind `spider2`. The input is one ordered event log of 1,988 events; the output is the 11 source tables, rebuilt exactly, and the answer to 1 saved Spider 2.0 question.
+Version `v1`, kind `spider2`. The input is one ordered event log of 2,032 events; the output is the 11 source tables, rebuilt exactly, and the answer to 1 saved Spider 2.0 question.
 
 ## Raw data
 
@@ -16,7 +16,7 @@ The reverse-engineering research, with the queries behind every number, is in [`
 
 ## How the log was made
 
-Each match is an event owned by its tournament, and each bowler's game is an event owned by the bowler. Teams, bowlers, tournaments and the Washington ZIP lookup are entities. A team's captain and a bowler's team refer to each other; both are refs.
+Each match is an event owned by its tournament, and each bowler's game is an event owned by the bowler. Teams, bowlers, tournaments and the Washington ZIP lookup are entities. A team's captain, and a bowler's address, phone and team, are current state the source holds only as of the extract: they travel on `teams_snapshot` and `bowlers_snapshot` at N, not on creation. Teams 9 and 10 are captained by bowlers who play for teams 2 and 6. Both columns are refs, and on the snapshots they no longer form a reference cycle between creation events.
 
 Two things are rebuilt by SQL, not carried:
 - `Match_Games` is one row per game bowled. Its `WinningTeamID` is a fill pattern, not a result: the odd-lane team in games 1 and 3, the even-lane team in game 2 (168 of 168 games).
@@ -30,16 +30,50 @@ Two things are rebuilt by SQL, not carried:
 
 | Event | Kind | Rows | Payload fields |
 |---|---|---:|---|
-| `teams_created` | entity | 10 | `team_id`, `ext_id`, `team_name`, `captain_id` |
-| `bowlers_created` | entity | 34 | `bowler_id`, `ext_id`, `last_name`, `first_name`, `middle_init`, `address`, `city`, `state`, `zip`, `phone`, `team_id` |
+| `teams_created` | entity | 10 | `team_id`, `ext_id`, `team_name` |
+| `bowlers_created` | entity | 34 | `bowler_id`, `ext_id`, `last_name`, `first_name`, `middle_init` |
 | `tournaments_created` | entity | 20 | `tourney_id`, `ext_id`, `tourney_date`, `tourney_location` |
 | `wazips_created` | entity | 523 | `zip_id`, `ext_id`, `city`, `state` |
 | `match_scheduled` | business | 57 | `tourney_id`, `match_id`, `lanes`, `odd_lane_team_id`, `even_lane_team_id` |
 | `game_bowled` | business | 1,344 | `bowler_id`, `match_id`, `game_number`, `raw_score`, `handicap_score`, `won_game` |
+| `teams_snapshot` | business | 10 | `team_id`, `captain_id` |
+| `bowlers_snapshot` | business | 34 | `bowler_id`, `address`, `city`, `state`, `zip`, `phone`, `team_id` |
 
 ## Times set by rule
 
-Every entity is created at T0 = 2017-09-04 00:00, the first tournament date; no table has a creation column. This includes the six 2018 tournaments, which are scheduled, not held. Matches and games have no time of their own: they take their tournament's date at midnight. Within a day, matches sort before games, and games by match and game number.
+Every entity is created at T0 = 2017-09-04 00:00, the first tournament date; no table has a creation column. This includes the six 2018 tournaments, which are scheduled, not held. Matches and games have no time of their own: they take their tournament's date at midnight. Within a day, matches sort before games, and games by match and game number. Snapshots are at N = 2017-12-04 00:00, the last played tournament and the latest event time in the log.
+
+## Snapshot columns
+
+| Entity | Snapshot event | At (UTC) | Rows | Columns |
+|---|---|---|---:|---|
+| `teams` | `teams_snapshot` | 2017-12-04 00:00:00 | 10 | `captain_id` |
+| `bowlers` | `bowlers_snapshot` | 2017-12-04 00:00:00 | 34 | `address`, `city`, `state`, `zip`, `phone`, `team_id` |
+
+| Column | Verdict | Reason |
+|---|---|---|
+| `teams.ext_id` | creation | The source key (`TeamID`). |
+| `teams.team_name` | creation | A given name. |
+| `teams.captain_id` | snapshot | A title held, which can pass to another bowler; teams 9 and 10 are captained from other teams. Research kept it on creation. |
+| `bowlers.ext_id` | creation | The source key (`BowlerID`). |
+| `bowlers.last_name` | creation | Given names. |
+| `bowlers.first_name` | creation | Given names. |
+| `bowlers.middle_init` | creation | Given names. |
+| `bowlers.address` | snapshot | An address, known only as of the extract. Research kept it on creation. |
+| `bowlers.city` | snapshot | An address. Research kept it on creation. |
+| `bowlers.state` | snapshot | An address. Research kept it on creation. |
+| `bowlers.zip` | snapshot | An address. Research kept it on creation. |
+| `bowlers.phone` | snapshot | A phone. Research kept it on creation. |
+| `bowlers.team_id` | snapshot | The roster as of the extract (team 7 has 6 bowlers); a bowler can change team, so when in doubt, snapshot. Research kept it on creation. |
+| `bowlers.BowlerTotalPins`, `BowlerGamesBowled`, `BowlerCurrentAverage`, `BowlerCurrentHcp` | derived | A function of `game_bowled` with the 2017-11-27 cut-off (34 of 34); computed in `build.sql`, not carried. |
+| `tournaments.ext_id` | creation | The source key (`TourneyID`). |
+| `tournaments.tourney_date` | creation | The scheduled date the tournament was created with; it also decides its matches' and games' times, so it stays. |
+| `tournaments.tourney_location` | creation | Part of the published schedule; the source shows no change. |
+| `wazips.ext_id` | creation | The source key (`ZIP`). |
+| `wazips.city` | creation | A static postal lookup. |
+| `wazips.state` | creation | A static postal lookup. |
+
+No creation event takes a domain name: every entity is created at T0 by rule.
 
 ## Expected output
 
