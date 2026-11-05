@@ -1,0 +1,51 @@
+titleNullable = 'California Traffic Collision Data from SWITRS'
+creatorNameNullable = 'Alex Gude'
+licenseNameNullable = 'CC0: Public Domain'
+totalBytesNullable = 9943216128
+lastUpdatedNullable = None
+descriptionNullable = "### Context\n\nMy father started riding a motorcycle when I was in high school and he only stopped recently. A few years ago I wondered how risky it was and started looking for some data to answer that question. What I found was a treasure trove of data: every traffic collision from 2001 to present in the state of California.\n\n### Content\n\nThis data comes from the California Highway Patrol and covers collisions from January 1st, 2001 until mid-December, 2020. I have requested full database dumps from the CHP four times, once in 2016, 2017, 2018, 2020, 2021. I have combined these datasets into the one presented here. For additional details, see my post: [**Introducing the SWITRS SQLite Hosted Dataset**](https://alexgude.com/blog/switrs-sqlite-hosted-dataset/)\n\nThere are three main tables:\n\n- `collisions`: Contains information about the collision, where it happened, what vehicles were involved.\n- `parties`: Contains information about the groups people involved in the collision including age, sex, and sobriety.\n- `victims`: Contains information about the injuries of specific people involved in the collision.\n\nThere is also a table called `case_ids` which I used to build the other tables. It tells you which of the five original datasets each row came from.\n\nThere is a data dictionary here: https://tims.berkeley.edu/help/SWITRS.php I have in some cases remapped values so that they are human readable (`making a left turn` instead of `D` for example); you can find those mappings here: https://github.com/agude/SWITRS-to-SQLite/blob/master/switrs_to_sqlite/value_maps.py\n\n**Looking for the raw data?** There is another Kaggle dataset with the raw CSV files: [**Kaggle: California Traffic Collision Raw SWITRS Data**](https://www.kaggle.com/alexgude/california-traffic-collision-raw-switrs-data)\n\n### Acknowledgements\n\nThis data would not exist without the California Highway Patrol compiling it, thanks!\n\n### Inspiration\n\nThere is _**SO**_ much to explore and discover in this data!\n\nHere are some of the things I have looked into:\n\n- [On What Days Do Cyclists Crash?](https://alexgude.com/blog/switrs-bicycle-crashes-by-date/)\n- [On What Days Do Motorcycles Crash?](https://alexgude.com/blog/switrs-motorcycle-crashes-by-date/)\n- [On What Days Do People Crash?](https://alexgude.com/blog/switrs-crashes-by-date/)\n- [Car Crashes After Daylight Saving Time](https://alexgude.com/blog/switrs-daylight-saving-time-accidents/)\n- [Car Crashes After Daylight Saving Time Ends](https://alexgude.com/blog/switrs-daylight-saving-time-end-accidents/)\n\nAnd here are questions I'd like to answer:\n\n- [**Task**: When do different makes and models of motorcycles crash?](https://www.kaggle.com/alexgude/california-traffic-collision-data-from-switrs/tasks?taskId=2750)\n- On what days are pedestrians involved in collisions?\n- Are DUIs more likely on certain days?\n- How has COVID19 changed collisions? Are different types of vehicles involved? At different t
+--- Spider2 resource dir
+DDL.csv 3456
+case_ids.json 688
+collisions.json 19526
+parties.json 9219
+victims.json 3194
+--- Spider2 collisions.json (head)
+{
+    "sample_rows": [
+        {
+            "case_id": 5638515.0,
+            "db_year": 2021
+        },
+        {
+            "case_id": 1277029.0,
+            "db_year": 2018
+        },
+        {
+            "case_id": 8561714.0,
+            "db_year": 2021
+        },
+        {
+            "case_id": 9091662.0,
+            "db_year": 2021
+        },
+        {
+            "case_id": 2939481.0,
+            "db_year": 2018
+        }
+    ],
+    "table_name": "case_ids",
+    "table_fullname": "case_ids",
+    "column_names": [
+        "case_id",
+        "db_year"
+    ],
+    "column_types": [
+        "REAL",
+        "INTEGER"
+    ],
+    "description": [
+        "",
+        ""
+    ]
+}

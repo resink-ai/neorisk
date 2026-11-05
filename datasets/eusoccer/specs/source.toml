@@ -1,0 +1,12 @@
+# European Soccer Database (Kaggle, Hugo Mathien 2016): Spider2's EU_soccer, all 7 data tables.
+file = "EU_soccer.sqlite"
+note = "Dates only ('YYYY-MM-DD 00:00:00'), read as UTC. sqlite_sequence is system data and is not compared; the view match_view is replayed for the saved questions."
+
+[tables]
+Country = ["id"]
+League = ["id"]
+Team = ["id"]
+Player = ["id"]
+Match = ["id"]
+Player_Attributes = ["id"]
+Team_Attributes = ["id"]

@@ -1,0 +1,22 @@
+### local244  (3 rows, 0.00s)
+CATEGORY | MIN_DURATION_MINUTES | MAX_DURATION_MINUTES | TOTAL_REVENUE
+long | 47.72618333333333 | 88.11588333333333 | 41.79
+medium | 3.28925 | 47.0861 | 1817.55
+short | 0.01785 | 3.2888 | 469.26
+
+### thresholds  (1 rows, 0.00s)
+mn | av | mx | t1 | t2
+1071 | 393599.2121039109 | 5286953 | 197335.10605195546 | 2840276.1060519554
+
+### system_tables  (0 rows, 0.00s)
+name
+
+### rowid_order_vs_pk  (2 rows, 0.00s)
+t | n | same
+PlaylistTrack | 8715 | 162
+InvoiceLine | 2240 | 2240
+
+### date_range  (1 rows, 0.00s)
+min(InvoiceDate) | max(InvoiceDate) | count(*)
+2009-01-01 00:00:00 | 2013-12-22 00:00:00 | 412
+

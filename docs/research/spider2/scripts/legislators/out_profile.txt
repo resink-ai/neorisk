@@ -1,0 +1,61 @@
+### legislators: 12518 rows, rowid 1..12518
+column | decl | typeof counts | null | empty | \N | distinct | min | max | ws-padded
+full_name | TEXT | {'text': 12518} | 0 | 0 | 0 | 12310 | 'A. Donald McEachin' | 'Zoe Lofgren' | 0
+first_name | TEXT | {'text': 12518} | 0 | 0 | 0 | 1684 | 'A.' | 'Zoe' | 0
+last_name | TEXT | {'text': 12518} | 0 | 0 | 0 | 5724 | 'Aandahl' | 'du Pont' | 0
+middle_name | TEXT | {'text': 8559, 'null': 3959} | 3959 | 0 | 0 | 2914 | '(Jim) Guy' | 'de Veaux' | 0
+nickname | TEXT | {'null': 12262, 'text': 256} | 12262 | 0 | 0 | 131 | 'Abe' | 'of Ohio' | 0
+suffix | TEXT | {'null': 12078, 'text': 440} | 12078 | 0 | 0 | 5 | 'II' | 'Sr.' | 0
+other_names_end | TEXT | {'null': 12514, 'text': 4} | 12514 | 0 | 0 | 4 | '1846-01-12' | '2007-12-17' | 0
+other_names_middle | REAL | {'null': 12518} | 12518 | None | None | 0 | None | None | 0
+other_names_last | TEXT | {'null': 12513, 'text': 5} | 12513 | 0 | 0 | 5 | 'Bono' | 'Menendez' | 0
+birthday | TEXT | {'text': 11967, 'null': 551} | 551 | 0 | 0 | 11038 | '1721-04-19' | '1989-10-13' | 0
+gender | TEXT | {'text': 12518} | 0 | 0 | 0 | 2 | 'F' | 'M' | 0
+id_bioguide | TEXT | {'text': 12518} | 0 | 0 | 0 | 12518 | 'A000001' | 'Z000018' | 0
+id_bioguide_previous_0 | TEXT | {'null': 12515, 'text': 3} | 12515 | 0 | 0 | 3 | 'F000246' | 'W000790' | 0
+id_govtrack | INTEGER | {'integer': 12518} | 0 | 0 | 0 | 12518 | 300001 | 456792 | 0
+id_icpsr | REAL | {'real': 12298, 'null': 220} | 220 | 0 | 0 | 12298 | 1.0 | 99342.0 | 0
+id_wikipedia | TEXT | {'text': 12516, 'null': 2} | 2 | 0 | 0 | 12516 | 'A. C. Schiffler' | 'Zoe Lofgren' | 0
+id_wikidata | TEXT | {'text': 12516, 'null': 2} | 2 | 0 | 0 | 12516 | 'Q1000051' | 'Q999912' | 0
+id_google_entity_id | TEXT | {'text': 12449, 'null': 69} | 69 | 0 | 0 | 12449 | 'kg:/g/11bc5_pspc' | 'kg:/m/0zwmkgq' | 0
+id_house_history | REAL | {'real': 11026, 'null': 1492} | 1492 | 0 | 0 | 11026 | 7672.0 | 15032449022.0 | 0
+id_house_history_alternate | REAL | {'null': 12517, 'real': 1} | 12517 | 0 | 0 | 1 | 13283.0 | 13283.0 | 0
+id_thomas | REAL | {'null': 10337, 'real': 2181} | 10337 | 0 | 0 | 2181 | 1.0 | 2296.0 | 0
+id_cspan | REAL | {'null': 11664, 'real': 854} | 11664 | 0 | 0 | 854 | 5.0 | 9278255.0 | 0
+id_votesmart | REAL | {'null': 11437, 'real': 1081} | 11437 | 0 | 0 | 1081 | 0.0 | 182310.0 | 0
+id_lis | TEXT | {'null': 12226, 'text': 292} | 12226 | 0 | 0 | 292 | 'S009' | 'S405' | 0
+id_ballotpedia | TEXT | {'null': 11998, 'text': 520} | 11998 | 0 | 0 | 520 | 'Aaron Schock' | 'Zoe Lofgren' | 0
+id_opensecrets | TEXT | {'null': 11309, 'text': 1209} | 11309 | 0 | 0 | 1209 | 'N00000010' | 'N99999896' | 0
+id_fec_0 | TEXT | {'null': 11435, 'text': 1083} | 11435 | 0 | 0 | 1083 | 'H0AL02087' | 'S8WI00026' | 0
+id_fec_1 | TEXT | {'null': 12408, 'text': 110} | 12408 | 0 | 0 | 110 | 'H0IN05094' | 'S8TN00337' | 0
+id_fec_2 | TEXT | {'null': 12512, 'text': 6} | 12512 | 0 | 0 | 6 | 'H0GA03017' | 'S8ND00120' | 0
+
+### legislators_terms: 44063 rows, rowid 1..44063
+column | decl | typeof counts | null | empty | \N | distinct | min | max | ws-padded
+id_bioguide | TEXT | {'text': 44063} | 0 | 0 | 0 | 12518 | 'A000001' | 'Z000018' | 0
+term_number | INTEGER | {'integer': 44063} | 0 | 0 | 0 | 30 | 0 | 29 | 0
+term_id | TEXT | {'text': 44063} | 0 | 0 | 0 | 44063 | 'A000001-0' | 'Z000018-1' | 0
+term_type | TEXT | {'text': 44063} | 0 | 0 | 0 | 2 | 'rep' | 'sen' | 0
+term_start | TEXT | {'text': 44063} | 0 | 0 | 0 | 721 | '1789-03-04' | '2020-05-19' | 0
+term_end | TEXT | {'text': 44063} | 0 | 0 | 0 | 632 | '1791-03-03' | '2025-01-03' | 0
+state | TEXT | {'text': 44063} | 0 | 0 | 0 | 59 | 'AK' | 'WY' | 0
+district | REAL | {'real': 40190, 'null': 3873} | 3873 | 0 | 0 | 55 | -1.0 | 53.0 | 0
+class | REAL | {'null': 40190, 'real': 3873} | 40190 | 0 | 0 | 3 | 1.0 | 3.0 | 0
+party | TEXT | {'text': 43611, 'null': 452} | 452 | 0 | 0 | 67 | 'AL' | 'Whig' | 0
+how | TEXT | {'null': 43862, 'text': 201} | 43862 | 0 | 0 | 1 | 'appointment' | 'appointment' | 0
+url | TEXT | {'null': 39677, 'text': 4386} | 39677 | 0 | 0 | 2081 | 'http://ackerman.house.gov/' | 'https://zinke.house.gov' | 3
+address | TEXT | {'null': 41564, 'text': 2499} | 41564 | 0 | 0 | 1807 | '100 Cannon HOB; Washington DC 20515-... | 'G12 Dirksen Senate Office Building W... | 0
+phone | TEXT | {'null': 41569, 'text': 2494} | 41569 | 0 | 0 | 554 | '202-224-2023' | '202-225-9901' | 0
+fax | TEXT | {'null': 42251, 'text': 1812} | 42251 | 0 | 0 | 575 | '200-226-9739' | '920-230-7262' | 0
+contact_form | TEXT | {'null': 42633, 'text': 1430} | 42633 | 0 | 0 | 953 | 'Http://mariodiaz-balart.house.gov//i... | 'https://yoho.house.gov/contact/email... | 0
+office | TEXT | {'null': 41571, 'text': 2492} | 41571 | 0 | 0 | 601 | '100 Cannon House Office Building' | 'G12 Dirksen Senate Office Building' | 0
+state_rank | TEXT | {'null': 43846, 'text': 217} | 43846 | 0 | 0 | 2 | 'junior' | 'senior' | 0
+rss_url | TEXT | {'null': 42574, 'text': 1489} | 42574 | 0 | 0 | 511 | 'feed://olson.house.gov/common/rss/?r... | 'https://www.reed.senate.gov//rss/fee... | 0
+caucus | TEXT | {'null': 44049, 'text': 14} | 44049 | 0 | 0 | 1 | 'Democrat' | 'Democrat' | 0
+
+### legislation_date_dim: 30315 rows, rowid 1..30315
+column | decl | typeof counts | null | empty | \N | distinct | min | max | ws-padded
+date | TEXT | {'text': 30315} | 0 | 0 | 0 | 30315 | '1917-01-01' | '1999-12-31' | 0
+month_name | TEXT | {'text': 30315} | 0 | 0 | 0 | 12 | 'April' | 'September' | 0
+day_of_month | INTEGER | {'integer': 30315} | 0 | 0 | 0 | 31 | 1 | 31 | 0
+

@@ -1,0 +1,175 @@
+## XML columns
+null pattern across the 8 columns (True=present): {(False, False, False, False, False, False, False, False): 11762, (True, True, True, True, True, True, True, True): 14217}
+league,season with XML present / total:
+   (1, '2008/2009') 0 / 306
+   (1, '2009/2010') 0 / 210
+   (1, '2010/2011') 0 / 240
+   (1, '2011/2012') 0 / 240
+   (1, '2012/2013') 0 / 240
+   (1, '2013/2014') 0 / 12
+   (1, '2014/2015') 0 / 240
+   (1, '2015/2016') 0 / 240
+   (1729, '2008/2009') 380 / 380
+   (1729, '2009/2010') 380 / 380
+   (1729, '2010/2011') 380 / 380
+   (1729, '2011/2012') 380 / 380
+   (1729, '2012/2013') 380 / 380
+   (1729, '2013/2014') 380 / 380
+   (1729, '2014/2015') 380 / 380
+   (1729, '2015/2016') 380 / 380
+   (4769, '2008/2009') 0 / 380
+   (4769, '2009/2010') 0 / 380
+   (4769, '2010/2011') 233 / 380
+   (4769, '2011/2012') 273 / 380
+   (4769, '2012/2013') 380 / 380
+   (4769, '2013/2014') 380 / 380
+   (4769, '2014/2015') 380 / 380
+   (4769, '2015/2016') 380 / 380
+   (7809, '2008/2009') 306 / 306
+   (7809, '2009/2010') 306 / 306
+   (7809, '2010/2011') 306 / 306
+   (7809, '2011/2012') 306 / 306
+   (7809, '2012/2013') 306 / 306
+   (7809, '2013/2014') 306 / 306
+   (7809, '2014/2015') 306 / 306
+   (7809, '2015/2016') 306 / 306
+   (10257, '2008/2009') 380 / 380
+   (10257, '2009/2010') 379 / 380
+   (10257, '2010/2011') 379 / 380
+   (10257, '2011/2012') 358 / 358
+   (10257, '2012/2013') 379 / 380
+   (10257, '2013/2014') 380 / 380
+   (10257, '2014/2015') 379 / 379
+   (10257, '2015/2016') 380 / 380
+   (13274, '2008/2009') 2 / 306
+   (13274, '2009/2010') 4 / 306
+   (13274, '2010/2011') 4 / 306
+   (13274, '2011/2012') 7 / 306
+   (13274, '2012/2013') 0 / 306
+   (13274, '2013/2014') 0 / 306
+   (13274, '2014/2015') 207 / 306
+   (13274, '2015/2016') 306 / 306
+   (15722, '2008/2009') 0 / 240
+   (15722, '2009/2010') 0 / 240
+   (15722, '2010/2011') 0 / 240
+   (15722, '2011/2012') 7 / 240
+   (15722, '2012/2013') 0 / 240
+   (15722, '2013/2014') 0 / 240
+   (15722, '2014/2015') 0 / 240
+   (15722, '2015/2016') 0 / 240
+   (17642, '2008/2009') 0 / 240
+   (17642, '2009/2010') 0 / 240
+   (17642, '2010/2011') 0 / 240
+   (17642, '2011/2012') 0 / 240
+   (17642, '2012/2013') 0 / 240
+   (17642, '2013/2014') 0 / 240
+   (17642, '2014/2015') 0 / 306
+   (17642, '2015/2016') 0 / 306
+   (19694, '2008/2009') 3 / 228
+   (19694, '2009/2010') 4 / 228
+   (19694, '2010/2011') 4 / 228
+   (19694, '2011/2012') 2 / 228
+   (19694, '2012/2013') 0 / 228
+   (19694, '2013/2014') 0 / 228
+   (19694, '2014/2015') 0 / 228
+   (19694, '2015/2016') 0 / 228
+   (21518, '2008/2009') 380 / 380
+   (21518, '2009/2010') 380 / 380
+   (21518, '2010/2011') 379 / 380
+   (21518, '2011/2012') 380 / 380
+   (21518, '2012/2013') 380 / 380
+   (21518, '2013/2014') 380 / 380
+   (21518, '2014/2015') 380 / 380
+   (21518, '2015/2016') 380 / 380
+   (24558, '2008/2009') 0 / 180
+   (24558, '2009/2010') 0 / 180
+   (24558, '2010/2011') 0 / 180
+   (24558, '2011/2012') 0 / 162
+   (24558, '2012/2013') 0 / 180
+   (24558, '2013/2014') 0 / 180
+   (24558, '2014/2015') 0 / 180
+   (24558, '2015/2016') 100 / 180
+
+### goal: present 14217, empty '<goal />' 993, parse failures 0, ElementTree re-serialisation byte-equal 14216/14217, non-ASCII 0, whitespace/newline 1
+   <value> incidents 39980; distinct child-tag orders 34; top 3:
+      15073 comment,stats,event_incident_typefk,elapsed,player1,sortorder,team,id,n,type,goal_type
+      7586 comment,stats,event_incident_typefk,elapsed,player2,subtype,player1,sortorder,team,id,n,type,goal_type
+      6783 comment,stats,event_incident_typefk,coordinates,elapsed,player2,subtype,player1,sortorder,team,id,n,type,goal_type
+   top subtypes: [(None, 18429), ('shot', 11659), ('header', 4090), ('distance', 1425), ('volley', 1078), ('tap_in', 849), ('direct_freekick', 666), ('loose_ball', 592)]
+
+### shoton: present 14217, empty '<shoton />' 5754, parse failures 0, ElementTree re-serialisation byte-equal 14216/14217, non-ASCII 0, whitespace/newline 1
+   <value> incidents 93755; distinct child-tag orders 25; top 3:
+      44753 stats,event_incident_typefk,elapsed,subtype,player1,sortorder,team,n,type,id
+      38135 stats,event_incident_typefk,coordinates,elapsed,subtype,player1,sortorder,team,n,type,id
+      3064 stats,elapsed_plus,event_incident_typefk,elapsed,subtype,player1,sortorder,team,n,type,id
+   top subtypes: [('blocked_shot', 31635), ('shot', 23048), ('distance', 12961), ('header', 8097), ('big chance shot', 5174), ('deflected', 4005), ('direct_freekick', 3422), ('volley', 1596)]
+
+### shotoff: present 14217, empty '<shotoff />' 5754, parse failures 0, ElementTree re-serialisation byte-equal 14216/14217, non-ASCII 0, whitespace/newline 1
+   <value> incidents 95303; distinct child-tag orders 24; top 3:
+      48382 stats,event_incident_typefk,elapsed,subtype,player1,sortorder,team,n,type,id
+      38584 stats,event_incident_typefk,coordinates,elapsed,subtype,player1,sortorder,team,n,type,id
+      3255 stats,elapsed_plus,event_incident_typefk,elapsed,subtype,player1,sortorder,team,n,type,id
+   top subtypes: [('distance', 23110), ('shot', 22314), ('header', 15744), ('deflected', 8033), ('direct_freekick', 4240), ('big chance shot', 4234), ('bad shot', 4184), ('volley', 4117)]
+
+### foulcommit: present 14217, empty '<foulcommit />' 5752, parse failures 0, ElementTree re-serialisation byte-equal 14216/14217, non-ASCII 0, whitespace/newline 1
+   <value> incidents 219234; distinct child-tag orders 56; top 3:
+      63504 stats,event_incident_typefk,coordinates,elapsed,player2,subtype,player1,sortorder,team,n,type,id
+      48788 stats,event_incident_typefk,elapsed,player2,player1,sortorder,team,n,type,id
+      34580 stats,event_incident_typefk,elapsed,player2,subtype,player1,sortorder,team,n,type,id
+   top subtypes: [(None, 102854), ('trip', 30246), ('pushing', 28453), ('from_behind', 12954), ('serious_foul', 11573), ('pull', 8348), ('hands', 8208), ('dangerous_play', 7216)]
+
+### card: present 14217, empty '<card />' 441, parse failures 0, ElementTree re-serialisation byte-equal 14216/14217, non-ASCII 0, whitespace/newline 1
+   <value> incidents 62114; distinct child-tag orders 15; top 3:
+      41576 comment,stats,event_incident_typefk,elapsed,card_type,player1,sortorder,team,n,type,id
+      16508 comment,stats,event_incident_typefk,elapsed,card_type,subtype,player1,sortorder,team,n,type,id
+      1994 comment,stats,elapsed_plus,event_incident_typefk,elapsed,card_type,subtype,player1,sortorder,team,n,type,id
+   top subtypes: [(None, 43250), ('serious_fouls', 7680), ('Unsportsmanlike Cond', 3643), ('verbal_abuse', 2003), ('emergency_brake', 1313), ('shirt_pull', 750), ('stall_time', 642), ('pushing', 545)]
+
+### cross: present 14217, empty '<cross />' 5752, parse failures 0, ElementTree re-serialisation byte-equal 14216/14217, non-ASCII 0, whitespace/newline 1
+   <value> incidents 284775; distinct child-tag orders 19; top 3:
+      141761 stats,event_incident_typefk,elapsed,subtype,player1,sortorder,team,n,type,id
+      114491 stats,event_incident_typefk,coordinates,elapsed,subtype,player1,sortorder,team,n,type,id
+      8535 stats,elapsed_plus,event_incident_typefk,elapsed,subtype,player1,sortorder,team,n,type,id
+   top subtypes: [('cross', 284775)]
+
+### corner: present 14217, empty '<corner />' 5753, parse failures 0, ElementTree re-serialisation byte-equal 14216/14217, non-ASCII 0, whitespace/newline 1
+   <value> incidents 87839; distinct child-tag orders 17; top 3:
+      42391 stats,event_incident_typefk,elapsed,subtype,player1,sortorder,team,n,type,id
+      37475 stats,event_incident_typefk,coordinates,elapsed,subtype,player1,sortorder,team,n,type,id
+      2918 stats,elapsed_plus,event_incident_typefk,elapsed,subtype,player1,sortorder,team,n,type,id
+   top subtypes: [('cross', 42251), ('cross_right', 17422), ('cross_left', 15746), ('short', 6526), ('short_left', 3079), ('short_right', 2652), (None, 163)]
+
+### possession: present 14217, empty '<possession />' 5798, parse failures 0, ElementTree re-serialisation byte-equal 14216/14217, non-ASCII 0, whitespace/newline 1
+   <value> incidents 34815; distinct child-tag orders 10; top 3:
+      19326 comment,event_incident_typefk,elapsed,subtype,sortorder,awaypos,homepos,n,type,id
+      9149 comment,stats,event_incident_typefk,elapsed,subtype,sortorder,awaypos,homepos,n,type,id
+      4574 comment,elapsed_plus,event_incident_typefk,elapsed,subtype,sortorder,awaypos,homepos,n,type,id
+   top subtypes: [('possession', 34815)]
+
+## goal XML vs score
+matches whose XML has newlines/tabs (pretty-printed): [3639] [1, 1, 1, 1, 1, 1, 1, 1]
+goal (goal_type, comment) counts: [(('n', 'n'), 34520), (('p', 'p'), 2975), (('o', 'o'), 1113), (('npm', 'npm'), 736), (('dg', 'dg'), 580), ((None, 'n'), 27), (('rp', 'rp'), 17), ((None, 'dg'), 4), (('o', 'n'), 3), ((None, 'npm'), 3), (('psm', 'psm'), 1), (('n', 'dg'), 1)]
+goal XML incident count (own goals credited to the other side) equals the score: 13476; differs: 741; samples [(1770, (0, 2), (0, 3)), (1835, (1, 4), (2, 4)), (1881, (2, 0), (3, 0)), (1887, (2, 2), (3, 2)), (1915, (2, 0), (2, 1))]
+
+## XML player and team refs
+player refs 1065285, numeric but not in Player 5653, non-numeric {'Unknown player': 4}; team refs not the home/away team 1
+
+## odds
+odds cells 575910 in 30 columns; integer class 88274; not exact hundredths (round(v*100)/100 != v) 95
+decimal places of shortest repr: [(0, 88274), (1, 295983), (2, 191558), (3, 95)]
+odds <= 1.0: 0
+  B365: matches with only some of H/D/A null = 0
+  BS: matches with only some of H/D/A null = 0
+  BW: matches with only some of H/D/A null = 0
+  GB: matches with only some of H/D/A null = 0
+  IW: matches with only some of H/D/A null = 0
+  LB: matches with only some of H/D/A null = 0
+  PS: matches with only some of H/D/A null = 0
+  SJ: matches with only some of H/D/A null = 0
+  VC: matches with only some of H/D/A null = 0
+  WH: matches with only some of H/D/A null = 0
+B365 overround min/avg/max: (1.0170250896057347, 1.0615304906782028, 1.126010626010626)
+
+## Player.height = inches * 2.54 ?
+height == round(height/2.54)*2.54 in double: 9664; differs 1396
+height exact hundredths: 11060

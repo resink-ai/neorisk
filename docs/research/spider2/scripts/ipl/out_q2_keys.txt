@@ -1,0 +1,140 @@
+### pk_unique  (5 rows, 0.01s)
+t | dup
+bbb | 0
+bs | 0
+wt | 0
+er | 0
+pm | 0
+
+### child_without_ball  (3 rows, 0.03s)
+t | count(*)
+bs | 0
+wt | 0
+er | 1
+
+### ball_coverage  (6 rows, 0.10s)
+has_bs | has_er | has_wt | count(*)
+0 | 1 | 0 | 3421
+0 | 1 | 1 | 23
+1 | 0 | 0 | 120767
+1 | 0 | 1 | 6588
+1 | 1 | 0 | 3897
+1 | 1 | 1 | 7
+
+### no_bs_extra_types  (2 rows, 0.03s)
+extra_type | has_wt | count(*)
+wides | 0 | 3421
+wides | 1 | 23
+
+### bs_by_extra_type  (12 rows, 0.02s)
+extra_type | runs_scored | count(*)
+byes | 0 | 373
+legbyes | 0 | 2315
+legbyes | 6 | 1
+noballs | 0 | 244
+noballs | 1 | 192
+noballs | 2 | 30
+noballs | 4 | 69
+noballs | 6 | 32
+penalty | 0 | 1
+wides | 0 | 645
+wides | 1 | 1
+wides | 4 | 1
+
+### matches_missing_children  (3 rows, 0.00s)
+k | count(*)
+no_bbb | 0
+no_pm | 0
+no_wt | 0
+
+### players_per_match_team  (2 rows, 0.00s)
+n | count(*)
+10 | 1
+11 | 1135
+
+### pm_team_in_match  (1 rows, 0.00s)
+bad
+0
+
+### teams_per_match_pm  (1 rows, 0.00s)
+n | count(*)
+2 | 568
+
+### captains_keepers_per_side  (3 rows, 0.00s)
+caps | keeps | count(*)
+0 | 1 | 2
+1 | 1 | 1133
+2 | 1 | 1
+
+### ball_players_in_pm  (4 rows, 0.10s)
+r | count(*)
+striker | 178
+non_striker | 178
+bowler | 169
+player_out | 0
+
+### player_out_not_on_crease_detail  (0 rows, 0.00s)
+kind_out | count(*) | in_batting_xi
+
+### bbb_teams_vs_match  (1 rows, 0.01s)
+bad
+0
+
+### innings_batting_team_constant  (1 rows, 0.03s)
+count(*)
+3
+
+### innings_per_match  (1 rows, 0.01s)
+n | count(*)
+2 | 568
+
+### winner_in_match  (1 rows, 0.00s)
+bad_winner | bad_toss | same
+0 | 0 | 0
+
+### motm_in_match  (1 rows, 0.00s)
+motm_not_in_pm
+0
+
+### player_35_usage  (4 rows, 0.00s)
+team_id | role | count(*) | min(match_id) | max(match_id)
+3 | Player | 69 | 548311 | 829828
+5 | Player | 26 | 335989 | 392238
+9 | Player | 14 | 501205 | 501266
+13 | Player | 15 | 980910 | 981022
+
+### player_35_motm  (7 rows, 0.00s)
+match_id | match_date
+548316 | 2012-04-07
+598017 | 2013-04-13
+598027 | 2013-04-20
+729302 | 2014-04-23
+733976 | 2014-05-02
+734008 | 2014-05-13
+829802 | 2015-05-10
+
+### unused_players  (1 rows, 0.00s)
+count(*)
+1
+
+### neighbours_419136  (6 rows, 0.00s)
+match_id | match_date | season_id | team_1 | team_2 | venue
+419133 | 2010-03-25 | 3 | 2 | 6 | M Chinnaswamy Stadium
+419134 | 2010-03-28 | 3 | 5 | 3 | Sardar Patel Stadium Motera
+419135 | 2010-03-28 | 3 | 8 | 7 | Dr DY Patil Sports Academy
+419137 | 2010-03-30 | 3 | 7 | 4 | Brabourne Stadium
+419138 | 2010-03-31 | 3 | 3 | 2 | MA Chidambaram Stadium Chepauk
+419139 | 2010-03-31 | 3 | 6 | 5 | Feroz Shah Kotla
+
+### team1_usage  (9 rows, 0.00s)
+season_id | count(*)
+1 | 13
+2 | 12
+3 | 13
+4 | 15
+5 | 17
+6 | 16
+7 | 15
+8 | 13
+9 | 15
+

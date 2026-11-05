@@ -22,7 +22,14 @@ import pyarrow.parquet as pq
 from dataset.config import DatasetConfig
 from dataset.manifest import files_of, lock_diff, lock_of, recipe_sha256, sha256, write_json, writer
 from dataset.names import resolve
-from dataset.tables import TableResult, answer_table, compare_tables, detect_mixed, sqlite_table
+from dataset.tables import (
+    TableResult,
+    answer_table,
+    compare_tables,
+    detect_mixed,
+    generated,
+    sqlite_table,
+)
 from neorisk_simkit.io import read
 from neorisk_simkit.io.log import LogError, write_log
 from neorisk_simkit.io.writer import WRITER
@@ -55,14 +62,17 @@ def _index(con: sqlite3.Connection, keys: dict[str, list[str]]) -> None:
 
 def _results(cfg: DatasetConfig, db: Path, out: Path) -> dict:
     src = load_source(cfg.dir)
-    unknown = set(cfg.mixed) - set(src.tables)
-    if unknown:
-        raise BuildError(f"{cfg.name}: [results.mixed] names tables not in source.toml: "
-                         f"{sorted(unknown)}")
+    for section, names in (("mixed", cfg.mixed), ("exact", cfg.exact)):
+        unknown = set(names) - set(src.tables)
+        if unknown:
+            raise BuildError(f"{cfg.name}: [results.{section}] names tables not in source.toml: "
+                             f"{sorted(unknown)}")
     con = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
-    meta: dict = {"tables": {}, "queries": {}}
+    meta: dict = {"tables": {}, "queries": {}, "views": {}}
     try:
         ddl = dict(con.execute("SELECT name, sql FROM sqlite_master WHERE type = 'table'"))
+        meta["views"] = dict(con.execute(
+            "SELECT name, sql FROM sqlite_master WHERE type = 'view' ORDER BY rowid"))
         for t, key in src.tables.items():
             if t not in ddl:
                 raise BuildError(f"{cfg.name}: table {t!r} is not in {db.name}")
@@ -71,8 +81,13 @@ def _results(cfg: DatasetConfig, db: Path, out: Path) -> dict:
                 raise BuildError(f"{cfg.name}: table {t!r} has mixed columns {sorted(mixed)}, "
                                  f"but dataset.toml declares {sorted(want)}")
             tbl = sqlite_table(con, t, mixed)
+            bad = [c for c in cfg.exact.get(t, []) if c not in tbl.column_names
+                   or not pa.types.is_floating(tbl.schema.field(c).type)]
+            if bad:
+                raise BuildError(f"{cfg.name}: [results.exact] {t}: {bad} are not float columns")
             _write_parquet(tbl, out / "results" / f"{t}.parquet")
             meta["tables"][t] = {"ddl": ddl[t], "key": key, "mixed": sorted(mixed),
+                                 "generated": sorted(generated(con, t)),
                                  "columns": [{"name": f.name, "type": str(f.type)}
                                              for f in tbl.schema]}
     finally:
@@ -173,18 +188,24 @@ def verify(cfg: DatasetConfig, *, root: Path | None = None) -> dict:
                 tables.append(_failed(t, "no -- table block in build.sql", want.num_rows))
                 continue
             try:
-                fill_table(duck, t, blocks[t], m["ddl"], [c["name"] for c in m["columns"]],
-                           mem)
+                gen = set(m.get("generated", []))
+                fill_table(duck, t, blocks[t], m["ddl"],
+                           [c["name"] for c in m["columns"] if c["name"] not in gen], mem)
                 got = sqlite_table(mem, t, set(m["mixed"]))
             except (sqlite3.Error, duckdb.Error, pa.ArrowException, ValueError,
                     TypeError) as e:
                 tables.append(_failed(t, f"the rebuild fails: {type(e).__name__}: {e}",
                                       want.num_rows))
                 continue
-            tables.append(compare_tables(t, want, got))
+            tables.append(compare_tables(t, want, got, exact=set(cfg.exact.get(t, []))))
         extra = sorted(set(blocks) - set(meta["tables"]))
         if extra:
             tables.append(_failed("build.sql", f"blocks for tables not in the results: {extra}"))
+        for name, sql in meta.get("views", {}).items():     # the saved questions may read them
+            try:
+                mem.execute(sql)
+            except sqlite3.Error as e:
+                tables.append(_failed(f"view {name}", f"cannot be created: {e}"))
         _index(mem, {t: m["key"] for t, m in meta["tables"].items()
                      if mem.execute("SELECT 1 FROM sqlite_master WHERE name = ?",
                                     (t,)).fetchone()})

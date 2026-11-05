@@ -1,0 +1,32 @@
+# Baseball: Sean Lahman's Baseball Database, 2015 edition (CC BY-SA 3.0), via Kaggle's
+# "The History of Baseball". Keys are the measured unique ones (baseball.md §1).
+file = "Baseball.sqlite"
+note = "No NULL anywhere: '' is the only missing marker. Dates are YYYY-MM-DD text; fact rows carry only a year, so their times are rules."
+
+[tables]
+all_star = ["player_id", "year", "game_num"]
+appearances = ["year", "team_id", "player_id"]
+manager_award = ["player_id", "award_id", "year", "league_id"]
+player_award = ["player_id", "award_id", "year", "league_id"]
+manager_award_vote = ["award_id", "year", "league_id", "player_id"]
+player_award_vote = ["award_id", "year", "league_id", "player_id"]
+batting = ["player_id", "year", "stint"]
+batting_postseason = ["year", "round", "player_id"]
+player_college = ["player_id", "college_id", "year"]
+fielding = ["player_id", "year", "stint", "pos"]
+fielding_outfield = ["player_id", "year", "stint"]
+fielding_postseason = ["player_id", "year", "round", "pos"]
+hall_of_fame = ["player_id", "yearid", "votedby"]
+home_game = ["year", "team_id", "park_id"]
+manager = ["year", "team_id", "inseason"]
+manager_half = ["player_id", "year", "team_id", "half"]
+player = ["player_id"]
+park = ["park_id"]
+pitching = ["player_id", "year", "stint"]
+pitching_postseason = ["year", "round", "player_id"]
+salary = ["year", "team_id", "player_id"]
+college = ["college_id"]
+postseason = ["year", "round"]
+team = ["year", "team_id"]
+team_franchise = ["franchise_id"]
+team_half = ["year", "team_id", "half"]

@@ -1,0 +1,154 @@
+### row_counts  (2 rows, 0.00s)
+t | n
+SalaryDataset | 4344
+StaffHours | 236
+
+### salary_typeof  (3 rows, 0.00s)
+i | c | j | sr | l | s | n
+integer | null | text | real | text | text | 3
+integer | text | text | null | text | text | 2
+integer | text | text | real | text | text | 4339
+
+### salary_nulls  (1 rows, 0.00s)
+company | job | reported | loc | sal | company_empty
+3 | 0 | 2 | 0 | 0 | 0
+
+### null_reported_rows  (2 rows, 0.00s)
+index | CompanyName | JobTitle | SalariesReported | Location | Salary
+4027 | First Student Data Scientist | Data Analyst | None | Pune | ₹4,53,300/yr
+4237 | Amazon | Machine Learning Data Associate II | None | New Delhi | ₹3,29,439/yr
+
+### index_vs_rowid  (1 rows, 0.00s)
+mism | min("index") | max("index")
+0 | 0 | 4343
+
+### salary_format_mix  (9 rows, 0.00s)
+cur | per | n
+₹ | yr | 3211
+₹ | mo | 1087
+₹ | hr | 20
+$ | yr | 15
+£ | yr | 5
+$ | hr | 2
+$ | mo | 2
+A | yr | 1
+£ | mo | 1
+
+### salary_currency_samples  (10 rows, 0.00s)
+Salary | n
+$1,00,488/yr | 1
+$1,24,434/yr | 1
+$2,05,476/yr | 1
+$2,24,948/yr | 1
+$26/hr | 1
+$27,897/yr | 1
+$37,083/mo | 1
+$5,11,613/yr | 1
+$5,13,690/yr | 1
+$50,367/mo | 1
+
+### indian_digit_grouping  (1 rows, 0.00s)
+n
+0
+
+### duplicates  (1 rows, 0.00s)
+full_dups | key_dups
+0 | 326
+
+### dup_examples  (8 rows, 0.00s)
+CompanyName | JobTitle | Location | n | s
+ABC | Data Scientist | Mumbai | 2 | ₹10,36,761/yr | $96,739/yr
+ABC | Data Scientist | New Delhi | 3 | ₹7,28,836/yr | ₹30,82,142/yr | ₹87,000/mo
+ABC | Data Scientist | Pune | 2 | ₹42,249/mo | ₹1,01,398/mo
+ANZ Bank | Data Analyst | Bangalore | 2 | ₹9,99,547/yr | ₹6,43,705/yr
+Accenture | Data Analyst | Bangalore | 2 | ₹6,08,077/yr | ₹54,972/mo
+Accenture | Data Analyst | Pune | 3 | ₹5,81,174/yr | ₹15,000/mo | ₹18,036/mo
+Accenture | Data Engineer | Bangalore | 2 | ₹6,54,767/yr | ₹50,367/mo
+Accenture | Data Scientist | Bangalore | 2 | ₹9,44,110/yr | ₹59,606/mo
+
+### job_title_mix  (12 rows, 0.00s)
+JobTitle | n
+Data Scientist | 1844
+Data Analyst | 990
+Data Engineer | 805
+Machine Learning Engineer | 568
+Data Science | 43
+Senior Data Scientist | 39
+Junior Data Scientist | 18
+Senior Machine Learning Engineer | 9
+Lead Data Scientist | 6
+Software Engineer - Machine Learning | 2
+Machine Learning Scientist | 2
+Machine Learning Developer | 2
+
+### job_titles  (1 rows, 0.00s)
+titles | companies
+26 | 2529
+
+### reported_dist  (4 rows, 0.00s)
+b | n
+1 | 2504
+2-5 | 1421
+21+ | 63
+6-20 | 354
+
+### reported_integral  (1 rows, 0.00s)
+integral | n
+4342 | 4342
+
+### rowid_sort  (1 rows, 0.00s)
+runs
+60
+
+### rowid_reported_desc_within_runs  (1 rows, 0.00s)
+asc_steps | pairs
+5 | 4284
+
+### whitespace  (1 rows, 0.00s)
+company_ws | job_ws
+0 | 0
+
+### gold_local253_strip_digits  (20 rows, 0.01s)
+Location | CompanyName | av | nat
+Hyderabad | Qwerty Concepts | 5081882.000000 | 766041.537983
+Hyderabad | SetuServ | 4949704.000000 | 766041.537983
+Hyderabad | XYZ (Turkey) | 3000000.000000 | 766041.537983
+Hyderabad | ABCDEF | 2745265.500000 | 766041.537983
+Hyderabad | MarketLinc | 2658491.000000 | 766041.537983
+Mumbai | Rahul Industries | 6044006.000000 | 766041.537983
+Mumbai | NVIDIA | 4187500.000000 | 766041.537983
+Mumbai | VINAYA KUMAR | 4029337.000000 | 766041.537983
+Mumbai | Goldman Sachs | 3977066.000000 | 766041.537983
+Mumbai | Zee Entertainment Enterprises Ltd. | 3531413.000000 | 766041.537983
+New Delhi | Super Highway Labs | 3665141.000000 | 766041.537983
+New Delhi | Greenlight Planet | 2876666.000000 | 766041.537983
+New Delhi | Boston Scientific | 2707106.000000 | 766041.537983
+New Delhi | DreamOrbit Softech | 2612697.000000 | 766041.537983
+New Delhi | OLX Group | 2606510.000000 | 766041.537983
+Pune | Atos | 5273205.000000 | 766041.537983
+Pune | Volkswagen | 5184922.000000 | 766041.537983
+Pune | RAKESH GROUP | 5016304.000000 | 766041.537983
+Pune | The City Bank | 5000000.000000 | 766041.537983
+Pune | DasDas | 4466071.000000 | 766041.537983
+
+### national_avg_variants  (6 rows, 0.02s)
+v | a
+all rows | 766041.537983
+avg of company avgs | 743441.685396
+avg of (loc,company) avgs | 752888.651772
+only /yr rows | 1012608.686881
+only rupee rows | 770654.108615
+four cities | 694370.209420
+
+### meta_rank  (1 rows, 0.00s)
+index | CompanyName | JobTitle | SalariesReported | Location | Salary
+4062 | Meta | Machine Learning Engineer | 1.0 | Hyderabad | ₹3,017/hr
+
+### location_mix  (5 rows, 0.00s)
+Location | n | pct
+Bangalore | 1584 | 36.5
+Pune | 818 | 18.8
+Hyderabad | 669 | 15.4
+New Delhi | 656 | 15.1
+Mumbai | 617 | 14.2
+

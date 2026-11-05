@@ -1,0 +1,18 @@
+# dbimdb: an IMDb scrape weighted to Hindi cinema (1931–2018), reshaped by pandas to_sql.
+file = "Db-IMDB.sqlite"
+note = "No date but Movie.year. Releases are Jan 1 of the year; ratings are a snapshot at 2019-01-01 (rules)."
+
+[tables]
+Movie = ["MID"]
+Genre = ["GID"]
+Language = ["LAID"]
+Country = ["CID"]
+Location = ["LID"]
+M_Location = ["MID"]
+M_Country = ["MID"]
+M_Language = ["MID"]
+M_Genre = ["MID"]
+Person = ["index"]
+M_Producer = ["index"]
+M_Director = ["MID"]
+M_Cast = ["index"]

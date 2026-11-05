@@ -1,0 +1,55 @@
+## counts
+t|n|ids|lo|hi
+funding|1085|1074|0|1073
+dates|1085|1074|0|1073
+industries|1085|1074|0|1073
+## id range is dense 0..1073 (missing ids)
+missing_in_funding
+0
+## duplicate ids: rows, distinct full rows
+t|dup_ids|rows|distinct_rows
+funding|11|22|11
+dates|11|22|11
+industries|11|22|11
+## rowids of the first copy of each duplicate (min rowid), per table
+'funding'|group_concat(r, ' ')
+funding|1 2 3 4 5 6 7 8 9 10 11
+'dates'|group_concat(r, ' ')
+dates|1 2 3 4 5 6 7 8 9 10 11
+'industries'|group_concat(r, ' ')
+industries|1 2 3 4 5 6 7 8 9 10 11
+## duplicated id sets overlap between tables
+f_and_d
+0
+f_and_i
+0
+d_and_i
+0
+## rows 12..1085: same company at same rowid in all 3 tables; distinct ids there
+aligned
+694
+rows_12_on|ids_12_on
+1074|1074
+ids_rows_1_11_in_12_on
+11
+## physical order of rows 12.. vs company_id: ascents/descents
+ascents|descents
+538|535
+## is physical order sorted by date_joined? (rows 12..)
+asc_|desc_|eq
+558|514|1
+## storage types
+'funding'|typeof(company_id)|typeof(valuation)|typeof(funding)|typeof(select_investors)|count(*)
+funding|integer|integer|integer|null|1
+funding|integer|integer|integer|text|1084
+'dates'|typeof(company_id)|typeof(date_joined)|typeof(year_founded)|length(date_joined)|count(*)
+dates|integer|text|integer|23|1085
+'industries'|typeof(company_id)|typeof(industry)|count(*)
+industries|integer|text|1085
+## date_joined format
+n|ymd_midnight_ms
+1085|1085
+min(date_joined)|max(date_joined)|min(year_founded)|max(year_founded)
+2007-07-02T00:00:00.000|2022-04-05T00:00:00.000|1919|2021
+bad_dates
+0

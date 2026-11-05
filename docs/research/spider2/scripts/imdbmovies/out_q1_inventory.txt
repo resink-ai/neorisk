@@ -1,0 +1,154 @@
+### row_counts  (7 rows, 0.00s)
+t | n
+ERD | 25
+movies | 7997
+genre | 14662
+director_mapping | 3867
+role_mapping | 15615
+names | 25735
+ratings | 7997
+
+### sqlite_master  (7 rows, 0.00s)
+type | name
+table | ERD
+table | director_mapping
+table | genre
+table | movies
+table | names
+table | ratings
+table | role_mapping
+
+### typeof_columns  (24 rows, 0.03s)
+c | t | n
+movies.id | text | 7997
+movies.title | text | 7997
+movies.year | integer | 7997
+movies.date_published | text | 7997
+movies.duration | integer | 7997
+movies.country | null | 20
+movies.country | text | 7977
+movies.worlwide_gross_income | null | 3724
+movies.worlwide_gross_income | text | 4273
+movies.languages | null | 198
+movies.languages | text | 7799
+movies.production_company | null | 528
+movies.production_company | text | 7469
+genre.genre | text | 14662
+role_mapping.category | text | 15615
+names.height | null | 17335
+names.height | real | 8400
+names.date_of_birth | null | 13431
+names.date_of_birth | text | 12304
+names.known_for_movies | null | 15226
+names.known_for_movies | text | 10509
+ratings.avg_rating | real | 7997
+ratings.total_votes | integer | 7997
+ratings.median_rating | real | 7997
+
+### empties  (7 rows, 0.01s)
+c | empty | nul
+movies.country | 0 | 20
+movies.worlwide_gross_income | 0 | 3724
+movies.languages | 0 | 198
+movies.production_company | 0 | 528
+names.date_of_birth | 0 | 13431
+names.known_for_movies | 0 | 15226
+names.height | 0 | 17335
+
+### key_uniqueness  (7 rows, 0.02s)
+k | n | d
+movies.id | 7997 | 7997
+names.id | 25735 | 25735
+ratings.movie_id | 7997 | 7997
+genre(movie_id,genre) | 14662 | 14662
+director_mapping(m,n) | 3867 | 3867
+role_mapping(m,n) | 15615 | 15615
+role_mapping(m,n,c) | 15615 | 15615
+
+### full_row_dups  (4 rows, 0.02s)
+t | extra
+role_mapping | 0
+director_mapping | 0
+genre | 0
+names | 0
+
+### role_dup_samples  (0 rows, 0.00s)
+movie_id | name_id | category | count(*)
+
+### role_dup_shape  (0 rows, 0.01s)
+copies | pairs
+
+### role_two_categories  (1 rows, 0.00s)
+count(*)
+0
+
+### fk_orphans  (7 rows, 0.03s)
+fk | n | orphans
+ratings.movie_id->movies | 7997 | 0
+genre.movie_id->movies | 14662 | 0
+director_mapping.movie_id->movies | 3867 | 0
+director_mapping.name_id->names | 3867 | 0
+role_mapping.movie_id->movies | 15615 | 0
+role_mapping.name_id->names | 15615 | 0
+names.known_for_movies->movies | 10509 | 2261
+
+### coverage  (1 rows, 0.03s)
+no_rating | no_genre | no_director | no_role | names_unused | role_and_director
+0 | 0 | 4420 | 4240 | 9590 | 69
+
+### known_for_shape  (4 rows, 0.00s)
+commas | count(*)
+0 | 8248
+1 | 1821
+2 | 396
+3 | 44
+
+### known_for_in_credits  (1 rows, 5.17s)
+nonempty | is_credit
+10509 | 6215
+
+### rowid_orders  (6 rows, 0.06s)
+t | pairs | incr
+movies by id | 7996 | 7968
+names by id | 25734 | 24139
+ratings by movie_id | 7996 | 7996
+genre by movie_id | 14661 | 14661
+role by movie_id | 15614 | 15614
+director by movie_id | 3866 | 3866
+
+### movies_rowid_order_by_year  (1 rows, 0.00s)
+pairs | nondecr
+7996 | 7996
+
+### ratings_rowid_vs_movies_rowid  (1 rows, 0.00s)
+n | same_row
+7997 | 9
+
+### erd_rows  (25 rows, 0.00s)
+table | column | Unnamed: 2 | Unnamed: 3 | Unnamed: 4 | Unnamed: 5 | Unnamed: 6 | Unnamed: 7 | Unnamed: 8 | Unnamed: 9 | Unnamed: 10 | Unnamed: 11 | Unnamed: 12
+movie | id | None | None | None | None | None | None | None | genre | None | None | ratings
+movie | title | None | None | None | None | None | None | None | * movie_id | None | None | * movie_id
+movie | year | None | None | None | None | None | None | None | * genre | None | None | avg_rating
+movie | date_published | None | None | None | None | None | None | None | None | None | None | total_votes
+movie | duration | None | None | None | None | None | None | None | None | None | None | median_rating
+movie | country | None | None | None | None | None | None | None | None | None | None | None
+movie | worlwide_gross_income | None | None | None | None | None | None | None | None | None | None | None
+movie | languages | None | None | None | None | None | None | None | movie | None | None | None
+movie | production_company | None | None | None | None | None | None | None | * id | None | None | None
+genre | movie_id | None | None | None | None | None | None | None | title | None | None | None
+genre | genre | None | None | None | None | None | None | None | year | None | None | None
+director_mapping | movie_id | None | None | None | None | None | None | None | date_published | None | None | None
+director_mapping | name_id | None | None | None | None | role_mapping | None | None | duration | None | None | director_mapping
+role_mapping | movie_id | None | None | None | None | * movie_id | None | None | country | None | None | * movie_id
+role_mapping | name_id | None | None | None | None | * name_id | None | None | worlwide_gross_income | None | None | * name_id
+role_mapping | category | None | None | None | None | category | None | None | languages | None | None | None
+names | id | None | None | None | None | None | None | None | production_company | None | None | None
+names | name | None | None | None | None | None | None | None | None | None | None | None
+names | height | None | None | None | None | None | None | None | names | None | None | None
+names | date_of_birth | None | None | None | None | None | None | None | * id | None | None | None
+names | known_for_movies | None | None | None | None | None | None | None | name | None | None | None
+ratings | movie_id | None | None | None | None | None | None | None | height | None | None | None
+ratings | avg_rating | None | None | None | None | None | None | None | date_of_birth | None | None | None
+ratings | total_votes | None | None | None | None | None | None | None | known_for_movies | None | None | None
+ratings | median_rating | None | None | None | None | None | None | None | None | None | None | None
+

@@ -1,0 +1,78 @@
+### setup_indexes (setup on in-memory copy)
+
+### fielding_outfield_vs_appearances  (1 rows, 0.10s)
+n | all_eq | no_app
+11283 | 11047 | 2
+
+### team_vs_batting_sums  (1 rows, 0.04s)
+n | r_eq | h_eq | hr_eq | ab_eq | bb_eq | all5
+2805 | 2626 | 2691 | 2788 | 2649 | 2570 | 2390
+
+### team_vs_pitching_sums  (1 rows, 0.02s)
+n | w_eq | l_eq | soa_eq | ipouts_eq | er_eq
+2805 | 2748 | 2746 | 2748 | 1332 | 1495
+
+### team_vs_manager_sums  (1 rows, 0.00s)
+n | w_eq | l_eq | g_eq
+2805 | 2801 | 2798 | 2735
+
+### team_vs_home_game_attendance  (1 rows, 0.00s)
+n | att_eq | team_att_present | ghome_eq | ghome_present
+2774 | 447 | 2496 | 2357 | 2376
+
+### team_half_vs_team  (1 rows, 0.00s)
+n | wlg_eq
+26 | 19
+
+### manager_half_vs_manager  (1 rows, 0.00s)
+n | wlg_eq
+55 | 55
+
+### appearances_g_batting_vs_batting_g  (1 rows, 0.10s)
+n | eq | g_all_eq
+100651 | 84707 | 99636
+
+### appearances_g_p_vs_pitching_g  (1 rows, 0.03s)
+n | eq
+43843 | 43586
+
+### postseason_wins_vs_lines  (1 rows, 0.00s)
+n | plausible
+307 | 306
+
+### player_award_vote_winner_in_award  (3 rows, 1.52s)
+award_id | n | in_award
+Cy Young | 110 | 110
+MVP | 192 | 192
+Rookie of the Year | 138 | 138
+
+### player_award_ids  (27 rows, 0.00s)
+award_id | count(*) | min(year) | max(year)
+Baseball Magazine All-Star | 1520 | 1908 | 1950
+TSN All-Star | 1350 | 1925 | 2007
+Gold Glove | 1055 | 1957 | 2015
+Silver Slugger | 649 | 1980 | 2015
+Most Valuable Player | 192 | 1911 | 2015
+Rookie of the Year | 138 | 1947 | 2015
+TSN Pitcher of the Year | 135 | 1944 | 2012
+Cy Young Award | 110 | 1956 | 2015
+TSN Player of the Year | 92 | 1944 | 1991
+TSN Fireman of the Year | 88 | 1960 | 2000
+TSN Major League Player of the Year | 81 | 1936 | 2015
+Rolaids Relief Man Award | 74 | 1976 | 2012
+Babe Ruth Award | 64 | 1949 | 2012
+World Series MVP | 63 | 1955 | 2015
+Lou Gehrig Memorial Award | 57 | 1955 | 2011
+All-Star Game MVP | 55 | 1962 | 2015
+Hutch Award | 48 | 1965 | 2012
+Roberto Clemente Award | 46 | 1971 | 2015
+NLCS MVP | 39 | 1977 | 2015
+Pitching Triple Crown | 38 | 1877 | 2011
+ALCS MVP | 35 | 1980 | 2015
+Hank Aaron Award | 34 | 1999 | 2015
+TSN Guide MVP | 33 | 1929 | 1945
+Branch Rickey Award | 23 | 1992 | 2014
+Comeback Player of the Year | 22 | 2005 | 2015
+TSN Reliever of the Year | 20 | 2001 | 2010
+Triple Crown | 17 | 1878 | 2012
+

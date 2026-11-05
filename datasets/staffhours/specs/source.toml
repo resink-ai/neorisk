@@ -1,0 +1,7 @@
+# Staff hours: a generated clock-in/clock-out log (staff A..Z, 2013-01-02..2013-03-12), the
+# StaffHours table of Spider2's education_business catalog.
+file = "education_business.sqlite"
+note = "Date and HH:MM text, read as UTC. Staff are created at their first clock event (a rule)."
+
+[tables]
+StaffHours = ["StaffMember", "EventDate", "EventTime"]

@@ -6,6 +6,8 @@
     [recipe]                    # free-form; empty for spider2 (the specs sit beside it)
     [results.mixed]             # spider2: columns stored as SQLite text, per table
     orders = ["note"]
+    [results.exact]             # spider2: float columns compared bit for bit, not within 1e-9
+    case_ids = ["case_id"]
 """
 
 from __future__ import annotations
@@ -28,6 +30,7 @@ class DatasetConfig:
     dir: Path
     mixed: dict[str, list[str]] = field(default_factory=dict)
     recipe: dict = field(default_factory=dict)
+    exact: dict[str, list[str]] = field(default_factory=dict)
 
 
 def load(name_or_dir: str | Path) -> DatasetConfig:
@@ -45,8 +48,10 @@ def load(name_or_dir: str | Path) -> DatasetConfig:
         raise ValueError(f"{f}: version {version!r} must be v1, v2, ...")
     if kind not in KINDS:
         raise ValueError(f"{f}: kind {kind!r} must be one of {KINDS}")
-    mixed = {k: list(v) for k, v in t.get("results", {}).get("mixed", {}).items()}
-    return DatasetConfig(name, version, kind, d, mixed, dict(t.get("recipe", {})))
+    results = t.get("results", {})
+    mixed = {k: list(v) for k, v in results.get("mixed", {}).items()}
+    exact = {k: list(v) for k, v in results.get("exact", {}).items()}
+    return DatasetConfig(name, version, kind, d, mixed, dict(t.get("recipe", {})), exact)
 
 
 def all_configs(root: Path | None = None) -> list[DatasetConfig]:

@@ -1,0 +1,115 @@
+## Agents  rows=9
+   pk=['AgentID']  rowid order == pk order: 9/9
+   AgentID                  INT              [integer:9] empty=0 \N=0 ws=0 distinct=9 min=1 max=9
+   AgtFirstName             nvarchar (25)    [text:9] empty=0 \N=0 ws=0 distinct=9 min='Caleb' max='William'
+   AgtLastName              nvarchar (25)    [text:9] empty=0 \N=0 ws=0 distinct=8 min='Bishop' max='Wier'
+   AgtStreetAddress         nvarchar (50)    [text:9] empty=0 \N=0 ws=0 distinct=9 min='122 Spring River Drive' max='908 W. Capital Way'
+   AgtCity                  nvarchar (30)    [text:9] empty=0 \N=0 ws=0 distinct=5 min='Bellevue' max='Tacoma'
+   AgtState                 nvarchar (2)     [text:9] empty=0 \N=0 ws=0 distinct=1 min='WA' max='WA'
+   AgtZipCode               nvarchar (10)    [text:9] empty=0 \N=0 ws=0 distinct=6 min='98006' max='98413'
+   AgtPhoneNumber           nvarchar (15)    [text:9] empty=0 \N=0 ws=0 distinct=9 min='555-0037' max='555-2681'
+   DateHired                date             [text:9] empty=0 \N=0 ws=0 distinct=8 min='1997-05-15' max='2000-02-05'
+   Salary                   decimal(15, 2)   [integer:9] empty=0 \N=0 ws=0 distinct=8 min=50 max=35000
+   CommissionRate           float(24)        [real:9] empty=0 \N=0 ws=0 distinct=7 min=0.01 max=0.06
+
+## Customers  rows=15
+   pk=['CustomerID']  rowid order == pk order: 15/15
+   CustomerID               INT              [integer:15] empty=0 \N=0 ws=0 distinct=15 min=10001 max=10015
+   CustFirstName            nvarchar (25)    [text:15] empty=0 \N=0 ws=0 distinct=15 min='Carol' max='Zachary'
+   CustLastName             nvarchar (25)    [text:15] empty=0 \N=0 ws=0 distinct=15 min='Berg' max='Waldal'
+   CustStreetAddress        nvarchar (50)    [text:15] empty=0 \N=0 ws=0 distinct=14 min='12330 Kingman Drive' max='Route 2, Box 203B'
+   CustCity                 nvarchar (30)    [text:15] empty=0 \N=0 ws=0 distinct=6 min='Auburn' max='Tacoma'
+   CustState                nvarchar (2)     [text:15] empty=0 \N=0 ws=0 distinct=1 min='WA' max='WA'
+   CustZipCode              nvarchar (10)    [text:15] empty=0 \N=0 ws=0 distinct=7 min='98002' max='98413'
+   CustPhoneNumber          nvarchar (15)    [text:15] empty=0 \N=0 ws=0 distinct=15 min='555-0399' max='555-9938'
+
+## Engagements  rows=111
+   pk=['EngagementNumber']  rowid order == pk order: 111/111
+   EngagementNumber         INT              [integer:111] empty=0 \N=0 ws=0 distinct=111 min=2 max=131
+   StartDate                date             [text:111] empty=0 \N=0 ws=0 distinct=64 min='2017-09-02' max='2018-03-04'
+   EndDate                  date             [text:111] empty=0 \N=0 ws=0 distinct=77 min='2017-09-06' max='2018-03-13'
+   StartTime                time             [text:111] empty=0 \N=0 ws=0 distinct=9 min='12:00:00' max='20:00:00'
+   StopTime                 time             [text:111] empty=0 \N=0 ws=0 distinct=13 min='00:00:00' max='23:00:00'
+   ContractPrice            decimal(15, 2)   [integer:111] empty=0 \N=0 ws=0 distinct=48 min=110 max=14105
+   CustomerID               INT              [integer:111] empty=0 \N=0 ws=0 distinct=13 min=10001 max=10015
+   AgentID                  INT              [integer:111] empty=0 \N=0 ws=0 distinct=8 min=1 max=8
+   EntertainerID            INT              [integer:111] empty=0 \N=0 ws=0 distinct=12 min=1001 max=1013
+
+## Entertainer_Members  rows=40
+   pk=['EntertainerID', 'MemberID']  rowid order == pk order: 40/40
+   EntertainerID            INT              [integer:40] empty=0 \N=0 ws=0 distinct=13 min=1001 max=1013
+   MemberID                 INT              [integer:40] empty=0 \N=0 ws=0 distinct=25 min=101 max=125
+   Status                   smallint         [integer:40] empty=0 \N=0 ws=0 distinct=2 min=1 max=2
+
+## Entertainer_Styles  rows=32
+   pk=['EntertainerID', 'StyleID']  rowid order == pk order: 32/32
+   EntertainerID            INT              [integer:32] empty=0 \N=0 ws=0 distinct=13 min=1001 max=1013
+   StyleID                  smallint         [integer:32] empty=0 \N=0 ws=0 distinct=17 min=3 max=24
+   StyleStrength            smallint         [integer:32] empty=0 \N=0 ws=0 distinct=3 min=1 max=3
+
+## Entertainers  rows=13
+   pk=['EntertainerID']  rowid order == pk order: 13/13
+   EntertainerID            INT              [integer:13] empty=0 \N=0 ws=0 distinct=13 min=1001 max=1013
+   EntStageName             nvarchar (50)    [text:13] empty=0 \N=0 ws=0 distinct=13 min='Carol Peacock Trio' max='Topazz'
+   EntSSN                   nvarchar (12)    [text:13] empty=0 \N=0 ws=0 distinct=13 min='888-18-1013' max='888-98-1133'
+   EntStreetAddress         nvarchar (50)    [text:13] empty=0 \N=0 ws=0 distinct=13 min='13920 S.E. 40th Street' max='Route 2, Box 203B'
+   EntCity                  nvarchar (30)    [text:13] empty=0 \N=0 ws=0 distinct=5 min='Auburn' max='Woodinville'
+   EntState                 nvarchar (2)     [text:13] empty=0 \N=0 ws=0 distinct=1 min='WA' max='WA'
+   EntZipCode               nvarchar (10)    [text:13] empty=0 \N=0 ws=0 distinct=9 min='98002' max='99837'
+   EntPhoneNumber           nvarchar (15)    [text:13] empty=0 \N=0 ws=0 distinct=13 min='555-0039' max='555-9936'
+   EntWebPage               nvarchar (50)    [null:5,text:8] empty=0 \N=0 ws=0 distinct=8 min='www.coldwatercows.com' max='www.topazz.com'
+   EntEMailAddress          nvarchar (50)    [null:6,text:7] empty=0 \N=0 ws=0 distinct=7 min='carolinec@willow.com' max='susan@gs.com'
+   DateEntered              date             [text:13] empty=0 \N=0 ws=0 distinct=13 min='1995-01-20' max='1998-10-12'
+
+## Members  rows=25
+   pk=['MemberID']  rowid order == pk order: 25/25
+   MemberID                 INT              [integer:25] empty=0 \N=0 ws=0 distinct=25 min=101 max=125
+   MbrFirstName             nvarchar (25)    [text:25] empty=0 \N=0 ws=0 distinct=24 min='Angel' max='Suzanne'
+   MbrLastName              nvarchar (25)    [text:25] empty=0 \N=0 ws=0 distinct=21 min='Bonnicksen' max='Viescas'
+   MbrPhoneNumber           nvarchar (15)    [text:25] empty=0 \N=0 ws=0 distinct=25 min='555-0399' max='555-9938'
+   Gender                   nvarchar (2)     [null:1,text:24] empty=0 \N=0 ws=0 distinct=2 min='F' max='M'
+
+## Musical_Preferences  rows=36
+   pk=['CustomerID', 'StyleID']  rowid order == pk order: 36/36
+   CustomerID               INT              [integer:36] empty=0 \N=0 ws=0 distinct=15 min=10001 max=10015
+   StyleID                  smallint         [integer:36] empty=0 \N=0 ws=0 distinct=20 min=1 max=24
+   PreferenceSeq            smallint         [integer:36] empty=0 \N=0 ws=0 distinct=3 min=1 max=3
+
+## Musical_Styles  rows=25
+   pk=['StyleID']  rowid order == pk order: 25/25
+   StyleID                  smallint         [integer:25] empty=0 \N=0 ws=0 distinct=25 min=1 max=25
+   StyleName                nvarchar (75)    [text:25] empty=0 \N=0 ws=0 distinct=25 min="40's Ballroom Music" max='Variety'
+
+## ztblDays  rows=1096
+   pk=['DateField']  rowid order == pk order: 1096/1096
+   DateField                date             [text:1096] empty=0 \N=0 ws=0 distinct=1096 min='2017-01-01' max='2020-01-01'
+
+## ztblMonths  rows=36
+   pk=['YearNumber', 'MonthNumber']  rowid order == pk order: 36/36
+   MonthYear                nvarchar (15)    [text:36] empty=0 \N=0 ws=0 distinct=36 min='April 2017' max='September 2019'
+   YearNumber               smallint         [integer:36] empty=0 \N=0 ws=0 distinct=3 min=2017 max=2019
+   MonthNumber              smallint         [integer:36] empty=0 \N=0 ws=0 distinct=12 min=1 max=12
+   MonthStart               date             [text:36] empty=0 \N=0 ws=0 distinct=36 min='2017-01-01' max='2019-12-01'
+   MonthEnd                 date             [text:36] empty=0 \N=0 ws=0 distinct=36 min='2017-01-31' max='2019-12-31'
+   January                  smallint         [integer:36] empty=0 \N=0 ws=0 distinct=2 min=0 max=1
+   February                 smallint         [integer:36] empty=0 \N=0 ws=0 distinct=2 min=0 max=1
+   March                    smallint         [integer:36] empty=0 \N=0 ws=0 distinct=2 min=0 max=1
+   April                    smallint         [integer:36] empty=0 \N=0 ws=0 distinct=2 min=0 max=1
+   May                      smallint         [integer:36] empty=0 \N=0 ws=0 distinct=2 min=0 max=1
+   June                     smallint         [integer:36] empty=0 \N=0 ws=0 distinct=2 min=0 max=1
+   July                     smallint         [integer:36] empty=0 \N=0 ws=0 distinct=2 min=0 max=1
+   August                   smallint         [integer:36] empty=0 \N=0 ws=0 distinct=2 min=0 max=1
+   September                smallint         [integer:36] empty=0 \N=0 ws=0 distinct=2 min=0 max=1
+   October                  smallint         [integer:36] empty=0 \N=0 ws=0 distinct=2 min=0 max=1
+   November                 smallint         [integer:36] empty=0 \N=0 ws=0 distinct=2 min=0 max=1
+   December                 smallint         [integer:36] empty=0 \N=0 ws=0 distinct=2 min=0 max=1
+
+## ztblSkipLabels  rows=60
+   pk=['LabelCount']  rowid order == pk order: 60/60
+   LabelCount               INT              [integer:60] empty=0 \N=0 ws=0 distinct=60 min=1 max=60
+
+## ztblWeeks  rows=156
+   pk=['WeekStart']  rowid order == pk order: 156/156
+   WeekStart                date             [text:156] empty=0 \N=0 ws=0 distinct=156 min='2017-01-01' max='2019-12-22'
+   WeekEnd                  date             [text:156] empty=0 \N=0 ws=0 distinct=156 min='2017-01-07' max='2019-12-28'
+

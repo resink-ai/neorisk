@@ -1,0 +1,248 @@
+### lap_time_text_vs_ms  (1 rows, 0.11s)
+n | eq_m_ss_sss | min_ms | max_ms | over_1h
+575029 | 574986 | 55404 | 7507547 | 43
+
+### lap_time_text_bad  (10 rows, 0.00s)
+race_id | driver_id | lap | time | milliseconds
+847 | 20 | 25 | 2:05:05.152 | 7505152
+847 | 4 | 25 | 2:05:04.226 | 7504226
+847 | 13 | 25 | 2:05:06.656 | 7506656
+847 | 17 | 25 | 2:05:05.034 | 7505034
+847 | 3 | 25 | 2:05:01.488 | 7501488
+847 | 18 | 25 | 2:05:03.775 | 7503775
+847 | 30 | 25 | 2:05:02.081 | 7502081
+847 | 2 | 25 | 2:05:07.547 | 7507547
+847 | 808 | 25 | 2:05:06.243 | 7506243
+847 | 814 | 25 | 2:05:03.980 | 7503980
+
+### pit_duration_text_vs_ms  (1 rows, 0.00s)
+n | eq_rule | over_1min | mn | mx | time_hh_mm_ss
+10990 | 10990 | 500 | 12897 | 3069017 | 10990
+
+### pit_duration_bad  (0 rows, 0.00s)
+race_id | driver_id | stop | duration | milliseconds
+
+### pit_stop_time_vs_race_time  (1 rows, 0.00s)
+races | race_time_null | first_stop_within_3h_of_utc_start
+273 | 0 | 116
+
+### pit_stop_time_order  (1 rows, 0.00s)
+pairs | later_lap_earlier_clock | of_which_midnight_wrap
+5637 | 0 | 0
+
+### pit_stop_vs_lap_running_time  (1 rows, 0.13s)
+races | spread_le_2min | spread_le_10min | max_spread_s
+272 | 264 | 265 | 7908.364000082016
+
+### results_time_text  (1 rows, 0.01s)
+timed | winners | winner_eq_rule | plus_gap | gap_lt_1min_eq_rule | gap_ge_1min | gap_ge_1min_eq_rule
+7544 | 1122 | 753 | 6422 | 3554 | 2218 | 1556
+
+### results_time_text_examples  (15 rows, 0.00s)
+time | count(*)
++8:22.19 | 5
++5.7 | 4
++46.2 | 4
++1:29.6 | 4
++0.7 | 4
++6.1 | 3
++58.2 | 3
++57.1 | 3
++52.0 | 3
++41.2 | 3
++31.8 | 3
++3.4 | 3
++24.2 | 3
++20.2 | 3
++1:15.9 | 3
+
+### results_time_ms_null_mismatch  (1 rows, 0.00s)
+time_ms_nullness_differs | time_without_ms | ms_without_time
+0 | 0 | 0
+
+### position_text_values  (6 rows, 0.00s)
+position_text | count(*) | pos_null | min(position_order) | max(position_order)
+D | 149 | 149 | 6 | 30
+E | 9 | 9 | 20 | 32
+F | 1368 | 1368 | 15 | 39
+N | 190 | 190 | 6 | 23
+R | 8876 | 8876 | 5 | 34
+W | 334 | 334 | 7 | 39
+
+### position_vs_text  (1 rows, 0.00s)
+num_text_differs | pos_ne_order | null_pos_numeric_text
+0 | 13 | 2
+
+### points_values  (39 rows, 0.00s)
+points | count(*)
+0.0 | 18469
+0.5 | 6
+1.0 | 1055
+1.33 | 3
+1.5 | 17
+2.0 | 1114
+2.5 | 1
+3.0 | 823
+3.14 | 1
+3.5 | 1
+4.0 | 1100
+4.14 | 1
+4.5 | 4
+5.0 | 135
+6.0 | 1079
+6.14 | 1
+6.5 | 2
+7.0 | 16
+7.5 | 1
+8.0 | 463
+8.14 | 1
+8.5 | 2
+9.0 | 443
+10.0 | 601
+11.0 | 8
+12.0 | 282
+12.5 | 1
+13.0 | 10
+15.0 | 281
+16.0 | 11
+18.0 | 268
+19.0 | 23
+20.0 | 1
+24.0 | 1
+25.0 | 256
+26.0 | 35
+30.0 | 1
+36.0 | 1
+50.0 | 1
+
+### fastest_lap_fields  (1 rows, 0.00s)
+fl_null | rank_null | rank_zero | rank_without_fl | flt_null | fls_null | speed_trailing_zero | min(fastest_lap_speed) | max(fastest_lap_speed)
+18499 | 18249 | 250 | 250 | 18499 | 18499 | 836 | 100.615 | 91.610
+
+### rank_without_fastest_lap  (1 rows, 0.00s)
+rank | count(*) | min(ra.year) | max(ra.year)
+0 | 250 | 2011 | 2024
+
+### qualifying_text  (1 rows, 0.00s)
+q1_empty | q1_null | q2_empty | q2_null | q3_empty | q3_null | q1_m_ss_sss | q1_other
+0 | 154 | 13 | 4572 | 27 | 6713 | 10099 | 1
+
+### qualifying_odd  (1 rows, 0.00s)
+q1 | count(*)
+16:42.640 | 1
+
+### qualifying_empty_by_year  (2 rows, 0.00s)
+year | q2_empty | q3_empty | q2_null | q3_null
+2023 | 4 | 9 | 110 | 217
+2024 | 9 | 18 | 51 | 102
+
+### race_time_formats  (1 rows, 0.00s)
+hh_mm_ss | null_time | first_year_with_time | date_iso | fp1 | quali_date | first_year_quali_date | quali_not_before_race | sprint_not_before_race
+394 | 731 | 2005 | 1125 | 90 | 90 | 2021 | 0 | 0
+
+### race_time_by_year  (3 rows, 0.00s)
+year | races | with_time | with_fp1
+2005 | 19 | 19 | 0
+2021 | 22 | 22 | 22
+2022 | 22 | 22 | 22
+
+### session_offsets  (5 rows, 0.00s)
+s | d | count(*)
+quali | 1 | 77
+quali | 2 | 13
+fp1 | 2 | 89
+fp1 | 3 | 1
+sprint | 1 | 18
+
+### dob_formats  (1 rows, 0.00s)
+iso | n | min(dob) | max(dob)
+859 | 859 | 1896-12-28 | 2005-05-08
+
+### real_columns  (5 rows, 0.01s)
+c | more_than_6dp | min(lat) | max(lat)
+circuits.lat | 0 | -37.8497 | 57.2653
+circuits.lng | 0 | -118.189 | 144.968
+results.points | 1 | 0.0 | 50.0
+driver_standings.points | 5 | 0.0 | 575.0
+constructor_standings.points | 0 | 0.0 | 860.0
+
+### fractional_points  (14 rows, 0.00s)
+points | count(*)
+1.5 | 17
+0.5 | 6
+4.5 | 4
+1.33 | 3
+8.5 | 2
+6.5 | 2
+12.5 | 1
+8.14 | 1
+7.5 | 1
+6.14 | 1
+4.14 | 1
+3.5 | 1
+3.14 | 1
+2.5 | 1
+
+### constructor_results_status  (1 rows, 0.00s)
+status | year | constructor_ref | count(*)
+D | 2007 | mclaren | 17
+
+### standings_position_text  (2 rows, 0.00s)
+t | position_text | count(*)
+driver | D | 1
+constructor | E | 17
+
+### liveries  (5 rows, 0.00s)
+constructor_ref | start_year | end_year | primary_hex_code
+benneton | 1986 | 1991 | #40AB63
+benneton | 1992 | 1993 | #FCD133
+benneton | 1994 | 2001 | #01B2DA
+-- end_year null | 10 | None | None
+-- overlapping spans per ref | 1 | None | None
+
+### drivers_number_code  (1 rows, 0.06s)
+number_null | code_null | first_debut_with_code
+802 | 757 | 1959
+
+### lap_times_completeness  (1 rows, 2.46s)
+pairs | contiguous | eq_results_laps
+10789 | 10789 | 10700
+
+### lap_times_races_partial  (1 rows, 0.00s)
+year | count(*)
+2024 | 1
+
+### lap_time_text_rule_with_hours  (1 rows, 0.21s)
+n | eq_rule
+575029 | 575029
+
+### standings_points_off_grid  (2 rows, 0.00s)
+t | points | full17 | count(*)
+driver | 4.14 | 4.14 | 5
+results | 4.14 | 4.14 | 1
+
+### winner_time_decimals_by_era  (4 rows, 0.00s)
+dec | min(ra.year) | max(ra.year) | count(*)
+1 | 1950 | 2007 | 857
+2 | 1950 | 1998 | 723
+3 decimals | 1971 | 2024 | 5949
+other | 1954 | 2024 | 4
+
+### position_ne_order  (15 rows, 0.00s)
+race_id | year | driver_id | position | position_text | position_order | status_id
+71 | 2005 | 18 | None | 11 | 11 | 11
+71 | 2005 | 11 | None | 14 | 14 | 12
+452 | 1983 | 182 | 3 | 3 | 2 | 1
+452 | 1983 | 172 | 4 | 4 | 3 | 1
+452 | 1983 | 175 | 5 | 5 | 4 | 1
+452 | 1983 | 176 | 6 | 6 | 5 | 1
+452 | 1983 | 117 | 7 | 7 | 6 | 11
+452 | 1983 | 118 | 8 | 8 | 7 | 11
+452 | 1983 | 192 | 9 | 9 | 8 | 11
+452 | 1983 | 163 | 10 | 10 | 9 | 11
+452 | 1983 | 193 | 11 | 11 | 10 | 11
+452 | 1983 | 95 | 12 | 12 | 11 | 12
+452 | 1983 | 188 | 13 | 13 | 12 | 13
+452 | 1983 | 194 | 14 | 14 | 13 | 14
+452 | 1983 | 181 | 15 | 15 | 14 | 14
+

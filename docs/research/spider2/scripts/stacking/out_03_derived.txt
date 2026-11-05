@@ -1,0 +1,128 @@
+## eda: type/range NULL exactly on drop_user=1 or target=1 rows?
+drop_user|target|t_null|r_null|count(*)
+0|0|0|0|1241
+0|1|1|1|101
+1|0|1|1|205
+## step 3 feature count vs solution.nb_feature
+eq|lt|gt
+65|36|0
+## step 1 vs step 2 feature sets and values
+step1_rows_without_equal_step2
+1020
+step1_features_missing_in_step2
+0
+## step 3 features = top-nb_feature of step 2 by importance?
+step3_not_in_top_nb_feature
+0
+## step 1 features = eda rows with drop_user=0 and target=0 (correlation-dropped included)
+eda_kept_not_in_step1
+0
+step1_not_eda_kept
+0
+## step 2 features = step1 minus drop_correlation? (count rows of step2 whose eda drop_correlation=1)
+count(*)
+151
+## model rows per step (excluding Stack) and vs solution.nb_model
+step|avg_models|min(n)|max(n)
+1|16.45|6|19
+2|4.5|1|7
+3|4.5|1|7
+step|eq_nb_model|ne
+1|0|101
+2|99|2
+3|99|2
+## step 2/3 model sets are subsets of step 1?
+step2_models_not_in_step1
+0
+step3_models_not_in_step2
+0
+## step 2 models = step 1 models with test_score >= solution.score ?
+agree|disagree
+951|710
+## step 2 models = top nb_model of step 1 by test_score?
+agree|disagree
+1291|370
+## step 2 and 3 model scores equal step 1 scores for the same model?
+step|same|diff
+2|443|11
+3|173|281
+## model_importance: models = non-Stack models of the step? (1 extra, 3 missing measured in 02)
+name|version|step|model
+Liver disease prediction|5|2|KNCD
+name|version|step|model
+Liver disease prediction|5|2|GPCR
+Liver disease prediction|5|2|GPCQ
+Liver disease prediction|5|2|LOGRLCV
+## Stack vs best base model per step: strong (<), soft (=), weak (>)
+step|strong|soft|weak
+1|27|14|60
+2|32|13|56
+3|33|20|48
+## problem.type vs model names (C models on classification, R models on regression)
+type|c_like|n
+classification|1460|1879
+regression|29|993
+## L1_model per (name, version) vs solution columns: does it vary with version?
+name|group_concat(version||':'||L1_model, ' ')
+Critical Heat Flux|1:regression 2:regression 3:tree 4:tree 5:regression
+Delaney solubility|1:regression 2:regression 3:tree 4:tree 5:regression
+Franck-Hertz|1:regression 2:regression 3:regression 4:tree 5:tree
+Hospital Mortality Prediction|1:regression 2:regression 3:regression 4:regression 5:tree 6:tree
+Liver disease prediction|1:regression 2:regression 3:regression 4:regression 5:tree
+PCOS|1:regression 2:tree 3:regression
+PSS3E5|1:regression 2:regression 3:regression 4:regression 5:regression
+Pumpkin Seeds|1:regression 2:regression 3:tree 4:tree
+Solar Power Generation|1:regression 2:regression 3:regression 4:regression 5:regression 6:regression 7:regression
+Tunnel diode|1:regression 2:regression 3:regression 4:tree 5:tree 6:tree
+concrete|1:regression 2:regression 3:regression 4:tree 5:tree 6:regression 7:regression
+diabetes|1:regression 2:regression 3:regression 4:tree
+iris|1:regression 2:regression 3:regression 4:tree 5:tree 6:regression 7:regression
+kindey stone urine analysis|1:regression 2:regression 3:regression 4:regression 5:tree 6:tree 7:tree 8:tree
+lithium ion batteries|1:regression 2:regression 3:regression
+oil spill|1:regression 2:regression 3:regression 4:tree 5:tree
+smoke detection iot|1:regression 2:regression 3:regression 4:tree 5:tree
+survey lung cancer|1:regression 2:regression 3:regression 4:regression 5:tree
+water quality|1:regression 2:regression 3:regression
+water quality 2|1:regression 2:regression 3:tree
+## the views are pure functions of model and model_score (SQL in sqlite_master); solution_ext = DISTINCT (name,version,L1_model) of model
+count(*)
+0
+## score precision: digits after the point (as text)
+dec|count(*)
+1|34
+2|147
+3|3
+5|1
+7|6
+8|4
+13|18
+14|172
+15|2324
+16|21
+dec|count(*)
+6|1
+13|12
+14|89
+15|911
+16|841
+17|313
+18|183
+## negative test scores (regression R2 below 0)
+neg_test|min(test_score)
+54|-65597190.8645909
+neg_train|min(train_score)
+50|-85292809.8023027
+## step 2 models = top nb_model of step 1 by step-1 model_importance?
+agree|disagree
+1414|247
+## step 3 model set = step 2 model set?
+count(*)
+0
+count(*)
+0
+## the two (name,version) whose step-2 model count differs from nb_model
+name|version|step|n|nb_model
+Critical Heat Flux|5|2|5|6
+Critical Heat Flux|5|3|5|6
+PSS3E5|4|2|1|5
+PSS3E5|4|3|1|5

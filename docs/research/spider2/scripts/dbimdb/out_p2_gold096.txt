@@ -1,0 +1,3 @@
+years ours/gold: 78 78
+differing years: 0
+gold years with pct > 0: [(1939, (2, 50.0)), (1999, (66, 1.52)), (2000, (64, 1.56)), (2018, (104, 0.96))]

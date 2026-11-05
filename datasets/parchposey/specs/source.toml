@@ -1,0 +1,11 @@
+# Parch & Posey: the paper company of Mode Analytics' SQL course, Spider2's education_business
+# `web_*` tables (5 of the file's 16).
+file = "education_business.sqlite"
+note = "Times are UTC to the second, text 'YYYY-MM-DDTHH:MM:SS.000Z'. Rule times: regions and reps at 2013-12-04, accounts at their first web visit."
+
+[tables]
+web_region = ["id"]
+web_sales_reps = ["id"]
+web_accounts = ["id"]
+web_events = ["id"]
+web_orders = ["id"]

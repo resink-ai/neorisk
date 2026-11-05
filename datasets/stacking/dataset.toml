@@ -1,0 +1,14 @@
+name = "stacking"
+version = "v1"
+kind = "spider2"
+
+[recipe]
+
+[results.mixed]
+
+# Every float column compares bit for bit: all three answers turn on exact score ties
+[results.exact]
+solution = ["correlation", "score", "test_size"]
+model_score = ["train_score", "test_score"]
+model_importance = ["importance"]
+feature_importance = ["importance"]

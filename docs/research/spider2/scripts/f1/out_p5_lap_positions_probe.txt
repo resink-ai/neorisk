@@ -1,0 +1,10 @@
+race 575029
+start 26519
+retire 11568
+src 613112 cand 613116 src-not-cand 0 cand-not-src 4
+by type missing Counter()
+by type extra   Counter({'Starting Position - No Qualification': 4})
+  extra (540, 229, 0, 32, 'Starting Position - No Qualification')
+  extra (717, 373, 0, 1, 'Starting Position - No Qualification')
+  extra (733, 465, 0, 26, 'Starting Position - No Qualification')
+  extra (766, 541, 0, 31, 'Starting Position - No Qualification')

@@ -1,0 +1,6 @@
+hardware_fact_gross_price.gross_price: rows 579, n/10000 == stored 579, repr has <= 4 decimals 579
+hardware_fact_manufacturing_cost.manufacturing_cost: rows 579, n/10000 == stored 579, repr has <= 4 decimals 579
+hardware_fact_pre_invoice_deductions.pre_invoice_discount_pct: rows 418, n/10000 == stored 418, repr has <= 4 decimals 418
+duckdb hardware_fact_gross_price.gross_price: BIGINT/10000.0 == stored 579 of 579
+duckdb hardware_fact_manufacturing_cost.manufacturing_cost: BIGINT/10000.0 == stored 579 of 579
+duckdb hardware_fact_pre_invoice_deductions.pre_invoice_discount_pct: BIGINT/10000.0 == stored 418 of 418

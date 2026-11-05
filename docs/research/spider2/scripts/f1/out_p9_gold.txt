@@ -1,0 +1,15 @@
+local309 (gold SQL): 75 rows vs gold local309_c.csv 74 rows -> DIFFER
+   ours ['1950', 'Nino Farina', 'Alfa Romeo'] gold ['1950', 'Nino Farina', '']
+   ours ['1951', 'Juan Fangio', 'Ferrari'] gold ['1951', 'Juan Fangio', '']
+   ours ['1952', 'Alberto Ascari', 'Ferrari'] gold ['1952', 'Alberto Ascari', '']
+   ours ['1953', 'Alberto Ascari', 'Ferrari'] gold ['1953', 'Alberto Ascari', '']
+   ours ['1954', 'Juan Fangio', 'Ferrari'] gold ['1954', 'Juan Fangio', '']
+local309 (results-sum rewrite, driver+constructor): 75 rows vs gold local309_a.csv 75 rows -> DIFFER
+local310: 3 rows vs gold local310_a.csv 3 rows -> MATCH
+local311 (final constructor standings + best driver, sprints included): 3 rows vs gold local311_a.csv 3 rows -> MATCH
+local335 (season-min point scorer's constructors): 5 rows vs gold local335_a.csv 5 rows -> MATCH
+local309 (final standings champions; results sums before 1958): 75 rows vs gold local309_a.csv 75 rows -> MATCH
+gold SQL output vs local309_a.csv: 75 vs 75 rows, 67 rows equal position-by-position
+gold SQL output vs local309_b.csv: 75 vs 74 rows, 57 rows equal position-by-position
+gold SQL output vs local309_c.csv: 75 vs 74 rows, 58 rows equal position-by-position
+local309 results-sum rewrite vs local309_a.csv: years differing ['1958', '1964', '1965', '1970', '1972', '1973', '1974', '1988']

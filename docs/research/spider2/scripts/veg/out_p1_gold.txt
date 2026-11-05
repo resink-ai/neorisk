@@ -1,0 +1,44 @@
+local284 [sample sd] avg=9.426693227091633 sd=5.21102698337995 below=35 within=187 above=29
+local284 [population sd] avg=9.426693227091633 sd=5.200636091718015 below=35 within=187 above=29
+  local284_a.csv ['9.426693227091633', '35', '187', '29']
+  local284_b.csv ['35', '187', '29', '9.426693227091633', '5.200636091718013']
+local285_a.csv: 24 rows; per column, rows matched (|round2 - gold| <= 0.01) by each reading
+   avg          avg_wp_joined_rows=24, avg_wp_whsle_table=0, avg_wp_sale_rows=24, avg_wp_qty_weighted_sales=1
+   max          max_wp_joined=24, max_wp_whsle_table=22
+   min          min_wp_joined=24, min_wp_whsle_table=18
+   diff         joined=24, whsle_table=17
+   total_whole  sum_q_wp=0, sum_q_wp_sales_only=24
+   total_sell   no_discount=0, discount_1pct=0, no_discount_sales_only=24, discount_1pct_sales_only=0
+   avg_loss     avg_lr_joined_rows=24, avg_lr_items=0, avg_lr_sale_rows=24, avg_lr_qty_weighted_sales=3, avg_lr_items_sold_in_year=0, avg_lr_items_priced_in_year=0, avg_lr_whsle_rows=1
+   total_loss   sum_q_wp_lr=0, sum_q_wp_lr_sales_only=24
+   profit       sell_minus_whole_minus_loss=0, disc_sell_minus_whole_minus_loss=0, sales_only=24, sales_only_disc=0
+local285_b.csv: 24 rows; per column, rows matched (|round2 - gold| <= 0.01) by each reading
+   avg          avg_wp_joined_rows=0, avg_wp_whsle_table=24, avg_wp_sale_rows=0, avg_wp_qty_weighted_sales=0
+   max          max_wp_joined=22, max_wp_whsle_table=24
+   min          min_wp_joined=18, min_wp_whsle_table=24
+   diff         joined=17, whsle_table=24
+   total_whole  sum_q_wp=0, sum_q_wp_sales_only=24
+   total_sell   no_discount=0, discount_1pct=0, no_discount_sales_only=0, discount_1pct_sales_only=24
+   avg_loss     avg_lr_joined_rows=0, avg_lr_items=1, avg_lr_sale_rows=0, avg_lr_qty_weighted_sales=0, avg_lr_items_sold_in_year=24, avg_lr_items_priced_in_year=15, avg_lr_whsle_rows=2
+   total_loss   sum_q_wp_lr=0, sum_q_wp_lr_sales_only=24
+   profit       sell_minus_whole_minus_loss=0, disc_sell_minus_whole_minus_loss=0, sales_only=0, sales_only_disc=24
+local285_c.csv: 24 rows; per column, rows matched (|round2 - gold| <= 0.01) by each reading
+   avg          avg_wp_joined_rows=0, avg_wp_whsle_table=24, avg_wp_sale_rows=0, avg_wp_qty_weighted_sales=0
+   max          max_wp_joined=22, max_wp_whsle_table=24
+   min          min_wp_joined=18, min_wp_whsle_table=24
+   diff         joined=17, whsle_table=24
+   total_whole  sum_q_wp=0, sum_q_wp_sales_only=24
+   total_sell   no_discount=0, discount_1pct=0, no_discount_sales_only=0, discount_1pct_sales_only=24
+   avg_loss     avg_lr_joined_rows=0, avg_lr_items=1, avg_lr_sale_rows=0, avg_lr_qty_weighted_sales=0, avg_lr_items_sold_in_year=24, avg_lr_items_priced_in_year=15, avg_lr_whsle_rows=2
+   total_loss   sum_q_wp_lr=0, sum_q_wp_lr_sales_only=24
+   profit       sell_minus_whole_minus_loss=0, disc_sell_minus_whole_minus_loss=0, sales_only=0, sales_only_disc=24
+local285_d.csv: 24 rows; per column, rows matched (|round2 - gold| <= 0.01) by each reading
+   avg          avg_wp_joined_rows=1, avg_wp_whsle_table=0, avg_wp_sale_rows=1, avg_wp_qty_weighted_sales=24
+   max          max_wp_joined=24, max_wp_whsle_table=22
+   min          min_wp_joined=24, min_wp_whsle_table=18
+   diff         joined=24, whsle_table=17
+   total_whole  sum_q_wp=0, sum_q_wp_sales_only=24
+   total_sell   no_discount=0, discount_1pct=0, no_discount_sales_only=24, discount_1pct_sales_only=0
+   avg_loss     avg_lr_joined_rows=3, avg_lr_items=0, avg_lr_sale_rows=3, avg_lr_qty_weighted_sales=24, avg_lr_items_sold_in_year=0, avg_lr_items_priced_in_year=0, avg_lr_whsle_rows=1
+   total_loss   sum_q_wp_lr=0, sum_q_wp_lr_sales_only=24
+   profit       sell_minus_whole_minus_loss=0, disc_sell_minus_whole_minus_loss=0, sales_only=24, sales_only_disc=0

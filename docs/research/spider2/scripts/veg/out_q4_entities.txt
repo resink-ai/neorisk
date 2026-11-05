@@ -1,0 +1,38 @@
+### last_event  (1 rows, 0.02s)
+last_txn | last_quote
+2023-06-30 00:00:00 21:40:48 | 2023-06-30 00:00:00
+
+### first_quote_vs_first_sale  (1 rows, 0.23s)
+items | never_sold | quoted_before_first_sale | quoted_same_day | quoted_after | first_quote_on_day1
+251 | 5 | 14 | 232 | 0 | 36
+
+### first_quote_by_year  (4 rows, 0.01s)
+y | items
+2020 | 94
+2021 | 55
+2022 | 90
+2023 | 12
+
+### items_per_category_sold  (6 rows, 0.30s)
+category_name | items_sold
+Aquatic Tuberous Vegetables | 18
+Cabbage | 5
+Capsicum | 43
+Edible Mushroom | 71
+Flower/Leaf Vegetables | 99
+Solanum | 10
+
+### item_code_prefixes  (11 rows, 0.00s)
+prefix | count(*)
+1029000 | 233
+1069302 | 2
+1069318 | 2
+1069497 | 3
+1069561 | 2
+1069576 | 2
+1069588 | 1
+1069715 | 3
+1069727 | 1
+1069732 | 1
+1069739 | 1
+

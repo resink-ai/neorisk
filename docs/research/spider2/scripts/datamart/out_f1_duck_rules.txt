@@ -1,0 +1,2 @@
+duckdb 1.5.6
+{'n': 17117, 'raw_week_date_ok': 17117, 'iso_ok': 17117, 'formatted_ok': 17117, 'isoweek_ok': 17117, 'month_year_ok': 17117, 'segment_ok': 17117, 'age_band_ok': 17117, 'demographic_ok': 17117, 'avg_half_up_ok': 17117, 'avg_duck_round_ok': 17114}

@@ -1,0 +1,241 @@
+### movie_order_vs_year  (1 rows, 0.00s)
+pairs | nondecr | drops
+3474 | 1780 | 1694
+
+### movie_index_head_years  (9 rows, 0.00s)
+index | MID | title | year
+0 | tt2388771 | Mowgli | 2018
+1 | tt5164214 | Ocean's Eight | 2018
+2 | tt1365519 | Tomb Raider | 2018
+100 | tt6774212 | Aiyaary | 2018
+500 | tt1825801 | Hostel | 2011
+1000 | tt0133024 | Ishq | 1997
+2000 | tt2188749 | Gali Gali Chor Hai | 2012
+3000 | tt0361796 | Khatarnaak | 1990
+3474 | tt0375890 | Kanoon | 1994
+
+### movies_per_decade  (9 rows, 0.00s)
+decade | n
+1930 | 6
+1940 | 12
+1950 | 71
+1960 | 148
+1970 | 254
+1980 | 350
+1990 | 556
+2000 | 986
+2010 | 1092
+
+### movies_per_year_recent  (9 rows, 0.00s)
+y | n
+2010 | 125
+2011 | 116
+2012 | 111
+2013 | 136
+2014 | 126
+2015 | 119
+2016 | 129
+2017 | 126
+2018 | 104
+
+### title_dups  (1 rows, 0.00s)
+titles_with_gt1_movie | movies
+123 | 254
+
+### title_year_dups  (1 rows, 0.00s)
+count(*)
+0
+
+### mid_shape  (1 rows, 0.00s)
+len | pfx | n
+9 | tt | 3475
+
+### rating_hist  (9 rows, 0.00s)
+r | n
+1 | 9
+2 | 76
+3 | 235
+4 | 455
+5 | 716
+6 | 894
+7 | 896
+8 | 181
+9 | 13
+
+### votes_quantiles  (1 rows, 0.00s)
+p5 | p25 | p50 | p75 | p95 | mx
+59 | 120 | 388 | 1852 | 15607 | 1137529
+
+### rating_vs_votes_by_year  (3 rows, 0.00s)
+era | n | avg_rating | avg_votes
+1990-2009 | 1542 | 5.67 | 4166.0
+2010+ | 1092 | 5.87 | 7817.0
+<1990 | 841 | 6.93 | 990.0
+
+### genre_combo_sizes  (3 rows, 0.00s)
+genres_in_combo | combos
+1 | 16
+2 | 77
+3 | 235
+
+### movies_per_genre_combo_top  (10 rows, 0.00s)
+combo | n
+Drama | 342
+Action, Crime, Drama | 218
+Drama, Romance | 206
+Comedy, Drama, Romance | 149
+Comedy, Drama | 137
+Action, Drama | 122
+Comedy | 107
+Action, Comedy, Drama | 94
+Action, Drama, Romance | 90
+Comedy, Romance | 86
+
+### null_genre_use  (1 rows, 0.00s)
+GID | quote(g.Name) | movies
+309 | 'Null' | 7
+
+### language_mix  (8 rows, 0.00s)
+Name | n
+Hindi | 2989
+English | 151
+Tamil | 99
+Telugu | 93
+Kannada | 29
+Urdu | 17
+Marathi | 17
+Bengali | 17
+
+### country_mix  (8 rows, 0.00s)
+country | n
+India | 3296
+USA | 65
+UK | 41
+Canada | 16
+Pakistan | 6
+NULL | 5
+Australia | 4
+Switzerland | 3
+
+### location_null_by_era  (2 rows, 0.00s)
+era | n | no_location
+2000+ | 2078 | 960
+<2000 | 1397 | 666
+
+### location_name_shape  (8 rows, 0.00s)
+commas | n
+0 | 39
+1 | 97
+2 | 197
+3 | 144
+4 | 70
+5 | 8
+6 | 2
+7 | 2
+
+### cast_size_hist  (6 rows, 0.01s)
+band | movies
+1-5 | 94
+6-10 | 402
+11-20 | 1365
+21-40 | 1240
+41-80 | 311
+81+ | 63
+
+### producers_per_movie  (20 rows, 0.01s)
+producers | movies
+1 | 1110
+2 | 728
+3 | 451
+4 | 346
+5 | 226
+6 | 156
+7 | 134
+8 | 97
+9 | 70
+10 | 48
+11 | 27
+12 | 15
+13 | 17
+14 | 15
+15 | 10
+16 | 7
+17 | 5
+18 | 2
+19 | 4
+20 | 1
+
+### credits_per_actor  (6 rows, 0.04s)
+band | actors | max(c)
+1 | 24388 | 1
+2-3 | 4373 | 3
+4-10 | 2226 | 10
+11-30 | 770 | 30
+31-100 | 327 | 99
+101+ | 43 | 243
+
+### top_actors  (5 rows, 0.11s)
+name | films
+Anupam Kher | 243
+Shakti Kapoor | 225
+Amitabh Bachchan | 204
+Gulshan Grover | 200
+Asrani | 186
+
+### films_per_director  (15 rows, 0.00s)
+films | directors
+1 | 914
+2 | 220
+3 | 96
+4 | 56
+5 | 53
+6 | 24
+7 | 16
+8 | 14
+9 | 13
+10 | 13
+11 | 6
+12 | 10
+13 | 7
+14 | 4
+15 | 2
+
+### cast_gender_mix_rows  (3 rows, 0.09s)
+gender | credit_rows
+'Female' | 23028
+'Male' | 55214
+NULL | 4595
+
+### person_min_year_vs_movie_count  (9 rows, 0.10s)
+decade | persons
+1930 | 111
+1940 | 187
+1950 | 885
+1960 | 1006
+1970 | 1666
+1980 | 2213
+1990 | 3591
+2000 | 10928
+2010 | 16978
+
+### lookup_first_use_year  (2 rows, 0.00s)
+t | min(y) | max(y) | count(*)
+Genre | 1931 | 2018 | 328
+Location | 1939 | 2018 | 559
+
+### title_samples_nonascii  (1 rows, 0.00s)
+count(*)
+4
+
+### person_name_nonascii  (1 rows, 0.01s)
+count(*)
+223
+
+### year_prefix_vs_title_dups  (2 rows, 0.00s)
+prefixed | movies | title_shared_in_catalog
+0 | 3358 | 241
+1 | 117 | 13
+
+### same_title_same_tail_year  (0 rows, 0.00s)
+title | years
+

@@ -1,0 +1,74 @@
+### local022_gold_sql  (7 rows, 0.05s)
+player_name
+A Symonds
+SPD Smith
+SR Tendulkar
+SR Watson
+V Kohli
+WP Saha
+YK Pathan
+
+### local023_gold_sql  (5 rows, 0.01s)
+player_name | batting_avg
+CH Gayle | 52.357
+KP Pietersen | 38.125
+S Dhawan | 37.933
+CL White | 36.846
+SR Watson | 36.429
+
+### local023_csv_variant  (5 rows, 0.04s)
+player_name | avg_runs_per_match | batting_average
+CH Gayle | 52.3571 | 61.0833
+KP Pietersen | 38.125 | 61.0
+S Dhawan | 37.9333 | 40.6429
+CL White | 36.8462 | 43.5455
+SR Watson | 36.4286 | 42.5
+
+### local228  (27 rows, 0.07s)
+season_id | player_name | v | player_name | v
+1 | SE Marsh | 616 | Sohail Tanvir | 22
+1 | G Gambhir | 534 | SK Warne | 19
+1 | ST Jayasuriya | 514 | SR Watson | 17
+2 | ML Hayden | 572 | RP Singh | 23
+2 | AC Gilchrist | 495 | A Kumble | 21
+2 | AB de Villiers | 465 | A Nehra | 19
+3 | SR Tendulkar | 617 | PP Ojha | 21
+3 | JH Kallis | 572 | Harbhajan Singh | 17
+3 | SK Raina | 505 | A Kumble | 17
+4 | CH Gayle | 604 | SL Malinga | 28
+4 | V Kohli | 557 | MM Patel | 22
+4 | SR Tendulkar | 553 | S Aravind | 21
+5 | CH Gayle | 733 | M Morkel | 25
+5 | G Gambhir | 590 | SP Narine | 24
+5 | S Dhawan | 569 | SL Malinga | 22
+6 | MEK Hussey | 733 | DJ Bravo | 32
+6 | CH Gayle | 694 | JP Faulkner | 28
+6 | SK Raina | 548 | Harbhajan Singh | 24
+7 | RV Uthappa | 660 | MM Sharma | 23
+7 | DR Smith | 566 | SP Narine | 21
+7 | GJ Maxwell | 552 | B Kumar | 20
+8 | DA Warner | 562 | DJ Bravo | 26
+8 | LMP Simmons | 540 | SL Malinga | 24
+8 | V Kohli | 503 | A Nehra | 22
+9 | V Kohli | 969 | B Kumar | 23
+9 | DA Warner | 848 | YS Chahal | 21
+9 | AB de Villiers | 687 | SR Watson | 20
+
+### local026  (5 rows, 0.09s)
+player_name | match_id | runs
+P Parameswaran | 501252 | 37
+RS Bopara | 419144 | 33
+P Awana | 734052 | 33
+R Sharma | 548332 | 31
+A Symonds | 335993 | 30
+
+### local021  (1 rows, 0.05s)
+avg(t)
+1130.516129032258
+
+### local020  (3 rows, 0.05s)
+player_id | player_name | avg | runs | n
+53 | AC Gilchrist | 0.0 | 0 | 1
+369 | Sachin Baby | 4.0 | 8 | 2
+85 | AM Rahane | 5.0 | 5 | 1
+

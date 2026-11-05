@@ -1,0 +1,164 @@
+### key_uniqueness  (5 rows, 0.04s)
+k | n | d
+legislators.id_bioguide | 12518 | 12518
+legislators.id_govtrack | 12518 | 12518
+terms.term_id | 44063 | 44063
+terms.(id_bioguide,term_number) | 44063 | 44063
+date_dim.date | 30315 | 30315
+
+### term_id_rule  (1 rows, 0.00s)
+ok | n
+44063 | 44063
+
+### fk_orphans  (3 rows, 16.53s)
+j | orphans
+terms->legislators | 0
+legislators without terms | 0
+previous_0 -> legislators | 3
+
+### term_number_dense  (1 rows, 0.01s)
+dense | legislators
+12518 | 12518
+
+### term_number_in_start_order  (1 rows, 0.07s)
+rank_equals_number | n | start_goes_back | same_start_as_prev | overlaps_prev | starts_on_prev_end
+44063 | 44063 | 0 | 0 | 0 | 7882
+
+### rowid_order  (1 rows, 0.04s)
+next_term_same_person | person_changes | people | changes_at_term0
+2 | 44060 | 12518 | 12517
+
+### terms_rowid_vs_legislators_rowid  (1 rows, 18.32s)
+n | rank_match
+12518 | 2596
+
+### rowid_order_term0_block  (1 rows, 0.00s)
+min(rowid) | max(rowid) | count(*)
+1 | 12522 | 12518
+
+### term_number_blocks  (6 rows, 0.00s)
+term_number | min(rowid) | max(rowid) | count(*)
+0 | 1 | 12522 | 12518
+1 | 12329 | 20897 | 8379
+2 | 20898 | 26547 | 5645
+3 | 26392 | 30682 | 4140
+4 | 30683 | 33815 | 3132
+5 | 33811 | 36226 | 2411
+
+### legislators_current_first  (2 rows, 0.02s)
+block | count(*) | min(le) | max(le)
+0 | 11979 | 1791-03-03 | 2020-05-22
+1 | 539 | 1791-03-03 | 2025-01-03
+
+### current_block_size  (1 rows, 0.03s)
+first_rowid_ending_before_2021
+43
+
+### type_columns  (2 rows, 0.01s)
+term_type | count(*) | has_district | has_class | has_rank | appointment
+rep | 40190 | 40190 | 0 | 0 | 0
+sen | 3873 | 0 | 3873 | 217 | 201
+
+### date_formats  (4 rows, 0.01s)
+c | iso | valid | count(*)
+term_start | 44063 | 44063 | 44063
+term_end | 44063 | 44063 | 44063
+birthday | 11967 | 11967 | 11967
+other_names_end | 4 | 4 | 4
+
+### end_vs_start  (1 rows, 0.00s)
+pos | zero | neg
+44063 | 0 | 0
+
+### snapshot  (1 rows, 0.00s)
+last_start | last_end | ends_after_last_start | open_at_last_start
+2020-05-19 | 2025-01-03 | 538 | 538
+
+### term_lengths_days  (12 rows, 0.02s)
+term_type | days | count(*)
+rep | 730 | 7102
+rep | 731 | 3113
+rep | 728 | 3092
+rep | 456 | 2666
+rep | 729 | 2524
+rep | 454 | 2270
+rep | 453 | 2010
+rep | 452 | 1838
+rep | 457 | 1805
+rep | 727 | 1313
+rep | 451 | 942
+rep | 455 | 905
+
+### real_columns_integral  (7 rows, 0.01s)
+c | non_integral
+district | 0
+class | 0
+id_icpsr | 0
+id_house_history | 0
+id_thomas | 0
+id_cspan | 0
+id_votesmart | 0
+
+### district_values  (3 rows, 0.00s)
+district | count(*)
+None | 3873
+-1.0 | 1366
+0.0 | 915
+
+### url_whitespace  (3 rows, 0.00s)
+term_id | '['||url||']'
+K000374-0 | [http://kirk.senate.gov/ ]
+K000364-1 | [http://www.house.gov/kuhl ]
+G000280-5 | [http://www.house.gov/goode ]
+
+### party_top  (15 rows, 0.01s)
+party | count(*)
+Democrat | 20468
+Republican | 18892
+Whig | 1207
+Jackson | 878
+Federalist | 821
+None | 452
+Adams | 260
+Ind. Republican-Democrat | 129
+American | 84
+Unionist | 77
+Anti Masonic | 77
+Populist | 68
+Anti Jacksonian | 56
+Independent | 45
+Democratic Republican | 45
+
+### party_rare  (1 rows, 0.01s)
+parties_under_10_terms
+38
+
+### states  (1 rows, 0.01s)
+states | group_concat(distinct state)
+59 | AK,AL,AR,AS,AZ,CA,CO,CT,DC,DE,DK,FL,GA,GU,HI,IA,ID,IL,IN,KS,KY,LA,MA,MD,ME,MI,MN,MO,MP,MS,MT,NC,ND,NE,NH,NJ,NM,NV,NY,OH,OK,OL,OR,PA,PI,PR,RI,SC,SD,TN,TX,UT,VA,VI,VT,WA,WI,WV,WY
+
+### gender  (2 rows, 0.00s)
+gender | count(*)
+F | 366
+M | 12152
+
+### birthday_vs_first_term  (1 rows, 0.02s)
+with_bday | born_after_first_term | min_age | max_age
+11967 | 1 | 0 | 87
+
+### duplicate_full_names  (1 rows, 0.00s)
+names_shared | people
+180 | 388
+
+### contact_cols_only_recent  (1 rows, 0.00s)
+min(term_start) | count(*)
+1999-01-06 | 4393
+
+### contact_cols_last_term_only  (1 rows, 0.01s)
+on_last_term | rows_with_office
+890 | 2492
+
+### url_rows_by_last  (1 rows, 0.02s)
+on_last_term | rows_with_url
+1188 | 4386
+

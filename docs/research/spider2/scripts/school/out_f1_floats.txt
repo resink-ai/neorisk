@@ -1,0 +1,4 @@
+Student_Schedules.Grade: 120 values, decimals needed {0: 54, 1: 7, 2: 59}, all integral-cents-exact: True, all repr-roundtrip: True
+Students.StudGPA: 19 values, decimals needed {0: 4, 1: 2, 2: 7, 3: 6}, all integral-cents-exact: False, all repr-roundtrip: True
+Staff.Salary: 27 values, decimals needed {0: 27}, all integral-cents-exact: True, all repr-roundtrip: True
+Faculty_Subjects.ProficiencyRating: 110 values, decimals needed {0: 110}, all integral-cents-exact: True, all repr-roundtrip: True

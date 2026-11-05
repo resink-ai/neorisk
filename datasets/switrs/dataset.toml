@@ -1,0 +1,14 @@
+name = "switrs"
+version = "v1"
+kind = "spider2"
+
+[recipe]
+
+[results.mixed]
+
+# Every float column compares bit for bit: case_id is a float id above 2**53
+[results.exact]
+collisions = ["case_id", "jurisdiction", "special_condition", "distance", "intersection", "state_highway_indicator", "caltrans_district", "state_route", "postmile", "tow_away", "killed_victims", "injured_victims", "party_count", "pcf_violation", "not_private_property", "alcohol_involved", "motorcyclist_injured_count", "latitude", "longitude"]
+case_ids = ["case_id"]
+parties = ["case_id", "party_age", "hazardous_materials", "cellphone_in_use", "school_bus_related", "oaf_violation_section", "vehicle_year"]
+victims = ["case_id", "victim_age"]

@@ -1,0 +1,422 @@
+### date_ranges  (14 rows, 0.00s)
+c | min(purchased) | max(purchased) | count(*)
+purchases.purchased | 2016-01-01 | 2018-12-29 | 180
+monthly_sales.mth | 2016-01-01 | 2018-12-01 | 360
+monthly_budget.mth | 2018-01-01 | 2019-12-01 | 48
+orders.ordered | 2019-01-15 | 2019-03-29 | 10
+picking_list.created | 2019-01-16 14:03:41 | 2019-01-19 15:57:42 | 2
+picking_log.log_time | 2019-01-16 14:05:11 | 2019-01-19 16:11:42 | 63
+emp_hire_periods.start_ | 2010-07-01 | 2019-02-01 | 15
+emp_hire_periods.end_ | 2012-04-01 | 2017-03-01 | 8
+ticker.day | 2019-04-01 | 2019-04-19 | 15
+web_counter_hist.day | 2019-04-01 | 2019-04-30 | 120
+web_page_visits.visit_time | 2019-04-20 08:15:42 | 2019-04-20 15:05:48 | 23
+server_heartbeat.beat_time | 2019-04-10 13:00 | 2019-04-10 13:55 | 14
+web_devices.day | 2019-05-01 | 2019-05-02 | 2
+web_demographics.day | 2019-05-01 | 2019-05-02 | 2
+
+### dates_valid  (13 rows, 0.00s)
+t | n | valid
+purchases | 180 | 180
+monthly_sales | 360 | 360
+monthly_budget | 48 | 48
+orders | 10 | 10
+picking_list | 2 | 2
+picking_log | 63 | 63
+emp start | 15 | 15
+emp end | 8 | 8
+ticker | 15 | 15
+web_counter_hist | 120 | 120
+web_page_visits | 23 | 23
+server_heartbeat | 14 | 14
+web_devices | 2 | 2
+
+### monthly_sales_grid  (1 rows, 0.00s)
+products | months | rows | min(qty) | max(qty) | sum(qty)
+10 | 36 | 360 | 0 | 247 | 10144
+
+### monthly_budget_grid  (2 rows, 0.00s)
+product_id | months | min(mth) | max(mth) | min(qty) | max(qty) | sum(qty)
+6520 | 24 | 2018-01-01 | 2019-12-01 | 30.0 | 60.0 | 1020.0
+6600 | 24 | 2018-01-01 | 2019-12-01 | 6.0 | 20.0 | 312.0
+
+### purchase_schedule  (10 rows, 0.00s)
+product_id | n | month_parity | days
+4040 | 18 | 1,0 | 01,11,21
+4160 | 18 | 0,1 | 02,12,22
+4280 | 18 | 1,0 | 03,13,23
+5310 | 18 | 0,1 | 04,14,24
+5430 | 18 | 0 | 05,15,25
+6520 | 18 | 0,1 | 06,16,26
+6600 | 18 | 1 | 07,17,27
+7790 | 18 | 1 | 08,18,28
+7870 | 18 | 1,0 | 09,19,28,29
+7950 | 18 | 0,1 | 10,20,31,30
+
+### purchase_months_per_product  (10 rows, 0.00s)
+product_id | months | n
+4040 | 18 | 18
+4160 | 18 | 18
+4280 | 18 | 18
+5310 | 18 | 18
+5430 | 18 | 18
+6520 | 18 | 18
+6600 | 18 | 18
+7790 | 18 | 18
+7870 | 18 | 18
+7950 | 18 | 18
+
+### purchases_vs_monthly_sales_by_year  (30 rows, 0.00s)
+yr | product_id | bought | sold | diff
+2016 | 4040 | 300 | 286 | 14
+2017 | 4040 | 300 | 227 | 73
+2018 | 4040 | 300 | 300 | 0
+2016 | 4160 | 400 | 331 | 69
+2017 | 4160 | 600 | 582 | 18
+2018 | 4160 | 700 | 691 | 9
+2016 | 4280 | 100 | 99 | 1
+2017 | 4280 | 100 | 72 | 28
+2018 | 4280 | 200 | 132 | 68
+2016 | 5310 | 500 | 478 | 22
+2017 | 5310 | 600 | 582 | 18
+2018 | 5310 | 500 | 425 | 75
+2016 | 5430 | 300 | 261 | 39
+2017 | 5430 | 400 | 344 | 56
+2018 | 5430 | 500 | 451 | 49
+2016 | 6520 | 500 | 415 | 85
+2017 | 6520 | 500 | 458 | 42
+2018 | 6520 | 400 | 357 | 43
+2016 | 6600 | 200 | 121 | 79
+2017 | 6600 | 100 | 105 | -5
+2018 | 6600 | 100 | 98 | 2
+2016 | 7790 | 400 | 377 | 23
+2017 | 7790 | 400 | 321 | 79
+2018 | 7790 | 300 | 263 | 37
+2016 | 7870 | 600 | 552 | 48
+2017 | 7870 | 500 | 482 | 18
+2018 | 7870 | 500 | 451 | 49
+2016 | 7950 | 200 | 182 | 18
+2017 | 7950 | 300 | 210 | 90
+2018 | 7950 | 500 | 491 | 9
+
+### purchase_lagged_sales  (18 rows, 0.00s)
+product_id | purchased | qty | sales_same_month | sales_next_month
+4040 | 2016-01-01 | 52 | 42 | 37
+4040 | 2016-03-01 | 54 | 39 | 22
+4040 | 2016-05-01 | 51 | 11 | 6
+4040 | 2016-07-01 | 49 | 7 | 14
+4040 | 2016-09-01 | 53 | 25 | 12
+4040 | 2016-11-01 | 41 | 27 | 44
+4040 | 2017-02-11 | 53 | 34 | 18
+4040 | 2017-04-11 | 55 | 19 | 2
+4040 | 2017-06-11 | 52 | 12 | 21
+4040 | 2017-08-11 | 50 | 8 | 9
+4040 | 2017-10-11 | 54 | 18 | 22
+4040 | 2017-12-11 | 36 | 31 | 50
+4040 | 2018-01-21 | 54 | 50 | 55
+4040 | 2018-03-21 | 56 | 11 | 43
+4040 | 2018-05-21 | 53 | 24 | 16
+4040 | 2018-07-21 | 51 | 6 | 5
+4040 | 2018-09-21 | 55 | 17 | 17
+4040 | 2018-11-21 | 31 | 29 | 27
+
+### unit_cost  (10 rows, 0.00s)
+product_id | n | min_unit | max_unit | avg_unit
+4040 | 18 | 5.849 | 8.0 | 7.113
+4160 | 18 | 6.588 | 7.923 | 7.408
+4280 | 18 | 5.176 | 7.333 | 6.005
+5310 | 18 | 6.711 | 7.761 | 7.326
+5430 | 18 | 6.789 | 7.241 | 6.98
+6520 | 18 | 6.552 | 7.237 | 6.921
+6600 | 18 | 4.781 | 8.0 | 6.677
+7790 | 18 | 6.391 | 7.434 | 6.914
+7870 | 18 | 7.191 | 7.729 | 7.407
+7950 | 18 | 5.585 | 7.889 | 6.882
+
+### unit_cost_by_year  (30 rows, 0.00s)
+product_id | yr | min_unit | max_unit
+4040 | 2016 | 7.449 | 7.537
+4040 | 2017 | 5.849 | 5.944
+4040 | 2018 | 8.0 | 8.0
+4160 | 2016 | 6.588 | 6.623
+4160 | 2017 | 7.726 | 7.761
+4160 | 2018 | 7.878 | 7.923
+4280 | 2016 | 7.143 | 7.333
+4280 | 2017 | 5.556 | 5.769
+4280 | 2018 | 5.176 | 5.316
+5310 | 2016 | 7.511 | 7.563
+5310 | 2017 | 7.726 | 7.761
+5310 | 2018 | 6.711 | 6.759
+5430 | 2016 | 6.918 | 7.0
+5430 | 2017 | 6.789 | 6.854
+5430 | 2018 | 7.191 | 7.241
+6520 | 2016 | 6.552 | 6.594
+6520 | 2017 | 7.191 | 7.237
+6520 | 2018 | 7.0 | 7.0
+6600 | 2016 | 4.781 | 4.862
+6600 | 2017 | 8.0 | 8.0
+6600 | 2018 | 7.158 | 7.5
+7790 | 2016 | 7.388 | 7.434
+7790 | 2017 | 6.391 | 6.438
+7790 | 2018 | 6.922 | 7.0
+7870 | 2016 | 7.327 | 7.355
+7870 | 2017 | 7.67 | 7.729
+7870 | 2018 | 7.191 | 7.241
+7950 | 2016 | 7.176 | 7.276
+7950 | 2017 | 5.585 | 5.639
+7950 | 2018 | 7.83 | 7.889
+
+### inventory_vs_purchase  (1 rows, 0.00s)
+purchases_with_inventory | whole_lot | part_lot | over_purchase | min(purchased) | max(purchased)
+62 | 62 | 0 | 0 | 2017-12-19 | 2018-12-29
+
+### inventory_purchase_dates  (2 rows, 0.00s)
+yr | purchases | inventory_rows | qty
+2017 | 2 | 3 | 95.0
+2018 | 60 | 110 | 4000.0
+
+### purchases_without_inventory_dates  (1 rows, 0.00s)
+min(purchased) | max(purchased) | count(*)
+2016-01-01 | 2017-12-15 | 118
+
+### inventory_per_purchase  (4 rows, 0.00s)
+n_locs | purchases
+1 | 18
+2 | 38
+3 | 5
+4 | 1
+
+### inventory_qty_values  (12 rows, 0.00s)
+qty | n
+48.0 | 48
+6.0 | 6
+39.0 | 5
+44.0 | 4
+42.0 | 4
+41.0 | 4
+40.0 | 4
+31.0 | 3
+19.0 | 3
+8.0 | 3
+36.0 | 2
+29.0 | 2
+
+### inventory_lot_rule  (1 rows, 0.00s)
+full48 | partial | over48
+48 | 63 | 2
+
+### inventory_partial_per_purchase  (3 rows, 0.00s)
+partials | purchases
+0 | 2
+1 | 59
+4 | 1
+
+### inventory_by_warehouse  (2 rows, 0.00s)
+warehouse | rows | qty
+1 | 57 | 2173.0
+2 | 56 | 1922.0
+
+### inventory_totals_vs_minimums  (2 rows, 0.00s)
+product_id | qty_minimum | qty_purchase | inv
+6520 | 100.0 | 400.0 | 400.0
+6600 | 30.0 | 100.0 | 100.0
+
+### picking_vs_orderlines  (6 rows, 0.00s)
+order_id | product_id | ordered | picked
+421 | 4280 | 110.0 | 110.0
+421 | 6520 | 140.0 | 140.0
+422 | 4280 | 80.0 | 80.0
+422 | 6520 | 80.0 | 80.0
+423 | 4280 | 60.0 | 60.0
+423 | 6520 | 40.0 | 40.0
+
+### picking_vs_inventory  (10 rows, 0.00s)
+location_id | product_id | picked | inv | left_over | purchased
+16 | 6520 | 64.0 | 48.0 | -16.0 | 2018-04-26
+29 | 6520 | 28.0 | 14.0 | -14.0 | 2018-02-26
+65 | 4280 | 72.0 | 36.0 | -36.0 | 2018-02-23
+77 | 6520 | 40.0 | 20.0 | -20.0 | 2018-02-26
+114 | 4280 | 78.0 | 39.0 | -39.0 | 2018-04-23
+163 | 4280 | 70.0 | 35.0 | -35.0 | 2018-06-23
+165 | 6520 | 28.0 | 14.0 | -14.0 | 2018-02-26
+186 | 6520 | 48.0 | 24.0 | -24.0 | 2018-02-26
+212 | 4280 | 30.0 | 34.0 | 4.0 | 2018-08-23
+233 | 6520 | 52.0 | 26.0 | -26.0 | 2018-04-26
+
+### picking_lists_same_locations  (9 rows, 0.00s)
+line_no | location_id | q841 | q842
+1 | 16 | 42.0 | 22.0
+2 | 29 | 14.0 | 14.0
+3 | 77 | 20.0 | 20.0
+4 | 65 | 36.0 | 36.0
+5 | 114 | 39.0 | 39.0
+6 | 186 | 24.0 | 24.0
+7 | 165 | 14.0 | 14.0
+8 | 163 | 35.0 | 5.0
+9 | 233 | 26.0 | 30.0
+
+### order_vs_picklist_time  (3 rows, 0.00s)
+picklist_id | order_id | ordered | created
+841 | 421 | 2019-01-15 | 2019-01-16 14:03:41
+842 | 422 | 2019-01-17 | 2019-01-19 15:57:42
+842 | 423 | 2019-01-18 | 2019-01-19 15:57:42
+
+### picking_log_activities  (3 rows, 0.00s)
+activity | n | loc_null | line_null
+A | 21 | 2 | 21
+D | 21 | 2 | 21
+P | 21 | 0 | 0
+
+### picking_log_sequence  (2 rows, 0.00s)
+picklist_id | created | first_log | last_log | pattern
+841 | 2019-01-16 14:03:41 | 2019-01-16 14:05:11 | 2019-01-16 14:14:41 | DAPDAPDAPDAPDAPDAPDAPDAPDAPDA
+842 | 2019-01-19 15:57:42 | 2019-01-19 16:01:12 | 2019-01-19 16:11:42 | DAPDAPDAPDAPDAPDAPDAPDAPPDAPDAPPDA
+
+### picking_log_line_order  (2 rows, 0.00s)
+picklist_id | pairs | increasing
+841 | 8 | 8
+842 | 11 | 11
+
+### picking_log_gaps  (4 rows, 0.00s)
+activity | prev | n | min_s | max_s | avg_s
+A | D | 21 | 8.999991416931152 | 109.00001227855682 | 42.1
+D | P | 19 | 5.000013113021851 | 12.000015377998352 | 9.1
+P | A | 19 | 3.9999783039093018 | 11.000020802021027 | 6.7
+P | P | 2 | 6.000007688999176 | 7.999996840953827 | 7.0
+
+### picking_log_loc_null  (4 rows, 0.00s)
+picklist_id | log_time | activity | location_id | pickline_no
+841 | 2019-01-16 14:05:11 | D | None | None
+841 | 2019-01-16 14:14:41 | A | None | None
+842 | 2019-01-19 16:01:12 | D | None | None
+842 | 2019-01-19 16:11:42 | A | None | None
+
+### orders_lines  (10 rows, 0.00s)
+id | customer_id | ordered | lines | qty | amount
+421 | 50042 | 2019-01-15 | 2 | 250.0 | 4650.0
+422 | 51069 | 2019-01-17 | 2 | 160.0 | 3025.0
+423 | 50741 | 2019-01-18 | 2 | 100.0 | 1950.0
+424 | 51069 | 2019-01-28 | 1 | 16.0 | 320.0
+425 | 51069 | 2019-02-17 | 3 | 124.0 | 2380.0
+426 | 50741 | 2019-02-26 | 2 | 56.0 | 1000.0
+427 | 50042 | 2019-03-02 | 1 | 60.0 | 1480.0
+428 | 50741 | 2019-03-12 | 2 | 190.0 | 2885.0
+429 | 50042 | 2019-03-22 | 2 | 120.0 | 2625.0
+430 | 50741 | 2019-03-29 | 1 | 50.0 | 480.0
+
+### orderline_unit_price  (6 rows, 0.00s)
+product_id | n | unit_prices
+4280 | 6 | 21.8182,21.875,21.6667,24.6667,21.3889,21.875
+5310 | 1 | 18.75
+5430 | 2 | 19.1667,21.875
+6520 | 4 | 16.0714,15.9375,16.25,17.0
+6600 | 3 | 20.0,20.0,20.0
+7950 | 2 | 9.6,9.6
+
+### orderline_id_steps  (8 rows, 0.00s)
+step | count(*)
+None | 1
+1 | 7
+2 | 2
+3 | 3
+4 | 2
+5 | 1
+35 | 1
+111 | 1
+
+### orderline_id_vs_order  (1 rows, 0.00s)
+pairs | nondecreasing
+17 | 17
+
+### monthly_orders_view_vs_sales  (10 rows, 0.00s)
+product_id | mth | orders_qty | sales_qty
+4280 | 2019-01-01 | 250.0 | None
+4280 | 2019-03-01 | 230.0 | None
+5310 | 2019-02-01 | 40.0 | None
+5430 | 2019-02-01 | 60.0 | None
+5430 | 2019-03-01 | 40.0 | None
+6520 | 2019-01-01 | 260.0 | None
+6520 | 2019-02-01 | 40.0 | None
+6600 | 2019-01-01 | 16.0 | None
+6600 | 2019-02-01 | 40.0 | None
+7950 | 2019-03-01 | 150.0 | None
+
+### employees_title_vs_open_period  (14 rows, 0.00s)
+id | title | open_titles | periods
+142 | Managing Director | Managing Director | 2
+143 | IT Manager | IT Manager | 4
+144 | Product Director | Product Director | 2
+145 | IT Developer | IT Developer + Scrum Master | 2
+146 | Warehouse Manager | Warehouse Manager | 2
+147 | Operations Chief | Operations Chief | 3
+148 | Purchaser | None | 0
+149 | Forklift Operator | None | 0
+150 | Bulk Salesman | None | 0
+151 | Sales Manager | None | 0
+152 | Forklift Operator | None | 0
+153 | IT Supporter | None | 0
+154 | Retail Salesman | None | 0
+155 | Janitor | None | 0
+
+### hire_overlaps  (4 rows, 0.00s)
+emp_id | start_ | end_ | title | start_ | end_ | title
+143 | 2014-01-01 | 2016-06-01 | Sys Admin | 2014-04-01 | 2015-10-01 | Code Tester
+144 | 2010-07-01 | 2013-07-01 | Sales Manager | 2012-04-01 | None | Product Director
+145 | 2014-02-01 | None | IT Developer | 2019-02-01 | None | Scrum Master
+147 | 2016-05-01 | 2017-03-01 | Warehouse Manager | 2016-11-01 | None | Operations Chief
+
+### hire_gaps  (3 rows, 0.00s)
+emp_id | end_ | next_start
+143 | 2015-10-01 | 2016-06-01
+146 | 2016-02-01 | 2017-03-01
+147 | 2015-05-01 | 2016-05-01
+
+### emp_hierarchy_depth  (4 rows, 0.00s)
+depth | count(*)
+0 | 1
+1 | 2
+2 | 4
+3 | 7
+
+### picker_titles  (2 rows, 0.00s)
+id | picker_emp_id | title | first_start
+841 | 149 | Forklift Operator | None
+842 | 152 | Forklift Operator | None
+
+### favorites_reviews_products  (2 rows, 0.00s)
+kind | items | resolve
+favorites | 6 | 6
+reviews | 6 | 6
+
+### favorites_vs_orders  (4 rows, 0.00s)
+id | favorite_list | review_list | ordered_products
+50042 | 4040,5310 | 4040:A,6600:C,7950:B | 4280,6520,5430
+50741 | 5430,7790,7870 | 4160:A | 4280,6520,6600,7950
+51007 | None | None | None
+51069 | 6520 | 4280:B,7790:B | 4280,6520,6600,5310,5430
+
+### product_alcohol_values  (9 rows, 0.00s)
+sales_volume | abv | count(*)
+330.0 | 4.5 | 1
+330.0 | 5.0 | 2
+330.0 | 6.5 | 1
+330.0 | 7.0 | 1
+330.0 | 8.5 | 1
+500.0 | 4.0 | 1
+500.0 | 4.5 | 1
+500.0 | 5.5 | 1
+500.0 | 6.0 | 1
+
+### packaging_names_vs_volume  (10 rows, 0.00s)
+id | name | sales_volume
+4040 | Coalminers Sweat | 330.0
+4160 | Reindeer Fuel | 500.0
+4280 | Hoppy Crude Oil | 330.0
+5310 | Monks and Nuns | 330.0
+5430 | Hercule Trippel | 330.0
+6520 | Der Helle Kumpel | 500.0
+6600 | Hazy Pink Cloud | 500.0
+7790 | Summer in India | 500.0
+7870 | Ghost of Hops | 330.0
+7950 | Pale Rider Rides | 330.0
+

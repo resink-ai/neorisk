@@ -1,0 +1,7 @@
+# Data Mart: 8 Week SQL Challenge case #5, one group of tables in Spider2's bank_sales_trading.
+file = "bank_sales_trading.sqlite"
+note = "Pre-aggregated weekly cells; each is reported at its week_date (a Monday), midnight UTC."
+
+[tables]
+weekly_sales = ["week_date", "region", "platform", "segment", "customer_type"]
+cleaned_weekly_sales = ["week_date", "region", "platform", "segment", "customer_type"]

@@ -1,0 +1,193 @@
+### er_without_ball  (1 rows, 0.00s)
+match_id | over_id | ball_id | extra_type | extra_runs | innings_no
+335987 | 1 | 1 | legbyes | 1 | 1
+
+### er_without_ball_neighbours  (6 rows, 0.00s)
+match_id | over_id | ball_id | innings_no | team_batting | team_bowling | striker_batting_position | striker | non_striker | bowler | runs_scored
+335987 | 1 | 2 | 1 | 1 | 2 | 2 | 2 | 1 | 14 | 0
+335987 | 1 | 3 | 1 | 1 | 2 | 2 | 2 | 1 | 14 | None
+335987 | 1 | 4 | 1 | 1 | 2 | 2 | 2 | 1 | 14 | 0
+335987 | 1 | 5 | 1 | 1 | 2 | 2 | 2 | 1 | 14 | 0
+335987 | 1 | 6 | 1 | 1 | 2 | 2 | 2 | 1 | 14 | 0
+335987 | 1 | 7 | 1 | 1 | 2 | 2 | 2 | 1 | 14 | 0
+
+### mixed_team_innings  (6 rows, 0.05s)
+match_id | innings_no | team_batting | team_bowling | count(*) | min(over_id) | max(over_id)
+392202 | 2 | 1 | 7 | 48 | 1 | 15
+392202 | 2 | 7 | 1 | 47 | 1 | 16
+392207 | 2 | 3 | 5 | 68 | 1 | 20
+392207 | 2 | 5 | 3 | 52 | 1 | 19
+419119 | 2 | 6 | 7 | 49 | 1 | 17
+419119 | 2 | 7 | 6 | 54 | 1 | 17
+
+### ball_players_not_in_pm_by_match  (4 rows, 0.03s)
+match_id | count(*)
+392202 | 47
+392207 | 68
+419119 | 54
+501274 | 9
+
+### ball_players_not_in_pm_any_team  (1 rows, 0.02s)
+count(*)
+9
+
+### ball_id_per_over  (9 rows, 0.01s)
+ball_id | count(*)
+1 | 21831
+2 | 21782
+3 | 21718
+4 | 21666
+5 | 21597
+6 | 21526
+7 | 3878
+8 | 607
+9 | 98
+
+### balls_per_over_dist  (9 rows, 0.03s)
+n | count(*)
+1 | 50
+2 | 64
+3 | 52
+4 | 69
+5 | 71
+6 | 17649
+7 | 3270
+8 | 509
+9 | 98
+
+### legal_balls_per_over  (8 rows, 0.05s)
+legal | count(*)
+0 | 4
+1 | 56
+2 | 61
+3 | 54
+4 | 75
+5 | 90
+6 | 21489
+7 | 3
+
+### ball_id_gaps  (1 rows, 0.03s)
+overs_with_gaps
+1
+
+### ball_id_gap_detail  (1 rows, 0.07s)
+match_id | innings_no | over_id | group_concat(ball_id)
+335987 | 1 | 1 | 2,3,4,5,6,7
+
+### over_gaps  (1 rows, 0.03s)
+innings_with_over_gaps
+0
+
+### over_gap_detail  (0 rows, 0.03s)
+match_id | innings_no | count(DISTINCT over_id) | max(over_id)
+
+### overs_per_innings  (25 rows, 0.02s)
+innings_no | max_over | count(*)
+1 | 8 | 1
+1 | 10 | 2
+1 | 11 | 2
+1 | 12 | 2
+1 | 13 | 1
+1 | 15 | 2
+1 | 16 | 3
+1 | 17 | 3
+1 | 18 | 6
+1 | 19 | 9
+1 | 20 | 537
+2 | 5 | 3
+2 | 6 | 2
+2 | 8 | 4
+2 | 10 | 4
+2 | 11 | 4
+2 | 12 | 3
+2 | 13 | 4
+2 | 14 | 18
+2 | 15 | 14
+2 | 16 | 17
+2 | 17 | 27
+2 | 18 | 46
+2 | 19 | 95
+2 | 20 | 327
+
+### bowler_per_over  (2 rows, 0.04s)
+n | count(*)
+1 | 21816
+2 | 16
+
+### consecutive_overs_same_bowler  (1 rows, 0.10s)
+count(*)
+0
+
+### bowler_overs_max  (4 rows, 0.04s)
+n | count(*)
+1 | 676
+2 | 959
+3 | 1290
+4 | 3846
+
+### striker_eq_nonstriker  (1 rows, 0.00s)
+count(*)
+0
+
+### bowler_is_batter  (1 rows, 0.00s)
+count(*)
+0
+
+### batting_position_rule  (1 rows, 0.11s)
+eq | ne | count(*)
+6770 | 1723 | 8493
+
+### batting_position_constant  (1 rows, 0.04s)
+count(*)
+0
+
+### batting_position_unique_in_innings  (1 rows, 0.04s)
+count(*)
+0
+
+### first_ball_positions  (1 rows, 0.00s)
+striker_batting_position | count(*)
+1 | 1135
+
+### striker_rotation_rule  (4 rows, 0.26s)
+k | odd | same | swapped | other
+next_over | 0 | 1 | 11267 | 2
+next_over | 1 | 8448 | 9 | 0
+same_over | 0 | 64012 | 11 | 3
+same_over | 1 | 24 | 43398 | 1
+
+### wide_5_runs  (11 rows, 0.00s)
+extra_runs | runs_scored | count(*)
+1 | None | 3096
+1 | 0 | 583
+1 | 1 | 1
+1 | 4 | 1
+2 | None | 156
+2 | 0 | 34
+3 | None | 28
+3 | 0 | 6
+4 | None | 4
+5 | None | 160
+5 | 0 | 22
+
+### wickets_per_innings  (11 rows, 0.01s)
+n | count(*)
+0 | 9
+1 | 38
+2 | 56
+3 | 112
+4 | 157
+5 | 159
+6 | 144
+7 | 140
+8 | 120
+9 | 105
+10 | 96
+
+### player_out_twice  (1 rows, 0.00s)
+count(*)
+0
+
+### batter_after_out  (0 rows, 0.12s)
+kind_out | count(DISTINCT w.match_id||'/'||w.innings_no||'/'||w.player_out)
+

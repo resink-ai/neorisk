@@ -44,7 +44,7 @@ A round trip passes when every source table equals the rebuilt one as a **multis
 
 ## The datasets
 
-Measured on an Apple-silicon laptop: batch 1 on 2026-10-30, batch 2 on 2026-10-31.
+Measured on an Apple-silicon laptop: batch 1 on 2026-10-30, batch 2 on 2026-10-31, batch 3 on 2026-11-04. Batch 3 (from `ipl` on) is built with `dataset build`, not `roundtrip`, so it has no `roundtrip` time; its Events are the log's rows.
 
 | Project | Source | Tables | Rows | Events | Queries | `roundtrip` |
 |---|---|---:|---:|---:|---:|---:|
@@ -61,6 +61,36 @@ Measured on an Apple-silicon laptop: batch 1 on 2026-10-30, batch 2 on 2026-10-3
 | `northwind` | northwind | 15 | 3,366 | 3,794 | 2 | 1 s |
 | `oraclesh` | complex_oracle | 10 | 1,064,608 | 1,000,955 | 6 | 19 s |
 | `adventureworks` | AdventureWorks | 13 | 168,686 | 197,946 | 1 | 3 s |
+| `ipl` | IPL | 8 | 293,471 | 150,518 | 11 | — |
+| `f1` | f1 | 29 | 1,941,243 | 686,185 | 9 | — |
+| `veg` | bank_sales_trading (`veg_*`) | 4 | 934,987 | 934,742 | 2 | — |
+| `datamart` | bank_sales_trading (`weekly_sales`) | 2 | 34,234 | 17,117 | 2 | — |
+| `freshsegments` | bank_sales_trading (`interest_*`) | 2 | 15,482 | 16,191 | 2 | — |
+| `switrs` | California_Traffic_Collision | 4 | 471,571 | 565,814 | 3 | — |
+| `eusoccer` | EU_soccer | 7 | 222,796 | 233,856 | 5 | — |
+| `wwe` | WWE | 9 | 578,890 | 128,303 | 1 | — |
+| `dbimdb` | Db-IMDB | 13 | 154,676 | 140,056 | 5 | — |
+| `imdb_movies` | imdb_movies | 7 | 75,898 | 90,680 | 2 | — |
+| `baseball` | Baseball | 26 | 553,693 | 572,700 | 2 | — |
+| `atliq` | education_business (`hardware_*`) | 6 | 973,813 | 973,234 | 2 | — |
+| `parchposey` | education_business (`web_*`) | 5 | 16,390 | 16,390 | 1 | — |
+| `university` | education_business (`university_*`) | 5 | 76 | 132 | 1 | — |
+| `staffhours` | education_business (`StaffHours`) | 1 | 236 | 262 | 0 | — |
+| `salaries_india` | education_business (`SalaryDataset`) | 1 | 4,344 | 8,688 | 1 | — |
+| `legislators` | city_legislation (`legislators*`) | 3 | 86,896 | 100,107 | 4 | — |
+| `jobpostings` | city_legislation (`job_*`, `skills_*`) | 4 | 459,758 | 459,758 | 1 | — |
+| `aliens` | city_legislation (`alien*`) | 4 | 200,000 | 100,000 | 1 | — |
+| `cities` | city_legislation (`cities*`) | 4 | 45,725 | 45,966 | 4 | — |
+| `unicorns` | modern_data (`companies_*`) | 3 | 3,255 | 2,181 | 2 | — |
+| `nyctrees` | modern_data (`trees`, `income_trees`) | 2 | 690,846 | 1,374,766 | 2 | — |
+| `covidstates` | modern_data (`statistics`) | 1 | 1,010 | 1,010 | 0 | — |
+| `wordlist` | modern_data (`word_list`) | 1 | 373,804 | 373,804 | 2 | — |
+| `stacking` | stacking | 7 | 10,297 | 10,297 | 3 | — |
+| `oraclesql` | oracle_sql | 38 | 1,350 | 1,102 | 8 | — |
+| `bowling` | BowlingLeague | 11 | 2,156 | 1,988 | 1 | — |
+| `entertainment` | EntertainmentAgency | 13 | 1,654 | 306 | 3 | — |
+| `school` | school_scheduling | 15 | 811 | 951 | 1 | — |
+| `music` | music | 11 | 15,607 | 15,607 | 1 | — |
 
 Every table of every project round-trips exactly, and every saved query agrees. Most of `bitcoin`'s time is local157's correlated subquery.
 

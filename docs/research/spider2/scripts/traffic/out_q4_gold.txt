@@ -1,0 +1,41 @@
+### local017_gold_sql  (1 rows, 0.09s)
+Year
+2001
+
+### local017_top2_per_year  (21 rows, 0.04s)
+y | group_concat(c||' '||n, ' | ')
+2001 | speeding 1554 | automobile right of way 752
+2002 | speeding 1560 | improper turning 812
+2003 | speeding 1592 | improper turning 865
+2004 | speeding 1535 | improper turning 883
+2005 | speeding 1642 | improper turning 855
+2006 | speeding 1476 | improper turning 878
+2007 | speeding 1462 | improper turning 865
+2008 | speeding 1339 | improper turning 776
+2009 | speeding 1308 | improper turning 761
+2010 | speeding 1319 | improper turning 766
+2011 | speeding 1273 | improper turning 723
+2012 | speeding 1275 | improper turning 682
+2013 | speeding 1185 | improper turning 659
+2014 | speeding 1186 | improper turning 748
+2015 | speeding 1396 | improper turning 867
+2016 | speeding 1615 | improper turning 819
+2017 | speeding 1568 | improper turning 928
+2018 | speeding 1539 | improper turning 872
+2019 | speeding 1468 | improper turning 926
+2020 | speeding 1070 | improper turning 836
+2021 | speeding 411 | improper turning 264
+
+### local018_shares  (1 rows, 0.06s)
+cat | s2011 | s2021 | diff_2011_minus_2021
+speeding | 31.33152842727049 | 31.885182311869666 | -0.553654
+
+### local015_helmet  (2 rows, 0.03s)
+g | collisions | motorcyclist_fatalities | pct
+helmet_not_used | 1 | 0 | 0.0
+helmet_used | 18 | 3 | 16.67
+
+### local015_join_size  (1 rows, 0.01s)
+motorcycle_collisions | with_any_party
+2796 | 53
+

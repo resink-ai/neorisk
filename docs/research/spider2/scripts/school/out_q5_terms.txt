@@ -1,0 +1,47 @@
+### spring_is_fall_plus_3000  (1 rows, 0.00s)
+spring | has_fall_twin | identical_but_date | date_plus_126
+81 | 66 | 66 | 64
+
+### spring_without_twin  (15 rows, 0.00s)
+ClassID | SubjectID | StartDate
+4025 | 4 | 2018-01-15
+4055 | 5 | 2018-01-15
+4172 | 8 | 2018-01-15
+4192 | 9 | 2018-01-15
+4750 | 1 | 2018-01-15
+4751 | 1 | 2018-01-15
+4755 | 2 | 2018-01-15
+4760 | 3 | 2018-01-15
+4768 | 6 | 2018-01-16
+4800 | 23 | 2018-01-15
+4810 | 23 | 2018-01-16
+4812 | 24 | 2018-01-16
+4813 | 24 | 2018-01-15
+4825 | 25 | 2018-01-15
+4880 | 26 | 2018-01-15
+
+### fall_without_twin  (0 rows, 0.00s)
+ClassID | SubjectID | StartDate
+
+### twin_differences  (0 rows, 0.00s)
+ClassID | fs | ss | fr | sr | ft | st | fd | sd
+
+### faculty_twins  (1 rows, 0.00s)
+spring_fc | same_teacher
+80 | 64
+
+### enrolment_pattern  (1 rows, 0.00s)
+count(*)
+0
+
+### twin_date_offsets  (4 rows, 0.00s)
+StartDate | StartDate | d | count(*)
+2017-09-11 | 2018-01-15 | 126.0 | 52
+2017-09-12 | 2018-01-16 | 126.0 | 12
+2017-09-12 | 2018-01-20 | 130.0 | 1
+2017-09-16 | 2018-01-15 | 121.0 | 1
+
+### description_length  (1 rows, 0.00s)
+max(length(SubjectDescription)) | min(length(SubjectDescription))
+307 | 81
+

@@ -1,0 +1,51 @@
+## L040 R1: raw trees INNER JOIN raw income_trees (both duplicate sets fan out), med>0 AND mean>0
+boroname|n|avg_mean
+Queens|256056|79312.572258
+Brooklyn|184711|73675.976969
+Staten Island|106374|94029.327834
+## L040 R2: raw trees JOIN DISTINCT income_trees
+boroname|n|avg_mean
+Queens|252846|79366.738418
+Brooklyn|177132|73555.190988
+Staten Island|106374|94029.327834
+## L040 R3: DISTINCT trees JOIN DISTINCT income_trees
+boroname|n|avg_mean
+Queens|250364|79366.239747
+Brooklyn|175358|73552.914734
+Staten Island|105318|94026.03572
+## L040 R4: DISTINCT trees JOIN raw income_trees
+boroname|n|avg_mean
+Queens|253543|79312.071254
+Brooklyn|182866|73673.949701
+Staten Island|105318|94026.03572
+## L040 R5: all trees per borough (no income filter), raw and distinct
+boroname|raw|dist
+Queens|253039|250551
+Brooklyn|179089|177293
+Staten Island|106374|105318
+Bronx|86035|85203
+Manhattan|66089|65423
+## L040 R6: avg of mean income over DISTINCT zip rows per borough (zip-level average, zip borough from trees)
+b|zips|avg_mean
+Bronx|25|53051.84
+Brooklyn|38|72988.789474
+Manhattan|43|148516.44186
+Queens|64|81328.78125
+Staten Island|12|87952.75
+## L041 R1: raw rows, Bronx, health='Good' / all Bronx rows
+pct|n
+78.147266|86035
+## L041 R2: distinct trees
+pct|n
+78.169783|85203
+## L041 R3: raw, denominator = rows with non-NULL health
+pct|n
+82.63766|81360
+## L041 R4: distinct, denominator = non-NULL health
+pct
+82.649376
+## L041 R5: status='Alive' only, raw and distinct
+pct
+82.63766
+pct
+82.649376

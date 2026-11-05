@@ -1,0 +1,7 @@
+# English word list (consistent with dwyl/english-words' words_alpha.txt), the `word_list`
+# table of Spider2's modern_data. Rows 1-3,701 are copies Spider2 prepended.
+file = "modern_data.sqlite"
+note = "Untimed. Word creation and duplicate-marker times are a rule: 2016-01-01."
+
+[tables]
+word_list = ["words"]

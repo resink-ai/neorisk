@@ -1,0 +1,234 @@
+### setup_indexes  (setup, 0.01s)
+
+### key_uniqueness  (9 rows, 0.00s)
+k | n | d
+cities.city_id | 44622 | 44622
+countries.country_id | 241 | 241
+countries.country_code_2 | 241 | 241
+countries.country_code_3 | 241 | 241
+countries.country_name | 241 | 241
+currencies.currency_id | 254 | 254
+currencies.(cc2,code) | 254 | 253
+languages.language_id | 608 | 608
+languages.(language,cc2) | 608 | 602
+
+### rowid_is_id  (1 rows, 0.00s)
+cities | n | cur | lang
+44622 | 44622 | 254 | 608
+
+### country_id_gaps  (1 rows, 0.00s)
+mx | n | gaps
+256 | 241 | 15
+
+### fk_coverage  (3 rows, 0.00s)
+j | n | found
+cities -> countries | 44622 | 44622
+currencies -> countries | 254 | 254
+languages -> countries | 608 | 608
+
+### fk_orphans_list  (0 rows, 0.00s)
+t | country_code_2 | count(*)
+
+### countries_without_cities  (1 rows, 0.00s)
+count(*)
+5
+
+### lat_long_swapped  (1 rows, 0.00s)
+lat_out_of_range | lon_out_of_range | min(longitude) | max(longitude) | count(*)
+9774 | 0 | -54.9333 | 81.7166 | 44622
+
+### tokyo  (1 rows, 0.00s)
+city_id | city_name | latitude | longitude | country_code_2 | capital | population | insert_date
+1 | tokyo | 139.6922 | 35.6897 | jp | 1 | 37732000.0 | 2022-01-12
+
+### duplicate_cities  (1 rows, 0.02s)
+dup_groups | rows_in_groups
+1455 | 3623
+
+### exact_duplicate_rows_ignoring_id  (1 rows, 0.03s)
+count(*) - (select count(*) from (select distinct city_name, latitude, longitude, country_code_2, capital, population, insert_date from cities))
+0
+
+### same_place_twice  (1 rows, 0.02s)
+count(*)
+1
+
+### capitals_per_country  (4 rows, 0.01s)
+n | countries
+0 | 2
+1 | 223
+2 | 10
+3 | 1
+
+### population_zero_null  (1 rows, 0.00s)
+nulls | zeros | non_integral | max(population)
+305 | 4 | 0 | 37732000.0
+
+### population_rank_order  (1 rows, 0.03s)
+nonincreasing | increases | pairs | first_null_id
+23525 | 20673 | 44316 | 898
+
+### city_name_null  (1 rows, 0.00s)
+city_id | city_name | latitude | longitude | country_code_2 | capital | population | insert_date
+9272 | None | 100.7833 | 18.7833 | th | 0 | 20595.0 | 2023-03-02
+
+### name_chars  (1 rows, 0.01s)
+non_ascii | hyphen | apostrophe | dot
+0 | 0 | 0 | 67
+
+### insert_date_format  (1 rows, 0.01s)
+iso | valid | min(insert_date) | max(insert_date) | days | span_days
+44622 | 44622 | 2021-01-01 | 2023-08-01 | 943 | 943
+
+### insert_per_month  (32 rows, 0.01s)
+m | count(*)
+2021-01 | 1471
+2021-02 | 1291
+2021-03 | 1485
+2021-04 | 1508
+2021-05 | 1509
+2021-06 | 1395
+2021-07 | 1394
+2021-08 | 1481
+2021-09 | 1452
+2021-10 | 1446
+2021-11 | 1378
+2021-12 | 1472
+2022-01 | 1507
+2022-02 | 1351
+2022-03 | 1451
+2022-04 | 1437
+2022-05 | 1459
+2022-06 | 1411
+2022-07 | 1429
+2022-08 | 1453
+2022-09 | 1478
+2022-10 | 1473
+2022-11 | 1501
+2022-12 | 1482
+2023-01 | 1532
+2023-02 | 1281
+2023-03 | 1386
+2023-04 | 1402
+2023-05 | 1389
+2023-06 | 1432
+2023-07 | 1435
+2023-08 | 51
+
+### insert_per_day_dist  (45 rows, 0.01s)
+n | days
+27 | 2
+28 | 1
+29 | 1
+30 | 2
+31 | 4
+32 | 6
+33 | 4
+34 | 7
+35 | 8
+36 | 21
+37 | 13
+38 | 30
+39 | 25
+40 | 36
+41 | 36
+42 | 48
+43 | 50
+44 | 40
+45 | 62
+46 | 53
+47 | 46
+48 | 45
+49 | 48
+50 | 35
+51 | 50
+52 | 50
+53 | 42
+54 | 35
+55 | 38
+56 | 20
+57 | 15
+58 | 14
+59 | 11
+60 | 11
+61 | 7
+62 | 6
+63 | 3
+64 | 4
+65 | 3
+66 | 4
+67 | 2
+68 | 1
+69 | 2
+71 | 1
+73 | 1
+
+### insert_vs_population_independence  (3 rows, 0.01s)
+band | mean_day | count(*)
+1001-10000 | 468.8 | 9000
+rest | 469.8 | 34622
+top 1000 by population | 474.0 | 1000
+
+### insert_weekday  (7 rows, 0.01s)
+dow | count(*)
+0 | 6413
+1 | 6461
+2 | 6396
+3 | 6219
+4 | 6439
+5 | 6392
+6 | 6302
+
+### capital_insert  (2 rows, 0.00s)
+capital | mean_day | count(*)
+0 | 469.7 | 44376
+1 | 469.0 | 246
+
+### created_on  (1 rows, 0.00s)
+created_on | count(*)
+2024-07-18 | 241
+
+### region_mix  (6 rows, 0.00s)
+region | count(*)
+africa | 59
+americas | 57
+asia | 50
+europe | 48
+oceania | 26
+antartica | 1
+
+### currencies_per_country  (3 rows, 0.00s)
+n | count(*)
+1 | 215
+2 | 15
+3 | 3
+
+### languages_per_country  (14 rows, 0.00s)
+n | count(*)
+1 | 69
+2 | 100
+3 | 31
+4 | 14
+5 | 6
+6 | 5
+7 | 4
+8 | 2
+9 | 1
+11 | 1
+13 | 1
+15 | 1
+16 | 1
+22 | 1
+
+### null_currency_code  (1 rows, 0.00s)
+currency_id | country_code_2 | currency_name | currency_code
+212 | gs | no universal currency | None
+
+### null_sub_region  (1 rows, 0.00s)
+country_id | country_name | country_code_2 | country_code_3 | region | sub_region | intermediate_region | created_on
+10 | antarctica | aq | ata | antartica | None | None | 2024-07-18
+
+### population_order_head  (1 rows, 0.02s)
+increases_before_id_898 | pairs_before_898
+142 | 896
+

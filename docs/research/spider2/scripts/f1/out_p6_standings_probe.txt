@@ -1,0 +1,16 @@
+driver_standings       results only      rows 34595  key present 34595  points=cum 33922  wins=cum 34595
+     years with point mismatches (year: rows): {1950: 1, 1951: 9, 1952: 3, 1953: 14, 1954: 5, 1955: 1, 1956: 3, 1957: 1, 1958: 3, 1959: 1, 1960: 1, 1961: 2, 1962: 5, 1963: 6, 1964: 2, 1965: 7, 1966: 3, 1967: 1, 1979: 35, 1980: 3, 1985: 2, 1986: 4, 1987: 3, 1988: 5, 1989: 4, 1990: 2, 2021: 52, 2022: 188, 2023: 222, 2024: 85}
+driver_standings       results + sprint  rows 34595  key present 34595  points=cum 34469  wins=cum 34505
+     years with point mismatches (year: rows): {1950: 1, 1951: 9, 1952: 3, 1953: 14, 1954: 5, 1955: 1, 1956: 3, 1957: 1, 1958: 3, 1959: 1, 1960: 1, 1961: 2, 1962: 5, 1963: 6, 1964: 2, 1965: 7, 1966: 3, 1967: 1, 1979: 35, 1980: 3, 1985: 2, 1986: 4, 1987: 3, 1988: 5, 1989: 4, 1990: 2}
+     position order vs points: 1 adjacent pairs where a better position has fewer points
+     position_text != str(position): 1; values Counter({'D': 1})
+constructor_standings  results only      rows 13271  key present 13271  points=cum 12007  wins=cum 13270
+     years with point mismatches (year: rows): {1958: 50, 1959: 24, 1960: 26, 1961: 21, 1962: 32, 1963: 39, 1964: 34, 1965: 35, 1966: 32, 1967: 37, 1968: 39, 1969: 41, 1970: 57, 1971: 61, 1972: 30, 1973: 56, 1974: 57, 1975: 62, 1976: 64, 1977: 45, 1978: 69, 2007: 3, 2018: 9, 2020: 13, 2021: 39, 2022: 119, 2023: 124, 2024: 46}
+constructor_standings  results + sprint  rows 13271  key present 13271  points=cum 12335  wins=cum 13194
+     years with point mismatches (year: rows): {1958: 50, 1959: 24, 1960: 26, 1961: 21, 1962: 32, 1963: 39, 1964: 34, 1965: 35, 1966: 32, 1967: 37, 1968: 39, 1969: 41, 1970: 57, 1971: 61, 1972: 30, 1973: 56, 1974: 57, 1975: 62, 1976: 64, 1977: 45, 1978: 69, 2007: 3, 2018: 9, 2020: 13}
+     position order vs points: 17 adjacent pairs where a better position has fewer points
+     position_text != str(position): 17; values Counter({'E': 17})
+constructor_results results only: 12129/12505 equal; keys in results 12498; (race,constructor) pairs in results 12908
+     years with mismatches: {1958: 15, 1959: 14, 1960: 15, 1961: 11, 1962: 12, 1963: 11, 1964: 16, 1965: 15, 1966: 11, 1967: 14, 1968: 10, 1969: 20, 1970: 11, 1971: 17, 1972: 10, 1973: 18, 1974: 20, 1975: 16, 1976: 18, 1977: 12, 1978: 16, 1979: 2, 2002: 1, 2015: 4, 2021: 8, 2022: 15, 2023: 31, 2024: 13}
+constructor_results results + sprint: 12196/12505 equal; keys in results 12498; (race,constructor) pairs in results 12908
+     years with mismatches: {1958: 15, 1959: 14, 1960: 15, 1961: 11, 1962: 12, 1963: 11, 1964: 16, 1965: 15, 1966: 11, 1967: 14, 1968: 10, 1969: 20, 1970: 11, 1971: 17, 1972: 10, 1973: 18, 1974: 20, 1975: 16, 1976: 18, 1977: 12, 1978: 16, 1979: 2, 2002: 1, 2015: 4}

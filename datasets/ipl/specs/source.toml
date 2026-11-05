@@ -1,0 +1,14 @@
+# IPL seasons 1-9 (2008-2016), ball by ball: Spider2's IPL catalog (8 tables). Likely the
+# Kaggle "IPL SQLite Database" (harsha547/ipldatabase), unverified.
+file = "IPL.sqlite"
+note = "Dates only, read as UTC. Every intraday time is a rule; match 419136 has no match row."
+
+[tables]
+player = ["player_id"]
+team = ["team_id"]
+match = ["match_id"]
+player_match = ["match_id", "player_id"]
+ball_by_ball = ["match_id", "over_id", "ball_id", "innings_no"]
+batsman_scored = ["match_id", "over_id", "ball_id", "innings_no"]
+wicket_taken = ["match_id", "over_id", "ball_id", "innings_no"]
+extra_runs = ["match_id", "over_id", "ball_id", "innings_no"]

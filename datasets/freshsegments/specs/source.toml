@@ -1,0 +1,7 @@
+# Fresh Segments: 8 Week SQL Challenge case #8, one group of tables in Spider2's bank_sales_trading.
+file = "bank_sales_trading.sqlite"
+note = "Map stamps to the second, read as UTC. Metrics are stamped at their month's close; month-less rows at N."
+
+[tables]
+interest_map = ["id"]
+interest_metrics = ["month_year", "interest_id"]

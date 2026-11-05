@@ -1,0 +1,19 @@
+movies: Db-IMDB 3475 imdb_movies 7997 common ids 238
+same title 237 same year 199 same rating 74 same votes 1
+  tt0071145 ('Ankur', '1974', 8.2, 747) ('Ankur', 2019, 8.2, 789)
+  tt0095857 ('Pestonjee', '1988', 7.1, 129) ('Pestonjee', 2019, 7.0, 137)
+  tt0097268 ('Ek Din Achanak', '1989', 6.9, 166) ('Ek Din Achanak', 2018, 6.9, 179)
+  tt0147855 ('Aashirwad', '1968', 7.4, 161) ('Aashirwad', 2019, 7.3, 171)
+  tt0352314 ('Ek Hasina Thi', '2004', 7.6, 5276) ('Ek Hasina Thi', 2019, 7.6, 6014)
+  tt1365519 ('Tomb Raider', '2018', 6.4, 142585) ('Tomb Raider', 2018, 6.3, 172035)
+  tt1806913 ('Golmaal Again', '2017', 5.0, 6715) ('Golmaal Again', 2017, 4.9, 7344)
+  tt1981128 ('Geostorm', '2017', 5.3, 72375) ('Geostorm', 2017, 5.3, 83630)
+  tt2150177 ('Bhaiaji Superhit', '2018', 5.7, 202) ('Bhaiaji Superhit', 2018, 4.1, 465)
+  tt2198235 ('Monsoon Shootout', '2013', 6.4, 670) ('Monsoon Shootout', 2017, 6.5, 802)
+Db-IMDB movies with year 2017-2019: 230
+common (title, year) pairs: 198
+persons: Db-IMDB 37565 imdb_movies 25735 common ids 1771
+common persons with same name: 1732
+cast pairs on common movies: Db-IMDB 6533 imdb_movies 414 shared 400
+common movies where imdb_movies votes > Db-IMDB votes: 237 <: 0
+max Db-IMDB year of common movies vs imdb_movies year differs: 39

@@ -1,0 +1,231 @@
+### row_counts  (2 rows, 0.00s)
+t | n
+interest_metrics | 14273
+interest_map | 1209
+
+### typeof_metrics  (3 rows, 0.01s)
+m | y | my | iid | c | iv | r | pr | n
+null | null | null | null | real | real | integer | real | 1193
+null | null | null | real | real | real | integer | real | 1
+real | real | text | real | real | real | integer | real | 13079
+
+### typeof_map  (2 rows, 0.00s)
+typeof(id) | typeof(interest_name) | typeof(interest_summary) | typeof(created_at) | typeof(last_modified) | n
+integer | text | null | text | text | 20
+integer | text | text | text | text | 1189
+
+### metrics_null_patterns  (3 rows, 0.00s)
+m_null | y_null | my_null | iid_null | n
+0 | 0 | 0 | 0 | 13079
+1 | 1 | 1 | 0 | 1
+1 | 1 | 1 | 1 | 1193
+
+### metrics_null_rows_sample  (5 rows, 0.00s)
+rowid | _month | _year | month_year | interest_id | composition | index_value | ranking | percentile_ranking
+39 | None | None | None | None | 6.12 | 2.85 | 43 | 96.4
+78 | None | None | None | None | 7.13 | 2.84 | 45 | 96.23
+763 | None | None | None | None | 6.82 | 2.84 | 45 | 96.23
+802 | None | None | None | None | 5.96 | 2.83 | 47 | 96.06
+1449 | None | None | None | None | 7.73 | 2.82 | 48 | 95.98
+
+### null_interest_id_rows  (1193 rows, 0.00s)
+rowid | _month | _year | month_year | interest_id | composition | index_value | ranking | percentile_ranking
+39 | None | None | None | None | 6.12 | 2.85 | 43 | 96.4
+78 | None | None | None | None | 7.13 | 2.84 | 45 | 96.23
+763 | None | None | None | None | 6.82 | 2.84 | 45 | 96.23
+802 | None | None | None | None | 5.96 | 2.83 | 47 | 96.06
+1449 | None | None | None | None | 7.73 | 2.82 | 48 | 95.98
+1526 | None | None | None | None | 5.37 | 2.82 | 48 | 95.98
+1565 | None | None | None | None | 6.15 | 2.82 | 48 | 95.98
+2174 | None | None | None | None | 5.46 | 2.81 | 51 | 95.73
+2365 | None | None | None | None | 6.57 | 2.81 | 51 | 95.73
+5102 | None | None | None | None | 6.05 | 2.81 | 51 | 95.73
+6053 | None | None | None | None | 6.04 | 2.81 | 51 | 95.73
+7194 | None | None | None | None | 5.74 | 2.81 | 51 | 95.73
+8335 | None | None | None | None | 5.71 | 2.78 | 56 | 95.31
+8374 | None | None | None | None | 4.93 | 2.77 | 57 | 95.23
+9439 | None | None | None | None | 5.84 | 2.76 | 58 | 95.14
+9478 | None | None | None | None | 7.19 | 2.76 | 58 | 95.14
+9517 | None | None | None | None | 5.73 | 2.76 | 58 | 95.14
+10316 | None | None | None | None | 6.96 | 2.75 | 61 | 94.89
+10697 | None | None | None | None | 5.91 | 2.75 | 61 | 94.89
+11040 | None | None | None | None | 8.25 | 2.75 | 61 | 94.89
+11231 | None | None | None | None | 5.66 | 2.74 | 64 | 94.64
+11954 | None | None | None | None | 6.04 | 2.73 | 65 | 94.56
+11993 | None | None | None | None | 5.78 | 2.73 | 65 | 94.56
+12070 | None | None | None | None | 6.45 | 2.72 | 67 | 94.39
+12261 | None | None | None | None | 6.95 | 2.72 | 67 | 94.39
+12528 | None | None | None | None | 5.66 | 2.7 | 69 | 94.22
+13106 | None | None | None | None | 9.66 | 4.41 | 1 | 99.92
+13107 | None | None | None | None | 9.23 | 3.8 | 2 | 99.83
+13108 | None | None | None | None | 7.09 | 3.58 | 3 | 99.75
+13109 | None | None | None | None | 7.72 | 3.56 | 4 | 99.66
+13110 | None | None | None | None | 7.79 | 3.55 | 5 | 99.58
+13111 | None | None | None | None | 8.59 | 3.5 | 6 | 99.5
+13112 | None | None | None | None | 8.62 | 3.36 | 7 | 99.41
+13113 | None | None | None | None | 7.08 | 3.29 | 8 | 99.33
+13114 | None | None | None | None | 7.41 | 3.28 | 9 | 99.25
+13115 | None | None | None | None | 6.7 | 3.24 | 10 | 99.16
+13116 | None | None | None | None | 6.77 | 3.22 | 11 | 99.08
+13117 | None | None | None | None | 6.39 | 3.2 | 12 | 98.99
+13118 | None | None | None | None | 6.43 | 3.16 | 13 | 98.91
+13119 | None | None | None | None | 7.21 | 3.16 | 13 | 98.91
+13120 | None | None | None | None | 6.14 | 3.15 | 15 | 98.74
+13121 | None | None | None | None | 6.84 | 3.15 | 15 | 98.74
+13122 | None | None | None | None | 6.12 | 3.14 | 17 | 98.58
+13123 | None | None | None | None | 7.26 | 3.12 | 18 | 98.49
+13124 | None | None | None | None | 6.58 | 3.1 | 19 | 98.41
+13125 | None | None | None | None | 6.64 | 3.09 | 20 | 98.32
+13126 | None | None | None | None | 7.45 | 3.03 | 21 | 98.24
+13127 | None | None | None | None | 6.83 | 3.01 | 22 | 98.16
+13128 | None | None | None | None | 6.27 | 3.0 | 23 | 98.07
+13129 | None | None | None | None | 5.85 | 2.99 | 24 | 97.99
+13130 | None | None | None | None | 6.14 | 2.98 | 25 | 97.91
+13131 | None | None | None | None | 7.22 | 2.98 | 25 | 97.91
+13132 | None | None | None | None | 6.66 | 2.97 | 27 | 97.74
+13133 | None | None | None | None | 6.16 | 2.97 | 27 | 97.74
+13134 | None | None | None | None | 6.2 | 2.96 | 29 | 97.57
+13135 | None | None | None | None | 7.26 | 2.94 | 30 | 97.49
+13136 | None | None | None | None | 5.92 | 2.94 | 30 | 97.49
+13137 | None | None | None | None | 6.48 | 2.93 | 32 | 97.32
+13138 | None | None | None | None | 6.26 | 2.91 | 33 | 97.24
+13139 | None | None | None | None | 6.7 | 2.91 | 33 | 97.24
+13140 | None | None | None | None | 5.64 | 2.88 | 35 | 97.07
+13141 | None | None | None | None | 7.48 | 2.87 | 36 | 96.98
+13142 | None | None | None | None | 6.85 | 2.87 | 36 | 96.98
+13143 | None | None | None | None | 6.11 | 2.87 | 36 | 96.98
+13144 | None | None | None | None | 6.51 | 2.87 | 36 | 96.98
+13145 | None | None | None | None | 5.64 | 2.86 | 40 | 96.65
+13146 | None | None | None | None | 6.1 | 2.86 | 40 | 96.65
+13147 | None | None | None | None | 5.99 | 2.86 | 40 | 96.65
+13148 | None | None | None | None | 6.86 | 2.85 | 43 | 96.4
+13149 | None | None | None | None | 6.15 | 2.69 | 70 | 94.14
+13150 | None | None | None | None | 6.15 | 2.67 | 71 | 94.05
+13151 | None | None | None | None | 8.62 | 2.66 | 72 | 93.97
+13152 | None | None | None | None | 6.73 | 2.66 | 72 | 93.97
+13153 | None | None | None | None | 5.92 | 2.66 | 72 | 93.97
+13154 | None | None | None | None | 6.59 | 2.66 | 72 | 93.97
+13155 | None | None | None | None | 5.11 | 2.65 | 76 | 93.63
+13156 | None | None | None | None | 6.5 | 2.65 | 76 | 93.63
+13157 | None | None | None | None | 5.58 | 2.64 | 78 | 93.47
+13158 | None | None | None | None | 5.51 | 2.63 | 79 | 93.38
+13159 | None | None | None | None | 8.21 | 2.63 | 79 | 93.38
+13160 | None | None | None | None | 5.45 | 2.63 | 79 | 93.38
+13161 | None | None | None | None | 5.19 | 2.62 | 82 | 93.13
+13162 | None | None | None | None | 5.7 | 2.61 | 83 | 93.05
+13163 | None | None | None | None | 5.34 | 2.6 | 84 | 92.96
+13164 | None | None | None | None | 5.28 | 2.6 | 84 | 92.96
+13165 | None | None | None | None | 5.46 | 2.58 | 86 | 92.8
+13166 | None | None | None | None | 5.23 | 2.58 | 86 | 92.8
+13167 | None | None | None | None | 5.22 | 2.58 | 86 | 92.8
+13168 | None | None | None | None | 5.41 | 2.57 | 89 | 92.55
+13169 | None | None | None | None | 5.36 | 2.57 | 89 | 92.55
+13170 | None | None | None | None | 6.83 | 2.56 | 91 | 92.38
+13171 | None | None | None | None | 6.07 | 2.55 | 92 | 92.29
+13172 | None | None | None | None | 6.31 | 2.55 | 92 | 92.29
+13173 | None | None | None | None | 5.27 | 2.53 | 94 | 92.13
+13174 | None | None | None | None | 6.53 | 2.53 | 94 | 92.13
+13175 | None | None | None | None | 5.04 | 2.53 | 94 | 92.13
+13176 | None | None | None | None | 5.46 | 2.53 | 94 | 92.13
+13177 | None | None | None | None | 5.0 | 2.52 | 98 | 91.79
+13178 | None | None | None | None | 5.63 | 2.51 | 99 | 91.71
+13179 | None | None | None | None | 5.5 | 2.51 | 99 | 91.71
+
+### month_year_values  (15 rows, 0.01s)
+month_year | _month | _year | n | ids | min(ranking) | max(ranking)
+None | None | None | 1194 | 1 | 1 | 1194
+07-2018 | 7.0 | 2018.0 | 729 | 729 | 1 | 729
+08-2018 | 8.0 | 2018.0 | 767 | 767 | 1 | 767
+09-2018 | 9.0 | 2018.0 | 780 | 780 | 1 | 780
+10-2018 | 10.0 | 2018.0 | 857 | 857 | 1 | 857
+11-2018 | 11.0 | 2018.0 | 928 | 928 | 1 | 928
+12-2018 | 12.0 | 2018.0 | 995 | 995 | 1 | 993
+01-2019 | 1.0 | 2019.0 | 973 | 973 | 1 | 973
+02-2019 | 2.0 | 2019.0 | 1121 | 1121 | 1 | 1121
+03-2019 | 3.0 | 2019.0 | 1136 | 1136 | 1 | 1136
+04-2019 | 4.0 | 2019.0 | 1099 | 1099 | 1 | 1099
+05-2019 | 5.0 | 2019.0 | 857 | 857 | 1 | 857
+06-2019 | 6.0 | 2019.0 | 824 | 824 | 1 | 824
+07-2019 | 7.0 | 2019.0 | 864 | 864 | 1 | 864
+08-2019 | 8.0 | 2019.0 | 1149 | 1149 | 1 | 1149
+
+### month_year_consistency  (1 rows, 0.00s)
+n | consistent
+13079 | 13079
+
+### key_uniqueness_metrics  (1 rows, 0.01s)
+n | d
+13079 | 13079
+
+### key_uniqueness_map  (1 rows, 0.00s)
+n | d_id | d_name | min(id) | max(id)
+1209 | 1209 | 1208 | 1 | 51678
+
+### interest_id_integral  (1 rows, 0.00s)
+n | integral
+13080 | 13080
+
+### orphans_metrics_to_map  (1 rows, 0.17s)
+rows_ | ids
+0 | 0
+
+### orphan_ids  (0 rows, 0.17s)
+interest_id | count(*) | group_concat(coalesce(month_year,'NULL'))
+
+### map_ids_without_metrics  (1 rows, 0.07s)
+n
+7
+
+### map_ids_only_in_null_month_rows  (1 rows, 0.14s)
+n
+0
+
+### duplicate_names  (1 rows, 0.00s)
+interest_name | count(*) | group_concat(id)
+Pizza Lovers | 2 | 6364,45668
+
+### map_text_formats  (1 rows, 0.00s)
+name_untrimmed | summ_null | summ_empty | summ_untrimmed | name_empty | created_fmt_ok | modified_fmt_ok
+0 | 20 | 0 | 4 | 0 | 1209 | 1209
+
+### rowid_order_map  (1 rows, 0.00s)
+n | increasing
+1208 | 1206
+
+### rowid_order_metrics  (1 rows, 0.01s)
+pairs | nondecreasing_month | rank_nondecreasing_in_month
+14272 | 14246 | 14206
+
+### metrics_row_order_blocks  (30 rows, 0.01s)
+rowid_block | min(rowid) | max(rowid) | month_year | count(*)
+0 | 1 | 38 | 07-2018 | 38
+38 | 39 | 39 | None | 1
+1 | 40 | 77 | 07-2018 | 38
+76 | 78 | 78 | None | 1
+2 | 79 | 731 | 07-2018 | 653
+731 | 732 | 762 | 08-2018 | 31
+760 | 763 | 763 | None | 1
+732 | 764 | 801 | 08-2018 | 38
+798 | 802 | 802 | None | 1
+733 | 803 | 1448 | 08-2018 | 646
+1444 | 1449 | 1449 | None | 1
+734 | 1450 | 1501 | 08-2018 | 52
+1501 | 1502 | 1525 | 09-2018 | 24
+1520 | 1526 | 1526 | None | 1
+1502 | 1527 | 1564 | 09-2018 | 38
+1558 | 1565 | 1565 | None | 1
+1503 | 1566 | 2173 | 09-2018 | 608
+2166 | 2174 | 2174 | None | 1
+1504 | 2175 | 2284 | 09-2018 | 110
+2284 | 2285 | 2364 | 10-2018 | 80
+2356 | 2365 | 2365 | None | 1
+2285 | 2366 | 3142 | 10-2018 | 777
+3142 | 3143 | 4070 | 11-2018 | 928
+4070 | 4071 | 5065 | 12-2018 | 995
+5065 | 5066 | 5101 | 01-2019 | 36
+5092 | 5102 | 5102 | None | 1
+5066 | 5103 | 6039 | 01-2019 | 937
+6039 | 6040 | 6052 | 02-2019 | 13
+6042 | 6053 | 6053 | None | 1
+6040 | 6054 | 7161 | 02-2019 | 1108
+

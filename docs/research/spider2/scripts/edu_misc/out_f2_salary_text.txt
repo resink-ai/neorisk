@@ -1,0 +1,8 @@
+rows 4344 match currency+digits+period 4344
+currencies Counter({'₹': 4318, '$': 19, '£': 6, 'AFN ': 1})
+rebuilt byte-exact with lakh grouping 4344
+non-matching examples []
+rupee /yr amount quantiles p10 361080 p25 528453 p50 839303 p75 1269350 p90 1881045 p99 3665141 max 9568943 min 10814
+rupee /mo amount p50 30979, p10 11293, p90 98479, n 1087
+StaffHours: next-member letter step counts (mod 26) [(1, 213), (2, 10), (25, 5), (4, 2), (11, 2), (24, 1)]
+StaffHours: rowid alternates Enter/Exit 223 of 235

@@ -1,0 +1,54 @@
+### cities_per_country_top  (10 rows, 0.01s)
+country_code_2 | count(*)
+in | 5933
+us | 5393
+br | 2903
+de | 1733
+ph | 1578
+cn | 1562
+it | 1363
+gb | 1305
+jp | 1253
+ru | 1211
+
+### cities_per_country_bands  (5 rows, 0.01s)
+b | countries
+1 | 37
+1000+ | 11
+101-1000 | 59
+11-100 | 97
+2-10 | 32
+
+### population_quantiles  (1 rows, 0.03s)
+p5 | p25 | p50 | p75 | p95 | mx
+8810.0 | 12186.0 | 20990.0 | 47971.0 | 300516.0 | 37732000.0
+
+### coord_decimals  (4 rows, 0.02s)
+dec | count(*)
+1 | 2452
+2 | 4281
+3 | 3012
+4 | 34877
+
+### same_day_same_country  (15 rows, 0.02s)
+n | count(*)
+1 | 16799
+2 | 4111
+3 | 1617
+4 | 832
+5 | 509
+6 | 382
+7 | 291
+8 | 188
+9 | 131
+10 | 80
+11 | 39
+12 | 33
+13 | 13
+14 | 4
+15 | 1
+
+### insert_day_count_moments  (1 rows, 0.01s)
+days | mean | var
+943 | 47.31919406150583 | 50.99991790825743
+

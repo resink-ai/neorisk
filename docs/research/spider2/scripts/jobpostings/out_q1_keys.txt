@@ -1,0 +1,72 @@
+### setup_indexes  (setup, 0.17s)
+
+### key_uniqueness  (5 rows, 0.34s)
+k | n | d
+postings.job_id | 78769 | 78769
+company.company_id | 14003 | 14003
+company.name | 14003 | 14003
+skills.skill_id | 26 | 26
+skills_job.(job_id,skill_id) | 366960 | 366960
+
+### exact_duplicate_rows  (1 rows, 0.14s)
+dup_links
+0
+
+### postings_company_coverage  (1 rows, 0.01s)
+postings | company_found | distinct_companies | distinct_found
+78769 | 7334 | 34870 | 3476
+
+### company_used  (1 rows, 0.00s)
+companies | used
+14003 | 3476
+
+### links_job_coverage  (1 rows, 0.08s)
+links | job_found | distinct_jobs | distinct_jobs_found
+366960 | 36880 | 266553 | 26908
+
+### links_skill_coverage  (1 rows, 0.03s)
+links | skill_found | distinct_skill_ids | distinct_found
+366960 | 55165 | 244 | 24
+
+### links_both_found  (1 rows, 0.10s)
+both_found | count(*)
+5590 | 366960
+
+### postings_with_links  (1 rows, 0.01s)
+postings | with_any_link
+78769 | 26908
+
+### skills_used  (1 rows, 0.00s)
+skills | used
+26 | 24
+
+### id_ranges  (6 rows, 0.02s)
+c | min(job_id) | max(job_id)
+postings.job_id | 23 | 1826663
+links.job_id | 2 | 1826673
+postings.company_id | 2 | 787360
+company.company_id | 31 | 787652
+links.skill_id | 0 | 257
+skills.skill_id | 1 | 250
+
+### sample_rate_guess  (1 rows, 0.01s)
+postings_share | links_job_share | skills_share
+0.04312177827996829 | 0.14592258936186753 | 0.10077519379844961
+
+### rowid_order  (4 rows, 0.27s)
+t | asc_pairs | pairs
+postings | 39324 | 78768
+company | 7025 | 14002
+links | 183517 | 366959
+skills | 12 | 25
+
+### skill_types  (7 rows, 0.00s)
+type | count(*) | group_concat(skills, ', ')
+programming | 9 | sas, objective-c, ruby, bash, lua, javascript, python, perl, t-sql
+databases | 4 | sqlite, firebase, dynamodb, mariadb
+analyst_tools | 4 | sharepoint, alteryx, spss, qlik
+webframeworks | 3 | asp.netcore, vue.js, blazor
+cloud | 3 | vmware, heroku, ibm cloud
+async | 2 | wimi, confluence
+sync | 1 | twilio
+

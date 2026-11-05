@@ -1,0 +1,11 @@
+4.92375275  n=18653  fieldwise y,m,d diffs
+4.71682839  n=18653  fieldwise, int division (m/12, d/365 -> 0)
+4.83153380  n=18653  total days split y=D//365, m=(D%365)//30, d=(D%365)%30
+4.82427715  n=18653  D/365.25
+4.82758145  n=18653  D/365
+14.54956468  n=18653  years = D/365 (real), months = D/30 /12 , days = D /365
+4.82401866  n=18653  y diff + m diff/12 + d diff/365 (signed)
+4.82401973  n=18653  abs of signed sum
+4.87332909  n=18846  fieldwise, all rows, '' -> 0
+9.56627245  n=18653  y diff + total months diff/12 + d/365
+4.82376561  n=18653  borrowed y,m,d (30-day months)

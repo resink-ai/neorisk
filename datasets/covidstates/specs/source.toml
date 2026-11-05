@@ -1,0 +1,7 @@
+# COVID-19 by state: daily cumulative cases and deaths for CO, FL, MA and NC, the `statistics`
+# table of Spider2's modern_data. Rows 1-10 are copies Spider2 prepended.
+file = "modern_data.sqlite"
+note = "Report dates are midnight, read as UTC. Duplicate-marker time is a rule: N = 2020-11-11, the last report."
+
+[tables]
+statistics = ["state", "date"]

@@ -1,0 +1,47 @@
+### local130  (18 rows, 0.00s)
+StudLastName | Grade | QUINTILE
+Bishop | 98.07 | First
+Sheskey | 97.59 | First
+Kennedy | 93.01 | First
+Jones | 91.66 | Second
+Galvin | 91.44 | Second
+Bonnicksen | 88.91 | Second
+Chavez | 88.54 | Second
+Wier | 87.4 | Third
+Hamilton | 86.33 | Third
+Pundt | 82.58 | Third
+Hartwig | 81.66 | Fourth
+Viescas | 77.59 | Fourth
+Hallmark | 72.88 | Fourth
+Smith | 72.05 | Fourth
+Stadick | 71.09 | Fifth
+Patterson | 70.0 | Fifth
+Thompson | 67.6 | Fifth
+Lum | 67.19 | Fifth
+
+### english_completions  (1 rows, 0.00s)
+count(*) | count(DISTINCT StudentID)
+18 | 18
+
+### categories  (19 rows, 0.00s)
+CategoryID | CategoryDescription | DepartmentID
+ACC | Accounting | 1
+ART | Art | 3
+BIO | Biology | 2
+BUS | Business | 1
+CHE | Chemistry | 2
+CIS | Computer Information Systems | 5
+CSC | Computer Science | 5
+ECO | Economics | 4
+ENG | English | 3
+FRE | French | 3
+GEG | Geography | 4
+GER | German | 3
+HIS | History | 4
+JRN | Journalism | 1
+MAT | Math | 2
+MUS | Music | 3
+PHY | Physics | 2
+POL | Political Science | 4
+PSY | Psychology | 4
+

@@ -1,0 +1,35 @@
+### cities: 44622 rows, rowid 1..44622
+column | decl | typeof counts | null | empty | \N | distinct | min | max | ws-padded
+city_id | INTEGER | {'integer': 44622} | 0 | 0 | 0 | 44622 | 1 | 44622 | 0
+city_name | TEXT | {'text': 44621, 'null': 1} | 1 | 0 | 0 | 41062 | 'a coruna' | 'zywiec' | 0
+latitude | REAL | {'real': 44622} | 0 | 0 | 0 | 37063 | -179.6 | 179.3703 | 0
+longitude | REAL | {'real': 44622} | 0 | 0 | 0 | 34608 | -54.9333 | 81.7166 | 0
+country_code_2 | TEXT | {'text': 44622} | 0 | 0 | 0 | 236 | 'ad' | 'zw' | 0
+capital | INTEGER | {'integer': 44622} | 0 | 0 | 0 | 2 | 0 | 1 | 0
+population | REAL | {'real': 44317, 'null': 305} | 305 | 0 | 0 | 29611 | 0.0 | 37732000.0 | 0
+insert_date | TEXT | {'text': 44622} | 0 | 0 | 0 | 943 | '2021-01-01' | '2023-08-01' | 0
+
+### cities_countries: 241 rows, rowid 1..241
+column | decl | typeof counts | null | empty | \N | distinct | min | max | ws-padded
+country_id | INTEGER | {'integer': 241} | 0 | 0 | 0 | 241 | 1 | 256 | 0
+country_name | TEXT | {'text': 241} | 0 | 0 | 0 | 241 | 'afghanistan' | 'zimbabwe' | 0
+country_code_2 | TEXT | {'text': 241} | 0 | 0 | 0 | 241 | 'ad' | 'zw' | 0
+country_code_3 | TEXT | {'text': 241} | 0 | 0 | 0 | 241 | 'abw' | 'zwe' | 0
+region | TEXT | {'text': 241} | 0 | 0 | 0 | 6 | 'africa' | 'oceania' | 0
+sub_region | TEXT | {'text': 240, 'null': 1} | 1 | 0 | 0 | 17 | 'australia and new zealand' | 'western europe' | 0
+intermediate_region | TEXT | {'null': 135, 'text': 106} | 135 | 0 | 0 | 8 | 'caribbean' | 'western africa' | 0
+created_on | TEXT | {'text': 241} | 0 | 0 | 0 | 1 | '2024-07-18' | '2024-07-18' | 0
+
+### cities_currencies: 254 rows, rowid 1..254
+column | decl | typeof counts | null | empty | \N | distinct | min | max | ws-padded
+currency_id | INTEGER | {'integer': 254} | 0 | 0 | 0 | 254 | 1 | 254 | 0
+country_code_2 | TEXT | {'text': 254} | 0 | 0 | 0 | 233 | 'ad' | 'zw' | 0
+currency_name | TEXT | {'text': 254} | 0 | 0 | 0 | 165 | 'afghani' | 'zloty' | 0
+currency_code | TEXT | {'text': 253, 'null': 1} | 1 | 0 | 0 | 166 | 'aed' | 'zwl' | 0
+
+### cities_languages: 608 rows, rowid 1..608
+column | decl | typeof counts | null | empty | \N | distinct | min | max | ws-padded
+language_id | INTEGER | {'integer': 608} | 0 | 0 | 0 | 608 | 1 | 608 | 0
+language | TEXT | {'text': 608} | 0 | 0 | 0 | 229 | 'afrikaans' | 'zulu' | 0
+country_code_2 | TEXT | {'text': 608} | 0 | 0 | 0 | 237 | 'ad' | 'zw' | 0
+

@@ -1,0 +1,67 @@
+### drivers_ext  (1 rows, 0.00s)
+n_src | n_rebuilt | src_not_rebuilt | rebuilt_not_src | codes_filled
+859 | 859 | 0 | 0 | 757
+
+### constructors_ext  (1 rows, 0.00s)
+n_src | n_rebuilt | src_not_rebuilt | rebuilt_not_src | unused_short_names
+212 | 212 | 0 | 0 | 0
+
+### circuits_ext  (1 rows, 0.01s)
+n_src | n_rebuilt | src_not_rebuilt | rebuilt_not_src
+77 | 77 | 0 | 0
+
+### races_ext  (1 rows, 0.03s)
+n_src | n_rebuilt | src_not_rebuilt | rebuilt_not_src | sprint_date_but_no_sprint_result
+1125 | 1125 | 0 | 0 | 3
+
+### races_ext_max_points_vs_results  (20 rows, 0.00s)
+max_points | max_points_in_results | races | y0 | y1
+9 | 8.0 | 44 | 1950 | 1959
+9 | 9.0 | 437 | 1950 | 1990
+9 | 5.0 | 1 | 1951 | 1951
+9 | 8.5 | 2 | 1952 | 1953
+9 | 8.14 | 1 | 1954 | 1954
+9 | 6.0 | 2 | 1956 | 1957
+8 | 8.0 | 10 | 1960 | 1960
+9 | 4.5 | 3 | 1975 | 1984
+10 | 5.0 | 2 | 1991 | 2009
+10 | 10.0 | 318 | 1991 | 2009
+25 | 25.0 | 176 | 2010 | 2018
+25 | 50.0 | 1 | 2014 | 2014
+26 | 25.0 | 70 | 2019 | 2024
+26 | 26.0 | 30 | 2019 | 2024
+26 | 12.5 | 1 | 2021 | 2021
+29 | 25.0 | 2 | 2021 | 2021
+29 | 26.0 | 1 | 2021 | 2021
+34 | 25.0 | 8 | 2022 | 2024
+34 | 26.0 | 4 | 2022 | 2023
+26 | None | 12 | 2024 | 2024
+
+### lap_times_ext  (1 rows, 1.52s)
+n_src | n_rebuilt | src_not_rebuilt | rebuilt_not_src
+575029 | 575029 | 0 | 0
+
+### driver_standings_ext  (1 rows, 8.00s)
+n_src | n_rebuilt | n_added | src_not_rebuilt | rebuilt_not_src
+35012 | 35012 | 417 | 0 | 0
+
+### driver_standings_gaps  (1 rows, 0.33s)
+missing_pairs | filled_in_ext | driver_never_in_season_standings
+469 | 417 | 52
+
+### team_driver_ranks  (1 rows, 55.28s)
+n_src | n_rebuilt | src_not_rebuilt | rebuilt_not_src | overrides_applied | overrides_that_change_rank | year_team_driver_triples | triples_without_standings
+3530 | 3530 | 0 | 0 | 48 | 41 | 3549 | 19
+
+### retirements  (1 rows, 0.03s)
+n_src | n_rebuilt | src_not_rebuilt | rebuilt_not_src
+11568 | 11568 | 0 | 0
+
+### lap_positions  (1 rows, 1.74s)
+n_src | n_rebuilt | src_not_rebuilt | rebuilt_not_src | start_rows_collapsed_by_distinct
+613112 | 613112 | 0 | 0 | 4
+
+### generated_columns  (1 rows, 0.02s)
+drivers_full_name_bad | lap_seconds_bad | pit_seconds_bad
+0 | 0 | 0
+

@@ -1,0 +1,15 @@
+Buildings: BuildingCode=string, BuildingName=string, NumberOfFloors=int64, ElevatorAccess=int64, SiteParkingAvailable=int64
+Categories: CategoryID=string, CategoryDescription=string, DepartmentID=int64
+Class_Rooms: ClassRoomID=int64, BuildingCode=string, PhoneAvailable=int64
+Classes: ClassID=int64, SubjectID=int64, ClassRoomID=int64, Credits=int64, StartDate=string, StartTime=string, Duration=int64, MondaySchedule=int64, TuesdaySchedule=int64, WednesdaySchedule=int64, ThursdaySchedule=int64, FridaySchedule=int64, SaturdaySchedule=int64
+Departments: DepartmentID=int64, DeptName=string, DeptChair=int64
+Faculty: StaffID=int64, Title=string, Status=string, Tenured=int64
+Faculty_Categories: StaffID=int64, CategoryID=string
+Faculty_Classes: ClassID=int64, StaffID=int64
+Faculty_Subjects: StaffID=int64, SubjectID=int64, ProficiencyRating=float64
+Majors: MajorID=int64, Major=string
+Staff: StaffID=int64, StfFirstName=string, StfLastname=string, StfStreetAddress=string, StfCity=string, StfState=string, StfZipCode=string, StfAreaCode=string, StfPhoneNumber=string, Salary=float64, DateHired=string, Position=string
+Student_Class_Status: ClassStatus=int64, ClassStatusDescription=string
+Student_Schedules: StudentID=int64, ClassID=int64, ClassStatus=int64, Grade=float64
+Students: StudentID=int64, StudFirstName=string, StudLastName=string, StudStreetAddress=string, StudCity=string, StudState=string, StudZipCode=string, StudAreaCode=string, StudPhoneNumber=string, StudGPA=float64, StudMajor=int64
+Subjects: SubjectID=int64, CategoryID=string, SubjectCode=string, SubjectName=string, SubjectPreReq=string, SubjectDescription=string

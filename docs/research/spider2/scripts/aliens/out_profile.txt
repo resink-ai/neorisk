@@ -1,0 +1,44 @@
+### aliens: 50000 rows, rowid 1..50000
+column | decl | typeof counts | null | empty | \N | distinct | min | max | ws-padded
+id | INTEGER | {'integer': 50000} | 0 | 0 | 0 | 50000 | 1 | 50000 | 0
+first_name | TEXT | {'text': 50000} | 0 | 0 | 0 | 8393 | 'Aaren' | 'Zuzana' | 0
+last_name | TEXT | {'text': 50000} | 0 | 0 | 0 | 31037 | "A'Barrow" | 'von Nassau' | 0
+email | TEXT | {'text': 50000} | 0 | 0 | 0 | 50000 | 'aaaronsohnl3b@ted.com' | 'zyeudecso@csmonitor.com' | 0
+gender | TEXT | {'text': 50000} | 0 | 0 | 0 | 8 | 'Agender' | 'Polygender' | 0
+type | TEXT | {'text': 50000} | 0 | 0 | 0 | 5 | 'Flatwoods' | 'Reptile' | 0
+birth_year | INTEGER | {'integer': 50000} | 0 | 0 | 0 | 301 | 1672 | 1972 | 0
+
+### aliens_details: 50000 rows, rowid 1..50000
+column | decl | typeof counts | null | empty | \N | distinct | min | max | ws-padded
+detail_id | INTEGER | {'integer': 50000} | 0 | 0 | 0 | 50000 | 1 | 50000 | 0
+favorite_food | TEXT | {'text': 50000} | 0 | 0 | 0 | 1498 | 'Aardwolf' | 'Zorro, common' | 0
+feeding_frequency | TEXT | {'text': 50000} | 0 | 0 | 0 | 8 | 'Daily' | 'Yearly' | 0
+aggressive | INTEGER | {'integer': 50000} | 0 | 0 | 0 | 2 | 0 | 1 | 0
+
+### aliens_location: 50000 rows, rowid 1..50000
+column | decl | typeof counts | null | empty | \N | distinct | min | max | ws-padded
+loc_id | INTEGER | {'integer': 50000} | 0 | 0 | 0 | 50000 | 1 | 50000 | 0
+current_location | TEXT | {'text': 50000} | 0 | 0 | 0 | 461 | 'Abilene' | 'Zephyrhills' | 0
+state | TEXT | {'text': 50000} | 0 | 0 | 0 | 51 | 'Alabama' | 'Wyoming' | 0
+country | TEXT | {'text': 50000} | 0 | 0 | 0 | 1 | 'United States' | 'United States' | 0
+occupation | TEXT | {'text': 50000} | 0 | 0 | 0 | 195 | 'Account Coordinator' | 'Web Developer IV' | 0
+
+### alien_data: 50000 rows, rowid 1..50000
+column | decl | typeof counts | null | empty | \N | distinct | min | max | ws-padded
+id | INTEGER | {'integer': 50000} | 0 | 0 | 0 | 50000 | 1 | 50000 | 0
+first_name | TEXT | {'text': 49996, 'null': 4} | 4 | 0 | 0 | 8392 | 'aaren' | 'zuzana' | 0
+last_name | TEXT | {'text': 50000} | 0 | 0 | 0 | 31034 | "a'barrow" | 'zywicki' | 0
+email | TEXT | {'text': 50000} | 0 | 0 | 0 | 50000 | 'aaaronsohnl3b@ted.com' | 'zyeudecso@csmonitor.com' | 0
+gender | TEXT | {'text': 50000} | 0 | 0 | 0 | 3 | 'female' | 'non-binary' | 0
+type | TEXT | {'text': 50000} | 0 | 0 | 0 | 5 | 'flatwoods' | 'reptile' | 0
+birth_year | INTEGER | {'integer': 50000} | 0 | 0 | 0 | 301 | 1672 | 1972 | 0
+age | INTEGER | {'integer': 50000} | 0 | 0 | 0 | 301 | 52 | 352 | 0
+favorite_food | TEXT | {'text': 50000} | 0 | 0 | 0 | 1498 | 'aardwolf' | 'zorro, common' | 0
+feeding_frequency | TEXT | {'text': 50000} | 0 | 0 | 0 | 8 | 'daily' | 'yearly' | 0
+aggressive | INTEGER | {'integer': 50000} | 0 | 0 | 0 | 2 | 0 | 1 | 0
+occupation | TEXT | {'text': 50000} | 0 | 0 | 0 | 195 | 'account coordinator' | 'web developer iv' | 0
+current_location | TEXT | {'text': 50000} | 0 | 0 | 0 | 461 | 'abilene' | 'zephyrhills' | 0
+state | TEXT | {'text': 50000} | 0 | 0 | 0 | 51 | 'alabama' | 'wyoming' | 0
+us_region | TEXT | {'text': 50000} | 0 | 0 | 0 | 8 | 'far west' | 'southwest' | 0
+country | TEXT | {'text': 50000} | 0 | 0 | 0 | 1 | 'united states' | 'united states' | 0
+

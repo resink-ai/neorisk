@@ -1,0 +1,19 @@
+funding: rows 1-11 = [548, 645, 615, 51, 680, 457, 429, 933, 568, 478, 881]
+  rowid of the second copy of each: [724, 169, 459, 856, 590, 331, 565, 540, 567, 1000, 345]
+  rows 12.. distinct: 1074 of 1074
+dates: rows 1-11 = [109, 821, 153, 972, 1022, 433, 747, 902, 1065, 388, 748]
+  rowid of the second copy of each: [1053, 924, 1052, 242, 104, 1042, 346, 531, 250, 1026, 525]
+  rows 12.. distinct: 1074 of 1074
+industries: rows 1-11 = [316, 162, 803, 278, 983, 951, 650, 450, 556, 318, 889]
+  rowid of the second copy of each: [904, 1041, 175, 584, 22, 61, 499, 831, 14, 749, 880]
+  rows 12.. distinct: 1074 of 1074
+
+dates vs industries (rows 12..): 0 non-equal opcodes
+
+dates vs funding (rows 12..): 6 non-equal opcodes
+  insert dates[88:88]=[] funding[88:89]=[1005]
+  delete dates[314:315]=[1005] funding[315:315]=[]
+  insert dates[769:769]=[] funding[769:770]=[506]
+  delete dates[845:846]=[506] funding[846:846]=[]
+  insert dates[997:997]=[] funding[997:998]=[292]
+  delete dates[1072:1073]=[292] funding[1073:1073]=[]

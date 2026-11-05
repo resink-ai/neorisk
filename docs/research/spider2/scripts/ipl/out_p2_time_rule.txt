@@ -1,0 +1,11 @@
+delivery keys (union of 4 tables): 134704
+days with n matches: Counter({1: 239, 2: 164})
+2010-03-29 matches in source: None
+max deliveries in an innings: 134  min: 30
+innings 1 longest end offset (min): 87.33333333333333
+matches whose result time crosses midnight: 0
+innings 1 overruns the innings-2 start: 0
+double-header days where match 1 ends after match 2's toss: 0
+delivery times shared by two deliveries: 0
+last event (N): 2016-05-29 23:17:00
+double-header days: 164

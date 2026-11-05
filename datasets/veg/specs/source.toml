@@ -1,0 +1,10 @@
+# Vegetable wholesale: CUMCM 2023 Problem C's supermarket data, the veg_* tables of Spider2's
+# bank_sales_trading catalog (4 tables).
+file = "bank_sales_trading.sqlite"
+note = "POS lines to the second, read as UTC. Rule times: quotes at 00:00, items at their first quote, categories at 2020-07-01."
+
+[tables]
+veg_txn_df = ["index"]
+veg_whsle_df = ["whsle_date", "item_code"]
+veg_cat = ["item_code"]
+veg_loss_rate_df = ["item_code"]

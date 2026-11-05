@@ -1,0 +1,12 @@
+-- entity: genres                                                      rows chinook    25  music    25  identical (ordered, typed): True
+-- entity: media_types                                                 rows chinook     5  music     5  identical (ordered, typed): True
+-- entity: artists                                                     rows chinook   275  music   275  identical (ordered, typed): True
+-- entity: albums                                                      rows chinook   347  music   347  identical (ordered, typed): True
+-- entity: tracks                                                      rows chinook  3503  music  3503  identical (ordered, typed): True
+-- entity: playlists                                                   rows chinook    18  music    18  identical (ordered, typed): True
+-- entity: playlist_track                                              rows chinook  8715  music  8715  identical (ordered, typed): True
+-- entity: employees                                                   rows chinook     8  music     8  identical (ordered, typed): True
+-- entity: customers                                                   rows chinook    59  music    59  identical (ordered, typed): True
+-- event: invoice_issued owner=customer_id                             rows chinook   412  music   412  identical (ordered, typed): True
+-- event: invoice_line_added owner=customer_id ord=invoice_line_id     rows chinook  2240  music  2240  identical (ordered, typed): True
+rows compared: 15607

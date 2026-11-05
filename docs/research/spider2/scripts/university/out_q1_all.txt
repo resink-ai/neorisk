@@ -1,0 +1,143 @@
+### row_counts  (5 rows, 0.00s)
+t | n
+course | 7
+enrollment | 37
+faculty | 8
+offering | 13
+student | 11
+
+### typeof_columns  (12 rows, 0.00s)
+c | ty | n
+faculty.FacSupervisor | null | 2
+faculty.FacSupervisor | real | 6
+faculty.FacNo | integer | 8
+faculty.FacSalary | integer | 8
+faculty.FacHireDate | text | 8
+faculty.FacZipCode | text | 8
+offering.FacNo | null | 2
+offering.FacNo | real | 11
+offering.OffYear | integer | 13
+student.StdNo | integer | 11
+student.StdGPA | real | 11
+enrollment.EnrGrade | real | 37
+
+### key_uniqueness  (5 rows, 0.00s)
+k | d
+course.CourseNo | 0
+faculty.FacNo | 0
+student.StdNo | 0
+offering.OfferNo | 0
+enrollment (OfferNo,StdNo) | 0
+
+### fk_orphans  (5 rows, 0.00s)
+j | orphans | n
+enrollment.OfferNo | 0 | 37
+enrollment.StdNo | 0 | 37
+offering.CourseNo | 0 | 13
+offering.FacNo (non-null) | 0 | 11
+faculty.FacSupervisor (non-null) | 0 | 6
+
+### unused_parents  (4 rows, 0.00s)
+w | n | ids
+offerings w/o enrollment | 5 | 1111,2222,3333,4444,8888
+courses w/o offering | 1 | IS470
+faculty w/o offering | 2 | 123456789,987654322
+students w/o enrollment | 0 | None
+
+### faculty_also_student  (2 rows, 0.00s)
+FacNo | FacFirstName | FacLastName | StdClass
+876543210 | CRISTOPHER | COLAN | SR
+123456789 | JOHN | DOE | FR
+
+### faculty_no_leading_zero  (1 rows, 0.00s)
+FacNo | len
+98765432 | 8
+
+### gpa_vs_grades  (11 rows, 0.00s)
+StdNo | StdGPA | avg_grade | n
+123456789 | 3.0 | 3.04 | 5
+124567890 | 2.7 | 3.275 | 4
+234567890 | 3.5 | 3.15 | 4
+345678901 | 2.8 | 3.2333 | 3
+456789012 | 3.2 | 3.3 | 3
+567890123 | 3.6 | 3.15 | 4
+678901234 | 3.3 | 3.3333 | 3
+789012345 | 2.5 | 3.65 | 2
+876543210 | 4.0 | 3.25 | 2
+890123456 | 2.2 | 3.3333 | 3
+901234567 | 3.8 | 3.4 | 4
+
+### gpa_equals_avg  (1 rows, 0.00s)
+within_005 | n
+2 | 11
+
+### terms  (5 rows, 0.00s)
+OffYear | OffTerm | n
+2009 | FALL | 2
+2009 | SUMMER | 1
+2010 | SPRING | 4
+2010 | SUMMER | 2
+2010 | WINTER | 4
+
+### enrollment_by_term  (3 rows, 0.00s)
+OffYear | OffTerm | n
+2009 | FALL | 12
+2010 | SPRING | 16
+2010 | WINTER | 9
+
+### student_double_booking  (0 rows, 0.00s)
+StdNo | OfferNo | OfferNo | OffTerm | OffYear | OffTime | OffDays
+
+### grade_decimals  (2 rows, 0.00s)
+dp1 | n | min(EnrGrade) | max(EnrGrade)
+37 | 37 | 2.0 | 4.0
+11 | 11 | 2.2 | 4.0
+
+### rank_salary  (3 rows, 0.00s)
+FacRank | n | av | min(FacSalary) | max(FacSalary)
+ASSC | 2 | 72500.0 | 70000 | 75000
+ASST | 3 | 43333.333333333336 | 35000 | 55000
+PROF | 3 | 98333.33333333333 | 65000 | 120000
+
+### hire_vs_offering  (1 rows, 0.00s)
+min(FacHireDate) | max(FacHireDate) | first_off_year
+1996-05-01 | 2007-08-20 | 2009
+
+### whitespace_case  (1 rows, 0.00s)
+lower_fac | lower_std | ws
+0 | 0 | 0
+
+### rowid_order  (4 rows, 0.00s)
+t | d
+offering | 0
+faculty | 1
+student | 0
+enrollment | 0
+
+### gold_local163  (4 rows, 0.00s)
+FacRank | FacFirstName | FacLastName | FacSalary
+ASSC | JULIA | MILLS | 75000
+ASSC | LEONARD | FIBON | 70000
+ASST | CRISTOPHER | COLAN | 40000
+PROF | JANE | SMITH | 110000
+
+### enrollments_per_offering  (13 rows, 0.00s)
+OfferNo | n
+1111 | 0
+2222 | 0
+3333 | 0
+4444 | 0
+8888 | 0
+5555 | 2
+6666 | 2
+7777 | 3
+5678 | 5
+1234 | 6
+4321 | 6
+5679 | 6
+9876 | 7
+
+### grade_mean  (1 rows, 0.00s)
+mean_grade | n | per_student
+3.2568 | 37 | 3.36
+

@@ -1,0 +1,77 @@
+### create_ranked  (statement, 0.02s)
+
+### ranking_is_rank_by_index_value  (15 rows, 0.01s)
+my | n | ranking_eq_rank | n_month | pct_eq_round2 | pct_within_half_cent
+07-2018 | 729 | 729 | 729 | 729 | 729
+NULL | 1194 | 1194 | 1194 | 1194 | 1194
+08-2018 | 767 | 767 | 767 | 767 | 767
+09-2018 | 780 | 780 | 780 | 780 | 780
+10-2018 | 857 | 857 | 857 | 857 | 857
+11-2018 | 928 | 928 | 928 | 928 | 928
+12-2018 | 995 | 995 | 995 | 995 | 995
+01-2019 | 973 | 973 | 973 | 973 | 973
+02-2019 | 1121 | 1121 | 1121 | 1121 | 1121
+03-2019 | 1136 | 1136 | 1136 | 1136 | 1136
+04-2019 | 1099 | 1099 | 1099 | 1099 | 1099
+05-2019 | 857 | 857 | 857 | 857 | 857
+06-2019 | 824 | 824 | 824 | 824 | 824
+07-2019 | 864 | 864 | 864 | 864 | 864
+08-2019 | 1149 | 1149 | 1149 | 1149 | 1149
+
+### percentile_mismatch_sample  (0 rows, 0.00s)
+month_year | ranking | n_in_month | percentile_ranking | exact
+
+### create_neighbours  (statement, 0.04s)
+
+### null_rows_by_neighbour  (2 rows, 0.00s)
+pos | n | min(rid) | max(rid)
+between same month | 26 | 39 | 12528
+trailing block | 1168 | 13106 | 14273
+
+### null_rows_rank_fit  (1 rows, 0.00s)
+n | fits_between
+26 | 0
+
+### trailing_block  (1 rows, 0.00s)
+n | min(rid) | max(rid) | min(ranking) | max(ranking) | distinct_ranks | with_id
+1168 | 13106 | 14273 | 1 | 1194 | 224 | 1
+
+### null_rows_percentile_vs_month_size  (1 rows, 0.00s)
+n | n_min | n_max
+1194 | 1176.0 | 1250.0
+
+### interleaved_implied_month_size  (12 rows, 0.00s)
+prev_my | n | min(ranking) | max(ranking) | implied_N
+01-2019 | 1 | 51 | 51 | 1194.4
+02-2019 | 1 | 51 | 51 | 1194.4
+03-2019 | 1 | 51 | 51 | 1194.4
+04-2019 | 2 | 56 | 57 | 1194.5
+05-2019 | 3 | 58 | 58 | 1193.4
+06-2019 | 3 | 61 | 61 | 1193.7
+07-2018 | 2 | 43 | 45 | 1194.0
+07-2019 | 1 | 64 | 64 | 1194.0
+08-2018 | 3 | 45 | 48 | 1193.5
+08-2019 | 5 | 65 | 69 | 1194.4
+09-2018 | 3 | 48 | 51 | 1194.1
+10-2018 | 1 | 51 | 51 | 1194.4
+
+### trailing_ranked_among_themselves  (1 rows, 0.00s)
+n | eq
+1168 | 43
+
+### all_null_rows_ranked_together  (1 rows, 0.00s)
+n | eq | n_null
+1194 | 1194 | 1194
+
+### id_present_null_month_row  (1 rows, 0.00s)
+rid | interest_id | ranking | index_value | composition
+14271 | 21246.0 | 1191 | 0.68 | 1.61
+
+### composition_over_index  (1 rows, 0.00s)
+n | min(composition / index_value) | max(composition / index_value) | mean
+14273 | 0.736842105263158 | 9.135135135135135 | 2.223
+
+### value_grid  (1 rows, 0.01s)
+n | comp_2dp | idx_2dp | pct_2dp | min(composition) | max(composition) | min(index_value) | max(index_value)
+14273 | 14273 | 14273 | 14273 | 1.51 | 21.2 | 0.44 | 6.19
+

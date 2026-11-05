@@ -1,0 +1,114 @@
+### row_counts  (29 rows, 0.01s)
+t | n
+circuits | 77
+constructors | 212
+drivers | 859
+seasons | 75
+status | 139
+races | 1125
+results | 26519
+sprint_results | 300
+qualifying | 10254
+lap_times | 575029
+pit_stops | 10990
+driver_standings | 34595
+constructor_standings | 13271
+constructor_results | 12505
+short_grand_prix_names | 40
+short_constructor_names | 44
+liveries | 64
+tdr_overrides | 48
+circuits_ext | 77
+constructors_ext | 212
+drivers_ext | 859
+races_ext | 1125
+driver_standings_ext | 35012
+lap_times_ext | 575029
+lap_time_stats | 10789
+team_driver_ranks | 3530
+drives | 3784
+retirements | 11568
+lap_positions | 613112
+
+### natural_key_uniqueness  (14 rows, 0.31s)
+k | n | d
+results (race,driver) | 26519 | 26428
+results (race,driver,constructor) | 26519 | 26445
+results (race,position_order) | 26519 | 26396
+sprint_results (race,driver) | 300 | 300
+qualifying (race,driver) | 10254 | 10254
+driver_standings (race,driver) | 34595 | 34595
+constructor_standings (race,constructor) | 13271 | 13271
+constructor_results (race,constructor) | 12505 | 12505
+races (year,round) | 1125 | 1125
+pit_stops (race,driver,lap) | 10990 | 10990
+retirements (race,driver) | 11568 | 11542
+lap_positions (race,driver,lap) | 613112 | 613009
+drives (year,driver,drive_id,constructor) | 3784 | 3773
+driver_standings_ext id | 35012 | 34596
+
+### fk_orphans  (24 rows, 26.07s)
+fk | orphans
+races.circuit_id | 0
+races.year | 0
+results.race_id | 0
+results.driver_id | 0
+results.constructor_id | 0
+results.status_id | 0
+sprint_results.status_id | 0
+qualifying (race,driver) not in results | 0
+qualifying (race,driver,constructor) not in results | 10
+sprint (race,driver) not in results | 0
+lap_times (race,driver) not in results | 0
+pit_stops (race,driver) not in results | 0
+pit_stops (race,driver,lap) not in lap_times | 45
+driver_standings (race,driver) not in results | 8636
+constructor_results (race,cons) not in results | 7
+constructor_standings (race,cons) not in results | 892
+liveries.constructor_ref | 3
+tdr_overrides refs | 0
+short_grand_prix_names unused | 0
+drivers without results | 0
+constructors without results | 1
+circuits without races | 0
+status unused | 2
+races without results | 12
+
+### coverage_by_table  (8 rows, 0.06s)
+t | y0 | y1 | races
+results | 1950 | 2024 | 1113
+qualifying | 1994 | 2024 | 482
+lap_times | 1996 | 2024 | 531
+pit_stops | 2011 | 2024 | 273
+sprint_results | 2021 | 2024 | 15
+driver_standings | 1950 | 2024 | 1113
+constructor_standings | 1958 | 2024 | 1049
+constructor_results | 1958 | 2024 | 1048
+
+### snapshot  (1 rows, 0.05s)
+last_race_with_results | first_race_without | races_without_results | last_lap_times | last_standings
+2024-07-07 | 2024-07-21 | 12 | 2024-06-30 | 2024-07-07
+
+### races_with_results_missing_tables  (9 rows, 1.14s)
+year | races | no_driver_standings | no_constructor_standings | no_constructor_results
+1950 | 7 | 0 | 7 | 7
+1951 | 8 | 0 | 8 | 8
+1952 | 8 | 0 | 8 | 8
+1953 | 9 | 0 | 9 | 9
+1954 | 9 | 0 | 9 | 9
+1955 | 7 | 0 | 7 | 7
+1956 | 8 | 0 | 8 | 8
+1957 | 8 | 0 | 8 | 8
+1958 | 11 | 0 | 0 | 1
+
+### rowid_order  (4 rows, 0.28s)
+t | bad
+results by result_id | 5
+races by race_id | 5
+lap_times by (race,driver,lap) | 11437
+driver_standings by id | 21290
+
+### race_id_vs_date  (1 rows, 0.00s)
+pairs | id_later_but_earlier_date
+1114 | 61
+

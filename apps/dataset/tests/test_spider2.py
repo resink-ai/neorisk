@@ -128,3 +128,54 @@ def test_lock_names_a_writer_change(shop_dataset):
     lock.write_text(json.dumps(data))
     with pytest.raises(BuildError, match="writer"):
         build_spider2(cfg, db)
+
+
+def test_generated_column_rebuilds_and_is_never_inserted(shop_dataset):
+    cfg, db = shop_dataset
+    con = sqlite3.connect(db)
+    con.execute("ALTER TABLE orders ADD COLUMN cents INTEGER "
+                "GENERATED ALWAYS AS (CAST(round(total * 100) AS INTEGER)) VIRTUAL")
+    con.commit()
+    con.close()
+    build_spider2(cfg, db)
+    t = pq.read_table(resolve("shop/v1/results/orders.parquet"))
+    assert t.column_names[-1] == "cents"
+    assert t.column("cents").to_pylist()[0] == 1050
+    assert verify(cfg)["ok"]
+
+
+def test_query_over_a_view_verifies(shop_dataset):
+    cfg, db = shop_dataset
+    con = sqlite3.connect(db)
+    con.execute("CREATE VIEW big_orders AS SELECT oid, total FROM orders WHERE total > 5")
+    con.commit()
+    con.close()
+    (cfg.dir / "specs" / "queries" / "q2.sql").write_text("SELECT oid FROM big_orders;\n")
+    build_spider2(cfg, db)
+    rep = verify(cfg)
+    assert rep["ok"], [(r.name, r.detail) for r in rep["queries"]]
+    assert [q.name for q in rep["queries"]] == ["q1", "q2"]
+
+
+def test_exact_column_catches_one_ulp(shop_dataset):
+    import math
+    cfg, db = shop_dataset
+    (cfg.dir / "dataset.toml").write_text((cfg.dir / "dataset.toml").read_text().replace(
+        "[results.mixed]", '[results.exact]\norders = ["total"]\n[results.mixed]'))
+    cfg = load(cfg.dir)
+    build_spider2(cfg, db)
+    p = resolve("shop/v1/results/orders.parquet")
+    t = pq.read_table(p)
+    tot = t.column("total").to_pylist()
+    tot[0] = math.nextafter(tot[0], math.inf)
+    pq.write_table(t.set_column(t.schema.get_field_index("total"), "total",
+                                pa.array(tot, pa.float64())), p)
+    assert [r.name for r in verify(cfg)["tables"] if not r.ok] == ["orders"]
+
+
+def test_exact_column_must_be_float(shop_dataset):
+    cfg, db = shop_dataset
+    (cfg.dir / "dataset.toml").write_text((cfg.dir / "dataset.toml").read_text().replace(
+        "[results.mixed]", '[results.exact]\norders = ["note"]\n[results.mixed]'))
+    with pytest.raises(BuildError, match="note"):
+        build_spider2(load(cfg.dir), db)

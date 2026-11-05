@@ -1,0 +1,327 @@
+### country_id_is_first_match_id  (11 rows, 0.98s)
+id | name | first_match_id | matches
+1 | Belgium | 1 | 1728
+1729 | England | 1729 | 3040
+4769 | France | 4769 | 3040
+7809 | Germany | 7809 | 2448
+10257 | Italy | 10257 | 3017
+13274 | Netherlands | 13274 | 2448
+15722 | Poland | 15722 | 1920
+17642 | Portugal | 17642 | 2052
+19694 | Scotland | 19694 | 1824
+21518 | Spain | 21518 | 3040
+24558 | Switzerland | 24558 | 1422
+
+### team_id_vs_first_match_id  (1 rows, 3.99s)
+equal | differ | n
+1 | 298 | 299
+
+### team_id_vs_first_match_id_differ_sample  (20 rows, 0.00s)
+id | team_api_id | team_long_name | fm | fhm | fam
+2 | 9993 | Beerschot AC | 1 | 18 | 1
+3 | 10000 | SV Zulte-Waregem | 2 | 2 | 22
+4 | 9994 | Sporting Lokeren | 2 | 13 | 2
+5 | 9984 | KSV Cercle Brugge | 3 | 3 | 16
+6 | 8635 | RSC Anderlecht | 3 | 19 | 3
+7 | 9991 | KAA Gent | 4 | 4 | 12
+8 | 9998 | RAEC Mons | 4 | 20 | 4
+9 | 7947 | FCV Dender EH | 5 | 5 | 23
+10 | 9985 | Standard de Liège | 5 | 11 | 5
+11 | 8203 | KV Mechelen | 6 | 6 | 25
+12 | 8342 | Club Brugge KV | 6 | 10 | 6
+13 | 9999 | KSV Roeselare | 7 | 7 | 15
+14 | 8571 | KV Kortrijk | 7 | 25 | 7
+15 | 4049 | Tubize | 8 | 8 | 24
+16 | 9996 | Royal Excel Mouscron | 8 | 16 | 8
+17 | 10001 | KVC Westerlo | 9 | 9 | 14
+18 | 9986 | Sporting Charleroi | 9 | 21 | 9
+614 | 9997 | Sint-Truidense VV | 307 | 316 | 307
+1034 | 9989 | Lierse SK | 517 | 532 | 517
+1042 | 6351 | KAS Eupen | 521 | 538 | 521
+
+### player_id_gaps  (15 rows, 0.06s)
+missing_from
+439
+441
+2846
+4637
+4961
+5124
+6303
+6428
+6479
+6942
+7769
+8313
+8491
+9590
+9711
+
+### pa_duplicate_player_date  (1 rows, 0.11s)
+groups | rows | rows_with_null_rating
+835 | 1671 | 836
+
+### pa_null_rating_rows  (1 rows, 5.27s)
+n | sum(potential is null) | sum(preferred_foot is null) | sum(crossing is null) | sum(gk_reflexes is null) | has_twin_same_date
+836 | 836 | 836 | 836 | 836 | 836
+
+### pa_dup_sample  (12 rows, 0.08s)
+id | player_api_id | date | overall_rating | crossing | volleys
+66779 | 2907 | 2007-02-22 00:00:00 | 54 | 76 | 58
+66780 | 2907 | 2007-02-22 00:00:00 | NULL | NULL | NULL
+8064 | 3517 | 2007-02-22 00:00:00 | 81 | 66 | 68
+8065 | 3517 | 2007-02-22 00:00:00 | NULL | NULL | NULL
+91978 | 5243 | 2007-02-22 00:00:00 | 71 | 73 | 66
+91979 | 5243 | 2007-02-22 00:00:00 | NULL | NULL | NULL
+142413 | 5247 | 2007-02-22 00:00:00 | 67 | 58 | 58
+142414 | 5247 | 2007-02-22 00:00:00 | NULL | NULL | NULL
+157821 | 6864 | 2007-02-22 00:00:00 | 66 | 47 | 35
+157822 | 6864 | 2007-02-22 00:00:00 | NULL | NULL | NULL
+14322 | 7621 | 2007-02-22 00:00:00 | 48 | 9 | 25
+14323 | 7621 | 2007-02-22 00:00:00 | NULL | NULL | NULL
+
+### pa_null_rating_players  (1 rows, 0.03s)
+players | players_all_null
+756 | 0
+
+### pa_null_dates  (10 rows, 0.01s)
+date | count(*)
+2007-02-22 00:00:00 | 735
+2013-09-20 00:00:00 | 30
+2014-09-18 00:00:00 | 5
+2011-08-30 00:00:00 | 5
+2015-09-21 00:00:00 | 4
+2013-02-15 00:00:00 | 4
+2012-08-31 00:00:00 | 4
+2012-02-22 00:00:00 | 3
+2011-02-22 00:00:00 | 3
+2010-08-30 00:00:00 | 3
+
+### pa_partial_null  (3 rows, 0.06s)
+k | count(*)
+volleys..null but rating not | 1877
+attacking_work_rate null but rating not | 2394
+the 5 late stats null set: same rows | 0
+
+### pa_partial_null_dates  (1 rows, 0.01s)
+min(date) | max(date) | count(*)
+2007-02-22 00:00:00 | 2010-02-22 00:00:00 | 1877
+
+### pa_fifa_mismatch  (9 rows, 0.03s)
+player_api_id | player_fifa | pa_fifa | rows | fifa_in_player
+42116 | 158428 | 184431 | 48 | 1
+110189 | 148581 | 200529 | 25 | 0
+163838 | 198033 | 198394 | 25 | 1
+193866 | 148337 | 197937 | 24 | 0
+11285 | 202486 | 208618 | 19 | 1
+32968 | 51384 | 118359 | 19 | 1
+37254 | 177485 | 190195 | 19 | 1
+150396 | 186613 | 192635 | 19 | 1
+30271 | 135804 | 206652 | 14 | 1
+
+### pa_fifa_mismatch_summary  (1 rows, 0.03s)
+players | rows | rows_fifa_owned_by_other_player
+9 | 212 | 163
+
+### pa_player_with_two_blocks  (1 rows, 0.10s)
+player_api_id | count(*)
+32968 | 27
+
+### pa_date_order_breaks_sample  (10 rows, 0.03s)
+id | pid | d | pd | ppid
+220 | 231592 | 2014-09-19 00:00:00 | 2014-09-18 00:00:00 | 231592
+7404 | 150396 | 2016-01-21 00:00:00 | 2007-02-22 00:00:00 | 150396
+7448 | 163838 | 2016-03-31 00:00:00 | 2007-02-22 00:00:00 | 163838
+7808 | 40295 | 2014-09-19 00:00:00 | 2014-09-18 00:00:00 | 40295
+13007 | 32593 | 2014-09-19 00:00:00 | 2014-09-18 00:00:00 | 32593
+21046 | 66583 | 2014-09-19 00:00:00 | 2014-09-18 00:00:00 | 66583
+31281 | 26263 | 2014-09-19 00:00:00 | 2014-09-18 00:00:00 | 26263
+34342 | 93348 | 2014-09-19 00:00:00 | 2014-09-18 00:00:00 | 93348
+41834 | 432040 | 2014-09-19 00:00:00 | 2014-09-18 00:00:00 | 432040
+45417 | 35637 | 2014-09-19 00:00:00 | 2014-09-18 00:00:00 | 35637
+
+### ta_dup  (2 rows, 0.00s)
+id | team_fifa_api_id | team_api_id | date | buildUpPlaySpeed | buildUpPlaySpeedClass | buildUpPlayDribbling | buildUpPlayDribblingClass | buildUpPlayPassing | buildUpPlayPassingClass | buildUpPlayPositioningClass | chanceCreationPassing | chanceCreationPassingClass | chanceCreationCrossing | chanceCreationCrossingClass | chanceCreationShooting | chanceCreationShootingClass | chanceCreationPositioningClass | defencePressure | defencePressureClass | defenceAggression | defenceAggressionClass | defenceTeamWidth | defenceTeamWidthClass | defenceDefenderLineClass
+860 | 111560 | 9996 | 2015-09-10 00:00:00 | 50 | Balanced | 50 | Normal | 50 | Mixed | Organised | 50 | Normal | 50 | Normal | 50 | Normal | Organised | 45 | Medium | 45 | Press | 50 | Normal | Cover
+861 | 111560 | 9996 | 2015-09-10 00:00:00 | 50 | Balanced | 50 | Normal | 50 | Mixed | Organised | 50 | Normal | 50 | Normal | 50 | Normal | Organised | 45 | Medium | 45 | Press | 50 | Normal | Cover
+
+### ta_dates  (6 rows, 0.00s)
+date | count(*)
+2010-02-22 00:00:00 | 241
+2011-02-22 00:00:00 | 244
+2012-02-22 00:00:00 | 242
+2013-09-20 00:00:00 | 242
+2014-09-19 00:00:00 | 244
+2015-09-10 00:00:00 | 245
+
+### ta_per_team  (6 rows, 0.00s)
+c | teams
+1 | 14
+2 | 19
+3 | 20
+4 | 18
+5 | 28
+6 | 189
+
+### ta_dribbling_null_by_date  (6 rows, 0.00s)
+date | count(*) | sum(buildUpPlayDribbling is null)
+2010-02-22 00:00:00 | 241 | 241
+2011-02-22 00:00:00 | 244 | 244
+2012-02-22 00:00:00 | 242 | 242
+2013-09-20 00:00:00 | 242 | 242
+2014-09-19 00:00:00 | 244 | 0
+2015-09-10 00:00:00 | 245 | 0
+
+### pa_rows_per_player  (54 rows, 0.03s)
+c | players
+2 | 158
+3 | 331
+4 | 393
+5 | 433
+6 | 484
+7 | 491
+8 | 498
+9 | 442
+10 | 391
+11 | 346
+12 | 340
+13 | 343
+14 | 339
+15 | 358
+16 | 357
+17 | 354
+18 | 404
+19 | 392
+20 | 397
+21 | 389
+22 | 385
+23 | 359
+24 | 317
+25 | 327
+26 | 287
+27 | 247
+28 | 213
+29 | 214
+30 | 182
+31 | 140
+32 | 117
+33 | 124
+34 | 96
+35 | 72
+36 | 74
+37 | 54
+38 | 52
+39 | 33
+40 | 24
+41 | 25
+42 | 15
+43 | 12
+44 | 9
+45 | 10
+46 | 10
+47 | 4
+48 | 6
+50 | 4
+51 | 1
+52 | 1
+53 | 2
+54 | 1
+55 | 1
+56 | 2
+
+### pa_year_counts  (10 rows, 0.08s)
+y | count(*) | count(distinct player_api_id)
+2007 | 16138 | 11060
+2008 | 5798 | 5422
+2009 | 8993 | 6147
+2010 | 10829 | 6930
+2011 | 11976 | 7261
+2012 | 12632 | 7459
+2013 | 38867 | 7896
+2014 | 32808 | 7796
+2015 | 31834 | 7502
+2016 | 14103 | 5586
+
+### date_formats  (7 rows, 0.09s)
+k | count(*) | midnight
+Match.date | 25979 | 25979
+PA.date | 183978 | 183978
+TA.date | 1458 | 1458
+Player.birthday | 11060 | 11060
+valid dates (date() roundtrip) Match | 25979 | 25979
+valid PA | 183978 | 183978
+valid birthday | 11060 | 11060
+
+### work_rate_values  (29 rows, 0.10s)
+k | v | count(*)
+attacking | medium | 125070
+attacking | high | 42823
+attacking | low | 8569
+attacking | 'None' | 3639
+attacking | NULL | 3230
+attacking | norm | 348
+attacking | y | 106
+attacking | le | 104
+attacking | stoc | 89
+defensive | medium | 130846
+defensive | high | 27041
+defensive | low | 18432
+defensive | _0 | 2394
+defensive | o | 1550
+defensive | NULL | 836
+defensive | 1 | 441
+defensive | ormal | 348
+defensive | 2 | 342
+defensive | 3 | 258
+defensive | 5 | 234
+defensive | 7 | 217
+defensive | 0 | 197
+defensive | 6 | 197
+defensive | 9 | 152
+defensive | 4 | 116
+defensive | es | 106
+defensive | ean | 104
+defensive | tocky | 89
+defensive | 8 | 78
+
+### preferred_foot  (3 rows, 0.05s)
+preferred_foot | count(*)
+NULL | 836
+left | 44733
+right | 138409
+
+### height_values  (20 rows, 0.00s)
+height | count(*) | full17 | txt | inches
+157.48 | 1 | 157.48 | 157.48 | 62.0
+160.02 | 2 | 160.02 | 160.02 | 63.0
+162.56 | 9 | 162.56 | 162.56 | 64.0
+165.1 | 62 | 165.1 | 165.1 | 65.0
+167.64 | 118 | 167.64 | 167.64 | 66.0
+170.18 | 403 | 170.18 | 170.18 | 67.0
+172.72 | 530 | 172.72 | 172.72 | 68.0
+175.26 | 1188 | 175.26 | 175.26 | 69.0
+177.8 | 1489 | 177.8 | 177.8 | 70.0
+180.34 | 1388 | 180.34 | 180.34 | 71.0
+182.88 | 1954 | 182.88 | 182.88 | 72.0
+185.42 | 1278 | 185.42 | 185.42 | 73.0
+187.96 | 1305 | 187.96 | 187.96 | 74.0
+190.5 | 652 | 190.5 | 190.5 | 75.0
+193.04 | 470 | 193.04 | 193.04 | 76.0
+195.58 | 129 | 195.58 | 195.58 | 77.0
+198.12 | 60 | 198.12 | 198.12 | 78.0
+200.66 | 9 | 200.66 | 200.66 | 79.0
+203.2 | 12 | 203.2 | 203.2 | 80.0
+208.28 | 1 | 208.28 | 208.28 | 82.0
+
+### weight_range  (1 rows, 0.00s)
+min(weight) | max(weight) | count(distinct weight)
+117 | 243 | 50
+
+### player_name_ws  (1 rows, 0.00s)
+count(*)
+0
+
+### team_name_nonascii  (1 rows, 0.00s)
+count(*)
+43
+

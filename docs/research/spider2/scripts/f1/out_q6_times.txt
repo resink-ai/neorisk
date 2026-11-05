@@ -1,0 +1,55 @@
+### race_start_known  (2 rows, 0.00s)
+has_time | races | with_laps_rows
+0 | 731 | 150
+1 | 394 | 381
+
+### lap_races_without_start_time  (1 rows, 0.04s)
+races | min(ra.year) | max(ra.year)
+150 | 1996 | 2004
+
+### race_start_times  (8 rows, 0.00s)
+time | count(*)
+12:00:00 | 113
+13:00:00 | 50
+14:00:00 | 34
+13:10:00 | 30
+06:00:00 | 21
+19:00:00 | 13
+17:00:00 | 13
+05:00:00 | 13
+
+### latest_lap_end_vs_next_midnight  (1 rows, 0.35s)
+max_hours_after_midnight | laps_past_midnight
+22.06458055555556 | 0
+
+### max_running_ms  (1 rows, 0.01s)
+max_race_hours
+4.1006422222222225
+
+### pit_stop_lap_without_lap_time  (1 rows, 0.00s)
+stops | has_earlier_lap | driver_no_laps_at_all
+45 | 0 | 45
+
+### pit_lap_beyond_results_laps  (1 rows, 0.00s)
+count(*)
+0
+
+### qualifying_time_source  (3 rows, 0.00s)
+has_quali_date | has_quali_time | rows_
+0 | 0 | 8696
+1 | 0 | 439
+1 | 1 | 1119
+
+### sprint_time_source  (2 rows, 0.00s)
+has_time | count(*)
+0 | 60
+1 | 240
+
+### lap_events_same_time  (1 rows, 0.11s)
+count(*)
+10
+
+### pit_stops_without_laps_race  (1 rows, 0.00s)
+race_id | year | round | name | date | stops
+1132 | 2024 | 12 | British Grand Prix | 2024-07-07 | 45
+

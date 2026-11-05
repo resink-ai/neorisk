@@ -1,0 +1,24 @@
+### span  (1 rows, 0.00s)
+lo | hi | n | days_in_span
+1917-01-01 | 1999-12-31 | 30315 | 30315
+
+### generated_vs_source  (1 rows, 0.04s)
+gen_rows | gen_minus_src | src_minus_gen
+30315 | 0 | 0
+
+### rowid_is_date_order  (1 rows, 0.00s)
+aligned | n
+30315 | 30315
+
+### types  (1 rows, 0.01s)
+typeof(date) | typeof(month_name) | typeof(day_of_month) | count(*)
+text | text | integer | 30315
+
+### used_by_questions_dec31  (1 rows, 0.00s)
+dec31_rows
+83
+
+### range_vs_terms  (1 rows, 0.00s)
+first_start | last_end | terms_ending_before_dim | terms_starting_after_dim
+1789-03-04 | 2025-01-03 | 18052 | 4859
+

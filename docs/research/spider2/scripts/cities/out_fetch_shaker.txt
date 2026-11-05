@@ -1,0 +1,13 @@
+cities.csv  2303543 bytes    44623 lines
+countries.csv    13224 bytes      258 lines
+currencies.csv     5003 bytes      255 lines
+languages.csv     6676 bytes      609 lines
+build_tables.sql     3091 bytes      106 lines
+normalize_tables.sql     4385 bytes      153 lines
+remove_duplicates.sql     1108 bytes       43 lines
+cleanup_db.sql      431 bytes       17 lines
+create_relationships.sql     1294 bytes       47 lines
+licence: none; created 2023-08-05T11:17:32Z; pushed 2024-02-01T02:20:05Z
+cities.csv commit 2023-08-09T23:38:06Z Too many to mention...
+cities.csv commit 2023-08-09T03:04:12Z Adding Questions and solutions.
+cities.csv commit 2023-08-06T16:36:01Z Adding project to repo.

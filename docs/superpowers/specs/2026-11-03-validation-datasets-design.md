@@ -274,6 +274,43 @@ There is one design, delivered as four pull requests in order. Each leaves `main
    - ports for the four datasets;
    - `dataset run` and `dataset bench`, and the report.
 
+## Batch 3
+
+Batch 3 adds 30 Spider2 datasets from 18 SQLite files, each built with `dataset build` and round-tripped exactly on DuckDB; the research behind each is in `docs/research/spider2/`.
+
+| Dataset | Source | Event shape | Known limits |
+|---|---|---|---|
+| `ipl` | IPL | natural |  |
+| `f1` | f1 | partly imposed | local336, local355 and local356 reproduce no gold variant (local355 is one gap off `_a`; local356 shares 75 of 78 names with `_a`). |
+| `veg` | bank_sales_trading (`veg_*`) | natural |  |
+| `datamart` | bank_sales_trading (`weekly_sales`) | mostly imposed |  |
+| `freshsegments` | bank_sales_trading (`interest_*`) | partly imposed |  |
+| `switrs` | California_Traffic_Collision | partly imposed |  |
+| `eusoccer` | EU_soccer | natural |  |
+| `wwe` | WWE | partly imposed |  |
+| `dbimdb` | Db-IMDB | mostly imposed |  |
+| `imdb_movies` | imdb_movies | partly imposed |  |
+| `baseball` | Baseball | mostly imposed | local007 reproduces neither gold variant (4.85, 5.09966563); the literal reading gives 4.92375275. |
+| `atliq` | education_business (`hardware_*`) | partly imposed |  |
+| `parchposey` | education_business (`web_*`) | natural |  |
+| `university` | education_business (`university_*`) | mostly imposed |  |
+| `staffhours` | education_business (`StaffHours`) | natural |  |
+| `salaries_india` | education_business (`SalaryDataset`) | mostly imposed |  |
+| `legislators` | city_legislation (`legislators*`) | natural |  |
+| `jobpostings` | city_legislation (`job_*`, `skills_*`) | partly imposed |  |
+| `aliens` | city_legislation (`alien*`) | mostly imposed |  |
+| `cities` | city_legislation (`cities*`) | partly imposed |  |
+| `unicorns` | modern_data (`companies_*`) | partly imposed |  |
+| `nyctrees` | modern_data (`trees`, `income_trees`) | mostly imposed |  |
+| `covidstates` | modern_data (`statistics`) | natural |  |
+| `wordlist` | modern_data (`word_list`) | mostly imposed |  |
+| `stacking` | stacking | mostly imposed |  |
+| `oraclesql` | oracle_sql | partly imposed | local273, local277 and local279 reproduce no gold variant (local273's only gold is degenerate; local277's three golds disagree; local279's model is underspecified). |
+| `bowling` | BowlingLeague | partly imposed |  |
+| `entertainment` | EntertainmentAgency | mostly imposed |  |
+| `school` | school_scheduling | mostly imposed |  |
+| `music` | music | partly imposed |  |
+
 ## Decided by the user
 
 These are as stated in the conversation of 2026-11-01 to 2026-11-03:

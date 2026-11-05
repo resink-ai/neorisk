@@ -1,0 +1,62 @@
+### local019_gold_sql  (1 rows, 0.04s)
+wrestler1 | wrestler2
+Bron Breakker | Duke Hudson
+
+### local019_shortest_nxt_title_matches  (8 rows, 0.02s)
+belt | duration | winner | loser | title_change | copies | min(m.id)
+NXT Championship | 00:43 | Bron Breakker | Duke Hudson | 0 | 7 | 67104
+NXT North American Championship | 00:56 | Carmelo Hayes | Isaiah "Swerve" Scott | 1 | 7 | 67416
+NXT North American Championship | 01:16 | Oba Femi | Dragon Lee | 1 | 1 | 540679
+NXT Women's Title | 02:00 | Shayna Baszler | Xia Li | 0 | 7 | 70336
+NXT Tag Team Titles | 02:21 | Angelo Dawkins & Montez Ford | Steve Cutler & Wesley Blake | 0 | 7 | 69051
+NXT Tag Team Titles | 02:25 | Erik & Ivar | Angelo Dawkins & Montez Ford | 0 | 7 | 69211
+NXT North American Championship | 03:43 | Leon Ruff | Johnny Gargano | 1 | 7 | 67720
+NXT Tag Team Titles | 04:00 | Ember Moon & Shotzi Blackheart | Aliyah & Mercedes Martinez | 0 | 7 | 67604
+
+### local019_variant_a_title_change_excluded  (3 rows, 0.03s)
+winner_name | loser_name | duration
+Bron Breakker | Duke Hudson | 00:43
+Bron Breakker | Duke Hudson | 00:43
+Bron Breakker | Duke Hudson | 00:43
+
+### local019_variant_a_nxt_womens  (5 rows, 0.02s)
+name | winner_name | loser_name | duration | title_change
+'' | Tiffany Stratton | Thea Hail | '' | 0
+'' | Tiffany Stratton | Thea Hail | 03:29 | 0
+NXT Women's Title | Tiffany Stratton | Thea Hail | '' | 0
+NXT Women's Title | Tiffany Stratton | Thea Hail | 08:28 | 0
+NXT Women's Title | Tiffany Stratton | Thea Hail | 11:45 | 0
+
+### local019_dedup_invariance  (1 rows, 0.02s)
+nxt_title_rows | distinct_rows
+2924 | 424
+
+### local019_variant_a_try_belts_never_changed  (5 rows, 0.03s)
+name | name | name | duration
+NXT UK Tag Team Championship | Mark Coffey & Wolfgang | Brooks Jensen & Josh Briggs | 08:45
+WWE Womens Tag Team Championship | Chelsea Green & Piper Niven | Jacy Jayne & Thea Hail | 09:00
+NXT UK Tag Team Championship | Brooks Jensen & Josh Briggs | Elton Prince & Kit Wilson | 11:34
+WWE Womens Tag Team Championship | Bayley & Sasha Banks | Shotzi Blackheart & Tegan Nox | 11:38
+WWE Womens Tag Team Championship | Nia Jax & Shayna Baszler | Dakota Kai & Raquel Gonzalez | 13:15
+
+### local019_variant_a_try_per_belt_max_of_min  (18 rows, 0.02s)
+name | min(m.duration)
+NXT Championship | 00:43
+NXT Women's Title | 02:00
+NXT Tag Team Titles | 02:21
+NXT North American Championship | 04:43
+NXT Cruiserweight Championship | 06:18
+NXT Women's Tag Team Titles | 07:32
+WWE United Kingdom Championship | 07:54
+NXT UK Tag Team Championship | 08:45
+WWE Womens Tag Team Championship | 09:00
+Dusty Rhodes Tag Team Classic Cup | 09:36
+NXT Heritage Cup | 10:54
+Interim NXT Cruiserweight Championship | 12:24
+Million Dollar Title | 13:13
+NXT North American Championship NXT Tag Team Titles | 13:35
+NXT Championship NXT North American Championship | 15:25
+NXT UK Championship | 16:59
+WWE World Heavyweight Championship | 17:06
+NXT North American Championship WWE United Kingdom Championship | 21:50
+

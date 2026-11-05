@@ -1,0 +1,117 @@
+NULL cells in the whole catalog: 0
+mixed columns (numeric affinity holding text): 91
+  all_star.gp NUMERIC text=19 non-empty text=0
+  all_star.starting_pos NUMERIC text=3489 non-empty text=0
+  appearances.g_all NUMERIC text=203 non-empty text=0
+  appearances.gs NUMERIC text=51921 non-empty text=0
+  appearances.g_defense NUMERIC text=203 non-empty text=0
+  appearances.g_dh NUMERIC text=51718 non-empty text=0
+  appearances.g_ph NUMERIC text=51718 non-empty text=0
+  appearances.g_pr NUMERIC text=58006 non-empty text=0
+  batting.ab NUMERIC text=5149 non-empty text=0
+  batting.r NUMERIC text=5149 non-empty text=0
+  batting.h NUMERIC text=5149 non-empty text=0
+  batting.double NUMERIC text=5149 non-empty text=0
+  batting.triple NUMERIC text=5149 non-empty text=0
+  batting.hr NUMERIC text=5149 non-empty text=0
+  batting.rbi NUMERIC text=5573 non-empty text=0
+  batting.sb NUMERIC text=6449 non-empty text=0
+  batting.cs NUMERIC text=28603 non-empty text=0
+  batting.bb NUMERIC text=5149 non-empty text=0
+  batting.so NUMERIC text=12987 non-empty text=0
+  batting.ibb NUMERIC text=41712 non-empty text=0
+  batting.hbp NUMERIC text=7959 non-empty text=0
+  batting.sh NUMERIC text=11487 non-empty text=0
+  batting.sf NUMERIC text=41181 non-empty text=0
+  batting.g_idp NUMERIC text=31257 non-empty text=0
+  batting_postseason.cs NUMERIC text=201 non-empty text=0
+  batting_postseason.ibb NUMERIC text=1039 non-empty text=0
+  batting_postseason.hbp NUMERIC text=1237 non-empty text=0
+  batting_postseason.sh NUMERIC text=1244 non-empty text=0
+  batting_postseason.sf NUMERIC text=1248 non-empty text=0
+  batting_postseason.g_idp NUMERIC text=1205 non-empty text=0
+  fielding.gs NUMERIC text=94677 non-empty text=0
+  fielding.inn_outs NUMERIC text=68213 non-empty text=0
+  fielding.po NUMERIC text=14117 non-empty text=0
+  fielding.a NUMERIC text=14118 non-empty text=0
+  fielding.e NUMERIC text=14119 non-empty text=0
+  fielding.dp NUMERIC text=14118 non-empty text=0
+  fielding.pb NUMERIC text=159410 non-empty text=0
+  fielding.wp NUMERIC text=166337 non-empty text=0
+  fielding.sb NUMERIC text=164502 non-empty text=0
+  fielding.cs NUMERIC text=164502 non-empty text=0
+  fielding.zr NUMERIC text=166337 non-empty text=0
+  fielding_outfield.glf NUMERIC text=37 non-empty text=0
+  fielding_outfield.gcf NUMERIC text=37 non-empty text=0
+  fielding_outfield.grf NUMERIC text=43 non-empty text=0
+  fielding_postseason.gs NUMERIC text=387 non-empty text=0
+  fielding_postseason.inn_outs NUMERIC text=321 non-empty text=0
+  fielding_postseason.pb NUMERIC text=10960 non-empty text=0
+  fielding_postseason.sb NUMERIC text=6756 non-empty text=0
+  fielding_postseason.cs NUMERIC text=6756 non-empty text=0
+  hall_of_fame.ballots NUMERIC text=193 non-empty text=0
+  hall_of_fame.needed NUMERIC text=350 non-empty text=0
+  hall_of_fame.votes NUMERIC text=193 non-empty text=0
+  manager.rank NUMERIC text=1 non-empty text=0
+  manager_award.notes NUMERIC text=177 non-empty text=0
+  pitching.ipouts NUMERIC text=1 non-empty text=0
+  pitching.baopp NUMERIC text=1525 non-empty text=0
+  pitching.era NUMERIC text=90 non-empty text=0
+  pitching.ibb NUMERIC text=14575 non-empty text=0
+  pitching.wp NUMERIC text=133 non-empty text=0
+  pitching.hbp NUMERIC text=559 non-empty text=0
+  pitching.bfp NUMERIC text=239 non-empty text=0
+  pitching.gf NUMERIC text=133 non-empty text=0
+  pitching.sh NUMERIC text=32900 non-empty text=0
+  pitching.sf NUMERIC text=32900 non-empty text=0
+  pitching.g_idp NUMERIC text=43394 non-empty text=0
+  pitching_postseason.era NUMERIC text=269 non-empty text=1
+  pitching_postseason.ibb NUMERIC text=50 non-empty text=0
+  pitching_postseason.wp NUMERIC text=50 non-empty text=0
+  pitching_postseason.hbp NUMERIC text=50 non-empty text=0
+  pitching_postseason.bk NUMERIC text=225 non-empty text=0
+  pitching_postseason.bfp NUMERIC text=50 non-empty text=0
+  pitching_postseason.sh NUMERIC text=711 non-empty text=0
+  pitching_postseason.sf NUMERIC text=711 non-empty text=0
+  pitching_postseason.g_idp NUMERIC text=50 non-empty text=0
+  player.birth_year NUMERIC text=143 non-empty text=0
+  player.birth_month NUMERIC text=315 non-empty text=0
+  player.birth_day NUMERIC text=464 non-empty text=0
+  player.death_year NUMERIC text=9510 non-empty text=0
+  player.death_month NUMERIC text=9511 non-empty text=0
+  player.death_day NUMERIC text=9512 non-empty text=0
+  player.weight NUMERIC text=871 non-empty text=0
+  player.height NUMERIC text=805 non-empty text=0
+  player_award_vote.votes_first NUMERIC text=358 non-empty text=0
+  team.ghome NUMERIC text=399 non-empty text=0
+  team.so NUMERIC text=120 non-empty text=0
+  team.sb NUMERIC text=144 non-empty text=0
+  team.cs NUMERIC text=859 non-empty text=0
+  team.hbp NUMERIC text=2325 non-empty text=0
+  team.sf NUMERIC text=2325 non-empty text=0
+  team.dp NUMERIC text=317 non-empty text=0
+  team.attendance NUMERIC text=279 non-empty text=0
+numeric-affinity columns in total: 230
+
+REAL cells: CAST AS TEXT vs repr
+  pitching.baopp: real=41524 cast!=repr=2518 [(0.24600000000000002, '0.246'), (0.29100000000000004, '0.291'), (0.21899999999999997, '0.219')] cast_roundtrips=39006 decimals={1: 3191, 2: 28690, 3: 7125, 16: 29, 17: 2487, 18: 2}
+  pitching.era: real=40420 cast!=repr=0 [] cast_roundtrips=40420 decimals={1: 5369, 2: 35051}
+  pitching_postseason.era: real=2598 cast!=repr=0 [] cast_roundtrips=2598 decimals={1: 805, 2: 1793}
+  player_award_vote.points_won: real=6 cast!=repr=0 [] cast_roundtrips=6 decimals={1: 6}
+  player_award_vote.votes_first: real=6 cast!=repr=0 [] cast_roundtrips=6 decimals={1: 6}
+  team.era: real=2773 cast!=repr=0 [] cast_roundtrips=2773 decimals={1: 237, 2: 2536}
+  team.fp: real=2805 cast!=repr=80 [(0.9790000000000001, '0.979'), (0.9790000000000001, '0.979'), (0.9840000000000001, '0.984')] cast_roundtrips=2725 decimals={1: 63, 2: 2285, 3: 377, 16: 80}
+
+derived columns
+  pitching.era = round(27*er/ipouts,2) where ipouts>0 and era<>'': rows=44049 match=43935 examples_of_mismatch=[('nolanth01', 1884, 13, 120, 2.93), ('heckegu01', 1885, 116, 1440, 2.18), ('keefeti01', 1885, 70, 1200, 1.58), ('pylesh01', 1887, 14, 80, 4.73), ('whitnji01', 1890, 23, 120, 5.18)]
+  pitching.era within 0.005 of 27*er/ipouts: rows=44049 match=44049 examples_of_mismatch=[]
+  pitching.era='' <-> ipouts=0 (rows with era=''): rows=90 match=89 examples_of_mismatch=[('leblawa01', 2014, '', 4)]
+  pitching.baopp = round(h/(bfp-bb-hbp-sh-sf),3) (all present): rows=11233 match=11206 examples_of_mismatch=[('sikorbr01', 2000, 46, 187, 0.28800000000000003), ('daveyto01', 2002, 23, 97, 0.28800000000000003), ('walkety01', 2004, 69, 275, 0.28800000000000003), ('hergema01', 2005, 23, 90, 0.28800000000000003), ('aceveal01', 2014, 23, 85, 0.28800000000000003)]
+  pitching.baopp = round(h/(bfp-bb-hbp-sh-sf),2) (all present): rows=11233 match=1590 examples_of_mismatch=[('abbotpa01', 2000, 164, 766, 0.243), ('aceveju01', 2000, 77, 347, 0.24600000000000002), ('adamste01', 2000, 80, 369, 0.245), ('aguilri01', 2000, 47, 210, 0.251), ('aldresc01', 2000, 23, 95, 0.284)]
+  pitching.baopp = round(h/(ipouts+h),3): rows=42590 match=2778 examples_of_mismatch=[('barnero01', 1876, 7, 4, 0.53), ('blongjo01', 1876, 2, 12, 0.15), ('bondto01', 1876, 355, 1224, 0.22), ('bootham01', 1876, 22, 29, 0.43), ('boothed01', 1876, 16, 15, 0.47)]
+  pitching.baopp decimals<=2 (2-digit rounding): rows=42614 match=32971 examples_of_mismatch=[('abbotpa01', 0.243), ('aceveju01', 0.24600000000000002), ('adamste01', 0.245), ('aguilri01', 0.251), ('aldresc01', 0.284)]
+  team.era = round(27*er/ipouts,2): rows=2805 match=2805 examples_of_mismatch=[]
+  team.fp decimals<=3: rows=2805 match=2805 examples_of_mismatch=[]
+  pitching_postseason.era = round(27*er/ipouts,2): rows=4840 match=4832 examples_of_mismatch=[('sherdbi01', 1928, 'WS', 7, 40, 4.73), ('rootch01', 1929, 'WS', 7, 40, 4.73), ('ferrida01', 1946, 'WS', 3, 40, 2.03), ('hunteca01', 1973, 'WS', 3, 40, 2.03), ('stewada01', 1993, 'ALCS', 3, 40, 2.03)]
+  pitching_postseason era '' or inf <-> ipouts=0: rows=269 match=55 examples_of_mismatch=[('blakesh01', 1929, 'WS', 4, 2, ''), ('nehfar01', 1929, 'WS', 3, 2, ''), ('hogsech01', 1934, 'WS', 22, 1, ''), ('rootch01', 1935, 'WS', 6, 4, ''), ('coffmdi01', 1936, 'WS', 5, 6, '')]
+  pitching_postseason ipouts=0 -> era in ('', 'inf'): rows=55 match=55 examples_of_mismatch=[]

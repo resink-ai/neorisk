@@ -1,0 +1,180 @@
+### m419136_totals  (2 rows, 0.00s)
+innings_no | team_batting | bat | extras | wkts
+1 | 6 | 173 | 4 | 4
+2 | 1 | 126 | 11 | 9
+
+### team1_home_venues  (3 rows, 0.00s)
+venue | count(*)
+Eden Gardens | 51
+M Chinnaswamy Stadium | 8
+MA Chidambaram Stadium Chepauk | 7
+
+### deliveries_per_innings_quantiles  (1 rows, 0.02s)
+min(n) | p10 | p50 | p90 | max(n) | avg(n)
+30 | 106 | 123 | 127 | 134 | 118.57658450704226
+
+### innings_totals_quantiles  (2 rows, 0.07s)
+innings_no | min(runs) | p10 | p50 | p90 | max(runs) | round(avg(runs),1)
+1 | 67 | 119 | 160 | 193 | 263 | 159.1
+2 | 44 | 106 | 147 | 182 | 223 | 145.5
+
+### per_delivery_rates  (1 rows, 0.00s)
+deliveries | bs_rows | extras | wickets | extra_rate | wicket_rate | bat_runs_per_delivery
+134703 | 131259 | 7349 | 6618 | 0.0546 | 0.0491 | 1.2151
+
+### runs_per_over_dist  (5 rows, 0.08s)
+band | count(*)
+0-4 | 5249
+10-14 | 5158
+15-19 | 1443
+20+ | 385
+5-9 | 9597
+
+### run_rate_by_over  (20 rows, 0.10s)
+over_id | runs_per_over | wkts_per_over
+1 | 5.91 | 0.196
+2 | 7.02 | 0.233
+3 | 7.61 | 0.256
+4 | 7.98 | 0.243
+5 | 8.01 | 0.26
+6 | 8.09 | 0.253
+7 | 6.66 | 0.21
+8 | 7.11 | 0.214
+9 | 7.3 | 0.238
+10 | 7.16 | 0.232
+11 | 7.54 | 0.266
+12 | 7.79 | 0.252
+13 | 7.76 | 0.253
+14 | 7.98 | 0.281
+15 | 8.44 | 0.309
+16 | 8.71 | 0.346
+17 | 9.29 | 0.385
+18 | 9.63 | 0.488
+19 | 9.68 | 0.544
+20 | 9.91 | 0.772
+
+### toss_decision_by_season  (9 rows, 0.00s)
+season_id | field | bat
+1 | 32 | 26
+2 | 21 | 35
+3 | 20 | 38
+4 | 48 | 24
+5 | 37 | 37
+6 | 30 | 44
+7 | 41 | 18
+8 | 31 | 25
+9 | 49 | 11
+
+### toss_winner_wins  (1 rows, 0.00s)
+toss_win_match | count(*)
+287 | 567
+
+### bat_first_wins  (2 rows, 0.00s)
+win_type | count(*)
+runs | 260
+wickets | 307
+
+### margin_quantiles  (2 rows, 0.00s)
+win_type | min(m) | p25 | p50 | p75 | max(m)
+runs | 1 | 11 | 23 | 39 | 144
+wickets | 1 | 5 | 6 | 8 | 10
+
+### days_between_matches  (3 rows, 0.00s)
+gap | count(*)
+1.0 | 367
+2.0 | 26
+3.0 | 1
+
+### weekday_mix  (7 rows, 0.00s)
+dow | count(*)
+0 | 115
+1 | 57
+2 | 70
+3 | 76
+4 | 69
+5 | 72
+6 | 108
+
+### venue_top  (8 rows, 0.00s)
+venue | count(*)
+M Chinnaswamy Stadium | 55
+Eden Gardens | 54
+Feroz Shah Kotla | 51
+Wankhede Stadium | 49
+MA Chidambaram Stadium Chepauk | 47
+Rajiv Gandhi International Stadium Uppal | 40
+Punjab Cricket Association Stadium Mohali | 35
+Sawai Mansingh Stadium | 33
+
+### appearances_per_player  (5 rows, 0.00s)
+b | count(*)
+1 | 33
+101+ | 22
+11-50 | 171
+2-10 | 183
+51-100 | 59
+
+### max_appearances  (3 rows, 0.00s)
+player_name | count(*)
+SK Raina | 145
+RG Sharma | 142
+MS Dhoni | 142
+
+### teams_per_player  (6 rows, 0.00s)
+n | count(*)
+1 | 265
+2 | 113
+3 | 64
+4 | 17
+5 | 6
+6 | 3
+
+### team_change_within_season  (1 rows, 0.00s)
+count(*)
+1
+
+### dismissal_mix_by_innings  (17 rows, 0.00s)
+innings_no | kind_out | count(*)
+1 | caught | 2036
+1 | bowled | 623
+1 | run out | 394
+1 | lbw | 197
+1 | stumped | 98
+1 | caught and bowled | 89
+1 | retired hurt | 5
+1 | hit wicket | 5
+2 | caught | 1858
+2 | bowled | 611
+2 | run out | 283
+2 | lbw | 196
+2 | stumped | 121
+2 | caught and bowled | 95
+2 | retired hurt | 3
+2 | hit wicket | 3
+2 | obstructing the field | 1
+
+### all_out_or_20  (2 rows, 0.02s)
+innings_no | all_out | to_20_overs | ended_early | count(*)
+1 | 40 | 513 | 15 | 568
+2 | 56 | 303 | 209 | 568
+
+### player_created_rule  (9 rows, 0.00s)
+s | count(*)
+1 | 163
+2 | 59
+3 | 54
+4 | 47
+5 | 40
+6 | 37
+7 | 20
+8 | 17
+9 | 31
+
+### first_appearance_in_bbb_before_pm  (1 rows, 0.08s)
+count(*)
+0
+
+### dob_range_age_at_first  (1 rows, 0.00s)
+min(age) | max(age) | round(avg(age),1)
+16.61327857631759 | 41.57973990417522 | 25.9
+

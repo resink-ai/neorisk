@@ -1,0 +1,5 @@
+duckdb 1.5.6
+veg_txn_df {'n': 878503, 'qty_ok': 878503, 'px_ok': 878503, 'date_ok': 878503, 'time_ok': 878503, 'dow_ok': 878503, 'sr_ok': 878503}
+txn index from (time, ord=index): (878503, 878503)
+veg_whsle_df fen: (55982, 55982, 55982)
+veg_loss_rate_df bp: (251, 251)

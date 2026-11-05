@@ -1,0 +1,116 @@
+## status x health NULL x species NULL
+status|h_null|s_null|count(*)
+Alive|0|0|652167
+Alive|0|1|5
+Alive|1|0|1
+Dead|1|0|1
+Dead|1|1|13960
+Stump|1|1|17654
+## health values
+health|count(*)
+Good|528850
+Fair|96504
+|31616
+Poor|26818
+## dbh / stump_diam by status: zero counts, min, max
+status|dbh0|min(tree_dbh)|max(tree_dbh)|stump0|min(stump_diam)|max(stump_diam)|count(*)
+Alive|222|0|425|652173|0|0|652173
+Dead|56|0|450|13961|0|0|13961
+Stump|17654|0|0|0|1|140|17654
+## extreme dbh (> 100 inches)
+dbh_gt_100|max(tree_dbh)
+70|450
+## lat/long ranges and printed decimals
+min(latitude)|max(latitude)|min(longitude)|max(longitude)
+40.49846614|40.91291831|-74.2549647|-73.70048817
+lat_decimals|count(*)
+2|1
+3|9
+4|62
+5|582
+6|6098
+7|61793
+8|615243
+## same (lat, long) shared by several trees
+shared_points|trees_on_them|max(n)
+217|653|35
+## NTAs in more than one borough (rows per borough)
+nta_name|boroname|count(*)
+Bushwick North|Brooklyn|3451
+Bushwick North|Queens|4
+Cypress Hills-City Line|Brooklyn|3626
+Cypress Hills-City Line|Queens|18
+East New York|Brooklyn|9594
+East New York|Queens|13
+Georgetown-Marine Park-Bergen Beach-Mill Basin|Brooklyn|7442
+Georgetown-Marine Park-Bergen Beach-Mill Basin|Queens|7
+Marble Hill-Inwood|Manhattan|1508
+Marble Hill-Inwood|Bronx|246
+Ozone Park|Queens|3235
+Ozone Park|Brooklyn|9
+Woodhaven|Queens|4254
+Woodhaven|Brooklyn|6
+## zipcodes in more than one borough
+zipcode|boroname|count(*)
+11208|Brooklyn|8244
+11208|Queens|1
+11234|Brooklyn|11246
+11234|Queens|7
+11414|Queens|4649
+11414|Brooklyn|1
+## tree zipcodes not in income_trees
+zipcode|boroname|count(*)
+83|Manhattan|935
+10048|Manhattan|12
+10281|Manhattan|72
+11096|Queens|9
+11249|Brooklyn|1842
+11251|Brooklyn|93
+## idx vs tree_id order (rows in idx order): ascents/descents of tree_id
+asc_|desc_
+368859|314928
+## physical order of rows 6839.. by borough runs (number of borough changes)
+boro_changes
+429832
+## text oddities: untrimmed, lower/upper address, double spaces
+addr_untrim|addr_not_upper|addr_dblspace|common_not_lower|nta_untrim
+0|0|0|289070|0
+## top species
+spc_common|count(*)
+London planetree|87014
+honeylocust|64264
+Callery pear|58931
+pin oak|53185
+Norway maple|34189
+|31619
+littleleaf linden|29742
+cherry|29279
+Japanese zelkova|29258
+ginkgo|21024
+## income_trees margin_of_error totals for the zero-pop zips (sentinel 11) and other MOE stats
+Margin_of_Error_Total|count(*)
+11|32
+min(Estimate_Total)|max(Estimate_Total)|min(NULLIF(Estimate_Median_income,0))|max(Estimate_Median_income)|max(Estimate_Mean_income)
+0|43456|250|193510|441278
+median_250001
+0
+mean_lt_median
+0
+## income_trees physical order (zip ascents/descents)
+asc_|desc_
+215|4
+min(rowid)|max(rowid)
+1|29
+## income_trees: implausible medians (< 10000) and zero MOE on non-zero estimates
+zipcode|Estimate_Total|Margin_of_Error_Total|Estimate_Median_income|Margin_of_Error_Median_income|Estimate_Mean_income|Margin_of_Error_Mean_income
+10007|2781|229|250|0|441278|56347
+10282|2439|282|250|0|318142|49414
+## income_trees: rows 1-2 prepended copies? base = rows 3..220
+base_rows|base_zips
+218|216
+asc_|desc_|eq
+214|3|0
+rowid|zipcode|zipcode
+29|11370|11201
+67|11425|10001
+207|11697|10301

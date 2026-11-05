@@ -1,0 +1,75 @@
+### create_rebuilt  (statement, 0.01s)
+
+### create_rebuilt2  (statement, 0.01s)
+
+### create_rebuilt3  (statement, 0.03s)
+
+### week_number_candidates  (1 rows, 0.00s)
+by_W | by_V_iso_via_thursday | by_dayofyear | n
+5698 | 17117 | 5698 | 17117
+
+### per_column_matches  (1 rows, 0.01s)
+n | wdf | wd | region | platform | segment | ctype | tx | sales | mn | cy | ab | dm | avg_tx_sqlite_round | avg_tx_half_up_cents | week_number_iso
+17117 | 17117 | 17117 | 17117 | 17117 | 17117 | 17117 | 17117 | 17117 | 17117 | 17117 | 17117 | 17117 | 17104 | 17117 | 17117
+
+### avg_tx_mismatches  (13 rows, 0.00s)
+rowid | transactions | sales | avg_transaction | sqlite_round | half_up | raw
+265 | 40 | 6803 | 170.08 | 170.07 | 170.08 | 170.075
+458 | 120 | 18969 | 158.08 | 158.07 | 158.08 | 158.075
+568 | 40 | 5799 | 144.98 | 144.97 | 144.98 | 144.975
+2443 | 160 | 26612 | 166.33 | 166.32 | 166.33 | 166.325
+2955 | 120 | 22539 | 187.83 | 187.82 | 187.83 | 187.825
+5776 | 40 | 8409 | 210.23 | 210.22 | 210.23 | 210.225
+7161 | 160 | 21452 | 134.08 | 134.07 | 134.08 | 134.075
+11222 | 120 | 26289 | 219.08 | 219.07 | 219.08 | 219.075
+11836 | 40 | 6849 | 171.23 | 171.22 | 171.23 | 171.225
+13460 | 40 | 6309 | 157.73 | 157.72 | 157.73 | 157.725
+14666 | 280 | 10787 | 38.53 | 38.52 | 38.53 | 38.525
+15525 | 40 | 7053 | 176.33 | 176.32 | 176.33 | 176.325
+16420 | 160 | 23172 | 144.83 | 144.82 | 144.83 | 144.825
+
+### multiset_diff_cleaned_minus_rebuilt  (1 rows, 0.02s)
+n
+0
+
+### multiset_diff_rebuilt_minus_cleaned  (1 rows, 0.03s)
+n
+0
+
+### week_number_vs_dates  (10 rows, 0.00s)
+week_date | week_number | W | iso | dow
+2018-03-26 | 13 | 13 | 13 | 1
+2019-03-25 | 13 | 12 | 13 | 1
+2019-04-01 | 14 | 13 | 14 | 1
+2019-04-08 | 15 | 14 | 15 | 1
+2019-04-15 | 16 | 15 | 16 | 1
+2019-04-22 | 17 | 16 | 17 | 1
+2019-04-29 | 18 | 17 | 18 | 1
+2019-05-06 | 19 | 18 | 19 | 1
+2019-05-13 | 20 | 19 | 20 | 1
+2019-05-20 | 21 | 20 | 21 | 1
+
+### weekday_of_week_date  (1 rows, 0.00s)
+dow_0_sunday | weeks
+1 | 72
+
+### week_gaps  (3 rows, 0.00s)
+gap | n
+None | 1
+7.0 | 69
+203.0 | 2
+
+### weeks_per_year  (3 rows, 0.00s)
+calendar_year | weeks | min(week_date) | max(week_date) | min(week_number) | max(week_number)
+2018 | 24 | 2018-03-26 | 2018-09-03 | 13 | 36
+2019 | 24 | 2019-03-25 | 2019-09-02 | 13 | 36
+2020 | 24 | 2020-03-23 | 2020-08-31 | 13 | 36
+
+### avg_transaction_text  (1 rows, 0.01s)
+n | two_dp | min(avg_transaction) | max(avg_transaction)
+17117 | 17117 | 0.0 | 880.33
+
+### avg_transaction_half_up_ties  (1 rows, 0.00s)
+exact_ties | n
+109 | 17117
+

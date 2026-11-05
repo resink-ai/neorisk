@@ -1,0 +1,101 @@
+### status2_per_entertainer  (1 rows, 0.00s)
+n2 | count(*)
+1 | 13
+
+### solo_status  (4 rows, 0.00s)
+EntertainerID | EntStageName | MemberID | Status
+1004 | Jim Glynn | 125 | 2
+1009 | Katherine Ehrlich | 121 | 2
+1011 | Julia Schnebly | 122 | 2
+1012 | Susan McLain | 123 | 2
+
+### cust_member_phone  (2 rows, 0.00s)
+CustomerID | CustFirstName | CustLastName | MemberID | MbrFirstName | MbrLastName | CustPhoneNumber
+10012 | Kerry | Patterson | 121 | Katherine | Ehrlich | 555-0399
+10013 | Estella | Pundt | 113 | Steve | Pundt | 555-9938
+
+### outliers  (1 rows, 0.00s)
+EngagementNumber | StartDate | EndDate | StartTime | StopTime | ContractPrice | CustomerID | AgentID | EntertainerID
+99 | 2018-01-23 | 2018-02-23 | 14:00:00 | 20:00:00 | 14105 | 10005 | 6 | 1008
+
+### overlap_pairs  (2 rows, 0.00s)
+EntertainerID | EngagementNumber | StartDate | EndDate | EngagementNumber | StartDate | EndDate
+1008 | 85 | 2018-01-07 | 2018-01-09 | 87 | 2018-01-05 | 2018-01-07
+1008 | 99 | 2018-01-23 | 2018-02-23 | 120 | 2018-02-18 | 2018-02-21
+
+### hired_vs_first_engagement  (1 rows, 0.00s)
+last_hire | last_entered | first_start | last_end
+2000-02-05 | 1998-10-12 | 2017-09-02 | 2018-03-13
+
+### customer_first_engagement  (13 rows, 0.00s)
+CustomerID | min(StartDate)
+10001 | 2017-09-11
+10002 | 2017-09-30
+10003 | 2017-09-18
+10004 | 2017-09-12
+10005 | 2017-09-16
+10006 | 2017-09-02
+10007 | 2017-09-12
+10009 | 2017-09-30
+10010 | 2017-09-19
+10012 | 2017-10-01
+10013 | 2017-10-15
+10014 | 2017-09-11
+10015 | 2017-10-08
+
+### zip_city  (3 rows, 0.00s)
+k | count(DISTINCT AgtZipCode)
+agents | 6
+customers | 7
+entertainers | 9
+
+### start_time_dist  (9 rows, 0.00s)
+StartTime | count(*)
+12:00:00 | 13
+13:00:00 | 13
+14:00:00 | 15
+15:00:00 | 10
+16:00:00 | 12
+17:00:00 | 16
+18:00:00 | 9
+19:00:00 | 6
+20:00:00 | 17
+
+### hours_dist  (5 rows, 0.00s)
+hrs | count(*)
+2 | 24
+3 | 21
+4 | 22
+5 | 23
+6 | 21
+
+### minutes_nonzero  (1 rows, 0.00s)
+count(*)
+0
+
+### gap_between_start_dates  (8 rows, 0.00s)
+gap | count(*)
+1.0 | 33
+2.0 | 3
+3.0 | 2
+4.0 | 10
+5.0 | 3
+6.0 | 8
+8.0 | 1
+9.0 | 3
+
+### engagements_per_start_date  (4 rows, 0.00s)
+n | count(*)
+1 | 36
+2 | 15
+3 | 7
+4 | 6
+
+### customer_agent_affinity  (1 rows, 0.00s)
+pairs | count(*)
+75 | 111
+
+### style_matches_customer_pref  (1 rows, 0.00s)
+matched | count(*)
+30 | 111
+

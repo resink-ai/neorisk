@@ -1,0 +1,2 @@
+pitching.baopp: noisy=2518 of 41524; by decade={2000: 1537, 2010: 981}; distinct noisy values=90; top=[(0.333, 185), (0.286, 140), (0.269, 95), (0.241, 90), (0.279, 85)]
+team.fp: noisy=80 of 2805; by decade={2000: 52, 2010: 28}; distinct noisy values=3; top=[(0.984, 56), (0.979, 20), (0.989, 4)]

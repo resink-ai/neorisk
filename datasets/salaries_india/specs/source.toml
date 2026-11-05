@@ -1,0 +1,7 @@
+# India data-science salaries: Glassdoor aggregates by company, job title and city, the
+# SalaryDataset table of Spider2's education_business catalog.
+file = "education_business.sqlite"
+note = "Untimed: every listing is created by rule at 2022-01-01. Salary text is rebuilt with lakh grouping."
+
+[tables]
+SalaryDataset = ["index"]

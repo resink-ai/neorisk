@@ -1,0 +1,23 @@
+collisions: rows=94243 distinct=94243 >=2^53=5231 non_integer=0 min=11 max=9870011106100015104
+case_ids: rows=94243 distinct=94242 >=2^53=5237 non_integer=0 min=45 max=9870010702153510912
+parties: rows=186692 distinct=185584 >=2^53=10300 non_integer=0 min=15 max=9870011212175013888
+victims: rows=96393 distinct=95458 >=2^53=6061 non_integer=0 min=26 max=9870011208124510208
+union of distinct case_id over 4 tables: 460904
+  collisions: distinct only here=90570
+  case_ids: distinct only here=90431
+  parties: distinct only here=179853
+  victims: distinct only here=91507
+encoding cast_text: distinct texts=460879 texts mapping to >1 value=25 float(text)==value 448608/471571
+encoding printf_.0f: distinct texts=460904 texts mapping to >1 value=0 float(text)==value 471571/471571
+encoding printf_.17g: distinct texts=460904 texts mapping to >1 value=0 float(text)==value 463423/471571
+printf('%.0f') == str(int(double)): 462790 / 471571
+date-coded ids (>=1e17) in collisions: 5231; jurisdiction+date decode matches 5231; +HH:MM matches 5086
+  parties: date-coded ids 10300
+  victims: date-coded ids 6061
+  case_ids: date-coded ids 5237
+counter ids: 89012; adjacent (by case_id) pairs with date going backwards: 42259
+  neighbour-interpolated date error, days: p50=9.0 p90=42.0 p99=209.5 max=4878.0
+  ids [0e+00,1e+07): n=75673 dates 2002-01-01..2021-05-20
+  ids [1e+07,9e+07): n=304 dates 2019-04-26..2021-05-27
+  ids [9e+07,1e+09): n=13035 dates 2015-05-05..2021-05-30
+sqlite version: 3.45.1

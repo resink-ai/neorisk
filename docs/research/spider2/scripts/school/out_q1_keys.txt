@@ -1,0 +1,98 @@
+### sqlite_sequence  (7 rows, 0.00s)
+name | seq
+Staff | 98064
+Departments | 5
+Students | 1019
+Student_Class_Status | 3
+Class_Rooms | 3455
+Subjects | 56
+Classes | 6600
+
+### fk_orphans  (19 rows, 0.00s)
+fk | n
+class_rooms->buildings | 0
+classes->subjects | 0
+classes->class_rooms | 0
+departments chair->staff | 0
+categories->departments | 0
+faculty->staff | 0
+fac_cat->faculty | 0
+fac_cat->categories | 0
+fac_classes->classes | 0
+fac_classes->staff | 0
+fac_classes->faculty | 0
+fac_subj->faculty | 0
+fac_subj->subjects | 0
+sched->students | 0
+sched->classes | 0
+sched->status | 0
+students->majors | 0
+subjects->categories | 0
+subjects prereq->code | 0
+
+### coverage  (12 rows, 0.00s)
+k | count(DISTINCT ClassID)
+classes with students | 32
+classes with faculty | 145
+classes w/o faculty | 2
+classes with >1 faculty | 0
+students w/o schedule | 1
+staff not faculty | 3
+faculty w/o class | 1
+subjects w/o class | 4
+rooms w/o class | 8
+buildings w/o room | 1
+categories w/o subject | 3
+majors w/o student | 0
+
+### staff_not_faculty  (3 rows, 0.00s)
+StaffID | StfFirstName | StfLastname | Position | classes
+98021 | Tim | Smith | Registrar | 0
+98043 | Kathryn | Patterson | Secretary | 0
+98057 | Joe | Rosales III | Graduate Advisor | 0
+
+### class_teacher_subject_consistency  (1 rows, 0.00s)
+fc_rows | has_subject | has_category
+145 | 140 | 142
+
+### fac_subjects_categories_consistency  (1 rows, 0.00s)
+rows_ | cat_listed
+110 | 110
+
+### chairs_are_faculty  (5 rows, 0.00s)
+DepartmentID | DeptName | DeptChair | is_faculty
+1 | Business Administration | 98012 | 1
+2 | Sciences | 98010 | 1
+3 | Humanities | 98005 | 1
+4 | Social Sciences | 98059 | 1
+5 | Information Technology | 98007 | 1
+
+### id_ranges  (2 rows, 0.00s)
+k | group_concat(DISTINCT substr(ClassID,1,1))
+ClassID | 2,5,1,4,3,6
+room bldg prefix | AS1,CC2,CC3,IB2,IB3,LB1,TB1
+
+### classroom_id_encodes_building  (5 rows, 0.00s)
+BuildingCode | min(ClassRoomID) | max(ClassRoomID) | count(*)
+AS | 1514 | 1627 | 10
+CC | 2357 | 3455 | 12
+IB | 2408 | 3431 | 18
+LB | 1131 | 1231 | 3
+TB | 1639 | 1642 | 4
+
+### subject_code_prefix_is_category  (1 rows, 0.00s)
+ok | count(*)
+55 | 56
+
+### prereqs  (9 rows, 0.00s)
+SubjectCode | SubjectPreReq
+ACC 220 | ACC 210
+ACC 230 | ACC 220
+ACC 251 | ACC 220
+ACC 257 | ACC 220
+BUS 171 | BUS 170
+ECO 200 | MAT 098
+MUS 201 | MUS 101
+ENG 102 | ENG 101
+PHY 203 | PHY 201
+

@@ -1,0 +1,9 @@
+# US Congress legislators 1789-2020 (unitedstates/congress-legislators, via Tanimura's
+# "SQL for Data Analysis" ch. 4): 3 of city_legislation's tables.
+file = "city_legislation.sqlite"
+note = "Dates YYYY-MM-DD, read as UTC midnight. Rule time: a legislator is created at their first term start. legislation_date_dim is a generated calendar."
+
+[tables]
+legislators = ["id_bioguide"]
+legislators_terms = ["id_bioguide", "term_number"]
+legislation_date_dim = ["date"]

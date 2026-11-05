@@ -1,0 +1,11 @@
+Bowler_Scores: MatchID=int64, GameNumber=int64, BowlerID=int64, RawScore=int64, HandiCapScore=int64, WonGame=int64
+Bowler_Scores_Archive: MatchID=int64, GameNumber=int64, BowlerID=int64, RawScore=int64, HandiCapScore=int64, WonGame=int64
+Bowlers: BowlerID=int64, BowlerLastName=string, BowlerFirstName=string, BowlerMiddleInit=string, BowlerAddress=string, BowlerCity=string, BowlerState=string, BowlerZip=string, BowlerPhoneNumber=string, TeamID=int64, BowlerTotalPins=int64, BowlerGamesBowled=int64, BowlerCurrentAverage=int64, BowlerCurrentHcp=int64
+Match_Games: MatchID=int64, GameNumber=int64, WinningTeamID=int64
+Match_Games_Archive: MatchID=int64, GameNumber=int64, WinningTeamID=int64
+Teams: TeamID=int64, TeamName=string, CaptainID=int64
+Tournaments: TourneyID=int64, TourneyDate=string, TourneyLocation=string
+Tournaments_Archive: TourneyID=int64, TourneyDate=int64, TourneyLocation=string
+Tourney_Matches: MatchID=int64, TourneyID=int64, Lanes=string, OddLaneTeamID=int64, EvenLaneTeamID=int64
+Tourney_Matches_Archive: MatchID=int64, TourneyID=int64, Lanes=string, OddLaneTeamID=int64, EvenLaneTeamID=int64
+WAZips: ZIP=string, City=string, State=string

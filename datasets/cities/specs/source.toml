@@ -1,0 +1,9 @@
+# World cities: Jaime M. Shaker's SQL Coding Challenge, the cities* tables of Spider2's city_legislation.
+file = "city_legislation.sqlite"
+note = "Dates only, read as UTC midnight. Lookups are created at the rule time 2021-01-01; created_on is a snapshot."
+
+[tables]
+cities = ["city_id"]
+cities_countries = ["country_id"]
+cities_currencies = ["currency_id"]
+cities_languages = ["language_id"]

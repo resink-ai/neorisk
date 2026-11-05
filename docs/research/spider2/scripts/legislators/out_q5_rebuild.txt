@@ -1,0 +1,38 @@
+### event_counts  (1 rows, 0.00s)
+term_started | term_ended | open_with_scheduled_end | starts_after_N
+44063 | 43526 | 537 | 0
+
+### term_end_roundtrip  (1 rows, 0.03s)
+ok | n
+44063 | 44063
+
+### same_day_end_then_start  (1 rows, 0.03s)
+same_day_handover
+7882
+
+### same_day_start_end_conflict  (1 rows, 0.04s)
+count(*)
+0
+
+### current_block_stragglers  (2 rows, 0.01s)
+rowid | id_bioguide | full_name | le
+43 | F000224 | William Floyd | 1791-03-03
+87 | R000120 | John Reed | 1801-03-03
+
+### entity_created_at  (1 rows, 0.01s)
+min(fs) | max(fs) | count(*)
+1789-03-04 | 2020-05-19 | 12518
+
+### real_cols_as_int_roundtrip  (1 rows, 0.00s)
+d_ok | d_n | c_ok | c_n
+40190 | 40190 | 3873 | 3873
+
+### real_cols_legislators  (1 rows, 0.00s)
+icpsr_ok | icpsr_n | hh_ok | hh_n | hh_max
+12298 | 12298 | 11026 | 11026 | 15032449022.0
+
+### snapshot_style_ids_by_era  (2 rows, 0.02s)
+era | n | fec | opensecrets | votesmart | cspan | ballotpedia | thomas | lis
+left before 1971 | 10009 | 0 | 0 | 0 | 0 | 0 | 0 | 0
+served after 1970 | 2509 | 1083 | 1209 | 1081 | 854 | 520 | 2181 | 292
+

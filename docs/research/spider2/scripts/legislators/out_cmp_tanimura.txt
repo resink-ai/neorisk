@@ -1,0 +1,7 @@
+### legislators: csv 12518 rows, db 12518 rows, header equal: True
+rows differing (row order aligned): 0; per column: {}
+### legislators_terms: csv 44063 rows, db 44063 rows, header equal: True
+rows differing (row order aligned): 0; per column: {}
+
+legislators.id_icpsr: 12298 non-empty csv cells, 0 contain '.', 220 empty -> NULL
+legislators_terms.district: 40190 non-empty csv cells, 0 contain '.', 3873 empty -> NULL

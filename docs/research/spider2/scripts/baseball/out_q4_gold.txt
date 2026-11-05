@@ -1,0 +1,39 @@
+### local007_variant_b_debut_nonempty  (1 rows, 0.02s)
+v | n
+4.9237527475473115 | 18653
+
+### local007_variant_all_rows  (1 rows, 0.02s)
+v | n
+4.873329088400721 | 18846
+
+### local007_variant_julian  (1 rows, 0.01s)
+v1 | v2 | n
+4.824263121213746 | 4.83 | 18653
+
+### local007_variant_a_rounded  (1 rows, 0.02s)
+v
+4.92
+
+### local007_variant_age_style  (1 rows, 0.03s)
+v | v2
+4.8237656141103304 | 4.82
+
+### local008_gold_sql  (4 rows, 0.11s)
+Category | Player_Name | Batting_Table_Topper
+Games Played | Peter Edward | 3562
+Runs | Rickey Nelson Henley | 2295
+Hits | Peter Edward | 4256
+Home Runs | Barry Lamar | 762
+
+### local008_sum_types  (1 rows, 0.01s)
+typeof(sum(r)) | sum(r) | sum(nullif(r,'')) | total(r)
+real | 1912795.0 | 1912795 | 1912795.0
+
+### local007_weighted_by_join  (5 rows, 0.67s)
+w | avg(span) | count(*)
+join batting | 9.379724848508774 | 101326
+join appearances | 9.384056627138625 | 100941
+join fielding | 9.60660012432705 | 170518
+join pitching | 8.80798468405193 | 44137
+distinct span values | 10.591722177091794 | 1231
+

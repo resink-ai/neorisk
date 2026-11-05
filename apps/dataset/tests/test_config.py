@@ -31,3 +31,11 @@ def test_bad_kind_and_version(tmp_path):
     _write(d, 'name = "shop"\nversion = "v1"\nkind = "csv"\n')
     with pytest.raises(ValueError, match="kind"):
         load(d)
+
+
+def test_exact_columns_load(tmp_path):
+    d = tmp_path / "x"
+    d.mkdir()
+    (d / "dataset.toml").write_text('name = "x"\nversion = "v1"\nkind = "spider2"\n'
+                                    '[results.exact]\nt = ["a", "b"]\n')
+    assert load(d).exact == {"t": ["a", "b"]}

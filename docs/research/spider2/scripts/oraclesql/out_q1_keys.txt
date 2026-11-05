@@ -1,0 +1,128 @@
+### key_uniqueness  (24 rows, 0.00s)
+k | n | d
+customers.id | 4 | 4
+packaging.id | 11 | 11
+packaging_relations(p,c) | 12 | 12
+products.id | 10 | 10
+monthly_sales(p,mth) | 360 | 360
+purchases.id | 180 | 180
+locations.id | 256 | 256
+locations(w,a,p) | 256 | 256
+inventory.id | 113 | 113
+inventory(location) | 113 | 113
+inventory(location,purchase) | 113 | 113
+orders.id | 10 | 10
+orderlines.id | 18 | 18
+orderlines(order,product) | 18 | 18
+monthly_budget(p,mth) | 48 | 48
+ticker(s,day) | 15 | 15
+web_counter_hist(a,p,day) | 120 | 120
+server_heartbeat(s,t) | 14 | 14
+web_page_visits(ip,time) | 23 | 23
+web_page_visits(all cols) | 23 | 23
+employees.id | 14 | 14
+emp_hire_periods(e,start) | 15 | 15
+picking_line(l,no) | 21 | 21
+picking_log(l,time) | 63 | 63
+
+### id_ranges  (6 rows, 0.00s)
+t | min(id) | max(id) | count(*) | span
+purchases | 601 | 780 | 180 | 180
+inventory | 1148 | 1484 | 113 | 337
+orders | 421 | 430 | 10 | 10
+orderlines | 9120 | 9299 | 18 | 180
+locations | 1 | 256 | 256 | 256
+employees | 142 | 155 | 14 | 14
+
+### purchase_id_steps  (2 rows, 0.00s)
+step | n
+1 | 179
+None | 1
+
+### inventory_id_steps  (2 rows, 0.00s)
+step | n
+3 | 112
+None | 1
+
+### purchase_id_vs_date  (1 rows, 0.00s)
+pairs | nondecreasing | decreasing
+179 | 179 | 0
+
+### purchase_id_vs_date_breaks  (0 rows, 0.00s)
+id | purchased | prev_id | prev_purchased
+
+### fk_orphans  (34 rows, 0.00s)
+fk | orphans
+packaging_relations.packaging_id | 0
+packaging_relations.contains_id | 0
+products.group_id | 0
+monthly_sales.product_id | 0
+purchases.brewery_id | 0
+purchases.product_id | 0
+product_alcohol.product_id | 0
+customer_favorites.customer_id | 0
+customer_reviews.customer_id | 0
+inventory.location_id | 0
+inventory.product_id | 0
+inventory.purchase_id | 0
+inventory.product = purchase.product | 0
+orders.customer_id | 0
+orderlines.order_id | 0
+orderlines.product_id | 0
+monthly_budget.product_id | 0
+product_minimums.product_id | 0
+ticker.symbol | 0
+web_pages.app_id | 0
+web_counter_hist.page | 0
+web_page_visits.page | 0
+employees.supervisor_id | 0
+emp_hire_periods.emp_id | 0
+picking_list.picker_emp_id | 0
+picking_line.picklist_id | 0
+picking_line.location_id | 0
+picking_line.order_id | 0
+picking_line.product_id | 0
+picking_line (order,product) in orderlines | 0
+picking_log.picklist_id | 0
+picking_log.location_id | 0
+picking_log.(list,pickline_no) | 0
+picking_log P location = line location | 0
+
+### coverage  (19 rows, 0.00s)
+what | n
+products in purchases | 10
+breweries in purchases | 3
+products in monthly_sales | 10
+products in inventory | 10
+products in orderlines | 6
+products in monthly_budget | 2
+purchases in inventory | 62
+locations in inventory | 113
+locations in picking_line | 10
+locations in picking_line not in inventory | 0
+customers with orders | 3
+orders picked | 3
+employees with hire periods | 6
+employees who pick | 2
+pages visited | 4
+pages in counter hist | 4
+packaging used as container | 9
+packaging used as content | 7
+packaging never related | 0
+
+### products_by_brewery  (10 rows, 0.00s)
+brewery_id | product_id | purchases | min(purchased) | max(purchased)
+518 | 5310 | 18 | 2016-02-04 | 2018-11-24
+518 | 5430 | 18 | 2016-02-05 | 2018-12-25
+518 | 6520 | 18 | 2016-02-06 | 2018-12-26
+523 | 6600 | 18 | 2016-01-07 | 2018-11-27
+523 | 7790 | 18 | 2016-01-08 | 2018-11-28
+523 | 7870 | 18 | 2016-01-09 | 2018-12-29
+536 | 4040 | 18 | 2016-01-01 | 2018-11-21
+536 | 4160 | 18 | 2016-02-02 | 2018-12-22
+536 | 4280 | 18 | 2016-01-03 | 2018-12-23
+536 | 7950 | 18 | 2016-02-10 | 2018-11-30
+
+### products_multi_brewery  (0 rows, 0.00s)
+product_id | count(distinct brewery_id)
+

@@ -1,0 +1,12 @@
+days with postings 366; per day p5 124 p50 219 p95 311 max 383
+top days: [(datetime.date(2023, 1, 20), 383), (datetime.date(2023, 1, 4), 379), (datetime.date(2023, 1, 1), 378), (datetime.date(2023, 1, 26), 366), (datetime.date(2023, 1, 6), 345)]
+inter-arrival seconds: zero 2785; p50 113.0 p90 1215.0 p99 3426.0 max 76459.0
+weekday: {'Sat': 9308, 'Sun': 8106, 'Mon': 10759, 'Tue': 12440, 'Wed': 12699, 'Thu': 12815, 'Fri': 12642}
+salary_year_avg: n 2174 p5 58926.0 p25 90000.0 p50 115000.0 p75 150000.0 p95 200000.0 max 375000.0
+  most common: [(90000.0, 120), (125000.0, 88), (147500.0, 70), (115000.0, 69), (150000.0, 64)]
+salary_hour_avg: n 1090 p5 19.57999992370605 p25 27.5 p50 46.5 p75 62.5 p95 85.0 max 391.0
+  most common: [(24.0, 48), (65.0, 34), (55.0, 29), (60.0, 28), (62.5, 25)]
+skills_job links: 366960; created at posting time 36880; at catalog start (rule) 330080
+job_company: created at first posting 3476; at catalog start (rule) 10527
+postings whose company is missing: 71435 rows, 31394 distinct company ids
+links: distinct missing job ids 239645; distinct missing skill ids 220

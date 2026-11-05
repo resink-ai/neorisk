@@ -1,0 +1,12 @@
+# imdb_movies: the "RSVP Movies" IMDb SQL case study (course data), movies published 2017–2019.
+file = "imdb_movies.sqlite"
+note = "date_published is midnight text in a TIMESTAMP column, read as UTC. Ratings, gross and known-for are a snapshot at 2020-01-01 (a rule)."
+
+[tables]
+ERD = ["table", "column"]
+movies = ["id"]
+genre = ["movie_id", "genre"]
+director_mapping = ["movie_id", "name_id"]
+role_mapping = ["movie_id", "name_id"]
+names = ["id"]
+ratings = ["movie_id"]

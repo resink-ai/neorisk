@@ -1,0 +1,12 @@
+# stacking: the results store of an automated model-stacking tool run over 20 Kaggle tasks.
+file = "stacking.sqlite"
+note = "No timestamps at all; every time is the run-clock rule. The 3 views are replayed, not rebuilt."
+
+[tables]
+problem = ["name"]
+solution = ["name", "version"]
+eda = ["name", "version", "feature"]
+model = ["name", "version", "step"]
+model_score = ["name", "version", "step", "model"]
+model_importance = ["name", "version", "step", "model"]
+feature_importance = ["name", "version", "step", "feature"]

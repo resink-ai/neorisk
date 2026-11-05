@@ -1,0 +1,9 @@
+# Aliens living in the US: Mockaroo-generated people, the alien* tables of Spider2's city_legislation.
+file = "city_legislation.sqlite"
+note = "No time column. Every alien is created, and its snapshot taken, at the rule time 2024-01-01."
+
+[tables]
+aliens = ["id"]
+aliens_details = ["detail_id"]
+aliens_location = ["loc_id"]
+alien_data = ["id"]

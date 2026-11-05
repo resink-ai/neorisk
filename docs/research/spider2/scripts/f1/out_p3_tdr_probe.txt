@@ -1,0 +1,6 @@
+overrides 48 overrides that hit a tdr row 48 tdr rows equal to override 48
+final standings position asc             mismatch raw    41  after overrides     0  e.g. []
+final standings position asc, ref        mismatch raw    41  after overrides     0  e.g. []
+team points desc, races desc             mismatch raw  1295  after overrides  1255  e.g. [(1950, 6, 802), (1950, 6, 793), (1950, 51, 579), (1950, 51, 786)]
+team points desc, best finish            mismatch raw   734  after overrides   694  e.g. [(1950, 51, 579), (1950, 51, 786), (1950, 105, 686), (1950, 105, 697)]
+races desc, team points desc             mismatch raw  1565  after overrides  1523  e.g. [(1950, 6, 802), (1950, 6, 633), (1950, 51, 642), (1950, 51, 579)]

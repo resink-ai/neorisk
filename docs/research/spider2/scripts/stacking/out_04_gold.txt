@@ -1,0 +1,51 @@
+## stack_ok view: rows by status and L1_model
+status|L1_model|n
+soft|regression|36
+soft|tree|11
+strong|regression|78
+strong|tree|14
+## local263 R1: per status, the L1_model with most stack_ok rows (gold _a: soft regression 17; strong regression 37)
+status|L1_model|n
+soft|regression|36
+strong|regression|78
+## local263 R2: as R1 but counting distinct (name, version) per status
+status|L1_model|n
+soft|regression|21
+strong|regression|37
+## local264 R1: L1_model frequency over model rows (all steps, versions) (gold _a regression 213; _b Traditional regression 213; _c Traditional 303)
+L1_model|n
+regression|213
+tree|90
+'all model rows'|count(*)
+all model rows|303
+## local262 R1: problems whose count of strong (name,version,step) rows exceeds their solution row count
+## (gold _a: Critical Heat Flux, Delaney solubility, Franck-Hertz, PSS3E5, Solar Power Generation, Tunnel diode, oil spill)
+name|strong_steps|solutions
+Critical Heat Flux|6|5
+Delaney solubility|9|5
+Franck-Hertz|12|5
+PSS3E5|13|5
+Solar Power Generation|16|7
+Tunnel diode|11|6
+oil spill|7|5
+## local262 R2: same via the stack_ok view (strong rows)
+name|n|n
+Critical Heat Flux|6|5
+Delaney solubility|9|5
+Franck-Hertz|12|5
+PSS3E5|13|5
+Solar Power Generation|16|7
+Tunnel diode|11|6
+oil spill|7|5
+## stack_ok has one row per (name,version,step)? and covers strong+soft exactly
+rows|keys
+139|139
+## stack_ok_score: (name, version) with a Stack score at all 3 steps among stack_ok (name,version)
+count(*)|count(DISTINCT name||'#'||version)
+64|64
+## local263 R3: one status per (name, version): strong if any step strong, else soft if any step soft; count per L1_model
+status|L1_model|n
+soft|regression|17
+soft|tree|4
+strong|regression|37
+strong|tree|6

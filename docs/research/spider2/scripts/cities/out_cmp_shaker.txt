@@ -1,0 +1,12 @@
+countries.csv: 257 raw rows; dedup on cleaned country_code_2 drops 16 ids: [3, 28, 42, 62, 91, 112, 116, 137, 138, 150, 164, 189, 192, 206, 242, 257]
+### cities_countries: replayed 241, db 241, ids only in replay 0 [], only in db 0
+  differing cells per column: {}
+cities.csv: 44622 raw rows; capital raw values Counter({'FALSE': 44376, 'TRUE': 246})
+### cities: replayed 44622, db 44622, ids only in replay 0 [], only in db 0
+  differing cells per column: {'city_name': 1}
+  example (9272, 'city_name', 'nan', None)
+### cities_currencies: replayed 254, db 254, ids only in replay 0 [], only in db 0
+  differing cells per column: {}
+### cities_languages: replayed 608, db 608, ids only in replay 0 [], only in db 0
+  differing cells per column: {}
+raw insert_date: 44622 values, distinct 943, min 2021-01-01, max 2023-08-01, all YYYY-MM-DD True

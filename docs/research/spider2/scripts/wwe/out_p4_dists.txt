@@ -1,0 +1,33 @@
+distinct matches 77567
+cards/year WWWF 1963 - 1979 min 3 max 62 median 11
+cards/year WWF 1979 - 2002 min 9 max 323 median 137
+cards/year WWE 2002 - 2024 min 10 max 444 median 265
+cards/year WCW 1991 - 2001 min 17 max 256 median 59
+cards/year NXT 2012 - 2024 min 8 max 230 median 135
+cards by decade: [('1960s', 118), ('1970s', 120), ('1980s', 543), ('1990s', 2586), ('2000s', 2827), ('2010s', 4931), ('2020s', 1514)]
+card weekday: [('Mon', 3666), ('Tue', 3357), ('Sun', 1405), ('Sat', 1358), ('Fri', 1158), ('Wed', 860), ('Thu', 835)]
+gap days WWWF n 228 zero-gaps 2 quantiles(10) [2.0, 4.8, 19.7, 22.6, 28.0, 28.0, 30.0, 35.0, 43.0] max 224
+gap days WWF n 2966 zero-gaps 1428 quantiles(10) [0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 4.0, 9.0] max 56
+gap days WWE n 6615 zero-gaps 2864 quantiles(10) [0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 2.0, 4.0] max 15
+gap days WCW n 1077 zero-gaps 167 quantiles(10) [0.0, 1.0, 1.0, 1.0, 1.0, 2.0, 3.0, 5.0, 7.0] max 81
+gap days NXT n 1748 zero-gaps 549 quantiles(10) [0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 3.0, 5.0, 7.0] max 28
+matches/card WWWF mean 7.09 quantiles(4) [7.0, 7.0, 8.0] max 11
+matches/card WWF mean 6.39 quantiles(4) [5.0, 6.0, 8.0] max 16
+matches/card WWE mean 5.58 quantiles(4) [3.0, 6.0, 8.0] max 20
+matches/card WCW mean 8.03 quantiles(4) [7.0, 8.0, 9.0] max 17
+matches/card NXT mean 6.53 quantiles(4) [5.0, 7.0, 8.0] max 30
+win_type: [('def. (pin)', 42507), ('def.', 22627), ('def. (sub)', 4695), ('def. (DQ)', 4299), ('draw (NC)', 1404), ('def. (CO)', 925), ('draw (DCO)', 280), ('draw (time)', 197), ('draw (DDQ)', 174), ('draw', 147), ('def. (TKO)', 88), ('def. (KO)', 58), ('vs.', 45), ('def. (forfeit)', 35), ('draw (curfew)', 23), ('(pin)', 23), ('draw (DPin)', 14), ('draw (DTKO)', 8), ('', 4), ('(DQ)', 3), ('def.draw (time)', 3), ('(sub)', 3), ('draw (points)', 2), ('def.draw (NC)', 2), ('def.draw (DCO)', 1)]
+duration present 29072 of 77567 ; seconds quantiles(10) [108.0, 152.0, 198.0, 258.0, 334.0, 447.0, 577.0, 710.0, 900.0] max 4860
+duration present share by decade: [('1960s', 0.387), ('1970s', 0.444), ('1980s', 0.794), ('1990s', 0.347), ('2000s', 0.447), ('2010s', 0.241), ('2020s', 0.556)]
+seconds==00 share 0.0505 (uniform would be 0.0167)
+title matches 11276 share 0.1454 ; title_change among title matches 1532 ; title_change on a no-title match 9
+top belts: [('WWE United States Championship', 922), ('WWE Intercontinental Championship', 885), ('WWE Tag Team Championship', 613), ('WWE Championship', 526), ('WWF Intercontinental Title', 472), ('World Heavyweight Championship (WWE)', 458), ('WWF Tag Team Titles', 456), ('WWF World Heavyweight Title', 445)]
+compound belt names (contain two 'Title'/'Championship'): 42 of 143
+match_type top: [('', 62522), ('dark', 2863), ('6-person tag', 2535), ('handicap tag', 857), ('triple-threat', 529), ('street fight', 463), ('"hardcore"', 427), ('8-person tag', 378), ('3-way Match', 319), ('no disqualification', 315), ('steel cage', 314), ('Battle Royal', 232)]
+side size (members, from ' & ' split): [(1, 111274), (2, 34624), (3, 6450), (4, 1644), (5, 407), (6, 278), (7, 61), (8, 43), (9, 41), (10, 48), (11, 18), (12, 16)] ... max 62
+appearances per Wrestlers row: n 17182 quantiles(10) [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 2.0, 4.0, 12.0] max 985 ; once: 10321
+most frequent sides: [('Dolph Ziggler', 985), ('Kane', 981), ('The Big Show', 947), ('Chris Jericho', 941), ('John Cena', 940), ('Randy Orton', 912), ('The Miz', 866), ('Sheamus', 803)]
+dup payload within a card (same row twice): 21
+winner == loser (distinct): 15 [('', 12), ('Unknown Male Wrestler', 3)]
+empty win_type (distinct): 4
+cards per location: quantiles(10) [1.0, 1.0, 2.0, 3.0, 5.0, 9.0, 15.0, 30.0, 63.0]

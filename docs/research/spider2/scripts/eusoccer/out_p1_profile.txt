@@ -1,0 +1,226 @@
+objects: table:sqlite_sequence, table:Player_Attributes, table:Player, index:sqlite_autoindex_Player_1, index:sqlite_autoindex_Player_2, table:Match, index:sqlite_autoindex_Match_1, table:League, index:sqlite_autoindex_League_1, table:Country, index:sqlite_autoindex_Country_1, table:Team, index:sqlite_autoindex_Team_1, table:Team_Attributes, view:match_view
+
+## Country  rows=11
+col | decl | typeof counts | null | '' | '\N' | ws-padded | min | max | len min..max
+id | INTEGER | integer:11 | 0 | 0 | 0 | 0 | 1 | 24558 | None..None
+name | TEXT | text:11 | 0 | 0 | 0 | 0 | 'Belgium' | 'Switzerland' | 5..11
+
+## League  rows=11
+col | decl | typeof counts | null | '' | '\N' | ws-padded | min | max | len min..max
+id | INTEGER | integer:11 | 0 | 0 | 0 | 0 | 1 | 24558 | None..None
+country_id | INTEGER | integer:11 | 0 | 0 | 0 | 0 | 1 | 24558 | None..None
+name | TEXT | text:11 | 0 | 0 | 0 | 0 | 'Belgium Jupiler League' | 'Switzerland Super League' | 13..24
+
+## Match  rows=25979
+col | decl | typeof counts | null | '' | '\N' | ws-padded | min | max | len min..max
+id | INTEGER | integer:25979 | 0 | 0 | 0 | 0 | 1 | 25979 | None..None
+country_id | INTEGER | integer:25979 | 0 | 0 | 0 | 0 | 1 | 24558 | None..None
+league_id | INTEGER | integer:25979 | 0 | 0 | 0 | 0 | 1 | 24558 | None..None
+season | TEXT | text:25979 | 0 | 0 | 0 | 0 | '2008/2009' | '2015/2016' | 9..9
+stage | INTEGER | integer:25979 | 0 | 0 | 0 | 0 | 1 | 38 | None..None
+date | TEXT | text:25979 | 0 | 0 | 0 | 0 | '2008-07-18 00:00:00' | '2016-05-25 00:00:00' | 19..19
+match_api_id | INTEGER | integer:25979 | 0 | 0 | 0 | 0 | 483129 | 2216672 | None..None
+home_team_api_id | INTEGER | integer:25979 | 0 | 0 | 0 | 0 | 1601 | 274581 | None..None
+away_team_api_id | INTEGER | integer:25979 | 0 | 0 | 0 | 0 | 1601 | 274581 | None..None
+home_team_goal | INTEGER | integer:25979 | 0 | 0 | 0 | 0 | 0 | 10 | None..None
+away_team_goal | INTEGER | integer:25979 | 0 | 0 | 0 | 0 | 0 | 9 | None..None
+home_player_X1 | INTEGER | integer:24158,null:1821 | 1821 | 0 | 0 | 0 | 0 | 2 | None..None
+home_player_X2 | INTEGER | integer:24158,null:1821 | 1821 | 0 | 0 | 0 | 0 | 8 | None..None
+home_player_X3 | INTEGER | integer:24147,null:1832 | 1832 | 0 | 0 | 0 | 1 | 8 | None..None
+home_player_X4 | INTEGER | integer:24147,null:1832 | 1832 | 0 | 0 | 0 | 2 | 8 | None..None
+home_player_X5 | INTEGER | integer:24147,null:1832 | 1832 | 0 | 0 | 0 | 1 | 9 | None..None
+home_player_X6 | INTEGER | integer:24147,null:1832 | 1832 | 0 | 0 | 0 | 1 | 9 | None..None
+home_player_X7 | INTEGER | integer:24147,null:1832 | 1832 | 0 | 0 | 0 | 1 | 9 | None..None
+home_player_X8 | INTEGER | integer:24147,null:1832 | 1832 | 0 | 0 | 0 | 1 | 9 | None..None
+home_player_X9 | INTEGER | integer:24147,null:1832 | 1832 | 0 | 0 | 0 | 1 | 9 | None..None
+home_player_X10 | INTEGER | integer:24147,null:1832 | 1832 | 0 | 0 | 0 | 1 | 9 | None..None
+home_player_X11 | INTEGER | integer:24147,null:1832 | 1832 | 0 | 0 | 0 | 1 | 7 | None..None
+away_player_X1 | INTEGER | integer:24147,null:1832 | 1832 | 0 | 0 | 0 | 1 | 6 | None..None
+away_player_X2 | INTEGER | integer:24147,null:1832 | 1832 | 0 | 0 | 0 | 1 | 8 | None..None
+away_player_X3 | INTEGER | integer:24147,null:1832 | 1832 | 0 | 0 | 0 | 2 | 9 | None..None
+away_player_X4 | INTEGER | integer:24147,null:1832 | 1832 | 0 | 0 | 0 | 1 | 8 | None..None
+away_player_X5 | INTEGER | integer:24147,null:1832 | 1832 | 0 | 0 | 0 | 1 | 9 | None..None
+away_player_X6 | INTEGER | integer:24147,null:1832 | 1832 | 0 | 0 | 0 | 1 | 9 | None..None
+away_player_X7 | INTEGER | integer:24147,null:1832 | 1832 | 0 | 0 | 0 | 1 | 9 | None..None
+away_player_X8 | INTEGER | integer:24147,null:1832 | 1832 | 0 | 0 | 0 | 1 | 9 | None..None
+away_player_X9 | INTEGER | integer:24146,null:1833 | 1833 | 0 | 0 | 0 | 1 | 9 | None..None
+away_player_X10 | INTEGER | integer:24146,null:1833 | 1833 | 0 | 0 | 0 | 1 | 9 | None..None
+away_player_X11 | INTEGER | integer:24140,null:1839 | 1839 | 0 | 0 | 0 | 3 | 8 | None..None
+home_player_Y1 | INTEGER | integer:24158,null:1821 | 1821 | 0 | 0 | 0 | 0 | 3 | None..None
+home_player_Y2 | INTEGER | integer:24158,null:1821 | 1821 | 0 | 0 | 0 | 0 | 3 | None..None
+home_player_Y3 | INTEGER | integer:24147,null:1832 | 1832 | 0 | 0 | 0 | 3 | 5 | None..None
+home_player_Y4 | INTEGER | integer:24147,null:1832 | 1832 | 0 | 0 | 0 | 3 | 5 | None..None
+home_player_Y5 | INTEGER | integer:24147,null:1832 | 1832 | 0 | 0 | 0 | 3 | 8 | None..None
+home_player_Y6 | INTEGER | integer:24147,null:1832 | 1832 | 0 | 0 | 0 | 3 | 9 | None..None
+home_player_Y7 | INTEGER | integer:24147,null:1832 | 1832 | 0 | 0 | 0 | 3 | 9 | None..None
+home_player_Y8 | INTEGER | integer:24147,null:1832 | 1832 | 0 | 0 | 0 | 3 | 10 | None..None
+home_player_Y9 | INTEGER | integer:24147,null:1832 | 1832 | 0 | 0 | 0 | 1 | 10 | None..None
+home_player_Y10 | INTEGER | integer:24147,null:1832 | 1832 | 0 | 0 | 0 | 3 | 11 | None..None
+home_player_Y11 | INTEGER | integer:24147,null:1832 | 1832 | 0 | 0 | 0 | 1 | 11 | None..None
+away_player_Y1 | INTEGER | integer:24147,null:1832 | 1832 | 0 | 0 | 0 | 1 | 3 | None..None
+away_player_Y2 | INTEGER | integer:24147,null:1832 | 1832 | 0 | 0 | 0 | 3 | 3 | None..None
+away_player_Y3 | INTEGER | integer:24147,null:1832 | 1832 | 0 | 0 | 0 | 3 | 7 | None..None
+away_player_Y4 | INTEGER | integer:24147,null:1832 | 1832 | 0 | 0 | 0 | 3 | 7 | None..None
+away_player_Y5 | INTEGER | integer:24147,null:1832 | 1832 | 0 | 0 | 0 | 3 | 9 | None..None
+away_player_Y6 | INTEGER | integer:24147,null:1832 | 1832 | 0 | 0 | 0 | 3 | 10 | None..None
+away_player_Y7 | INTEGER | integer:24147,null:1832 | 1832 | 0 | 0 | 0 | 3 | 10 | None..None
+away_player_Y8 | INTEGER | integer:24147,null:1832 | 1832 | 0 | 0 | 0 | 3 | 10 | None..None
+away_player_Y9 | INTEGER | integer:24146,null:1833 | 1833 | 0 | 0 | 0 | 5 | 11 | None..None
+away_player_Y10 | INTEGER | integer:24146,null:1833 | 1833 | 0 | 0 | 0 | 6 | 11 | None..None
+away_player_Y11 | INTEGER | integer:24140,null:1839 | 1839 | 0 | 0 | 0 | 7 | 11 | None..None
+home_player_1 | INTEGER | integer:24755,null:1224 | 1224 | 0 | 0 | 0 | 2984 | 698273 | None..None
+home_player_2 | INTEGER | integer:24664,null:1315 | 1315 | 0 | 0 | 0 | 2802 | 748432 | None..None
+home_player_3 | INTEGER | integer:24698,null:1281 | 1281 | 0 | 0 | 0 | 2752 | 705484 | None..None
+home_player_4 | INTEGER | integer:24656,null:1323 | 1323 | 0 | 0 | 0 | 2752 | 723037 | None..None
+home_player_5 | INTEGER | integer:24663,null:1316 | 1316 | 0 | 0 | 0 | 2752 | 733787 | None..None
+home_player_6 | INTEGER | integer:24654,null:1325 | 1325 | 0 | 0 | 0 | 2625 | 750584 | None..None
+home_player_7 | INTEGER | integer:24752,null:1227 | 1227 | 0 | 0 | 0 | 2625 | 692984 | None..None
+home_player_8 | INTEGER | integer:24670,null:1309 | 1309 | 0 | 0 | 0 | 2625 | 693171 | None..None
+home_player_9 | INTEGER | integer:24706,null:1273 | 1273 | 0 | 0 | 0 | 2625 | 730065 | None..None
+home_player_10 | INTEGER | integer:24543,null:1436 | 1436 | 0 | 0 | 0 | 2625 | 742405 | None..None
+home_player_11 | INTEGER | integer:24424,null:1555 | 1555 | 0 | 0 | 0 | 2802 | 726956 | None..None
+away_player_1 | INTEGER | integer:24745,null:1234 | 1234 | 0 | 0 | 0 | 2796 | 698273 | None..None
+away_player_2 | INTEGER | integer:24701,null:1278 | 1278 | 0 | 0 | 0 | 2790 | 748432 | None..None
+away_player_3 | INTEGER | integer:24686,null:1293 | 1293 | 0 | 0 | 0 | 2752 | 705484 | None..None
+away_player_4 | INTEGER | integer:24658,null:1321 | 1321 | 0 | 0 | 0 | 2752 | 728414 | None..None
+away_player_5 | INTEGER | integer:24644,null:1335 | 1335 | 0 | 0 | 0 | 2790 | 746419 | None..None
+away_player_6 | INTEGER | integer:24666,null:1313 | 1313 | 0 | 0 | 0 | 2625 | 722766 | None..None
+away_player_7 | INTEGER | integer:24744,null:1235 | 1235 | 0 | 0 | 0 | 2625 | 750435 | None..None
+away_player_8 | INTEGER | integer:24638,null:1341 | 1341 | 0 | 0 | 0 | 2625 | 717248 | None..None
+away_player_9 | INTEGER | integer:24651,null:1328 | 1328 | 0 | 0 | 0 | 2625 | 722766 | None..None
+away_player_10 | INTEGER | integer:24538,null:1441 | 1441 | 0 | 0 | 0 | 2770 | 722766 | None..None
+away_player_11 | INTEGER | integer:24425,null:1554 | 1554 | 0 | 0 | 0 | 2802 | 726956 | None..None
+goal | TEXT | null:11762,text:14217 | 11762 | 0 | 0 | 0 | '<goal />' | '<goal><value><comment>rp</comment><even | 8..4694
+shoton | TEXT | null:11762,text:14217 | 11762 | 0 | 0 | 0 | '<shoton />' | '<shoton><value><stats><shoton>1</shoton | 10..8399
+shotoff | TEXT | null:11762,text:14217 | 11762 | 0 | 0 | 0 | '<shotoff />' | '<shotoff><value><stats><shotoff>1</shot | 11..8002
+foulcommit | TEXT | null:11762,text:14217 | 11762 | 0 | 0 | 0 | '<foulcommit />' | '<foulcommit><value><stats><foulscommitt | 14..18945
+card | TEXT | null:11762,text:14217 | 11762 | 0 | 0 | 0 | '<card />' | '<card><value><comment>y</comment><stats | 8..4849
+cross | TEXT | null:11762,text:14217 | 11762 | 0 | 0 | 0 | '<cross />' | '<cross><value><stats><crosses>1</crosse | 9..22748
+corner | TEXT | null:11762,text:14217 | 11762 | 0 | 0 | 0 | '<corner />' | '<corner><value><stats><corners>1</corne | 10..7838
+possession | TEXT | null:11762,text:14217 | 11762 | 0 | 0 | 0 | '<possession />' | '<possession><value><comment>92</comment | 14..6520
+B365H | NUMERIC | integer:2646,null:3387,real:19946 | 3387 | 0 | 0 | 0 | 1.04 | 26 | None..None
+B365D | NUMERIC | integer:3175,null:3387,real:19417 | 3387 | 0 | 0 | 0 | 1.4 | 17 | None..None
+B365A | NUMERIC | integer:5996,null:3387,real:16596 | 3387 | 0 | 0 | 0 | 1.08 | 51 | None..None
+BWH | NUMERIC | integer:1741,null:3404,real:20834 | 3404 | 0 | 0 | 0 | 1.03 | 34 | None..None
+BWD | NUMERIC | integer:2180,null:3404,real:20395 | 3404 | 0 | 0 | 0 | 1.65 | 19.5 | None..None
+BWA | NUMERIC | integer:3651,null:3404,real:18924 | 3404 | 0 | 0 | 0 | 1.1 | 51 | None..None
+IWH | NUMERIC | integer:2375,null:3459,real:20145 | 3459 | 0 | 0 | 0 | 1.03 | 20 | None..None
+IWD | NUMERIC | integer:2608,null:3459,real:19912 | 3459 | 0 | 0 | 0 | 1.5 | 11 | None..None
+IWA | NUMERIC | integer:4256,null:3459,real:18264 | 3459 | 0 | 0 | 0 | 1.1 | 25 | None..None
+LBH | NUMERIC | integer:2758,null:3423,real:19798 | 3423 | 0 | 0 | 0 | 1.04 | 26 | None..None
+LBD | NUMERIC | integer:3602,null:3423,real:18954 | 3423 | 0 | 0 | 0 | 1.4 | 19 | None..None
+LBA | NUMERIC | integer:6328,null:3423,real:16228 | 3423 | 0 | 0 | 0 | 1.1 | 51 | None..None
+PSH | NUMERIC | integer:127,null:14811,real:11041 | 14811 | 0 | 0 | 0 | 1.04 | 36 | None..None
+PSD | NUMERIC | integer:92,null:14811,real:11076 | 14811 | 0 | 0 | 0 | 2.2 | 29 | None..None
+PSA | NUMERIC | integer:223,null:14811,real:10945 | 14811 | 0 | 0 | 0 | 1.09 | 47.5 | None..None
+WHH | NUMERIC | integer:2577,null:3408,real:19994 | 3408 | 0 | 0 | 0 | 1.02 | 26 | None..None
+WHD | NUMERIC | integer:3648,null:3408,real:18923 | 3408 | 0 | 0 | 0 | 1.02 | 17 | None..None
+WHA | NUMERIC | integer:6173,null:3408,real:16398 | 3408 | 0 | 0 | 0 | 1.08 | 51 | None..None
+SJH | NUMERIC | integer:2028,null:8882,real:15069 | 8882 | 0 | 0 | 0 | 1.04 | 23 | None..None
+SJD | NUMERIC | integer:2627,null:8882,real:14470 | 8882 | 0 | 0 | 0 | 1.4 | 15 | None..None
+SJA | NUMERIC | integer:4737,null:8882,real:12360 | 8882 | 0 | 0 | 0 | 1.1 | 41 | None..None
+VCH | NUMERIC | integer:2337,null:3411,real:20231 | 3411 | 0 | 0 | 0 | 1.03 | 36 | None..None
+VCD | NUMERIC | integer:2902,null:3411,real:19666 | 3411 | 0 | 0 | 0 | 1.62 | 26 | None..None
+VCA | NUMERIC | integer:5495,null:3411,real:17073 | 3411 | 0 | 0 | 0 | 1.08 | 67 | None..None
+GBH | NUMERIC | integer:1464,null:11817,real:12698 | 11817 | 0 | 0 | 0 | 1.05 | 21 | None..None
+GBD | NUMERIC | integer:2000,null:11817,real:12162 | 11817 | 0 | 0 | 0 | 1.45 | 11 | None..None
+GBA | NUMERIC | integer:3437,null:11817,real:10725 | 11817 | 0 | 0 | 0 | 1.12 | 34 | None..None
+BSH | NUMERIC | integer:1550,null:11818,real:12611 | 11818 | 0 | 0 | 0 | 1.04 | 17 | None..None
+BSD | NUMERIC | integer:1887,null:11818,real:12274 | 11818 | 0 | 0 | 0 | 1.33 | 13 | None..None
+BSA | NUMERIC | integer:3654,null:11818,real:10507 | 11818 | 0 | 0 | 0 | 1.12 | 34 | None..None
+
+## Player  rows=11060
+col | decl | typeof counts | null | '' | '\N' | ws-padded | min | max | len min..max
+id | INTEGER | integer:11060 | 0 | 0 | 0 | 0 | 1 | 11075 | None..None
+player_api_id | INTEGER | integer:11060 | 0 | 0 | 0 | 0 | 2625 | 750584 | None..None
+player_name | TEXT | text:11060 | 0 | 0 | 0 | 0 | 'Aaron Appindangoye' | 'dos Santos Fabio Junior' | 2..40
+player_fifa_api_id | INTEGER | integer:11060 | 0 | 0 | 0 | 0 | 2 | 234141 | None..None
+birthday | TEXT | text:11060 | 0 | 0 | 0 | 0 | '1967-01-23 00:00:00' | '1999-04-24 00:00:00' | 19..19
+height | INTEGER | real:11060 | 0 | 0 | 0 | 0 | 157.48 | 208.28 | None..None
+weight | INTEGER | integer:11060 | 0 | 0 | 0 | 0 | 117 | 243 | None..None
+
+## Player_Attributes  rows=183978
+col | decl | typeof counts | null | '' | '\N' | ws-padded | min | max | len min..max
+id | INTEGER | integer:183978 | 0 | 0 | 0 | 0 | 1 | 183978 | None..None
+player_fifa_api_id | INTEGER | integer:183978 | 0 | 0 | 0 | 0 | 2 | 234141 | None..None
+player_api_id | INTEGER | integer:183978 | 0 | 0 | 0 | 0 | 2625 | 750584 | None..None
+date | TEXT | text:183978 | 0 | 0 | 0 | 0 | '2007-02-22 00:00:00' | '2016-07-07 00:00:00' | 19..19
+overall_rating | INTEGER | integer:183142,null:836 | 836 | 0 | 0 | 0 | 33 | 94 | None..None
+potential | INTEGER | integer:183142,null:836 | 836 | 0 | 0 | 0 | 39 | 97 | None..None
+preferred_foot | TEXT | null:836,text:183142 | 836 | 0 | 0 | 0 | 'left' | 'right' | 4..5
+attacking_work_rate | TEXT | null:3230,text:180748 | 3230 | 0 | 0 | 0 | 'None' | 'y' | 1..6
+defensive_work_rate | TEXT | null:836,text:183142 | 836 | 0 | 0 | 0 | '0' | 'tocky' | 1..6
+crossing | INTEGER | integer:183142,null:836 | 836 | 0 | 0 | 0 | 1 | 95 | None..None
+finishing | INTEGER | integer:183142,null:836 | 836 | 0 | 0 | 0 | 1 | 97 | None..None
+heading_accuracy | INTEGER | integer:183142,null:836 | 836 | 0 | 0 | 0 | 1 | 98 | None..None
+short_passing | INTEGER | integer:183142,null:836 | 836 | 0 | 0 | 0 | 3 | 97 | None..None
+volleys | INTEGER | integer:181265,null:2713 | 2713 | 0 | 0 | 0 | 1 | 93 | None..None
+dribbling | INTEGER | integer:183142,null:836 | 836 | 0 | 0 | 0 | 1 | 97 | None..None
+curve | INTEGER | integer:181265,null:2713 | 2713 | 0 | 0 | 0 | 2 | 94 | None..None
+free_kick_accuracy | INTEGER | integer:183142,null:836 | 836 | 0 | 0 | 0 | 1 | 97 | None..None
+long_passing | INTEGER | integer:183142,null:836 | 836 | 0 | 0 | 0 | 3 | 97 | None..None
+ball_control | INTEGER | integer:183142,null:836 | 836 | 0 | 0 | 0 | 5 | 97 | None..None
+acceleration | INTEGER | integer:183142,null:836 | 836 | 0 | 0 | 0 | 10 | 97 | None..None
+sprint_speed | INTEGER | integer:183142,null:836 | 836 | 0 | 0 | 0 | 12 | 97 | None..None
+agility | INTEGER | integer:181265,null:2713 | 2713 | 0 | 0 | 0 | 11 | 96 | None..None
+reactions | INTEGER | integer:183142,null:836 | 836 | 0 | 0 | 0 | 17 | 96 | None..None
+balance | INTEGER | integer:181265,null:2713 | 2713 | 0 | 0 | 0 | 12 | 96 | None..None
+shot_power | INTEGER | integer:183142,null:836 | 836 | 0 | 0 | 0 | 2 | 97 | None..None
+jumping | INTEGER | integer:181265,null:2713 | 2713 | 0 | 0 | 0 | 14 | 96 | None..None
+stamina | INTEGER | integer:183142,null:836 | 836 | 0 | 0 | 0 | 10 | 96 | None..None
+strength | INTEGER | integer:183142,null:836 | 836 | 0 | 0 | 0 | 10 | 96 | None..None
+long_shots | INTEGER | integer:183142,null:836 | 836 | 0 | 0 | 0 | 1 | 96 | None..None
+aggression | INTEGER | integer:183142,null:836 | 836 | 0 | 0 | 0 | 6 | 97 | None..None
+interceptions | INTEGER | integer:183142,null:836 | 836 | 0 | 0 | 0 | 1 | 96 | None..None
+positioning | INTEGER | integer:183142,null:836 | 836 | 0 | 0 | 0 | 2 | 96 | None..None
+vision | INTEGER | integer:181265,null:2713 | 2713 | 0 | 0 | 0 | 1 | 97 | None..None
+penalties | INTEGER | integer:183142,null:836 | 836 | 0 | 0 | 0 | 2 | 96 | None..None
+marking | INTEGER | integer:183142,null:836 | 836 | 0 | 0 | 0 | 1 | 96 | None..None
+standing_tackle | INTEGER | integer:183142,null:836 | 836 | 0 | 0 | 0 | 1 | 95 | None..None
+sliding_tackle | INTEGER | integer:181265,null:2713 | 2713 | 0 | 0 | 0 | 2 | 95 | None..None
+gk_diving | INTEGER | integer:183142,null:836 | 836 | 0 | 0 | 0 | 1 | 94 | None..None
+gk_handling | INTEGER | integer:183142,null:836 | 836 | 0 | 0 | 0 | 1 | 93 | None..None
+gk_kicking | INTEGER | integer:183142,null:836 | 836 | 0 | 0 | 0 | 1 | 97 | None..None
+gk_positioning | INTEGER | integer:183142,null:836 | 836 | 0 | 0 | 0 | 1 | 96 | None..None
+gk_reflexes | INTEGER | integer:183142,null:836 | 836 | 0 | 0 | 0 | 1 | 96 | None..None
+
+## Team  rows=299
+col | decl | typeof counts | null | '' | '\N' | ws-padded | min | max | len min..max
+id | INTEGER | integer:299 | 0 | 0 | 0 | 0 | 1 | 51606 | None..None
+team_api_id | INTEGER | integer:299 | 0 | 0 | 0 | 0 | 1601 | 274581 | None..None
+team_fifa_api_id | INTEGER | integer:288,null:11 | 11 | 0 | 0 | 0 | 1 | 112513 | None..None
+team_long_name | TEXT | text:299 | 0 | 0 | 0 | 0 | '1. FC Kaiserslautern' | 'Śląsk Wrocław' | 2..28
+team_short_name | TEXT | text:299 | 0 | 0 | 0 | 0 | 'AAR' | 'ZWO' | 2..3
+
+## Team_Attributes  rows=1458
+col | decl | typeof counts | null | '' | '\N' | ws-padded | min | max | len min..max
+id | INTEGER | integer:1458 | 0 | 0 | 0 | 0 | 1 | 1458 | None..None
+team_fifa_api_id | INTEGER | integer:1458 | 0 | 0 | 0 | 0 | 1 | 112513 | None..None
+team_api_id | INTEGER | integer:1458 | 0 | 0 | 0 | 0 | 1601 | 274581 | None..None
+date | TEXT | text:1458 | 0 | 0 | 0 | 0 | '2010-02-22 00:00:00' | '2015-09-10 00:00:00' | 19..19
+buildUpPlaySpeed | INTEGER | integer:1458 | 0 | 0 | 0 | 0 | 20 | 80 | None..None
+buildUpPlaySpeedClass | TEXT | text:1458 | 0 | 0 | 0 | 0 | 'Balanced' | 'Slow' | 4..8
+buildUpPlayDribbling | INTEGER | integer:489,null:969 | 969 | 0 | 0 | 0 | 24 | 77 | None..None
+buildUpPlayDribblingClass | TEXT | text:1458 | 0 | 0 | 0 | 0 | 'Little' | 'Normal' | 4..6
+buildUpPlayPassing | INTEGER | integer:1458 | 0 | 0 | 0 | 0 | 20 | 80 | None..None
+buildUpPlayPassingClass | TEXT | text:1458 | 0 | 0 | 0 | 0 | 'Long' | 'Short' | 4..5
+buildUpPlayPositioningClass | TEXT | text:1458 | 0 | 0 | 0 | 0 | 'Free Form' | 'Organised' | 9..9
+chanceCreationPassing | INTEGER | integer:1458 | 0 | 0 | 0 | 0 | 21 | 80 | None..None
+chanceCreationPassingClass | TEXT | text:1458 | 0 | 0 | 0 | 0 | 'Normal' | 'Safe' | 4..6
+chanceCreationCrossing | INTEGER | integer:1458 | 0 | 0 | 0 | 0 | 20 | 80 | None..None
+chanceCreationCrossingClass | TEXT | text:1458 | 0 | 0 | 0 | 0 | 'Little' | 'Normal' | 4..6
+chanceCreationShooting | INTEGER | integer:1458 | 0 | 0 | 0 | 0 | 22 | 80 | None..None
+chanceCreationShootingClass | TEXT | text:1458 | 0 | 0 | 0 | 0 | 'Little' | 'Normal' | 4..6
+chanceCreationPositioningClass | TEXT | text:1458 | 0 | 0 | 0 | 0 | 'Free Form' | 'Organised' | 9..9
+defencePressure | INTEGER | integer:1458 | 0 | 0 | 0 | 0 | 23 | 72 | None..None
+defencePressureClass | TEXT | text:1458 | 0 | 0 | 0 | 0 | 'Deep' | 'Medium' | 4..6
+defenceAggression | INTEGER | integer:1458 | 0 | 0 | 0 | 0 | 24 | 72 | None..None
+defenceAggressionClass | TEXT | text:1458 | 0 | 0 | 0 | 0 | 'Contain' | 'Press' | 5..7
+defenceTeamWidth | INTEGER | integer:1458 | 0 | 0 | 0 | 0 | 29 | 73 | None..None
+defenceTeamWidthClass | TEXT | text:1458 | 0 | 0 | 0 | 0 | 'Narrow' | 'Wide' | 4..6
+defenceDefenderLineClass | TEXT | text:1458 | 0 | 0 | 0 | 0 | 'Cover' | 'Offside Trap' | 5..12
+
+## sqlite_sequence  rows=7
+col | decl | typeof counts | null | '' | '\N' | ws-padded | min | max | len min..max
+name |  | text:7 | 0 | 0 | 0 | 0 | 'Country' | 'Team_Attributes' | 4..17
+seq |  | integer:7 | 0 | 0 | 0 | 0 | 1458 | 183978 | None..None

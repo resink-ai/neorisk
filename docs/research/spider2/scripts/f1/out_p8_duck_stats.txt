@@ -1,0 +1,18 @@
+duckdb 1.5.6
+avg_ms = avg(ms)                              rows 10789 exact 10789 within1e-9 10789
+avg_s = avg(ms/1000.0)                        rows 10789 exact 10685 within1e-9 10789
+avg_s = sum(ms/1000.0)/count                  rows 10789 exact 10685 within1e-9 10789
+avg_s = list_reduce in lap order /n           rows 10789 exact 10789 within1e-9 10789
+stdev_ms = stddev_pop(ms)                     rows 10789 exact 2199 within1e-9 10789
+stdev_s = stddev_pop(ms/1000.0)               rows 10789 exact 2078 within1e-9 10789
+stdev_ms = sqrt((n*sum(x^2)-sum(x)^2) as integers / n^2) rows 10789 exact 9522 within1e-9 10789
+stdev_s = that / 1000                         rows 10789 exact 5009 within1e-9 10789
+--- as SQLite CAST(x AS TEXT) text (the contract's results type for untyped columns)
+avg_ms = avg(ms)                              text-equal 10789/10789
+avg_s = avg(ms/1000.0)                        text-equal 10777/10789
+avg_s = sum(ms/1000.0)/count                  text-equal 10777/10789
+avg_s = list_reduce in lap order /n           text-equal 10789/10789
+stdev_ms = stddev_pop(ms)                     text-equal 9192/10789
+stdev_s = stddev_pop(ms/1000.0)               text-equal 9143/10789
+stdev_ms = sqrt((n*sum(x^2)-sum(x)^2) as integers / n^2) text-equal 10707/10789
+stdev_s = that / 1000                         text-equal 10347/10789

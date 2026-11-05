@@ -1,0 +1,259 @@
+### row_counts  (8 rows, 0.08s)
+t | n
+Country | 11
+League | 11
+Team | 299
+Team_Attributes | 1458
+Player | 11060
+Player_Attributes | 183978
+Match | 25979
+sqlite_sequence | 7
+
+### sqlite_sequence_vs_max_id  (7 rows, 0.00s)
+name | seq | max_id
+Country | 51958 | 24558
+League | 51958 | 24558
+Match | 51958 | 25979
+Player | 11075 | 11075
+Player_Attributes | 183978 | 183978
+Team | 103916 | 51606
+Team_Attributes | 1458 | 1458
+
+### country_league  (11 rows, 0.00s)
+cid | country | lid | country_id | league
+1 | Belgium | 1 | 1 | Belgium Jupiler League
+1729 | England | 1729 | 1729 | England Premier League
+4769 | France | 4769 | 4769 | France Ligue 1
+7809 | Germany | 7809 | 7809 | Germany 1. Bundesliga
+10257 | Italy | 10257 | 10257 | Italy Serie A
+13274 | Netherlands | 13274 | 13274 | Netherlands Eredivisie
+15722 | Poland | 15722 | 15722 | Poland Ekstraklasa
+17642 | Portugal | 17642 | 17642 | Portugal Liga ZON Sagres
+19694 | Scotland | 19694 | 19694 | Scotland Premier League
+21518 | Spain | 21518 | 21518 | Spain LIGA BBVA
+24558 | Switzerland | 24558 | 24558 | Switzerland Super League
+
+### id_gaps  (5 rows, 0.01s)
+t | n | min(id) | max(id) | gaps
+Player | 11060 | 1 | 11075 | 15
+Team | 299 | 1 | 51606 | 51307
+Match | 25979 | 1 | 25979 | 0
+Player_Attributes | 183978 | 1 | 183978 | 0
+Team_Attributes | 1458 | 1 | 1458 | 0
+
+### team_id_sample  (12 rows, 0.00s)
+id | team_api_id | team_fifa_api_id | team_long_name | team_short_name
+1 | 9987 | 673 | KRC Genk | GEN
+2 | 9993 | 675 | Beerschot AC | BAC
+3 | 10000 | 15005 | SV Zulte-Waregem | ZUL
+4 | 9994 | 2007 | Sporting Lokeren | LOK
+5 | 9984 | 1750 | KSV Cercle Brugge | CEB
+6 | 8635 | 229 | RSC Anderlecht | AND
+7 | 9991 | 674 | KAA Gent | GEN
+8 | 9998 | 1747 | RAEC Mons | MON
+9 | 7947 | None | FCV Dender EH | DEN
+10 | 9985 | 232 | Standard de Liège | STL
+11 | 8203 | 110724 | KV Mechelen | MEC
+12 | 8342 | 231 | Club Brugge KV | CLB
+
+### team_id_jumps  (299 rows, 0.00s)
+id | prev
+1 | None
+2 | 1
+3 | 2
+4 | 3
+5 | 4
+6 | 5
+7 | 6
+8 | 7
+9 | 8
+10 | 9
+11 | 10
+12 | 11
+13 | 12
+14 | 13
+15 | 14
+16 | 15
+17 | 16
+18 | 17
+614 | 18
+1034 | 614
+1042 | 1034
+1513 | 1042
+2004 | 1513
+2476 | 2004
+2510 | 2476
+3457 | 2510
+3458 | 3457
+3459 | 3458
+3460 | 3459
+3461 | 3460
+3462 | 3461
+3463 | 3462
+3464 | 3463
+3465 | 3464
+3466 | 3465
+3467 | 3466
+3468 | 3467
+3469 | 3468
+3470 | 3469
+3471 | 3470
+3472 | 3471
+3473 | 3472
+3474 | 3473
+3475 | 3474
+3476 | 3475
+4218 | 3476
+4225 | 4218
+4234 | 4225
+4996 | 4234
+5744 | 4996
+5747 | 5744
+5756 | 5747
+6504 | 5756
+6509 | 6504
+7261 | 6509
+7276 | 7261
+8021 | 7276
+8779 | 8021
+8784 | 8779
+9537 | 8784
+9538 | 9537
+9539 | 9538
+9540 | 9539
+9541 | 9540
+9542 | 9541
+9543 | 9542
+9544 | 9543
+9545 | 9544
+9546 | 9545
+9547 | 9546
+9548 | 9547
+9549 | 9548
+9550 | 9549
+9551 | 9550
+9552 | 9551
+9553 | 9552
+9554 | 9553
+9555 | 9554
+9556 | 9555
+10300 | 9556
+10309 | 10300
+10312 | 10309
+11074 | 10312
+11076 | 11074
+11817 | 11076
+11822 | 11817
+11825 | 11822
+12587 | 11825
+12594 | 12587
+12595 | 12594
+13343 | 12595
+14106 | 13343
+14868 | 14106
+14876 | 14868
+15617 | 14876
+15618 | 15617
+15619 | 15618
+15620 | 15619
+15621 | 15620
+15622 | 15621
+
+### key_uniqueness  (13 rows, 0.61s)
+k | n | d
+Player.player_api_id | 11060 | 11060
+Player.player_fifa_api_id | 11060 | 11060
+Player.player_name | 11060 | 10848
+Team.team_api_id | 299 | 299
+Team.team_fifa_api_id (non-null) | 288 | 285
+Team.team_long_name | 299 | 296
+Team.team_short_name | 299 | 259
+Match.match_api_id | 25979 | 25979
+Match(league,season,stage,home) | 25979 | 25979
+Match(home,away,season) | 25979 | 24509
+PA(player_api_id,date) | 183978 | 183142
+PA(player_fifa_api_id,date) | 183978 | 183065
+TA(team_api_id,date) | 1458 | 1457
+
+### team_fifa_dupes  (3 rows, 0.00s)
+team_fifa_api_id | count(*) | group_concat(team_api_id||':'||team_long_name, ' ; ')
+301 | 2 | 8244:Widzew Łódź ; 8024:Widzew Łódź
+111429 | 2 | 8031:Polonia Bytom ; 8020:Polonia Bytom
+111560 | 2 | 9996:Royal Excel Mouscron ; 274581:Royal Excel Mouscron
+
+### team_fifa_null  (11 rows, 0.14s)
+id | team_api_id | team_long_name | team_short_name | matches
+9 | 7947 | FCV Dender EH | DEN | 34
+15 | 4049 | Tubize | TUB | 34
+26561 | 6601 | FC Volendam | VOL | 34
+34816 | 177361 | Termalica Bruk-Bet Nieciecza | TBN | 30
+35286 | 7992 | Trofense | TRO | 30
+35291 | 10213 | Amadora | AMA | 30
+36248 | 9765 | Portimonense | POR | 30
+36723 | 4064 | Feirense | FEI | 30
+38789 | 6367 | Uniao da Madeira | MAD | 34
+38791 | 188163 | Tondela | TON | 34
+51606 | 7896 | Lugano | LUG | 36
+
+### team_longname_dupes  (3 rows, 0.00s)
+team_long_name | count(*) | group_concat(team_api_id||'/'||ifnull(team_fifa_api_id,'null')||'/'||team_short_name, ' ; ')
+Polonia Bytom | 2 | 8031/111429/POB ; 8020/111429/GOR
+Royal Excel Mouscron | 2 | 9996/111560/MOU ; 274581/111560/MOP
+Widzew Łódź | 2 | 8244/301/LOD ; 8024/301/WID
+
+### player_name_dupes_count  (1 rows, 0.00s)
+names | rows | max(c)
+163 | 375 | 7
+
+### fk_orphans  (12 rows, 0.18s)
+fk | orphans
+Match.country_id | 0
+Match.league_id | 0
+Match.league->country consistent | 0
+Match.home_team | 0
+Match.away_team | 0
+Match.home=away | 0
+PA.player_api_id | 0
+PA.player_fifa_api_id | 49
+PA api/fifa pair matches Player | 212
+TA.team_api_id | 0
+TA.team_fifa_api_id | 0
+TA api/fifa pair matches Team | 0
+
+### match_player_orphans  (1 rows, 0.52s)
+slots | filled | orphan_slots | distinct_players
+571538 | 542281 | 0 | 11060
+
+### coverage  (5 rows, 66.49s)
+k | count(*)
+players with attributes | 11060
+players in any match | 11060
+teams in any match | 299
+teams with attributes | 288
+teams in match but no attributes | 11
+
+### rowid_order  (4 rows, 0.02s)
+k | sum(id<>rowid)
+Match id=rowid | 0
+Player | 0
+PA | 0
+Team | 0
+
+### pa_order  (7 rows, 0.50s)
+k | breaks
+PA id order by (player_fifa_api_id?) | 5486
+PA id order by player_name (via Player) | 266
+PA within player: date descending breaks | 38
+PA player blocks contiguous: player changes | 11060
+Player id order by name breaks | 265
+TA id order: team changes | 287
+TA within team: date desc? (asc breaks) | 0
+
+### match_id_order  (5 rows, 0.15s)
+k | sum(l < pl)
+Match id vs (country,league) | 0
+Match id vs season within league | 0
+Match id vs stage within league-season | 261
+Match id vs date within league-season | 5725
+Match id vs match_api_id | 356
+

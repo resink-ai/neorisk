@@ -1,0 +1,7 @@
+name = "school"
+version = "v1"
+kind = "spider2"
+
+[recipe]
+
+[results.mixed]

@@ -1,0 +1,56 @@
+### person_space_runs  (4 rows, 0.02s)
+first_index | last_index | n | lead_space
+0 | 30438 | 30439 | 1
+30439 | 30439 | 1 | -1
+30440 | 36820 | 6381 | 1
+36821 | 38284 | 1464 | 0
+
+### block_membership  (4 rows, 0.06s)
+blk | n | min(i) | max(i) | in_cast | in_producer | in_director
+A_0_30438 | 30439 | 0 | 30438 | 30439 | 707 | 376
+NULLROW | 1 | 30439 | 30439 | None | None | None
+B_lead_space | 6381 | 30440 | 36820 | 1688 | 4729 | 343
+C_no_space | 1464 | 36821 | 38284 | 392 | 525 | 1464
+
+### block_dup_pairs  (2 rows, 0.02s)
+pair | n
+AC | 376
+BC | 343
+
+### unique_within_blocks  (3 rows, 0.02s)
+blk | n | d
+A | 30439 | 30439
+B | 6381 | 6381
+C | 1464 | 1464
+
+### gender_by_block  (10 rows, 0.01s)
+blk | g | count(*)
+A | 'Female' | 8902
+A | 'Male' | 18809
+A | NULL | 2728
+B | 'Female' | 514
+B | 'Male' | 1110
+B | NULL | 4757
+C | 'Female' | 19
+C | 'Male' | 136
+C | NULL | 1309
+N | NULL | 1
+
+### cast_gender_coverage  (3 rows, 0.06s)
+gender | count(*)
+'Female' | 9396
+'Male' | 19860
+NULL | 2871
+
+### block_A_order_vs_cast_first_seen  (1 rows, 24.97s)
+cast_distinct | block_a | same_position
+32127 | 30439 | 30439
+
+### block_B_order_vs_producer_first_seen  (1 rows, 0.90s)
+prod_distinct | block_b | same_position
+5436 | 6381 | 0
+
+### block_C_order_vs_director_first_seen  (1 rows, 0.00s)
+dir_distinct | block_c | same_position | min(c.i) | max(c.i)
+1464 | 1464 | 1464 | 36821 | 38284
+

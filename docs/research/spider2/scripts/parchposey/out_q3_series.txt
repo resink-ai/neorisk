@@ -1,0 +1,117 @@
+### split_points  (2 rows, 0.01s)
+t | id | account_id | prev
+orders | 4307 | 1001 | 4501
+events | 4394 | 1001 | 4501
+
+### order_series_stats  (2 rows, 0.00s)
+s | n | accts | avg_total | avg_usd | min(occurred_at) | max(occurred_at)
+A ids 1-4306 | 4306 | 350 | 461.9 | 2555.34 | 2013-12-04T04:45:54.000Z | 2017-01-01T23:50:16.000Z
+B ids 4307-6912 | 2606 | 328 | 647.3 | 4657.8 | 2013-12-04T04:22:44.000Z | 2017-01-02T00:02:40.000Z
+
+### order_series_one_per_month  (2 rows, 0.00s)
+s | max_per_account_month | multi
+A | 2 | 298
+B | 2 | 104
+
+### event_series_stats  (7 rows, 0.00s)
+s | channel | n
+A ids 1-4393 | direct | 4393
+B ids 4394-9073 | facebook | 967
+B ids 4394-9073 | organic | 952
+B ids 4394-9073 | adwords | 906
+B ids 4394-9073 | direct | 905
+B ids 4394-9073 | banner | 476
+B ids 4394-9073 | twitter | 474
+
+### series_a_event_order_pairing  (1 rows, 0.01s)
+ea | oa | paired | event_before | within_1h | min_min | max_min
+4393 | 4306 | 4306 | 4306 | 3532 | 1.0 | 214689.5
+
+### series_a_counts_per_account  (1 rows, 0.00s)
+eq | more_events | more_orders | n
+290 | 60 | 0 | 351
+
+### series_a_extra_events  (6 rows, 0.00s)
+diff | accts
+0 | 290
+1 | 43
+2 | 13
+3 | 3
+4 | 1
+5 | 1
+
+### series_a_gap_minutes  (12 rows, 0.01s)
+bucket_min | n
+0 | 463
+5 | 605
+10 | 583
+15 | 612
+20 | 577
+25 | 575
+30 | 117
+40410 | 1
+40480 | 1
+40485 | 1
+40550 | 1
+40580 | 1
+
+### order_b_vs_a_same_day  (1 rows, 0.14s)
+same_day | n
+2537 | 2606
+
+### order_b_minus_a_minutes  (8 rows, 0.36s)
+bucket | n
+0 | 1418
+10 | 865
+20 | 271
+42750 | 2
+42140 | 2
+42080 | 2
+42000 | 2
+41160 | 2
+
+### monthly_day_drift  (8 rows, 0.00s)
+gap | n
+29 | 1714
+30 | 1703
+28 | 241
+31 | 222
+59 | 40
+60 | 17
+58 | 16
+116 | 1
+
+### series_b_qty_profile  (2 rows, 0.00s)
+s | std | gl | po | zero
+A | 374.0 | 41.0 | 47.0 | 3
+B | 127.0 | 321.0 | 200.0 | 17
+
+### account_first_event_vs_rep  (1 rows, 0.00s)
+min(fe) | max(fe)
+2013-12-04T04:18:29.000Z | 2017-01-01T13:12:29.000Z
+
+### account_lifespan_ends  (6 rows, 0.00s)
+last_month | accts
+2017-01 | 14
+2016-12 | 271
+2016-11 | 7
+2016-10 | 3
+2016-09 | 6
+2016-08 | 1
+
+### accounts_start_month  (5 rows, 0.00s)
+y | accts
+2013 | 61
+2014 | 20
+2015 | 64
+2016 | 201
+2017 | 5
+
+### events_after_last_order  (1 rows, 0.07s)
+events_after | n
+152 | 350
+
+### active_months_contiguous  (1 rows, 0.00s)
+contiguous | n
+291 | 350
+

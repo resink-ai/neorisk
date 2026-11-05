@@ -1,0 +1,13 @@
+cohort skill freq (top 8): [(181, None, 3), (182, None, 3), (0, None, 3), (1, 'python', 3), (5, None, 3), (22, None, 1), (8, None, 1), (26, None, 1)]
+tied at the top: [181, 182, 0, 1, 5]
+skills (181, 182, 0) ([None, None, None]): over (posting,skill) rows 100150.7109375000 (n=9), over distinct postings 98586.9248046875 (n=8), float32 of rows-avg 100150.7109375
+skills (181, 182, 1) ([None, None, 'python']): over (posting,skill) rows 101117.0442708333 (n=9), over distinct postings 101794.1748046875 (n=8), float32 of rows-avg 101117.0468750
+skills (181, 182, 5) ([None, None, None]): over (posting,skill) rows 87872.5998263889 (n=9), over distinct postings 87872.5998263889 (n=9), float32 of rows-avg 87872.6015625
+skills (181, 0, 1) ([None, None, 'python']): over (posting,skill) rows 96521.7109375000 (n=9), over distinct postings 96521.7109375000 (n=9), float32 of rows-avg 96521.7109375
+skills (181, 0, 5) ([None, None, None]): over (posting,skill) rows 83277.2664930556 (n=9), over distinct postings 83277.2664930556 (n=9), float32 of rows-avg 83277.2656250
+skills (181, 1, 5) ([None, 'python', None]): over (posting,skill) rows 84243.5998263889 (n=9), over distinct postings 84243.5998263889 (n=9), float32 of rows-avg 84243.6015625
+skills (182, 0, 1) ([None, None, 'python']): over (posting,skill) rows 109562.6666666667 (n=9), over distinct postings 111100.4285714286 (n=7), float32 of rows-avg 109562.6640625
+skills (182, 0, 5) ([None, None, None]): over (posting,skill) rows 96318.2222222222 (n=9), over distinct postings 94275.3750000000 (n=8), float32 of rows-avg 96318.2187500
+skills (182, 1, 5) ([None, 'python', None]): over (posting,skill) rows 97284.5555555556 (n=9), over distinct postings 97482.6250000000 (n=8), float32 of rows-avg 97284.5546875
+skills (0, 1, 5) ([None, 'python', None]): over (posting,skill) rows 92689.2222222222 (n=9), over distinct postings 92689.2222222222 (n=9), float32 of rows-avg 92689.2187500
+inner join to skills_dim, top 3 present: [1, 187] avg over rows 104100.0 n 4

@@ -1,0 +1,163 @@
+## customers  rows=4
+  id               decl=INTEGER  classes=[('integer', 4)] empty=0 bslashN=0
+  name             decl=TEXT     classes=[('text', 4)] empty=0 bslashN=0 shapes=[('a a a', 3), ('a a', 1)] untrimmed=0
+## conway_gen_zero  rows=0
+  x                decl=INTEGER  classes=[] empty=0 bslashN=0
+  y                decl=INTEGER  classes=[] empty=0 bslashN=0
+  alive            decl=INTEGER  classes=[] empty=0 bslashN=0
+## web_devices  rows=2
+  day              decl=(none)   classes=[('text', 2)] empty=0 bslashN=0 shapes=[('9999-99-99', 2)] untrimmed=0
+  pc               decl=INTEGER  classes=[('integer', 2)] empty=0 bslashN=0
+  tablet           decl=INTEGER  classes=[('integer', 2)] empty=0 bslashN=0
+  phone            decl=INTEGER  classes=[('integer', 2)] empty=0 bslashN=0
+## web_demographics  rows=2
+  day              decl=(none)   classes=[('text', 2)] empty=0 bslashN=0 shapes=[('9999-99-99', 2)] untrimmed=0
+  m_tw_cnt         decl=INTEGER  classes=[('integer', 2)] empty=0 bslashN=0
+  m_tw_qty         decl=INTEGER  classes=[('integer', 2)] empty=0 bslashN=0
+  m_fb_cnt         decl=INTEGER  classes=[('integer', 2)] empty=0 bslashN=0
+  m_fb_qty         decl=INTEGER  classes=[('integer', 2)] empty=0 bslashN=0
+  f_tw_cnt         decl=INTEGER  classes=[('integer', 2)] empty=0 bslashN=0
+  f_tw_qty         decl=INTEGER  classes=[('integer', 2)] empty=0 bslashN=0
+  f_fb_cnt         decl=INTEGER  classes=[('integer', 2)] empty=0 bslashN=0
+  f_fb_qty         decl=INTEGER  classes=[('integer', 2)] empty=0 bslashN=0
+## channels_dim  rows=2
+  id               decl=INTEGER  classes=[('integer', 2)] empty=0 bslashN=0
+  name             decl=TEXT     classes=[('text', 2)] empty=0 bslashN=0 shapes=[('a', 2)] untrimmed=0
+  shortcut         decl=TEXT     classes=[('text', 2)] empty=0 bslashN=0 shapes=[('a', 2)] untrimmed=0
+## gender_dim  rows=2
+  letter           decl=TEXT     classes=[('text', 2)] empty=0 bslashN=0 shapes=[('a', 2)] untrimmed=0
+  name             decl=TEXT     classes=[('text', 2)] empty=0 bslashN=0 shapes=[('a', 2)] untrimmed=0
+## packaging  rows=11
+  id               decl=INTEGER  classes=[('integer', 11)] empty=0 bslashN=0
+  name             decl=TEXT     classes=[('text', 11)] empty=0 bslashN=0 shapes=[('a a', 5), ('a a a', 4), ('a 999a', 2)] untrimmed=0
+## packaging_relations  rows=12
+  packaging_id     decl=INTEGER  classes=[('integer', 12)] empty=0 bslashN=0
+  contains_id      decl=INTEGER  classes=[('integer', 12)] empty=0 bslashN=0
+  qty              decl=INTEGER  classes=[('integer', 12)] empty=0 bslashN=0
+## product_groups  rows=4
+  id               decl=INTEGER  classes=[('integer', 4)] empty=0 bslashN=0
+  name             decl=TEXT     classes=[('text', 4)] empty=0 bslashN=0 shapes=[('a', 4)] untrimmed=0
+## products  rows=10
+  id               decl=INTEGER  classes=[('integer', 10)] empty=0 bslashN=0
+  name             decl=TEXT     classes=[('text', 10)] empty=0 bslashN=0 shapes=[('a a a', 7), ('a a', 3)] untrimmed=0
+  group_id         decl=INTEGER  classes=[('integer', 10)] empty=0 bslashN=0
+## monthly_sales  rows=360
+  product_id       decl=INTEGER  classes=[('integer', 360)] empty=0 bslashN=0
+  mth              decl=TEXT     classes=[('text', 360)] empty=0 bslashN=0 shapes=[('9999-99-99', 360)] untrimmed=0
+  qty              decl=INTEGER  classes=[('integer', 360)] empty=0 bslashN=0
+## breweries  rows=3
+  id               decl=INTEGER  classes=[('integer', 3)] empty=0 bslashN=0
+  name             decl=TEXT     classes=[('text', 3)] empty=0 bslashN=0 shapes=[('a a', 2), ('a a a', 1)] untrimmed=0
+## purchases  rows=180
+  id               decl=INTEGER  classes=[('integer', 180)] empty=0 bslashN=0
+  purchased        decl=TEXT     classes=[('text', 180)] empty=0 bslashN=0 shapes=[('9999-99-99', 180)] untrimmed=0
+  brewery_id       decl=INTEGER  classes=[('integer', 180)] empty=0 bslashN=0
+  product_id       decl=INTEGER  classes=[('integer', 180)] empty=0 bslashN=0
+  qty              decl=INTEGER  classes=[('integer', 180)] empty=0 bslashN=0
+  cost             decl=REAL     classes=[('real', 180)] empty=0 bslashN=0 real_nonintegral=0
+## product_alcohol  rows=10
+  product_id       decl=INTEGER  classes=[('integer', 10)] empty=0 bslashN=0
+  sales_volume     decl=REAL     classes=[('real', 10)] empty=0 bslashN=0 real_nonintegral=0
+  abv              decl=REAL     classes=[('real', 10)] empty=0 bslashN=0 real_nonintegral=5
+## customer_favorites  rows=4
+  customer_id      decl=INTEGER  classes=[('integer', 4)] empty=0 bslashN=0
+  favorite_list    decl=TEXT     classes=[('null', 1), ('text', 3)] empty=0 bslashN=0 shapes=[('9999,9999', 1), ('9999,9999,9999', 1), ('9999', 1)] untrimmed=0
+## customer_reviews  rows=4
+  customer_id      decl=INTEGER  classes=[('integer', 4)] empty=0 bslashN=0
+  review_list      decl=TEXT     classes=[('null', 1), ('text', 3)] empty=0 bslashN=0 shapes=[('9999:a,9999:a,9999:a', 1), ('9999:a', 1), ('9999:a,9999:a', 1)] untrimmed=0
+## locations  rows=256
+  id               decl=INTEGER  classes=[('integer', 256)] empty=0 bslashN=0
+  warehouse        decl=INTEGER  classes=[('integer', 256)] empty=0 bslashN=0
+  aisle            decl=TEXT     classes=[('text', 256)] empty=0 bslashN=0 shapes=[('a', 256)] untrimmed=0
+  position         decl=INTEGER  classes=[('integer', 256)] empty=0 bslashN=0
+## inventory  rows=113
+  id               decl=INTEGER  classes=[('integer', 113)] empty=0 bslashN=0
+  location_id      decl=INTEGER  classes=[('integer', 113)] empty=0 bslashN=0
+  product_id       decl=INTEGER  classes=[('integer', 113)] empty=0 bslashN=0
+  purchase_id      decl=INTEGER  classes=[('integer', 113)] empty=0 bslashN=0
+  qty              decl=REAL     classes=[('real', 113)] empty=0 bslashN=0 real_nonintegral=0
+## orders  rows=10
+  id               decl=INTEGER  classes=[('integer', 10)] empty=0 bslashN=0
+  customer_id      decl=INTEGER  classes=[('integer', 10)] empty=0 bslashN=0
+  ordered          decl=TEXT     classes=[('text', 10)] empty=0 bslashN=0 shapes=[('9999-99-99', 10)] untrimmed=0
+  delivery         decl=TEXT     classes=[('null', 10)] empty=0 bslashN=0
+## orderlines  rows=18
+  id               decl=INTEGER  classes=[('integer', 18)] empty=0 bslashN=0
+  order_id         decl=INTEGER  classes=[('integer', 18)] empty=0 bslashN=0
+  product_id       decl=INTEGER  classes=[('integer', 18)] empty=0 bslashN=0
+  qty              decl=REAL     classes=[('real', 18)] empty=0 bslashN=0 real_nonintegral=0
+  amount           decl=REAL     classes=[('real', 18)] empty=0 bslashN=0 real_nonintegral=0
+## monthly_budget  rows=48
+  product_id       decl=INTEGER  classes=[('integer', 48)] empty=0 bslashN=0
+  mth              decl=TEXT     classes=[('text', 48)] empty=0 bslashN=0 shapes=[('9999-99-99', 48)] untrimmed=0
+  qty              decl=REAL     classes=[('real', 48)] empty=0 bslashN=0 real_nonintegral=0
+## product_minimums  rows=2
+  product_id       decl=INTEGER  classes=[('integer', 2)] empty=0 bslashN=0
+  qty_minimum      decl=REAL     classes=[('real', 2)] empty=0 bslashN=0 real_nonintegral=0
+  qty_purchase     decl=REAL     classes=[('real', 2)] empty=0 bslashN=0 real_nonintegral=0
+## stock  rows=1
+  symbol           decl=TEXT     classes=[('text', 1)] empty=0 bslashN=0 shapes=[('a', 1)] untrimmed=0
+  company          decl=TEXT     classes=[('text', 1)] empty=0 bslashN=0 shapes=[('a a a a', 1)] untrimmed=0
+## ticker  rows=15
+  symbol           decl=TEXT     classes=[('text', 15)] empty=0 bslashN=0 shapes=[('a', 15)] untrimmed=0
+  day              decl=TEXT     classes=[('text', 15)] empty=0 bslashN=0 shapes=[('9999-99-99', 15)] untrimmed=0
+  price            decl=REAL     classes=[('real', 15)] empty=0 bslashN=0 real_nonintegral=13
+## web_apps  rows=1
+  id               decl=INTEGER  classes=[('integer', 1)] empty=0 bslashN=0
+  name             decl=TEXT     classes=[('text', 1)] empty=0 bslashN=0 shapes=[('a', 1)] untrimmed=0
+## web_pages  rows=4
+  app_id           decl=INTEGER  classes=[('integer', 4)] empty=0 bslashN=0
+  page_no          decl=INTEGER  classes=[('integer', 4)] empty=0 bslashN=0
+  friendly_url     decl=TEXT     classes=[('text', 4)] empty=0 bslashN=0 shapes=[('/a', 4)] untrimmed=0
+## web_counter_hist  rows=120
+  app_id           decl=INTEGER  classes=[('integer', 120)] empty=0 bslashN=0
+  page_no          decl=INTEGER  classes=[('integer', 120)] empty=0 bslashN=0
+  day              decl=TEXT     classes=[('text', 120)] empty=0 bslashN=0 shapes=[('9999-99-99', 120)] untrimmed=0
+  counter          decl=INTEGER  classes=[('integer', 120)] empty=0 bslashN=0
+## server_heartbeat  rows=14
+  server           decl=TEXT     classes=[('text', 14)] empty=0 bslashN=0 shapes=[('99.9.9.999', 14)] untrimmed=0
+  beat_time        decl=TEXT     classes=[('text', 14)] empty=0 bslashN=0 shapes=[('9999-99-99 99:99', 14)] untrimmed=0
+## web_page_visits  rows=23
+  client_ip        decl=TEXT     classes=[('text', 23)] empty=0 bslashN=0 shapes=[('999.999.99.99', 19), ('99.999.99.999', 4)] untrimmed=0
+  visit_time       decl=TEXT     classes=[('text', 23)] empty=0 bslashN=0 shapes=[('9999-99-99 99:99:99', 23)] untrimmed=0
+  app_id           decl=INTEGER  classes=[('integer', 23)] empty=0 bslashN=0
+  page_no          decl=INTEGER  classes=[('integer', 23)] empty=0 bslashN=0
+## employees  rows=14
+  id               decl=INTEGER  classes=[('integer', 14)] empty=0 bslashN=0
+  name             decl=TEXT     classes=[('text', 14)] empty=0 bslashN=0 shapes=[('a a', 12), ('a a a', 2)] untrimmed=0
+  title            decl=TEXT     classes=[('text', 14)] empty=0 bslashN=0 shapes=[('a a', 12), ('a', 2)] untrimmed=0
+  supervisor_id    decl=INTEGER  classes=[('integer', 13), ('null', 1)] empty=0 bslashN=0
+## emp_hire_periods  rows=15
+  emp_id           decl=INTEGER  classes=[('integer', 15)] empty=0 bslashN=0
+  start_           decl=TEXT     classes=[('text', 15)] empty=0 bslashN=0 shapes=[('9999-99-99', 15)] untrimmed=0
+  end_             decl=TEXT     classes=[('null', 7), ('text', 8)] empty=0 bslashN=0 shapes=[('9999-99-99', 8)] untrimmed=0
+  title            decl=TEXT     classes=[('text', 15)] empty=0 bslashN=0 shapes=[('a a', 15)] untrimmed=0
+## picking_list  rows=2
+  id               decl=INTEGER  classes=[('integer', 2)] empty=0 bslashN=0
+  created          decl=TEXT     classes=[('text', 2)] empty=0 bslashN=0 shapes=[('9999-99-99 99:99:99', 2)] untrimmed=0
+  picker_emp_id    decl=INTEGER  classes=[('integer', 2)] empty=0 bslashN=0
+## picking_line  rows=21
+  picklist_id      decl=INTEGER  classes=[('integer', 21)] empty=0 bslashN=0
+  line_no          decl=INTEGER  classes=[('integer', 21)] empty=0 bslashN=0
+  location_id      decl=INTEGER  classes=[('integer', 21)] empty=0 bslashN=0
+  order_id         decl=INTEGER  classes=[('integer', 21)] empty=0 bslashN=0
+  product_id       decl=INTEGER  classes=[('integer', 21)] empty=0 bslashN=0
+  qty              decl=REAL     classes=[('real', 21)] empty=0 bslashN=0 real_nonintegral=0
+## picking_log  rows=63
+  picklist_id      decl=INTEGER  classes=[('integer', 63)] empty=0 bslashN=0
+  log_time         decl=TEXT     classes=[('text', 63)] empty=0 bslashN=0 shapes=[('9999-99-99 99:99:99', 63)] untrimmed=0
+  activity         decl=TEXT     classes=[('text', 63)] empty=0 bslashN=0 shapes=[('a', 63)] untrimmed=0
+  location_id      decl=INTEGER  classes=[('integer', 59), ('null', 4)] empty=0 bslashN=0
+  pickline_no      decl=INTEGER  classes=[('integer', 21), ('null', 42)] empty=0 bslashN=0
+## id_name_type  rows=0
+  id               decl=INTEGER  classes=[] empty=0 bslashN=0
+  name             decl=TEXT     classes=[] empty=0 bslashN=0
+## id_name_coll_type  rows=0
+  collection_id    decl=INTEGER  classes=[] empty=0 bslashN=0
+## id_name_coll_entries  rows=0
+  collection_id    decl=INTEGER  classes=[] empty=0 bslashN=0
+  id               decl=INTEGER  classes=[] empty=0 bslashN=0
+  name             decl=TEXT     classes=[] empty=0 bslashN=0
+## favorite_coll_type  rows=0
+  id               decl=INTEGER  classes=[] empty=0 bslashN=0
+TOTAL rows 1350 tables 38
