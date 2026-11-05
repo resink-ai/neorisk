@@ -1,0 +1,135 @@
+{
+  "name": "baseball",
+  "version": "v1",
+  "kind": "spider2",
+  "writer": {
+    "polars": "2.0.0",
+    "pyarrow": "26.0.0"
+  },
+  "recipe_sha256": "55381220f948d3e46ccfb728d2d7cdac8681b0765788efbeedc09bbc80ca8f25",
+  "source_sha256": "4784826541ea40d76dd9c2da2812e189ec351ca79e2738916da5587b465341cd",
+  "files": {
+    "expected/queries/local007.parquet": {
+      "sha256": "f9aec6f533dbc209e722135f23b8fc20ef45c910af44e9628c436b864d7fbb80",
+      "rows": 1
+    },
+    "expected/queries/local008.parquet": {
+      "sha256": "c37ccd8794d4c050d008094a47801e832f8040208dadab587e0bebf255ec2f1c",
+      "rows": 4
+    },
+    "log/part-00000.parquet": {
+      "sha256": "30335268c3c1b7caf909430106a7865ee0bf8ebe62ae6dff39697b7d6e5b09d9",
+      "rows": 574277
+    },
+    "results/all_star.parquet": {
+      "sha256": "ad4f59dc37c7706f5bb567fd162291189bd08d5a641191f21c5acab531cb4899",
+      "rows": 5069
+    },
+    "results/appearances.parquet": {
+      "sha256": "bd211c694c2efd4be2bad43945b32de3e5921ca5339718aeeff396222a698d0d",
+      "rows": 100951
+    },
+    "results/batting.parquet": {
+      "sha256": "c2c8a8a39cec4fb1fb6c81903f1bf68f5bba469208ec2bacf09d143371e44a02",
+      "rows": 101332
+    },
+    "results/batting_postseason.parquet": {
+      "sha256": "3b9fd30e1d9ff309a72fcf4a05d690bd7dc2a803e9cdc0e7515abff36d7ecb90",
+      "rows": 11690
+    },
+    "results/college.parquet": {
+      "sha256": "9bb603d6c10ccbdf72599787c34d2bd9e7f9ea14710547bff6c1d32f70e04276",
+      "rows": 1207
+    },
+    "results/fielding.parquet": {
+      "sha256": "cb9d247d81ebcdc66b9b21b467b13dffd9738077b42bb95725c9713bf1b810ae",
+      "rows": 170526
+    },
+    "results/fielding_outfield.parquet": {
+      "sha256": "309ace602bce5ed542e3b77058c338a091c12c983cc15768707488091e56ce05",
+      "rows": 12028
+    },
+    "results/fielding_postseason.parquet": {
+      "sha256": "e8d796f210818a275a6a2779d14c44b37b2ec70295da7fc8cce3c067423b2e94",
+      "rows": 12311
+    },
+    "results/hall_of_fame.parquet": {
+      "sha256": "7c430946c330677e86dbb104e40b8be7083c7ece32fc17d2451b27da7c773a44",
+      "rows": 4120
+    },
+    "results/home_game.parquet": {
+      "sha256": "49cd2877b20f1d1bfa2b55f56c4eb30f2b5451537606f316bd360154d7ef1d0b",
+      "rows": 2944
+    },
+    "results/manager.parquet": {
+      "sha256": "896b0db6fa8a2ff4fcbb3a38d92d8c9452d32db4f7b685a7f3d48974e5af34d9",
+      "rows": 3405
+    },
+    "results/manager_award.parquet": {
+      "sha256": "f159a2097c6f1cd7ad6b251c51b3fe18852c37908720dc25eb1fdbbd8e2ea522",
+      "rows": 177
+    },
+    "results/manager_award_vote.parquet": {
+      "sha256": "2ffe2b99341775df0714b93df9b178c8430ac3ac485e3c8db9e675bae948ed50",
+      "rows": 414
+    },
+    "results/manager_half.parquet": {
+      "sha256": "456b4a5a8ca2f63787316b07ab10aea5e4fe972be8cdc1c43e1e94bdfa48f410",
+      "rows": 93
+    },
+    "results/park.parquet": {
+      "sha256": "ca025fceb5d3860f98188f5f5bd68a4d2ed852a864860992686882c6e7526ca7",
+      "rows": 250
+    },
+    "results/pitching.parquet": {
+      "sha256": "a88ceeece758046cb9f54f03474a7c5c0e1722dafbc30044132e2b7ad18dc000",
+      "rows": 44139
+    },
+    "results/pitching_postseason.parquet": {
+      "sha256": "ab67a1d5488343892db427e88f13e26abb83a3c2647a51582d627f0630bc2e1e",
+      "rows": 5109
+    },
+    "results/player.parquet": {
+      "sha256": "de02ba7fffb1393d8a50c8900291e4966538dc7deaa700749cf17a198bf7e864",
+      "rows": 18846
+    },
+    "results/player_award.parquet": {
+      "sha256": "c161c83b9628a769893b21e15930e0adf5dcff90b217057b00b9d49c5cd9bd77",
+      "rows": 6078
+    },
+    "results/player_award_vote.parquet": {
+      "sha256": "bf348954b267e33eb519f95d50ce65812aff6dadfbe14994fba33dcd83ec1d6d",
+      "rows": 6795
+    },
+    "results/player_college.parquet": {
+      "sha256": "e660f3f2f534e69f50f5dcf89335f835ca179a72ae9c46c9bb64150f0940e527",
+      "rows": 17350
+    },
+    "results/postseason.parquet": {
+      "sha256": "3c3b470ee2fd778810eb4fccc0b7ac1b49517d825c790ab85cb7f7c3438ef3a0",
+      "rows": 307
+    },
+    "results/salary.parquet": {
+      "sha256": "e9b6525d3ae96c0a39e3e8d397f6f8043fbf79e01fcf0e25765712649ae132c8",
+      "rows": 25575
+    },
+    "results/team.parquet": {
+      "sha256": "1b399e5fa9aa9a31031e3dbeaf7e1e0903bdbfef2badbecfc94671ee4a4ab147",
+      "rows": 2805
+    },
+    "results/team_franchise.parquet": {
+      "sha256": "7d2e22f7ffb049f5074981a7a34988916520db5e3fb01b866ecf764b938aa562",
+      "rows": 120
+    },
+    "results/team_half.parquet": {
+      "sha256": "2f98f14b6af40836b22966f68f07d4e89b2234b81b7452ef4355524031a02ce8",
+      "rows": 52
+    },
+    "schema/events.json": {
+      "sha256": "ced646b01599a9f0b664588484dcfecb27d2290cc38c41c022d26126db440810"
+    },
+    "schema/results.json": {
+      "sha256": "859961c83bb84ea84c1f7e6994cb6558a0daa8050982434d1783e2953c0b608a"
+    }
+  }
+}

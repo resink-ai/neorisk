@@ -57,8 +57,7 @@ created AS (
 SELECT c.player_id AS ext_id, CASE WHEN p.player_id IS NULL THEN '1' ELSE '0' END AS stub,
        NULLIF(p."birth_year", '') AS "birth_year", NULLIF(p."birth_month", '') AS "birth_month",
        NULLIF(p."birth_day", '') AS "birth_day", p."birth_country", p."birth_state", p."birth_city",
-       p."name_first", p."name_last", p."name_given", NULLIF(p."weight", '') AS "weight",
-       NULLIF(p."height", '') AS "height", p."bats", p."throws", p."debut", p."retro_id",
+       p."name_first", p."name_last", p."name_given", p."throws", p."debut", p."retro_id",
        p."bbref_id",
        c.created_at
 FROM created c LEFT JOIN player p USING (player_id)
@@ -66,25 +65,43 @@ ORDER BY c.player_id;
 
 -- entity: team_franchise
 -- created_at: Jan 1 of the franchise's first team-season (rule).
-SELECT f.franchise_id AS ext_id, f.franchise_name, f.active, f.na_assoc,
+SELECT f.franchise_id AS ext_id, f.na_assoc,
        (SELECT min(year) FROM team t WHERE t.franchise_id = f.franchise_id) || '-01-01 00:00:00'
            AS created_at
 FROM team_franchise f ORDER BY f.franchise_id;
 
+-- event: team_franchise_snapshot owner=franchise_id
+-- At N: the current name (ANA's 1961 creation would otherwise carry its 2005 name)
+-- and the active flag.
+SELECT '2016-02-18 00:00:00' AS event_time, franchise_id, franchise_name, active
+FROM team_franchise ORDER BY franchise_id;
+
 -- entity: park
 -- created_at: its first home game (min span_first); T0 for the unused FOR02.
-SELECT p.park_id AS ext_id, p.park_name, p.park_alias, p.city, p.state, p.country,
+SELECT p.park_id AS ext_id, p.city, p.state, p.country,
        coalesce((SELECT min(span_first) FROM home_game h WHERE h.park_id = p.park_id) || ' 00:00:00',
                 '1871-01-01 00:00:00') AS created_at
 FROM park p ORDER BY p.park_id;
 
+-- event: park_snapshot owner=park_id
+-- At N: the current name and the list of earlier names (CHI12 opened in 1991,
+-- named U.S. Cellular Field in 2003).
+SELECT '2016-02-18 00:00:00' AS event_time, park_id, park_name, park_alias
+FROM park ORDER BY park_id;
+
 -- entity: college
 -- All at T0 (rule), plus a stub for each of the 4 unknown ids in player_college.
 SELECT i.college_id AS ext_id, CASE WHEN c.college_id IS NULL THEN '1' ELSE '0' END AS stub,
-       c.name_full, c.city, c.state, c.country, '1871-01-01 00:00:00' AS created_at
+       c.city, c.state, c.country, '1871-01-01 00:00:00' AS created_at
 FROM (SELECT college_id FROM college UNION SELECT college_id FROM player_college) i
 LEFT JOIN college c USING (college_id)
 ORDER BY i.college_id;
+
+-- event: college_snapshot owner=college_id
+-- At N: the current name (swtexas is "Texas State University", renamed in 2003).
+-- Source colleges only; the 4 stubs have none.
+SELECT '2016-02-18 00:00:00' AS event_time, college_id, name_full
+FROM college ORDER BY college_id;
 
 -- entity: season
 -- An owner shard for postseason series: one per team year, at Jan 1 (rule).
@@ -309,10 +326,11 @@ SELECT c.created_at AS event_time, pc.player_id, pc.college_id, pc.year,
 FROM player_college pc JOIN created c USING (player_id)
 ORDER BY pc.player_id, pc.year, pc.college_id;
 
--- event: player_snapshot_taken owner=player_id
--- At N = 2016-02-18, the last death date: final_game and the death columns are
--- lifetime values, known only at the snapshot.
-SELECT '2016-02-18 00:00:00' AS event_time, player_id, "final_game", NULLIF("death_year", '') AS "death_year",
+-- event: player_snapshot owner=player_id
+-- At N = 2016-02-18, the last death date: weight, height and bats are the values
+-- listed at the extract; final_game and the death columns are lifetime values.
+SELECT '2016-02-18 00:00:00' AS event_time, player_id, NULLIF("weight", '') AS "weight",
+       NULLIF("height", '') AS "height", "bats", "final_game", NULLIF("death_year", '') AS "death_year",
        NULLIF("death_month", '') AS "death_month", NULLIF("death_day", '') AS "death_day",
        "death_country", "death_state", "death_city"
 FROM player ORDER BY player_id;

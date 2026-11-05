@@ -4,7 +4,7 @@
 
 Sean Lahman's Baseball Database, 2015 edition: every major-league season from 1871 to 2015 as season, stint and postseason-round aggregates (batting, pitching, fielding, appearances, salaries, managers, teams, home parks, all-star selections, awards and votes), plus Hall of Fame ballots to 2016 and the players' colleges.
 
-Version `v1`, kind `spider2`. The input is one ordered event log of 572,700 events; the output is the 26 source tables, rebuilt exactly, and the answers to 2 saved Spider 2.0 questions.
+Version `v1`, kind `spider2`. The input is one ordered event log of 574,277 events; the output is the 26 source tables, rebuilt exactly, and the answers to 2 saved Spider 2.0 questions.
 
 ## Raw data
 
@@ -16,7 +16,7 @@ The reverse-engineering research, with the queries behind every number, is in [`
 
 ## How the log was made
 
-Players, franchises, parks and colleges are entities, and so is `season`, one per year, which owns the postseason series because their old team codes do not all resolve. The 12 orphan player ids and 4 orphan college ids are stub entities (`stub = '1'`), so every id stays a typed ref; `specs/build.sql` leaves the stubs out of `player` and `college`. Every other source row is one event: player tables are owned by the player, `team` by its `franchise_id`, `team_half` and `home_game` by the franchise of their team (year, team_id), and `postseason` by its season. `player_college` rows are `college_attended` events at the player's creation. `final_game` and the six death columns are lifetime values, so they ride on one `player_snapshot_taken` event per player at N rather than on the creation.
+Players, franchises, parks and colleges are entities, and so is `season`, one per year, which owns the postseason series because their old team codes do not all resolve. The 12 orphan player ids and 4 orphan college ids are stub entities (`stub = '1'`), so every id stays a typed ref; `specs/build.sql` leaves the stubs out of `player` and `college`. Every other source row is one event: player tables are owned by the player, `team` by its `franchise_id`, `team_half` and `home_game` by the franchise of their team (year, team_id), and `postseason` by its season. `player_college` rows are `college_attended` events at the player's creation. Values known only as of the extract ride on one `<entity>_snapshot` event per source row at N rather than on the creation: a player's listed weight, height and batting side, his `final_game` and the six death columns; a franchise's current name and `active` flag; a park's current name and its list of earlier names; a college's current name.
 
 A numeric column holding `''` next to integers travels as a null integer and is rebuilt as `coalesce(CAST(x AS VARCHAR), '')`, which SQLite's NUMERIC affinity turns back into the same integer or `''`. The 4 real-bearing mixed columns travel as SQLite's own `CAST(x AS TEXT)` (`'0.246'`, `''`, `'inf'`), the text the results hold for a mixed column. `salary` is whole dollars, carried as `amount` cents. `team.era`, `team.fp` and `player_award_vote.points_won` are plain reals, carried as `f64`; JSON's shortest form round-trips `fp`'s noisy values exactly.
 
@@ -26,10 +26,10 @@ A numeric column holding `''` next to integers travels as a null integer and is 
 
 | Event | Kind | Rows | Payload fields |
 |---|---|---:|---|
-| `player_created` | entity | 18,858 | `player_key`, `ext_id`, `stub`, `birth_year`, `birth_month`, `birth_day`, `birth_country`, `birth_state`, `birth_city`, `name_first`, `name_last`, `name_given`, `weight`, `height`, `bats`, `throws`, `debut`, `retro_id`, `bbref_id` |
-| `team_franchise_created` | entity | 120 | `franchise_key`, `ext_id`, `franchise_name`, `active`, `na_assoc` |
-| `park_created` | entity | 250 | `park_key`, `ext_id`, `park_name`, `park_alias`, `city`, `state`, `country` |
-| `college_created` | entity | 1,211 | `college_key`, `ext_id`, `stub`, `name_full`, `city`, `state`, `country` |
+| `player_created` | entity | 18,858 | `player_key`, `ext_id`, `stub`, `birth_year`, `birth_month`, `birth_day`, `birth_country`, `birth_state`, `birth_city`, `name_first`, `name_last`, `name_given`, `throws`, `debut`, `retro_id`, `bbref_id` |
+| `team_franchise_created` | entity | 120 | `franchise_key`, `ext_id`, `na_assoc` |
+| `park_created` | entity | 250 | `park_key`, `ext_id`, `city`, `state`, `country` |
+| `college_created` | entity | 1,211 | `college_key`, `ext_id`, `stub`, `city`, `state`, `country` |
 | `season_created` | entity | 145 | `season_key`, `ext_id` |
 | `team_season_reported` | business | 2,805 | `year`, `league_id`, `team_id`, `franchise_id`, `div_id`, `rank`, `g`, `ghome`, `w`, `l`, `div_win`, `wc_win`, `lg_win`, `ws_win`, `r`, `ab`, `h`, `double`, `triple`, `hr`, `bb`, `so`, `sb`, `cs`, `hbp`, `sf`, `ra`, `er`, `era`, `cg`, `sho`, `sv`, `ipouts`, `ha`, `hra`, `bba`, `soa`, `e`, `dp`, `fp`, `name`, `park`, `attendance`, `bpf`, `ppf`, `team_id_br`, `team_id_lahman45`, `team_id_retro` |
 | `team_half_reported` | business | 52 | `franchise`, `year`, `league_id`, `team_id`, `half`, `div_id`, `div_win`, `rank`, `g`, `w`, `l` |
@@ -53,7 +53,10 @@ A numeric column holding `''` next to integers travels as a null integer and is 
 | `manager_award_vote_received` | business | 414 | `award_id`, `year`, `league_id`, `player_id`, `points_won`, `points_max`, `votes_first` |
 | `hof_ballot_recorded` | business | 4,120 | `player_id`, `yearid`, `votedby`, `ballots`, `needed`, `votes`, `inducted`, `category`, `needed_note` |
 | `college_attended` | business | 17,350 | `player_id`, `college_id`, `year` |
-| `player_snapshot_taken` | business | 18,846 | `player_id`, `final_game`, `death_year`, `death_month`, `death_day`, `death_country`, `death_state`, `death_city` |
+| `player_snapshot` | business | 18,846 | `player_id`, `weight`, `height`, `bats`, `final_game`, `death_year`, `death_month`, `death_day`, `death_country`, `death_state`, `death_city` |
+| `team_franchise_snapshot` | business | 120 | `franchise_id`, `franchise_name`, `active` |
+| `park_snapshot` | business | 250 | `park_id`, `park_name`, `park_alias` |
+| `college_snapshot` | business | 1,207 | `college_id`, `name_full` |
 
 ## Times set by rule
 
@@ -68,9 +71,47 @@ Only debuts, home-game spans and all-star game dates are natural. Every other fa
 - a player is created at min(`debut`, his first owned event): the debut for 18,604; the first event for 191 players without a debut, for 49 with a rule-dated row before their debut (45 pre-debut salaries among the 54 rows) and for the 12 stubs; and T0 = 1871-01-01 for the 2 players with neither (`crossjo01`, `sulliwi01`). For 49 players the creation carries a `debut` later than its own time;
 - a franchise at Jan 1 of its first team-season; a park at its first `span_first` (T0 for the unused `FOR02`); colleges, stubs included, at T0; a season at Jan 1 of its year;
 - a `college_attended` event at its player's creation, ordered after it by (year, college_id);
-- `player_snapshot_taken` at N = 2016-02-18, the last death date. Every other event is at most H(2016) = 2016-01-15.
+- every snapshot event (`player_snapshot`, `team_franchise_snapshot`, `park_snapshot`, `college_snapshot`) at N = 2016-02-18, the last death date. Every other event is at most H(2016) = 2016-01-15.
 
 Queries must filter on `year`, not on the event time.
+
+## Snapshot columns
+
+| Entity | Snapshot event | At (UTC) | Rows | Columns |
+|---|---|---|---:|---|
+| `player` | `player_snapshot` | 2016-02-18 00:00:00 | 18,846 | `weight`, `height`, `bats`, `final_game`, `death_year`, `death_month`, `death_day`, `death_country`, `death_state`, `death_city` |
+| `team_franchise` | `team_franchise_snapshot` | 2016-02-18 00:00:00 | 120 | `franchise_name`, `active` |
+| `park` | `park_snapshot` | 2016-02-18 00:00:00 | 250 | `park_name`, `park_alias` |
+| `college` | `college_snapshot` | 2016-02-18 00:00:00 | 1,207 | `name_full` |
+
+| Column | Verdict | Reason |
+|---|---|---|
+| `player.player_id` (`ext_id`), `stub` | creation | The source key; `stub` marks the 12 orphan ids and is fixed. |
+| `player.birth_year`, `birth_month`, `birth_day`, `birth_country`, `birth_state`, `birth_city` | creation | Birth facts, fixed before the player's first event. |
+| `player.name_first`, `name_last`, `name_given` | creation | Given names. |
+| `player.weight`, `height` | snapshot | Ruling: one listed value per player as of the extract, and weight changes over a career (when in doubt, snapshot). Research kept them in creation. |
+| `player.bats` | snapshot | Ruling: the batting side is a choice a player can change (to or from switch-hitting); Lahman holds one current value. Research kept it in creation. |
+| `player.throws` | creation | The throwing hand, a physical trait fixed before the debut. |
+| `player.debut` | creation | It decides the creation time (min(debut, first owned event)), so it stays; for 49 players with an earlier rule-dated row it is later than the creation's own time (research §7). |
+| `player.final_game` | snapshot | A lifetime value, still open at N for 1,076 players (research §2). |
+| `player.death_year`, `death_month`, `death_day`, `death_country`, `death_state`, `death_city` | snapshot | Death is after most of the player's events, and 496 Hall of Fame rows are posthumous (research §2). |
+| `player.retro_id`, `bbref_id` | creation | External ids for the same person, assigned once. |
+| `team_franchise.franchise_id` (`ext_id`) | creation | The source key. |
+| `team_franchise.franchise_name` | snapshot | Ruling: the current name, not the founding one (ANA, created 1961, is "Los Angeles Angels of Anaheim", a 2005 name; TBD, created 1998, is "Tampa Bay Rays", a 2008 name). Research kept it in creation. |
+| `team_franchise.active` | snapshot | The current state (research §2). The previous build carried it on the creation. |
+| `team_franchise.na_assoc` | creation | The fixed link to a National Association franchise. |
+| `park.park_id` (`ext_id`) | creation | The source key. |
+| `park.park_name` | snapshot | Ruling: the current, often sponsored, name (CHI12, created 1991, is "U.S. Cellular Field", a 2003 name). Research kept it in creation. |
+| `park.park_alias` | snapshot | Ruling: the park's earlier names, a list that grows with each rename ("Edison Field; Anaheim Stadium"). Research kept it in creation. |
+| `park.city`, `state`, `country` | creation | Where the park stands; a park does not move. |
+| `college.college_id` (`ext_id`), `stub` | creation | The source key; `stub` marks the 4 unknown ids. |
+| `college.name_full` | snapshot | Ruling: the current name (`swtexas` is "Texas State University", a 2003 name; `ulala` "University of Louisiana at Lafayette", 1999), carried at T0 = 1871. Research kept it in creation. |
+| `college.city`, `state`, `country` | creation | Where the college stands. |
+| `season.year` (`ext_id`) | creation | The key; a season has no other column. |
+
+The 12 player stubs and 4 college stubs have no snapshot row; the rebuild LEFT JOINs each snapshot and leaves the stubs out of `player` and `college`.
+
+No domain name: a player's creation is his debut for 18,604 players only (254 are created at a rule date, the 12 stubs never debuted), and franchise, park, college and season creations are rules or first recorded games, so every entity keeps `<entity>_created`.
 
 ## Expected output
 
