@@ -1,0 +1,47 @@
+{
+  "name": "cliquebait",
+  "version": "v1",
+  "kind": "spider2",
+  "writer": {
+    "polars": "2.0.0",
+    "pyarrow": "26.0.0"
+  },
+  "recipe_sha256": "4b923c1dd3eedc9cf6d4a58eeaf1e75f75c6a0422e007dd7f7297375f83eca23",
+  "source_sha256": "10c8b8136486902a19c3f974f210e9fb7c8f98918ae0313114c720219b02e18c",
+  "files": {
+    "expected/queries/local075.parquet": {
+      "sha256": "5b8b17c90e9e7ee1e22d85f0f4b44fda951e0f09af9553f7001434b108afb4f4",
+      "rows": 9
+    },
+    "log/part-00000.parquet": {
+      "sha256": "13d5a63e23abade6af55ccda7b91594c83deb5c0be7c1a8896ea0a21477df82e",
+      "rows": 34537
+    },
+    "results/shopping_cart_campaign_identifier.parquet": {
+      "sha256": "668098630fbcd314926cc1accfd49b6b43332ae9fda30e2ce8f87ec0492460a8",
+      "rows": 3
+    },
+    "results/shopping_cart_event_identifier.parquet": {
+      "sha256": "54f75d13f581d7433bdc31fec069e8138fc1c2f39b89c9f437ced9e190d4e530",
+      "rows": 5
+    },
+    "results/shopping_cart_events.parquet": {
+      "sha256": "058ec9fbbe4f49fab1ac9e7f623bc326de1e91a7cd0b3a13a1cdb3bde720078d",
+      "rows": 32734
+    },
+    "results/shopping_cart_page_hierarchy.parquet": {
+      "sha256": "1aba24a4b29dc3e7e803f842ed9573646865bf92ad696972c4ac0d5ddea609fc",
+      "rows": 13
+    },
+    "results/shopping_cart_users.parquet": {
+      "sha256": "aabc5e1aa605b828e5b43c4969b1aa4dacc6c9b6786ed9d4438d99f641baa6a7",
+      "rows": 1782
+    },
+    "schema/events.json": {
+      "sha256": "333105c161b6934ce353011f4c61c592d7f84a4d8b423a6f7ebb91d576c15925"
+    },
+    "schema/results.json": {
+      "sha256": "f130b9c8da11cb77b476e56777a7d55c33b72cb9045610b545fb2ad6f9f2f962"
+    }
+  }
+}
