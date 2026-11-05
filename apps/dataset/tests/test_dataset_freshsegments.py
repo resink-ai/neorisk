@@ -1,7 +1,8 @@
 COUNTS = {
     "interest_metrics_reported": 14273,
     "interest_modified": 709,
-    "interests_created": 1209
+    "interests_created": 1209,
+    "interests_snapshot": 1209
 }
 
 
