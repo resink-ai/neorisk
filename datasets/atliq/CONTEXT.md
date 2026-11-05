@@ -34,6 +34,27 @@ The sales table is a pre-aggregate: each row, one month's quantity of one produc
 
 The fiscal year starts in September: fiscal year N starts at (N−1)-09-01. Prices, costs and discounts for fiscal year N are set at (N−1)-09-01. Customers are created at the catalog start, 2019-09-01. A product is created at the start of the first fiscal year it is priced in (2019-09-01 for 245 products, 2020-09-01 for 102); the 50 products never priced or sold are created at 2019-09-01. A sale's `fiscal_year` is its calendar year, plus one from September on.
 
+No snapshot events, so no N: the yearly prices, costs and discounts are already their own events at their fiscal year's start.
+
+## Snapshot columns
+
+None: every entity attribute travels in its creation event.
+
+| Column | Verdict | Reason |
+|---|---|---|
+| `customers.customer_code` (`ext_id`) | creation | The key. Its digits encode the channel (7 Direct, 8 Distributor, 9 Retailer) and the market (research §4). |
+| `customers.customer` | creation | A given name. |
+| `customers.platform` | creation | The kind of business the customer is (a store or an online shop), the type it was set up as: each of the 75 customer names has one platform. |
+| `customers.channel`, `market` | creation | Encoded in the customer code, so fixed when the code was issued. |
+| `customers.sub_zone`, `region` | creation | A geographic grouping of the market, one per market and NULL for exactly the USA and Canada; not a state of the customer. |
+| `products.product_code` (`ext_id`) | creation | The key. Its digits encode the division, the model, the year and the variant (research §4). |
+| `products.division`, `segment`, `category` | creation | The original classification; the division is encoded in the code. |
+| `products.product`, `variant` | creation | Given names. |
+
+Research finds no snapshot-only column (§2): there is no stock, no status, no `last_update` and no lifetime total, and every changing value (price, cost, discount) is already a yearly event.
+
+No domain name: customers are created at the catalog start and products at their first priced fiscal year, both rules, not a real-world act the source shows, so both keep `<entity>_created`.
+
 ## Expected output
 
 `results/` holds every source table, as the source stores it. Each column's type follows the values it holds: text, int64 or float64. A mixed column holds text and numbers together, so it is stored as SQLite's own text rendering and declared in `dataset.toml`.

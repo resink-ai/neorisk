@@ -1,0 +1,55 @@
+{
+  "name": "atliq",
+  "version": "v1",
+  "kind": "spider2",
+  "writer": {
+    "polars": "2.0.0",
+    "pyarrow": "26.0.0"
+  },
+  "recipe_sha256": "4aaa77d8cd278c47b023538d696b055566cdad451a7dbd8627dcb7bb8527929e",
+  "source_sha256": "d3498b07f44a4ac1757798d70f4cac7c44d16082c0608c58a74d5aa0d6d058f9",
+  "files": {
+    "expected/queries/local058.parquet": {
+      "sha256": "0912b4e00353be05dfc52160cfa95e96335e359025223bfc51529ab1c2362e73",
+      "rows": 6
+    },
+    "expected/queries/local059.parquet": {
+      "sha256": "654ee7a285b2a53984fda72edf4c6bde81d5568cd635b0104c0781a49635f3f6",
+      "rows": 3
+    },
+    "log/part-00000.parquet": {
+      "sha256": "ef945ad4ba4aa67089c99dcf5e563a8310088ff342786c87fb9087b2e76444e2",
+      "rows": 973234
+    },
+    "results/hardware_dim_customer.parquet": {
+      "sha256": "bd26bf527dee163993aa7fd58116cadd1c225d7291dfa7d0392127011833ab17",
+      "rows": 209
+    },
+    "results/hardware_dim_product.parquet": {
+      "sha256": "9ff8160779fa2fa150f8339d7e0e3db3a67f54ab159c08a3fb516588e4ec65c0",
+      "rows": 397
+    },
+    "results/hardware_fact_gross_price.parquet": {
+      "sha256": "33a851570937ffc5034301042c74568585c73f708e155f63238a8c08858c01c1",
+      "rows": 579
+    },
+    "results/hardware_fact_manufacturing_cost.parquet": {
+      "sha256": "6fa8ac5578aee92334b64efbbbe109516ec90e635fd8acb218bcccfef433a7b8",
+      "rows": 579
+    },
+    "results/hardware_fact_pre_invoice_deductions.parquet": {
+      "sha256": "4fcc87ecc99491f6deff618edfbcc27f5cd4dd2f045fb9fd7a824d8786f246f0",
+      "rows": 418
+    },
+    "results/hardware_fact_sales_monthly.parquet": {
+      "sha256": "e5b2cf4c3626921e6e5b8152e1d5f66977cc63203cdce27bd9ff01203f0df551",
+      "rows": 971631
+    },
+    "schema/events.json": {
+      "sha256": "5a616f46bec85f1d0e6ecbdfe7791a3c95e4595df8659b44ef5f7b6ba6f93258"
+    },
+    "schema/results.json": {
+      "sha256": "657f20675005970c35a4926ea76be27df4fa7e4a65b370da332927a6aee617c2"
+    }
+  }
+}
