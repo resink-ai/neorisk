@@ -2,12 +2,14 @@
 -- No source time: every row takes the rule time 2024-01-01 (alien_data.age = 2024 - birth_year).
 
 -- entity: aliens
-SELECT CAST(a.id AS TEXT) AS ext_id, a.first_name, a.last_name, a.email, a.gender, a.type,
-       a.birth_year, d.favorite_food, d.feeding_frequency, d.aggressive,
+SELECT CAST(id AS TEXT) AS ext_id, first_name, last_name, type, birth_year,
        '2024-01-01 00:00:00' AS created_at
-FROM aliens a JOIN aliens_details d ON d.detail_id = a.id ORDER BY a.id;
+FROM aliens ORDER BY id;
 
 -- event: aliens_snapshot owner=alien
-SELECT '2024-01-01 00:00:00' AS event_time, CAST(loc_id AS TEXT) AS alien, current_location,
-       state, country, occupation
-FROM aliens_location ORDER BY loc_id;
+-- The three tables are 1:1 on id = detail_id = loc_id, with no orphans.
+SELECT '2024-01-01 00:00:00' AS event_time, CAST(a.id AS TEXT) AS alien, a.email, a.gender,
+       d.favorite_food, d.feeding_frequency, d.aggressive, l.current_location, l.state,
+       l.country, l.occupation
+FROM aliens a JOIN aliens_details d ON d.detail_id = a.id JOIN aliens_location l ON l.loc_id = a.id
+ORDER BY a.id;

@@ -16,7 +16,7 @@ The reverse-engineering research, with the queries behind every number, is in [`
 
 ## How the log was made
 
-`aliens`, `aliens_details` and `aliens_location` are one alien split into three tables on the same id (id = detail_id = loc_id, 50,000 rows each, no orphans). They become one `aliens` entity, whose creation event carries the `aliens` and `aliens_details` columns. The location and occupation are snapshot columns, so they ride on one `aliens_snapshot` event per alien at the same instant. Nothing happens to an alien, so there are no other business events. `alien_data` is not read: `specs/build.sql` derives it from the other three. Every text column is lowered, the first name `'Nan'` becomes NULL (4 aliens; pandas read the name as NaN), gender folds its six other values into `non-binary`, `age` is 2024 − `birth_year`, and `us_region` is the state's BEA region from a 51-row list.
+`aliens`, `aliens_details` and `aliens_location` are one alien split into three tables on the same id (id = detail_id = loc_id, 50,000 rows each, no orphans). They become one `aliens` entity, whose creation event carries the name, the type and the birth year. The e-mail, gender, favourite food, feeding frequency, aggression flag, location and occupation are snapshot columns, so they ride on one `aliens_snapshot` event per alien at the same instant. Nothing happens to an alien, so there are no other business events. `alien_data` is not read: `specs/build.sql` derives it from the other three. Every text column is lowered, the first name `'Nan'` becomes NULL (4 aliens; pandas read the name as NaN), gender folds its six other values into `non-binary`, `age` is 2024 − `birth_year`, and `us_region` is the state's BEA region from a 51-row list.
 
 `uv run dataset build aliens` runs `specs/ingest.sql` on the read-only source to make a simkit dataset (an internal stage), then writes it as one log. Entity rows become `<entity>_created` events at their creation time; business events keep their columns. The log is in `seq` order: event time, then entities before events at the same instant. Each row's `payload` is a JSON object whose fields are listed in `schema/events.json`.
 
@@ -24,12 +24,37 @@ The reverse-engineering research, with the queries behind every number, is in [`
 
 | Event | Kind | Rows | Payload fields |
 |---|---|---:|---|
-| `aliens_created` | entity | 50,000 | `alien_id`, `ext_id`, `first_name`, `last_name`, `email`, `gender`, `type`, `birth_year`, `favorite_food`, `feeding_frequency`, `aggressive` |
-| `aliens_snapshot` | business | 50,000 | `alien`, `current_location`, `state`, `country`, `occupation` |
+| `aliens_created` | entity | 50,000 | `alien_id`, `ext_id`, `first_name`, `last_name`, `type`, `birth_year` |
+| `aliens_snapshot` | business | 50,000 | `alien`, `email`, `gender`, `favorite_food`, `feeding_frequency`, `aggressive`, `current_location`, `state`, `country`, `occupation` |
 
 ## Times set by rule
 
-Every alien is created, and its snapshot taken, at 2024-01-01 00:00:00: `alien_data.age` is exactly 2024 − `birth_year` in all 50,000 rows, so 2024 is the data's own "as of" year. `birth_year` (1672–1972) is an attribute, not a birth event.
+Every alien is created, and its snapshot taken, at 2024-01-01 00:00:00: `alien_data.age` is exactly 2024 − `birth_year` in all 50,000 rows, so 2024 is the data's own "as of" year. The snapshot time N is that instant too: there are no other events, so it is also the latest event time. `birth_year` (1672–1972) is an attribute, not a birth event.
+
+## Snapshot columns
+
+| Entity | Snapshot event | At (UTC) | Rows | Columns |
+|---|---|---|---:|---|
+| `aliens` | `aliens_snapshot` | 2024-01-01 00:00:00 | 50,000 | `email`, `gender`, `favorite_food`, `feeding_frequency`, `aggressive`, `current_location`, `state`, `country`, `occupation` |
+
+| Column | Verdict | Reason |
+|---|---|---|
+| `aliens.ext_id` | creation | The source key (`id` = `detail_id` = `loc_id`). |
+| `aliens.first_name`, `last_name` | creation | Given names. |
+| `aliens.type` | creation | The alien type it was made with, its original category. |
+| `aliens.birth_year` | creation | A birth date; `alien_data.age` is derived from it. |
+| `aliens.email` | snapshot | An e-mail. Research kept it on creation; it is not derivable, since the domain is drawn from 500. |
+| `aliens.gender` | snapshot | Ruling: a recorded identity that can change, and nothing fixes it at creation; when in doubt, snapshot. Research kept it on creation. |
+| `aliens_details.favorite_food` | snapshot | A preference, which can change. Research kept it on creation. |
+| `aliens_details.feeding_frequency` | snapshot | A habit, which can change. Research kept it on creation. |
+| `aliens_details.aggressive` | snapshot | A current trait flag; local202 reads it through `alien_data`, rebuilt from the snapshot. Research kept it on creation. |
+| `aliens_location.current_location`, `state`, `country` | snapshot | Where it lives now, an address (research). |
+| `aliens_location.occupation` | snapshot | A job held now, which can change (research). |
+| `alien_data.*` | derived | `build.sql` derives it from the other three (research). |
+
+Creation and snapshot share one instant here, so the moves change only which event carries each column; no past event exists to take a value from its future.
+
+No domain name: aliens are created at the rule time, which shows no real-world act, so they keep `aliens_created`.
 
 ## Expected output
 
