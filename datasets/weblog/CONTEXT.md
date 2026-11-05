@@ -4,7 +4,7 @@
 
 A web and app product: access, action, purchase and error logs with user, card and product masters (a textbook sample).
 
-Version `v1`, kind `spider2`. The input is one ordered event log of 851 events; the output is the 19 source tables, rebuilt exactly, and the answers to 5 saved Spider 2.0 questions.
+Version `v1`, kind `spider2`. The input is one ordered event log of 868 events; the output is the 19 source tables, rebuilt exactly, and the answers to 5 saved Spider 2.0 questions.
 
 ## Raw data
 

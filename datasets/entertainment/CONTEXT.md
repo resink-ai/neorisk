@@ -4,7 +4,7 @@
 
 An entertainment agency: agents book entertainers (acts with members and ranked musical styles) for customers (with ranked style preferences), at a contract price for a run of days.
 
-Version `v1`, kind `spider2`. The input is one ordered event log of 306 events; the output is the 13 source tables, rebuilt exactly, and the answers to 3 saved Spider 2.0 questions.
+Version `v1`, kind `spider2`. The input is one ordered event log of 476 events; the output is the 13 source tables, rebuilt exactly, and the answers to 3 saved Spider 2.0 questions.
 
 ## Raw data
 

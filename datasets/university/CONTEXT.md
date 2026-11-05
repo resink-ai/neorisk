@@ -4,7 +4,7 @@
 
 A university's course records: students enrol in course offerings and get a grade; faculty teach the offerings and report to a supervisor.
 
-Version `v1`, kind `spider2`. The input is one ordered event log of 132 events; the output is the 5 source tables, rebuilt exactly, and the answer to 1 saved Spider 2.0 question.
+Version `v1`, kind `spider2`. The input is one ordered event log of 145 events; the output is the 5 source tables, rebuilt exactly, and the answer to 1 saved Spider 2.0 question.
 
 ## Raw data
 
