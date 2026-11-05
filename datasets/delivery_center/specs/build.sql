@@ -4,7 +4,8 @@
 SELECT CAST(ext_id AS BIGINT) AS channel_id, channel_name, channel_type FROM channels;
 
 -- table: drivers
-SELECT CAST(ext_id AS BIGINT) AS driver_id, driver_modal, driver_type FROM drivers;
+SELECT CAST(x.ext_id AS BIGINT) AS driver_id, s.driver_modal, s.driver_type
+FROM drivers x LEFT JOIN drivers_snapshot s ON s.driver_key = x.driver_key;
 
 -- table: deliveries
 SELECT a.delivery_id, a.order_id AS delivery_order_id, CAST(dr.ext_id AS BIGINT) AS driver_id,
@@ -29,8 +30,9 @@ FROM payment_recorded;
 
 -- table: stores
 SELECT CAST(s.ext_id AS BIGINT) AS store_id, CAST(h.ext_id AS BIGINT) AS hub_id, s.store_name,
-       s.store_segment, s.store_plan_price, s.store_latitude, s.store_longitude
-FROM stores s JOIN hubs h USING (hub_key);
+       s.store_segment, n.store_plan_price, n.store_latitude, n.store_longitude
+FROM stores s JOIN hubs h USING (hub_key)
+LEFT JOIN stores_snapshot n ON n.store_key = s.store_key;
 
 -- table: orders
 WITH st AS (SELECT order_id,

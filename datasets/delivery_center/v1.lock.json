@@ -1,0 +1,75 @@
+{
+  "name": "delivery_center",
+  "version": "v1",
+  "kind": "spider2",
+  "writer": {
+    "polars": "2.0.0",
+    "pyarrow": "26.0.0"
+  },
+  "recipe_sha256": "442f723b1dbead1e8b2b5af6985ac54f96e87fb39191d6a4b315a843ec8f636b",
+  "source_sha256": "d882e3e6552634e27739beab4c65fe8ec2086b84155489762f9052a663913f9e",
+  "files": {
+    "expected/queries/local209.parquet": {
+      "sha256": "2f7f91d3e936ca8da113273845c05d2151613af2598a31542bdd5a3dc4eff9be",
+      "rows": 1
+    },
+    "expected/queries/local210.parquet": {
+      "sha256": "6b6957ae6f0e9d7882794988b0a1ec1757210cdc5ee97e05eb69c82e967a80d1",
+      "rows": 21
+    },
+    "expected/queries/local212.parquet": {
+      "sha256": "65a64d0d1cc32c8b0902fdb311725eb24b9f93a7741ac7800d0b114a815b297c",
+      "rows": 5
+    },
+    "log/part-00000.parquet": {
+      "sha256": "1030ad6d5fa1a0b4e608acebd6a425a263ac54f1c5d60b737096d38edf908f1a",
+      "rows": 1000000
+    },
+    "log/part-00001.parquet": {
+      "sha256": "ead5c1bac5711f39fdbb70bad79cdb9114214c09c89243265c2982f85a1e255e",
+      "rows": 1000000
+    },
+    "log/part-00002.parquet": {
+      "sha256": "4882d2ff3f8e23d790c65873046f4d607adb28fc8f4d73028c227af265d51efb",
+      "rows": 1000000
+    },
+    "log/part-00003.parquet": {
+      "sha256": "7138e3cf6108668baeeaf73ea3820c4fce09d4766aa5a5e8e02f5bc082d2a7ed",
+      "rows": 955707
+    },
+    "results/channels.parquet": {
+      "sha256": "2c72fa2fb758fc897b33cd556eeaa289a2dc70e9e3477688b0336ed03a496cb8",
+      "rows": 40
+    },
+    "results/deliveries.parquet": {
+      "sha256": "279319555322d4954dbf818c11464afeefe3f3903159b74e1163ccf9d9e9931d",
+      "rows": 378843
+    },
+    "results/drivers.parquet": {
+      "sha256": "942d70c1d2117cff9c7cb657b04e69f258855977915b0ab1893a9fa07db6f966",
+      "rows": 4824
+    },
+    "results/hubs.parquet": {
+      "sha256": "0cd08501078f4f88265e3dd06ba7bae959a40329b938b5ee393474b52bbbc44d",
+      "rows": 32
+    },
+    "results/orders.parquet": {
+      "sha256": "650ce541ba257b3a12f1f726685b31903bfab21374a56f8972f55321b6b49126",
+      "rows": 368999
+    },
+    "results/payments.parquet": {
+      "sha256": "33f3c122880b067f102dc48ef58234845a254a1602b0675630f5bb153108b886",
+      "rows": 400834
+    },
+    "results/stores.parquet": {
+      "sha256": "94c395bfa907bf2f89f2434919d3be9451735364fa9846235da67cc175572fda",
+      "rows": 951
+    },
+    "schema/events.json": {
+      "sha256": "28ba3654f4068c13fec8d54ecbcf938d262715435db71f07aafd11e6e90d7c40"
+    },
+    "schema/results.json": {
+      "sha256": "2c6c95b1d72cd35754a21fd45d4ac68fc5d809f1ea4a06ff5d62fa97114cb5a2"
+    }
+  }
+}
