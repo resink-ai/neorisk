@@ -4,7 +4,7 @@
 
 Parch & Posey, a paper company selling standard, gloss and poster paper to large US companies: accounts visit the web site through a channel and place orders; each account has a sales rep, and each rep a region.
 
-Version `v1`, kind `spider2`. The input is one ordered event log of 16,390 events; the output is the 5 source tables, rebuilt exactly, and the answer to 1 saved Spider 2.0 question.
+Version `v1`, kind `spider2`. The input is one ordered event log of 16,791 events; the output is the 5 source tables, rebuilt exactly, and the answer to 1 saved Spider 2.0 question.
 
 ## Raw data
 
@@ -16,7 +16,7 @@ The reverse-engineering research, with the queries behind every number, is in [`
 
 ## How the log was made
 
-Each web event is a `web_visited` event and each order an `order_placed` event, both owned by the account at their own `occurred_at`. Their source ids are carried (`web_event_id`, `order_id`) and ride as `ord`, because id order is not time order: the orders form two interleaved series. An order carries only its three quantities; `total` and the four `*_amt_usd` columns are rebuilt from them in integer cents (499, 749 and 812 per unit), divided by 100 once. Regions, reps and accounts are entities.
+Each web event is a `web_visited` event and each order an `order_placed` event, both owned by the account at their own `occurred_at`. Their source ids are carried (`web_event_id`, `order_id`) and ride as `ord`, because id order is not time order: the orders form two interleaved series. An order carries only its three quantities; `total` and the four `*_amt_usd` columns are rebuilt from them in integer cents (499, 749 and 812 per unit), divided by 100 once. Regions, reps and accounts are entities. A rep's region, and an account's website, location, point of contact and sales rep, are values as of the extract, so they travel in one `<entity>_snapshot` event per row at N.
 
 `uv run dataset build parchposey` runs `specs/ingest.sql` on the read-only source to make a simkit dataset (an internal stage), then writes it as one log. Entity rows become `<entity>_created` events at their creation time; business events keep their columns. The log is in `seq` order: event time, then entities before events at the same instant. Each row's `payload` is a JSON object whose fields are listed in `schema/events.json`.
 
@@ -25,14 +25,42 @@ Each web event is a `web_visited` event and each order an `order_placed` event, 
 | Event | Kind | Rows | Payload fields |
 |---|---|---:|---|
 | `region_created` | entity | 4 | `region_key`, `ext_id`, `name` |
-| `sales_reps_created` | entity | 50 | `rep_key`, `ext_id`, `name`, `region_id` |
-| `accounts_created` | entity | 351 | `account_key`, `ext_id`, `name`, `website`, `lat`, `long`, `primary_poc`, `sales_rep_id` |
+| `sales_reps_created` | entity | 50 | `rep_key`, `ext_id`, `name` |
+| `accounts_created` | entity | 351 | `account_key`, `ext_id`, `name` |
 | `web_visited` | business | 9,073 | `account_id`, `web_event_id`, `channel` |
 | `order_placed` | business | 6,912 | `account_id`, `order_id`, `standard_qty`, `gloss_qty`, `poster_qty` |
+| `sales_reps_snapshot` | business | 50 | `rep_key`, `region_id` |
+| `accounts_snapshot` | business | 351 | `account_key`, `website`, `lat`, `long`, `primary_poc`, `sales_rep_id` |
 
 ## Times set by rule
 
-Regions and sales reps are created at the catalog start, 2013-12-04 00:00:00, the day of the first event. An account is created at its first web visit; every account has one, and it precedes the account's first order.
+Regions and sales reps are created at the catalog start, 2013-12-04 00:00:00, the day of the first event. An account is created at its first web visit; every account has one, and it precedes the account's first order. Snapshots are at N = 2017-01-02 00:02:40, the last order and so the latest event time in the log (the last web visit is 2017-01-01 23:51:09).
+
+## Snapshot columns
+
+| Entity | Snapshot event | At (UTC) | Rows | Columns |
+|---|---|---|---:|---|
+| `sales_reps` | `sales_reps_snapshot` | 2017-01-02 00:02:40 | 50 | `region_id` |
+| `accounts` | `accounts_snapshot` | 2017-01-02 00:02:40 | 351 | `website`, `lat`, `long`, `primary_poc`, `sales_rep_id` |
+
+| Column | Verdict | Reason |
+|---|---|---|
+| `region.ext_id` | creation | The source key (`id`). |
+| `region.name` | creation | A given name. |
+| `sales_reps.ext_id` | creation | The source key (`id`). |
+| `sales_reps.name` | creation | A given name. |
+| `sales_reps.region_id` | snapshot | The rep's current territory, an assignment that can change. Research kept it on creation. |
+| `accounts.ext_id` | creation | The source key (`id`). |
+| `accounts.created_at` | creation | The first web visit (a rule); it is the event's time. |
+| `accounts.name` | creation | A given name (the company). |
+| `accounts.website` | snapshot | A web address, like an e-mail, known as of the extract. Research kept it on creation. |
+| `accounts.lat` | snapshot | The location, an address; known as of the extract. Research kept it on creation. |
+| `accounts.long` | snapshot | As `lat`. Research kept it on creation. |
+| `accounts.primary_poc` | snapshot | The current point of contact, who can change. Research kept it on creation. |
+| `accounts.sales_rep_id` | snapshot | The rep assigned as of the extract; an account can be reassigned. Research kept it on creation. |
+| `web_orders.total`, `*_amt_usd` | derived | The quantities times 499, 749 and 812 cents, / 100; computed in `build.sql`, not carried. |
+
+No domain name: regions and reps are created at the catalog start by rule, and an account at its first web visit by rule, so none shows a real-world act; all keep `<entity>_created`.
 
 ## Expected output
 

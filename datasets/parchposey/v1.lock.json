@@ -1,0 +1,47 @@
+{
+  "name": "parchposey",
+  "version": "v1",
+  "kind": "spider2",
+  "writer": {
+    "polars": "2.0.0",
+    "pyarrow": "26.0.0"
+  },
+  "recipe_sha256": "d048401d58d68ea4d5952228410b7ab184084494892ded9186ac8f59be40674d",
+  "source_sha256": "d3498b07f44a4ac1757798d70f4cac7c44d16082c0608c58a74d5aa0d6d058f9",
+  "files": {
+    "expected/queries/local114.parquet": {
+      "sha256": "636e7d8e4cb3e690b77d08179ed2f2cfa8e94b61545283725b472d86add48a15",
+      "rows": 4
+    },
+    "log/part-00000.parquet": {
+      "sha256": "eef7bc2cfa3c623baa72695f7f3899ce79c474188c0503a22f5c0e4f804655c4",
+      "rows": 16791
+    },
+    "results/web_accounts.parquet": {
+      "sha256": "774b9385ea99cf74a970c11eac8552aa4b68cc7eee2e2ff4b46d6b650bbc2848",
+      "rows": 351
+    },
+    "results/web_events.parquet": {
+      "sha256": "0e89e86a7a05bdb14b9f3abc66479ac0ed9d7bd70fbe85d7cd826c70daa9a4c2",
+      "rows": 9073
+    },
+    "results/web_orders.parquet": {
+      "sha256": "e6687a827ccd6209370ef62f55f01aff5c0c3885a2830a86ea5a63b163c55ffe",
+      "rows": 6912
+    },
+    "results/web_region.parquet": {
+      "sha256": "20d5efc26abaab315cf02f881707c7855c73c9f074bd9303d23be33b9230635c",
+      "rows": 4
+    },
+    "results/web_sales_reps.parquet": {
+      "sha256": "75180d48b6863808535e783878b67477bd8afc4cf55620c34be87ba61e533666",
+      "rows": 50
+    },
+    "schema/events.json": {
+      "sha256": "11ddad96e2283e4fd7b3eaaca7082e23f2b14bec41219425d77a0500cfedac98"
+    },
+    "schema/results.json": {
+      "sha256": "a576e932fb4bd9fc3ec2c80aed91bb48fb5362a4697111d75edaa15768d4a8d7"
+    }
+  }
+}
