@@ -42,6 +42,26 @@ Promotions, locations, shows (`Events`), sides (`Wrestlers`), belts, match types
 
 Card dates are the only times in the source, read as UTC midnight; a match takes its card's date. The scrape runs have no recorded time: run r is stamped at the latest card date among the cards first seen in runs 1..r, which gives 2023-11-04, 2023-11-14, 2023-11-24, 2023-12-05, 2023-12-18, 2023-12-28 and 2024-01-14 (N, the last card date). A card's page snapshot takes its first run's time. Sides, belts and match types are created on the earliest card date of a match that uses them. Promotions, locations and shows are created on the earliest card that uses them; the unused ones (ECW, 13 locations, 13 shows) and all listing pages are created at the run-1 time, 2023-11-04. Every time is ≤ N. Run times are a scraper fact and a lower bound, not a domain fact.
 
+## Snapshot columns
+
+None: every entity attribute travels in its creation event.
+
+No column qualifies, so there are no `<entity>_snapshot` events and no snapshot time N is needed. Were one added, N would be 2024-01-14, the last card date and run 7's time.
+
+| Column | Verdict | Reason |
+|---|---|---|
+| `*.id` (`ext_id`, every entity) | creation | The scraper's counter, the source key. |
+| `Promotions.name` | creation | A given name. |
+| `Locations.name` | creation | A place name, `'City, State'`; a different name would be a different row. |
+| `Events.name` (`shows`) | creation | A show's title. |
+| `Wrestlers.name` (`sides`) | creation | The side's members, sorted and joined: the row's identity, which a new line-up makes a new row. |
+| `Belts.name` | creation | A title's name, the row's identity (`''` = no title). |
+| `Match_Types.name` | creation | A type name, the row's identity (`''` = plain). |
+| `Tables.html`, `Tables.url` | creation | The listing page as fetched in run 1, and a listing page is created at the run-1 time, so the HTML carries nothing from its future (research). Moving it to N would date it later than its fetch. |
+| `Cards.url`, `info_html`, `match_html` | not an entity column | They ride on `card_page_scraped` at the card's first-run time (research). |
+
+No domain name: every entity's creation time is a rule (first use, or the run-1 time), which shows no real-world act, so each keeps `<entity>_created`.
+
 ## Expected output
 
 `results/` holds every source table, as the source stores it. Each column's type follows the values it holds: text, int64 or float64. A mixed column holds text and numbers together, so it is stored as SQLite's own text rendering and declared in `dataset.toml`.

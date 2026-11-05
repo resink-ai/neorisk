@@ -1,0 +1,63 @@
+{
+  "name": "wwe",
+  "version": "v1",
+  "kind": "spider2",
+  "writer": {
+    "polars": "2.0.0",
+    "pyarrow": "26.0.0"
+  },
+  "recipe_sha256": "197b90c58802fd7d4488baac1c96523cbc9b7ae1fb7d387627b108da7db2dd0f",
+  "source_sha256": "5e21654b3ea344583c921864c499ea984e66fb46579f7d4e74f531d0f415a52a",
+  "files": {
+    "expected/queries/local019.parquet": {
+      "sha256": "776069936cabde20e80c71577bfd6bcad4238ea0a1d4546b59e24d305307fd63",
+      "rows": 1
+    },
+    "log/part-00000.parquet": {
+      "sha256": "67e4814b4caafdfe5258154430c4f9c6f92a2cdb3525b881f68eae7f89fbde21",
+      "rows": 128303
+    },
+    "results/Belts.parquet": {
+      "sha256": "17bb9a4dd70136470ae557c6305583bf760b0978bb9a78d4fde5524a6239db16",
+      "rows": 143
+    },
+    "results/Cards.parquet": {
+      "sha256": "b43cae26f298b48a36fc7868b99e2826fa52106d40614428c88052a777d5cbd6",
+      "rows": 12639
+    },
+    "results/Events.parquet": {
+      "sha256": "57ab4222b439c0dc5bbcf26fe89ff01766aab9cd2e726df8b83c6e6e073e2e22",
+      "rows": 5033
+    },
+    "results/Locations.parquet": {
+      "sha256": "bf82317b26260f87df266e210bc65e2ab97b0b730be54a32163667ff2b212b1a",
+      "rows": 609
+    },
+    "results/Match_Types.parquet": {
+      "sha256": "bade742aba764220f69d03cfe8ebe263ff74302ae80bc121935715f4f25a4a34",
+      "rows": 1208
+    },
+    "results/Matches.parquet": {
+      "sha256": "cdc27cdfcdb8c4ea464177b47488d8cffe77888fb6f4565771daa16a0cac1b26",
+      "rows": 540800
+    },
+    "results/Promotions.parquet": {
+      "sha256": "0d7f0c0b4472bc5924b87e9c1433788d506116a02598439167dc058766395892",
+      "rows": 6
+    },
+    "results/Tables.parquet": {
+      "sha256": "d1fd072b1e1df921af247797f14d27d272e5c46d03e10ca2f40c0a173e76a02f",
+      "rows": 1270
+    },
+    "results/Wrestlers.parquet": {
+      "sha256": "3e8caaf1c0defad491e063bb8bf2b2a2663a7a2bb3246bd6b5963b00113d5f1c",
+      "rows": 17182
+    },
+    "schema/events.json": {
+      "sha256": "6e824f22755e246e8b6ec1e9feb4fdc356f9c9ec06b384cdc0954f264ff10376"
+    },
+    "schema/results.json": {
+      "sha256": "a7eed9a3fc293cce34fcf971af2dae520101de1321e18b7399c21cb918c5bce7"
+    }
+  }
+}
