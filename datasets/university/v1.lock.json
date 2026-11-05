@@ -1,0 +1,47 @@
+{
+  "name": "university",
+  "version": "v1",
+  "kind": "spider2",
+  "writer": {
+    "polars": "2.0.0",
+    "pyarrow": "26.0.0"
+  },
+  "recipe_sha256": "715ba9a8f548642db230356569c39ce0e50d37c36434f51bd00cd4be36afe92c",
+  "source_sha256": "d3498b07f44a4ac1757798d70f4cac7c44d16082c0608c58a74d5aa0d6d058f9",
+  "files": {
+    "expected/queries/local163.parquet": {
+      "sha256": "0833997d6e44dd520e31c8ddf8d304dda7609856428ce5bc850b5ba21f593dfd",
+      "rows": 4
+    },
+    "log/part-00000.parquet": {
+      "sha256": "598df1c8e196c4e47f132b916d1733e065f06d0b8a9e10a33ab740dbe231e64f",
+      "rows": 145
+    },
+    "results/university_course.parquet": {
+      "sha256": "0af679cec9b0d69b83260bebbad2982fcbd7d77d3a6ff2f84547e96d675b8958",
+      "rows": 7
+    },
+    "results/university_enrollment.parquet": {
+      "sha256": "28657fb0ba0df3f1c3f655b535839fc0951c59a535b778946191deff15a2bca7",
+      "rows": 37
+    },
+    "results/university_faculty.parquet": {
+      "sha256": "b80f99177125386ebd9d3c1feb3566bb8ff12c8ad7ce822c75164a3f2972c376",
+      "rows": 8
+    },
+    "results/university_offering.parquet": {
+      "sha256": "fd4a3fd309fb61a70121bbe635cf1885183f23c999ebd22142f1599990d530b2",
+      "rows": 13
+    },
+    "results/university_student.parquet": {
+      "sha256": "f3278895b6de03b8e16caec45a54146848f7e2219b53cc63677ef429f726f47f",
+      "rows": 11
+    },
+    "schema/events.json": {
+      "sha256": "aacb7f969a47bf16784447032eb58f9715dfa2cfcf34027f340b2e36247114a1"
+    },
+    "schema/results.json": {
+      "sha256": "a9a83711dc1bb111d4bb742446bf11450322ad63259d8a34339b438c2d2c7fda"
+    }
+  }
+}
