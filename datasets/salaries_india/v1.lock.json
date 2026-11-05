@@ -1,0 +1,31 @@
+{
+  "name": "salaries_india",
+  "version": "v1",
+  "kind": "spider2",
+  "writer": {
+    "polars": "2.0.0",
+    "pyarrow": "26.0.0"
+  },
+  "recipe_sha256": "a282849c96edbb084aec03fae2ea758210207e830734f5366d8b38b70509793f",
+  "source_sha256": "d3498b07f44a4ac1757798d70f4cac7c44d16082c0608c58a74d5aa0d6d058f9",
+  "files": {
+    "expected/queries/local253.parquet": {
+      "sha256": "94b3da9e9a6a82c2d7fed28857a98f09c2865b092a9d6759f28927c3aed99ba0",
+      "rows": 20
+    },
+    "log/part-00000.parquet": {
+      "sha256": "42bc7096875feef2ac91b632a2c8560dadb6dacacb37482076beedb82ef05c3f",
+      "rows": 8688
+    },
+    "results/SalaryDataset.parquet": {
+      "sha256": "334a16e93e81dfc31127750d664608fb221269c32e807a90cc18e384cd217387",
+      "rows": 4344
+    },
+    "schema/events.json": {
+      "sha256": "4c14a7730bef2ffbb277e516474818bee7b1da2aed58c436481fe35c96326ed7"
+    },
+    "schema/results.json": {
+      "sha256": "76c778ef545bff4bae0c22295b781f1dc161dc230ec4391523d8849827149b39"
+    }
+  }
+}
