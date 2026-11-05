@@ -27,7 +27,7 @@ Flight lifecycle events are owned by the flight, bookings and tickets by the boo
 | `aircrafts_created` | entity | 9 | `aircraft_key`, `ext_id`, `model`, `range` |
 | `airports_created` | entity | 104 | `airport_key`, `ext_id`, `airport_name`, `city`, `coordinates`, `timezone` |
 | `seats_created` | entity | 1,339 | `seat_key`, `ext_id`, `aircraft_key`, `seat_no`, `fare_conditions` |
-| `flight_scheduled` | business | 33,121 | `flight_id`, `flight_no`, `scheduled_departure`, `scheduled_arrival`, `departure_airport`, `arrival_airport`, … (7 in all) |
+| `flight_scheduled` | business | 33,121 | `flight_id`, `flight_no`, `scheduled_departure`, `scheduled_arrival`, `departure_airport`, `arrival_airport`, `aircraft_key` |
 | `flight_cancelled` | business | 414 | `flight_id` |
 | `checkin_opened` | business | 17,324 | `flight_id` |
 | `flight_delayed` | business | 41 | `flight_id` |
@@ -42,9 +42,30 @@ Flight lifecycle events are owned by the flight, bookings and tickets by the boo
 
 Flight scheduling and cancellation are 30 days before departure; tickets take the booking time; check-ins are 130 to 90 minutes before departure, in boarding order.
 
+Aircraft, airports and seats have no creation time in the source, so they are created at the dataset's first time, 2017-06-15 18:50:00 (the ingest default: the earliest `flight_scheduled`).
+
+N = 2017-08-15 18:00:00 (+03), the source's own snapshot time (`bookings.now()`, the latest `book_date` and `actual_arrival`). It caps every invented time. There are no snapshot events, so nothing is placed at N.
+
 ## Snapshot columns
 
-Classified in PR 2. Until then every entity attribute travels in its creation event.
+None: every entity attribute travels in its creation event.
+
+| Column | Verdict | Reason |
+|---|---|---|
+| `aircrafts_data.aircraft_code` (`ext_id`) | creation | The key. A code names an aircraft model (the type), not a single airframe. |
+| `aircrafts_data.model` | creation | The model's given name (JSON text, en and ru). |
+| `aircrafts_data.range` | creation | The model's design range in km, a fixed property of the type, not of a plane's state. |
+| `airports_data.airport_code` (`ext_id`) | creation | The key. |
+| `airports_data.airport_name` | creation | A given name (JSON text). |
+| `airports_data.city` | creation | The city the airport serves (JSON text): its fixed location, not a mailing address that can move. |
+| `airports_data.coordinates` | creation | The airport's fixed position, `(lon,lat)`. |
+| `airports_data.timezone` | creation | The tz name of the airport's location (17 in all), fixed with the position. |
+| `seats.aircraft_code` (`aircraft_key`), `seat_no` | creation | The key: an immutable ref to the model and the seat label. |
+| `seats.fare_conditions` | creation | The class the seat was laid out in. Every boarding pass's seat is in the class of its segment (579,686 of 579,686, research §3), so a later re-layout would contradict past check-ins. |
+
+Research classes all three tables as static (§1): there is no stock, no status, no `last_update` and no lifetime total on them. Every per-flight and per-booking state is already its own event or derived: a flight's status and actual times come from its lifecycle events, a booking's `total_amount` is the sum of its `segment_sold` amounts, and seat occupancy is the `passenger_checked_in` seat numbers.
+
+No domain name: the source shows no act that brings an aircraft model, an airport or a seat into being, so each keeps `<entity>_created`.
 
 ## Expected output
 
