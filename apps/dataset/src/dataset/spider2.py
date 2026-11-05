@@ -22,6 +22,7 @@ import pyarrow.parquet as pq
 from dataset.config import DatasetConfig
 from dataset.manifest import files_of, lock_diff, lock_of, recipe_sha256, sha256, write_json, writer
 from dataset.names import resolve
+from dataset.snapshots import check_snapshots
 from dataset.tables import (
     TableResult,
     answer_table,
@@ -121,6 +122,10 @@ def build_spider2(cfg: DatasetConfig, db: Path, *, record: bool = False) -> dict
                 write_log(read(ds), tmp, owners=owners(cfg.dir))
             except (IngestError, LogError) as e:
                 raise BuildError(f"{cfg.name}: {e}") from e
+        problems = check_snapshots(tmp)
+        if problems:
+            raise BuildError(f"{cfg.name}: the snapshot events break the contract: "
+                             + "; ".join(problems))
         meta = _results(cfg, db, tmp)
         rep = verify(cfg, root=tmp)
         if not rep["ok"]:

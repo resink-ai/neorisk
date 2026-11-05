@@ -179,3 +179,18 @@ def test_exact_column_must_be_float(shop_dataset):
         "[results.mixed]", '[results.exact]\norders = ["note"]\n[results.mixed]'))
     with pytest.raises(BuildError, match="note"):
         build_spider2(load(cfg.dir), db)
+
+
+def test_snapshot_shop_builds(shop_dataset):
+    from conftest import snapshot_shop
+    cfg, db = shop_dataset
+    snapshot_shop(cfg.dir)
+    assert build_spider2(load(cfg.dir), db)["counts"]["log"] == 9
+
+
+def test_build_refuses_bad_snapshot(shop_dataset):
+    from conftest import snapshot_shop
+    cfg, db = shop_dataset
+    snapshot_shop(cfg.dir, ref_owner=False)
+    with pytest.raises(BuildError, match="customers_snapshot"):
+        build_spider2(load(cfg.dir), db)
