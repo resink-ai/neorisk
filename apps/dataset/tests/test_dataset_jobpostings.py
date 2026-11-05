@@ -1,5 +1,6 @@
 COUNTS = {
     "companies_created": 14003,
+    "companies_snapshot": 14003,
     "job_posted": 78769,
     "job_skills_created": 366960,
     "skills_created": 26,

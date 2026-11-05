@@ -4,12 +4,13 @@ from the Spider2 tables (docs/research/spider2/jobpostings.md); stage 2 adds the
 
 Spider kept an independent ~10% sample of each table, so about 90% of the company, job and
 skill ids point at rows that are not here. Every id is therefore a raw i64, never a ref. The
-salaries are float32 artefacts and travel as f64 verbatim.
+salaries are float32 artefacts and travel as f64 verbatim. A company's website and its
+scrape-time Google links ride on one snapshot per company at N, the last posting.
 """
 
 from dataclasses import dataclass
 
-from neorisk_simkit.spec import Pack, cat, f64, i32, i64, opt, text
+from neorisk_simkit.spec import Pack, cat, f64, i32, i64, opt, ref, text
 
 SCHEMA_VERSION = 1
 
@@ -30,8 +31,12 @@ def t():
 def define(p: Pack) -> None:
     p.entity("companies", key="company_key",
              doc="job_company; created at its first posting, else the catalog start (rules)",
-             cols={"ext_id": text(doc="company_id"), "name": text(), "link": t(),
-                   "link_google": t(), "thumbnail": t()})
+             cols={"ext_id": text(doc="company_id"), "name": text()})
+    p.event("companies_snapshot",
+            doc="State at N = 2023-12-31 03:18:00, the last posting: website and scrape links",
+            cols={"company_key": ref("companies"), "link": t(),
+                  "link_google": opt(text(doc="Carries scrape-session tokens")),
+                  "thumbnail": opt(text(doc="Carries scrape-session image ids"))})
     p.entity("skills", key="skill_key", doc="skills_dim; created at the catalog start (a rule)",
              cols={"ext_id": text(doc="skill_id"), "skills": text(),
                    "type": cat("analyst_tools", "async", "cloud", "databases", "programming",

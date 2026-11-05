@@ -4,7 +4,7 @@
 
 Data-job postings scraped from Google Jobs during 2023: each posting, the companies behind them, the skills catalogue, and which skills each posting asks for.
 
-Version `v1`, kind `spider2`. The input is one ordered event log of 459,758 events; the output is the 4 source tables, rebuilt exactly, and the answer to 1 saved Spider 2.0 question.
+Version `v1`, kind `spider2`. The input is one ordered event log of 473,761 events; the output is the 4 source tables, rebuilt exactly, and the answer to 1 saved Spider 2.0 question.
 
 ## Raw data
 
@@ -16,7 +16,7 @@ The reverse-engineering research, with the queries behind every number, is in [`
 
 ## How the log was made
 
-Each posting is a `job_posted` event owned by its `job_id`, at `job_posted_date`, with `ord = job_id` among the 2,785 tied times. Companies, skills and the posting-skill links are entities. Because the sampling leaves about 90% of every relation orphaned, `company_id` on a posting and `job_id` and `skill_id` on a link are raw `i64` ids, never refs, and every table is a straight projection of its event or entity. The salaries are float32 artefacts and travel as `f64` verbatim.
+Each posting is a `job_posted` event owned by its `job_id`, at `job_posted_date`, with `ord = job_id` among the 2,785 tied times. Companies, skills and the posting-skill links are entities. Because the sampling leaves about 90% of every relation orphaned, `company_id` on a posting and `job_id` and `skill_id` on a link are raw `i64` ids, never refs, and every table is a straight projection of its event or entity. The salaries are float32 artefacts and travel as `f64` verbatim. A company's website and its scrape-time Google links are snapshot columns: they ride on one `companies_snapshot` event per company at N.
 
 `uv run dataset build jobpostings` runs `specs/ingest.sql` on the read-only source to make a simkit dataset (an internal stage), then writes it as one log. Entity rows become `<entity>_created` events at their creation time; business events keep their columns. The log is in `seq` order: event time, then entities before events at the same instant. Each row's `payload` is a JSON object whose fields are listed in `schema/events.json`.
 
@@ -24,14 +24,37 @@ Each posting is a `job_posted` event owned by its `job_id`, at `job_posted_date`
 
 | Event | Kind | Rows | Payload fields |
 |---|---|---:|---|
-| `companies_created` | entity | 14,003 | `company_key`, `ext_id`, `name`, `link`, `link_google`, `thumbnail` |
+| `companies_created` | entity | 14,003 | `company_key`, `ext_id`, `name` |
 | `skills_created` | entity | 26 | `skill_key`, `ext_id`, `skills`, `type` |
 | `job_skills_created` | entity | 366,960 | `job_skill_key`, `ext_id`, `job_id`, `skill_id` |
+| `companies_snapshot` | business | 14,003 | `company_key`, `link`, `link_google`, `thumbnail` |
 | `job_posted` | business | 78,769 | `job_id`, `company_id`, `job_title_short`, `job_title`, `job_location`, `job_via`, `job_schedule_type`, `job_work_from_home`, `search_location`, `job_no_degree_mention`, `job_health_insurance`, `job_country`, `salary_rate`, `salary_year_avg`, `salary_hour_avg` |
 
 ## Times set by rule
 
-The catalog start is the first posting, 2022-12-31 06:03:30. A company is created at its first posting (3,476 companies), else at the catalog start (10,527). A skill is created at the catalog start. A skill link is created at its posting's time (36,880 links), else at the catalog start (330,080).
+The catalog start is the first posting, 2022-12-31 06:03:30. A company is created at its first posting (3,476 companies), else at the catalog start (10,527). A skill is created at the catalog start. A skill link is created at its posting's time (36,880 links), else at the catalog start (330,080). N = 2023-12-31 03:18:00, the last posting and the latest event time in the log; every company snapshot is at N.
+
+## Snapshot columns
+
+| Entity | Snapshot event | At (UTC) | Rows | Columns |
+|---|---|---|---:|---|
+| `companies` | `companies_snapshot` | 2023-12-31 03:18:00 | 14,003 | `link`, `link_google`, `thumbnail` |
+
+| Column | Verdict | Reason |
+|---|---|---|
+| `job_company.company_id` (`ext_id`) | creation | The source key. |
+| `job_company.name` | creation | A given name. |
+| `job_company.link` | snapshot | Ruling: the company's website as of the scrape, an address that can change (when in doubt, snapshot). Research kept it in creation. |
+| `job_company.link_google` | snapshot | A google.com/search URL with scrape-session tokens (`sca_esv=`, `ved=`): a value at scrape time (research §2). |
+| `job_company.thumbnail` | snapshot | A Google image URL with a scrape-session id (`encrypted-tbn0`): a value at scrape time (research §2). |
+| `skills_dim.skill_id` (`ext_id`) | creation | The source key. |
+| `skills_dim.skills` | creation | A given name. |
+| `skills_dim.type` | creation | The original category the skill was created with. |
+| `skills_job_dim.job_id`, `skill_id` (and `ext_id`) | creation | The link's key: two immutable raw ids. |
+
+No snapshot column decides an event's time or order: a company is created at its first posting, else at the catalog start.
+
+No domain name: companies, skills and links have no creation act in the source (their times are rules), so all keep `<entity>_created`. The real act, a posting, is already `job_posted`.
 
 ## Expected output
 
