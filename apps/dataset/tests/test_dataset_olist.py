@@ -12,7 +12,9 @@ COUNTS = {
     "lead_qualified": 8000,
     "lead_won": 842,
     "sellers_created": 3095,
+    "sellers_snapshot": 3095,
     "products_created": 32951,
+    "products_snapshot": 32951,
     "geolocation_created": 1000163,
     "translations_created": 71
 }

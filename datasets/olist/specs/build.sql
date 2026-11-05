@@ -5,9 +5,9 @@ SELECT ext_id AS product_category_name, english AS product_category_name_english
 FROM translations;
 
 -- table: sellers
-SELECT ext_id AS seller_id, zip_code_prefix AS seller_zip_code_prefix, city AS seller_city,
-       state AS seller_state
-FROM sellers;
+SELECT x.ext_id AS seller_id, s.zip_code_prefix AS seller_zip_code_prefix,
+       s.city AS seller_city, s.state AS seller_state
+FROM sellers x LEFT JOIN sellers_snapshot s ON s.seller_id = x.seller_key;
 
 -- table: customers
 SELECT customer_id, customer_unique_id, zip_code_prefix AS customer_zip_code_prefix,
@@ -65,12 +65,12 @@ LEFT JOIN order_delivered dl USING (order_id)
 LEFT JOIN order_status_final f USING (order_id);
 
 -- table: products
-SELECT ext_id AS product_id, category AS product_category_name,
-       name_length AS product_name_lenght, description_length AS product_description_lenght,
-       photos_qty AS product_photos_qty, weight_g AS product_weight_g,
-       length_cm AS product_length_cm, height_cm AS product_height_cm,
-       width_cm AS product_width_cm
-FROM products;
+SELECT x.ext_id AS product_id, x.category AS product_category_name,
+       s.name_length AS product_name_lenght, s.description_length AS product_description_lenght,
+       s.photos_qty AS product_photos_qty, s.weight_g AS product_weight_g,
+       s.length_cm AS product_length_cm, s.height_cm AS product_height_cm,
+       s.width_cm AS product_width_cm
+FROM products x LEFT JOIN products_snapshot s ON s.product_id = x.product_key;
 
 -- table: leads_qualified
 SELECT mql_id, strftime(event_time AT TIME ZONE 'UTC', '%Y-%m-%d') AS first_contact_date,

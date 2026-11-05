@@ -1,16 +1,12 @@
 -- Olist: source tables → events (refdata ingest). Wall clock is stored as UTC; money in cents.
+-- Entities are created at the first purchase (the default). Snapshots at N = 2018-11-15
+-- 00:00, the day after the last event (a won_date of 2018-11-14).
 
 -- entity: sellers
-SELECT seller_id AS ext_id, seller_zip_code_prefix AS zip_code_prefix, seller_city AS city,
-       seller_state AS state
-FROM sellers ORDER BY seller_id;
+SELECT seller_id AS ext_id FROM sellers ORDER BY seller_id;
 
 -- entity: products
-SELECT product_id AS ext_id, product_category_name AS category,
-       product_name_lenght AS name_length, product_description_lenght AS description_length,
-       product_photos_qty AS photos_qty, product_weight_g AS weight_g,
-       product_length_cm AS length_cm, product_height_cm AS height_cm,
-       product_width_cm AS width_cm
+SELECT product_id AS ext_id, product_category_name AS category
 FROM products ORDER BY product_id;
 
 -- entity: geolocation
@@ -92,3 +88,15 @@ ORDER BY order_id, review_id;
 SELECT review_answer_timestamp AS event_time, review_id, order_id, review_score,
        review_comment_title, review_comment_message
 FROM order_reviews ORDER BY order_id, review_id;
+
+-- event: sellers_snapshot owner=seller_id
+SELECT '2018-11-15 00:00:00' AS event_time, seller_id, seller_zip_code_prefix AS zip_code_prefix,
+       seller_city AS city, seller_state AS state
+FROM sellers ORDER BY seller_id;
+
+-- event: products_snapshot owner=product_id
+SELECT '2018-11-15 00:00:00' AS event_time, product_id, product_name_lenght AS name_length,
+       product_description_lenght AS description_length, product_photos_qty AS photos_qty,
+       product_weight_g AS weight_g, product_length_cm AS length_cm,
+       product_height_cm AS height_cm, product_width_cm AS width_cm
+FROM products ORDER BY product_id;
