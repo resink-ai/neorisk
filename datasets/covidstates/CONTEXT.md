@@ -33,6 +33,12 @@ Each state-day is one `daily_totals_reported` event, owned by the state, at the 
 
 The duplicate markers are at N = 2020-11-11 00:00:00, the last report date. Every other time is the source's report date.
 
+## Snapshot columns
+
+None: every entity attribute travels in its creation event.
+
+The dataset has no entities, so no column is classified. A state is a text owner on its daily reports, not an entity: it has no attribute of its own, and the cumulative totals are dated business events, not state known only at N.
+
 ## Expected output
 
 `results/` holds every source table, as the source stores it. Each column's type follows the values it holds: text, int64 or float64. A mixed column holds text and numbers together, so it is stored as SQLite's own text rendering and declared in `dataset.toml`.

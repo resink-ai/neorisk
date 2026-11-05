@@ -1,0 +1,27 @@
+{
+  "name": "covidstates",
+  "version": "v1",
+  "kind": "spider2",
+  "writer": {
+    "polars": "2.0.0",
+    "pyarrow": "26.0.0"
+  },
+  "recipe_sha256": "23900af47978736c84836912a90a9b15f142b4cc8b30d0e41001ba38a5b19d27",
+  "source_sha256": "d4910db155d7be8070d14cab6e44862d0fa74d71e6588d114c4bacb4225942e4",
+  "files": {
+    "log/part-00000.parquet": {
+      "sha256": "28909cef21715d452dc9285f574d99e814613d1bf3f2fc8533fa532555c00d07",
+      "rows": 1010
+    },
+    "results/statistics.parquet": {
+      "sha256": "27a954f8a372b0e2cdc7702ab76f214422ce606ba7f29b33fc3445ad9278cc91",
+      "rows": 1010
+    },
+    "schema/events.json": {
+      "sha256": "1aa0840e5e96ff773eccbc397aa28031375d903e482232bef46d857d06b6cf40"
+    },
+    "schema/results.json": {
+      "sha256": "1e2b927e762193f53a350e2b3c29e070e859ff821be846c84d5ec326706e2898"
+    }
+  }
+}
