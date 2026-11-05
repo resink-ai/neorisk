@@ -4,8 +4,7 @@
 
 -- entity: circuits
 -- Created at Jan 1 of the circuit's first race year.
-SELECT c.circuit_id AS ext_id, c.circuit_ref, c.name, c.location, c.country, c.lat, c.lng,
-       c.alt, c.url,
+SELECT c.circuit_id AS ext_id, c.circuit_ref, c.location, c.country, c.lat, c.lng, c.alt,
        (SELECT min(r.year) FROM races r WHERE r.circuit_id = c.circuit_id) || '-01-01 00:00:00'
            AS created_at
 FROM circuits c ORDER BY c.circuit_id;
@@ -13,7 +12,7 @@ FROM circuits c ORDER BY c.circuit_id;
 -- entity: constructors
 -- Created at Jan 1 of the first year it is classified, scored or ranked; the unused one at
 -- 1950-01-01.
-SELECT c.constructor_id AS ext_id, c.constructor_ref, c.name, c.nationality, c.url,
+SELECT c.constructor_id AS ext_id, c.constructor_ref, c.name, c.nationality,
        coalesce((SELECT min(r.year) FROM races r JOIN (
                      SELECT race_id, constructor_id FROM results
                      UNION ALL SELECT race_id, constructor_id FROM qualifying
@@ -26,8 +25,7 @@ FROM constructors c ORDER BY c.constructor_id;
 
 -- entity: drivers
 -- Created at Jan 1 of the first year with a result or a qualifying row.
-SELECT d.driver_id AS ext_id, d.driver_ref, d.number, d.code, d.forename, d.surname, d.dob,
-       d.nationality, d.url,
+SELECT d.driver_id AS ext_id, d.driver_ref, d.forename, d.surname, d.dob, d.nationality,
        (SELECT min(r.year) FROM races r JOIN (
             SELECT race_id, driver_id FROM results
             UNION ALL SELECT race_id, driver_id FROM qualifying) u
@@ -35,7 +33,7 @@ SELECT d.driver_id AS ext_id, d.driver_ref, d.number, d.code, d.forename, d.surn
 FROM drivers d ORDER BY d.driver_id;
 
 -- entity: seasons
-SELECT year AS ext_id, url, year || '-01-01 00:00:00' AS created_at
+SELECT year AS ext_id, year || '-01-01 00:00:00' AS created_at
 FROM seasons ORDER BY year;
 
 -- entity: status
@@ -51,8 +49,8 @@ SELECT constructor_ref AS ext_id, short_name, '1950-01-01 00:00:00' AS created_a
 FROM short_constructor_names ORDER BY constructor_ref;
 
 -- entity: liveries
--- Created at Jan 1 of start_year; end_year is a snapshot value.
-SELECT constructor_ref || '/' || start_year AS ext_id, constructor_ref, start_year, end_year,
+-- Created at Jan 1 of start_year; end_year rides on liveries_snapshot.
+SELECT constructor_ref || '/' || start_year AS ext_id, constructor_ref, start_year,
        primary_hex_code, start_year || '-01-01 00:00:00' AS created_at
 FROM liveries ORDER BY constructor_ref, start_year;
 
@@ -61,6 +59,31 @@ FROM liveries ORDER BY constructor_ref, start_year;
 SELECT year || '/' || constructor_ref || '/' || driver_ref AS ext_id, year, constructor_ref,
        driver_ref, team_driver_rank, '2024-07-08 00:00:00' AS created_at
 FROM tdr_overrides ORDER BY year, constructor_ref, driver_ref;
+
+-- event: circuits_snapshot owner=circuit_id
+-- At N: the current name (villeneuve, first raced 1978, took Gilles Villeneuve's name in
+-- 1982) and the Wikipedia link as of the dump.
+SELECT '2024-07-08 00:00:00' AS event_time, circuit_id, name, url
+FROM circuits ORDER BY circuit_id;
+
+-- event: constructors_snapshot owner=constructor_id
+SELECT '2024-07-08 00:00:00' AS event_time, constructor_id, url
+FROM constructors ORDER BY constructor_id;
+
+-- event: drivers_snapshot owner=driver_id
+-- At N: today's permanent number and code (research §2), and the Wikipedia link.
+SELECT '2024-07-08 00:00:00' AS event_time, driver_id, number, code, url
+FROM drivers ORDER BY driver_id;
+
+-- event: seasons_snapshot owner=season_id
+SELECT '2024-07-08 00:00:00' AS event_time, year AS season_id, url
+FROM seasons ORDER BY year;
+
+-- event: liveries_snapshot owner=livery_id
+-- At N: end_year is NULL for the 10 liveries still current.
+SELECT '2024-07-08 00:00:00' AS event_time, constructor_ref || '/' || start_year AS livery_id,
+       end_year
+FROM liveries ORDER BY constructor_ref, start_year;
 
 -- event: race_scheduled owner=circuit_id ord=race_id
 -- At Jan 1 of the season (no calendar publication date exists).

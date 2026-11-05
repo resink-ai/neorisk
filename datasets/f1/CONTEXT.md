@@ -4,7 +4,7 @@
 
 Formula 1, every World Championship race from 1950-05-13 to 2024-07-07: the calendar, qualifying, laps, pit stops, race and sprint classifications, and the official driver and constructor standings after each race.
 
-Version `v1`, kind `spider2`. The input is one ordered event log of 686,185 events; the output is the 29 source tables, rebuilt exactly, and the answers to 9 saved Spider 2.0 questions.
+Version `v1`, kind `spider2`. The input is one ordered event log of 687,472 events; the output is the 29 source tables, rebuilt exactly, and the answers to 9 saved Spider 2.0 questions.
 
 ## Raw data
 
@@ -16,7 +16,7 @@ The reverse-engineering research, with the queries behind every number, is in [`
 
 ## How the log was made
 
-Circuits, constructors, drivers, seasons, statuses and the four hand tables are entities. Each race is a `race_scheduled` event owned by its circuit; `race_id` is a plain id in every later event, since the 12 unraced rounds exist only as scheduled races. Qualifying, sprints, laps, pit stops and race results are events owned by the driver; constructor race points and both standings are reported events, because the official points and positions carry dropped scores, best-car rules and penalties that `results` does not give.
+Circuits, constructors, drivers, seasons, statuses and the four hand tables are entities. Values known only as of the mid-2024 dump ride on one `<entity>_snapshot` event per row at N: every Wikipedia `url`, a circuit's current name, a driver's permanent number and code, and a livery's end year. Each race is a `race_scheduled` event owned by its circuit; `race_id` is a plain id in every later event, since the 12 unraced rounds exist only as scheduled races. Qualifying, sprints, laps, pit stops and race results are events owned by the driver; constructor race points and both standings are reported events, because the official points and positions carry dropped scores, best-car rules and penalties that `results` does not give.
 
 `specs/build.sql` formats `lap_times.time` and `pit_stops.duration` from the milliseconds; `results.time`, `pit_stops.time` and `fastest_lap_speed` travel verbatim. The three generated columns are never inserted: SQLite computes them from the source DDL. The eleven derived tables are rebuilt by SQL from the log (the rules in `docs/research/spider2/scripts/f1/q3_derived.sql`). `drives` is cut into runs of one constructor per driver-season by rule; for the 17 driver-seasons (39 rows, 16 of them with a shared 1950s car) where the source does something no rule gives, its rows travel as `drive_override_recorded` events and replace the rule's. `lap_time_stats` is rebuilt from exact integer sums; it agrees within the comparator's 1e-9 relative tolerance for float64, not bit for bit.
 
@@ -26,15 +26,20 @@ Circuits, constructors, drivers, seasons, statuses and the four hand tables are 
 
 | Event | Kind | Rows | Payload fields |
 |---|---|---:|---|
-| `circuits_created` | entity | 77 | `circuit_id`, `ext_id`, `circuit_ref`, `name`, `location`, `country`, `lat`, `lng`, `alt`, `url` |
-| `constructors_created` | entity | 212 | `constructor_id`, `ext_id`, `constructor_ref`, `name`, `nationality`, `url` |
-| `drivers_created` | entity | 859 | `driver_id`, `ext_id`, `driver_ref`, `number`, `code`, `forename`, `surname`, `dob`, `nationality`, `url` |
-| `seasons_created` | entity | 75 | `season_id`, `ext_id`, `url` |
+| `circuits_created` | entity | 77 | `circuit_id`, `ext_id`, `circuit_ref`, `location`, `country`, `lat`, `lng`, `alt` |
+| `constructors_created` | entity | 212 | `constructor_id`, `ext_id`, `constructor_ref`, `name`, `nationality` |
+| `drivers_created` | entity | 859 | `driver_id`, `ext_id`, `driver_ref`, `forename`, `surname`, `dob`, `nationality` |
+| `seasons_created` | entity | 75 | `season_id`, `ext_id` |
 | `status_created` | entity | 139 | `status_id`, `ext_id`, `status` |
 | `short_grand_prix_names_created` | entity | 40 | `short_grand_prix_name_id`, `ext_id`, `short_name` |
 | `short_constructor_names_created` | entity | 44 | `short_constructor_name_id`, `ext_id`, `short_name` |
-| `liveries_created` | entity | 64 | `livery_id`, `ext_id`, `constructor_ref`, `start_year`, `end_year`, `primary_hex_code` |
+| `liveries_created` | entity | 64 | `livery_id`, `ext_id`, `constructor_ref`, `start_year`, `primary_hex_code` |
 | `tdr_overrides_created` | entity | 48 | `tdr_override_id`, `ext_id`, `year`, `constructor_ref`, `driver_ref`, `team_driver_rank` |
+| `circuits_snapshot` | business | 77 | `circuit_id`, `name`, `url` |
+| `constructors_snapshot` | business | 212 | `constructor_id`, `url` |
+| `drivers_snapshot` | business | 859 | `driver_id`, `number`, `code`, `url` |
+| `seasons_snapshot` | business | 75 | `season_id`, `url` |
+| `liveries_snapshot` | business | 64 | `livery_id`, `end_year` |
 | `race_scheduled` | business | 1,125 | `circuit_id`, `race_id`, `year`, `round`, `name`, `date`, `time`, `url`, `fp1_date`, `fp1_time`, `fp2_date`, `fp2_time`, `fp3_date`, `fp3_time`, `quali_date`, `quali_time`, `sprint_date`, `sprint_time` |
 | `qualifying_classified` | business | 10,254 | `driver_id`, `qualify_id`, `race_id`, `constructor_id`, `number`, `position`, `q1`, `q2`, `q3` |
 | `sprint_classified` | business | 300 | `driver_id`, `result_id`, `race_id`, `constructor_id`, `number`, `grid`, `position`, `position_text`, `position_order`, `points`, `laps`, `time`, `milliseconds`, `fastest_lap`, `fastest_lap_time`, `fastest_lap_speed`, `status_id` |
@@ -58,6 +63,47 @@ N = 2024-07-08 00:00:00, the classification of the last race with results.
 - **Race results, constructor points and standings** are at race day + 1, 00:00; no lap ends after 22:04 on race day.
 - **Entities:** circuits and constructors are created at Jan 1 of their first race year (the unused constructor at 1950-01-01), drivers at Jan 1 of their first year with a result or qualifying row, seasons at Jan 1 of the year, liveries at Jan 1 of `start_year`, statuses and the two short-name lookups at 1950-01-01, and `tdr_overrides` at N, as hand judgements made after the seasons.
 - **Drive overrides** are recorded at N.
+- **Snapshots** (`circuits_snapshot`, `constructors_snapshot`, `drivers_snapshot`, `seasons_snapshot`, `liveries_snapshot`) are all at N. No race, lap or standing is later.
+
+## Snapshot columns
+
+| Entity | Snapshot event | At (UTC) | Rows | Columns |
+|---|---|---|---:|---|
+| `circuits` | `circuits_snapshot` | 2024-07-08 00:00:00 | 77 | `name`, `url` |
+| `constructors` | `constructors_snapshot` | 2024-07-08 00:00:00 | 212 | `url` |
+| `drivers` | `drivers_snapshot` | 2024-07-08 00:00:00 | 859 | `number`, `code`, `url` |
+| `seasons` | `seasons_snapshot` | 2024-07-08 00:00:00 | 75 | `url` |
+| `liveries` | `liveries_snapshot` | 2024-07-08 00:00:00 | 64 | `end_year` |
+
+| Column | Verdict | Reason |
+|---|---|---|
+| `circuits.circuit_id` (`ext_id`), `circuit_ref` | creation | The source key and its fixed text id. |
+| `circuits.name` | snapshot | Ruling: the current name, not the one raced under (`villeneuve`, first raced 1978, took Gilles Villeneuve's name in 1982; `imola` became "Autodromo Enzo e Dino Ferrari" in 1988, after its first race in 1980). Research kept it in creation. |
+| `circuits.location`, `country`, `lat`, `lng`, `alt` | creation | Where the track stands; it does not move. |
+| `circuits.url` | snapshot | Ruling: a Wikipedia link as of the dump; articles are renamed (`galvez`'s link names "Oscar Alfredo Gálvez", its name "Juan y Oscar Gálvez"). Research kept it in creation. |
+| `constructors.constructor_id` (`ext_id`), `constructor_ref` | creation | The source key and its fixed text id. |
+| `constructors.name` | creation | A given name: a renamed team gets a new constructor id (`racing_point`, `aston_martin`; `toro_rosso`, `alphatauri`, `rb`). |
+| `constructors.nationality` | creation | The nationality the constructor was entered with, one value per id. |
+| `constructors.url` | snapshot | Ruling: a Wikipedia link as of the dump. Research kept it in creation. |
+| `drivers.driver_id` (`ext_id`), `driver_ref` | creation | The source key and its fixed text id. |
+| `drivers.number`, `code` | snapshot | Today's permanent number and code, NULL for 802 and 757 drivers (research §2). The previous build carried them on the creation. |
+| `drivers.forename`, `surname` | creation | Given names. |
+| `drivers.dob` | creation | A birth date. |
+| `drivers.nationality` | creation | The nationality the driver raced under, one value for the career. |
+| `drivers.url` | snapshot | Ruling: a Wikipedia link as of the dump. Research kept it in creation. |
+| `seasons.year` (`ext_id`) | creation | The key. |
+| `seasons.url` | snapshot | Ruling: a Wikipedia link as of the dump (2024's is `https`, the others `http`: edited at different times). Research kept it in creation. |
+| `status.status_id` (`ext_id`), `status` | creation | A fixed lookup label. |
+| `short_grand_prix_names.full_name` (`ext_id`), `short_name` | creation | An editorial lookup: the hand label is the row. |
+| `short_constructor_names.constructor_ref` (`ext_id`), `short_name` | creation | An editorial lookup: the hand label is the row. |
+| `liveries.constructor_ref`, `start_year` (`ext_id`) | creation | The key; `start_year` also decides the creation time. |
+| `liveries.end_year` | snapshot | NULL for the 10 liveries still current at N (research §2). The previous build carried it on the creation. |
+| `liveries.primary_hex_code` | creation | The livery's colour, fixed for the row. |
+| `tdr_overrides.year`, `constructor_ref`, `driver_ref` (`ext_id`), `team_driver_rank` | creation | Hand judgements, created at N already. |
+
+No snapshot column decides an event's time: circuits, constructors and drivers are created from their race years, liveries from `start_year`. The rebuild LEFT JOINs each snapshot on the entity key.
+
+No domain name: every creation time is a rule (Jan 1 of a first year, the catalog start or N), not a real-world act the source shows, so every entity keeps `<entity>_created`. The real acts already have names (`race_scheduled`, `race_result_classified`, ...).
 
 ## Expected output
 
