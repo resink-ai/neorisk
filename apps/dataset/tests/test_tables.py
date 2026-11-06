@@ -157,3 +157,16 @@ def test_exact_float_columns_compare_bit_for_bit():
     r = compare_tables("t", e, g, exact={"a"})
     assert not r.ok and r.missing == [(big,)]
     assert compare_tables("t", e, e, exact={"a"}).ok
+
+
+def test_compare_extended_types():
+    from datetime import UTC, date, datetime
+    ts = pa.timestamp("us", tz="UTC")
+    t = pa.table({"b": pa.array([True, False]), "d": pa.array([date(2026, 1, 1)] * 2),
+                  "t": pa.array([datetime(2026, 1, 1, tzinfo=UTC)] * 2, ts)})
+    assert compare_tables("x", t, t, extended=True).ok
+    moved = t.set_column(2, "t", pa.array([datetime(2026, 1, 1, tzinfo=UTC),
+                                           datetime(2026, 1, 2, tzinfo=UTC)], ts))
+    assert not compare_tables("x", t, moved, extended=True).ok
+    r = compare_tables("x", t, t)
+    assert not r.ok and "outside the contract" in r.detail

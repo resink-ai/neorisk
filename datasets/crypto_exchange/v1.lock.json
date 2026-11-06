@@ -1,0 +1,130 @@
+{
+  "name": "crypto_exchange",
+  "version": "v1",
+  "kind": "synthetic",
+  "writer": {
+    "polars": "2.0.0",
+    "pyarrow": "26.0.0"
+  },
+  "recipe_sha256": "08c77e85f524ce50286d9d53856e15a51133e42952b15cadce7e260583d4a476",
+  "source_sha256": "d99a6fc1b413e56680cf875d7b6141d4f4640dac9265d6b04aa12b1da4ce1029",
+  "files": {
+    "expected/cases.parquet": {
+      "sha256": "f5e666943060fc588682840ea8e6513248d22453e559b9fa1d23c676e13b6973",
+      "rows": 68
+    },
+    "expected/check.json": {
+      "sha256": "93d3e7de1e048a37c6dde030af7332dca431672632671b525adae8102813be5b"
+    },
+    "expected/labels.parquet": {
+      "sha256": "90cf2b9fdf15b122d1547d77749132ff3297939efc4ff81bda1623db063b2554",
+      "rows": 0
+    },
+    "expected/questions/q1_volume_by_symbol_day.parquet": {
+      "sha256": "48de561cd1f40d45d2f7780ba6588df89648a6182a7c1852d4361dd9ffef4b12",
+      "rows": 10
+    },
+    "expected/questions/q2_maker_taker_by_segment.parquet": {
+      "sha256": "b88f83718b10db84c71d678f5cbc5f170e73907cb9377e9cfb6b9504b0e95ecc",
+      "rows": 2
+    },
+    "expected/questions/q3_order_outcomes.parquet": {
+      "sha256": "b04b171df10611d4292fc71a9ec8c82b5379bb6bf493abf1a8144bf93cb55959",
+      "rows": 10
+    },
+    "log/part-00000.parquet": {
+      "sha256": "77b3a2f2c0c49c917ba82e1d58ec467ee04494ad49322317bd6781ac578a9147",
+      "rows": 24055
+    },
+    "results/dv_hub_orders.parquet": {
+      "sha256": "041dc32bb8503d87a81a5f5f5a1dddb34acb829916683303f13ef18cb6ce2143",
+      "rows": 9642
+    },
+    "results/dv_hub_traders.parquet": {
+      "sha256": "a2581a51c2a4737bf1c23eb55f3474a7f8d8eb91ea41a5268f5ea0c29b26f685",
+      "rows": 66
+    },
+    "results/dv_link_deposit.parquet": {
+      "sha256": "014e1e75de5d613c6bdf158ea9551207c8e1c5e28d2c090b607d640b0d84f1e8",
+      "rows": 264
+    },
+    "results/dv_link_order_trader.parquet": {
+      "sha256": "7cb82552efdbc1af597354aa1cfbdbf6123fa52c66c24c460455a1ac098c9028",
+      "rows": 9642
+    },
+    "results/dv_link_trade.parquet": {
+      "sha256": "cafc3ac40440ba2976455960921f77dbf8434a98b81134acacff6c8bc08d188c",
+      "rows": 5552
+    },
+    "results/dv_sat_deposit_details.parquet": {
+      "sha256": "c295fc930bd92a5e4d51e342e7c59c06f03662661c43ca0d6881c229d36dffde",
+      "rows": 264
+    },
+    "results/dv_sat_orders_details.parquet": {
+      "sha256": "a25604a944622a6e4117bf0da3ba5862a66f933c6396bd9820618c88df696438",
+      "rows": 9642
+    },
+    "results/dv_sat_orders_status.parquet": {
+      "sha256": "62cd240f08ec3f7c0e565142ead6ff6fffd1711a19435abc349b83ac8b009ef7",
+      "rows": 18173
+    },
+    "results/dv_sat_trade_details.parquet": {
+      "sha256": "7ce92a4b13caabeaf2da43f0f84f9d8c306d3b826fc918af6d76a672a2c51e33",
+      "rows": 5552
+    },
+    "results/dv_sat_traders_profile.parquet": {
+      "sha256": "bb70136f3d51536b5090d01154c724ac488a54f4fd40ce689471769ecc55f5b8",
+      "rows": 66
+    },
+    "results/obt_deposits.parquet": {
+      "sha256": "2eb6d0e2e439e5b001eb07eb36d854b353aa694d4a72124e05d86d5b32426cd6",
+      "rows": 264
+    },
+    "results/obt_orders.parquet": {
+      "sha256": "e1c65eeb15471f0b4675467aa9e7c7c2fab2163702fb4383ebae6ddc8ec6dcd2",
+      "rows": 9642
+    },
+    "results/obt_trades.parquet": {
+      "sha256": "48a344c7ddbd6fd4e058ad710b24ba7a89f077864f07444c0391161ffe769fae",
+      "rows": 5552
+    },
+    "results/star_dim_traders.parquet": {
+      "sha256": "f587b84a24521ec02ebd09b6fa6bce332ade20d70a0d16340dd60aeb95715999",
+      "rows": 66
+    },
+    "results/star_fact_deposits.parquet": {
+      "sha256": "60162a688f936e6dedb4043f660b4d69384f5149dde7b5c21a94828514ec0662",
+      "rows": 264
+    },
+    "results/star_fact_order_acceptances.parquet": {
+      "sha256": "f272f29fafde968f204e0c591e591f35d19e5aa3f35d837ccb4119ad2e792300",
+      "rows": 9578
+    },
+    "results/star_fact_order_cancellations.parquet": {
+      "sha256": "df89fad9663e2f999a4ba420416e05d55a42a6fc94157677b4e9251341ab45d2",
+      "rows": 1531
+    },
+    "results/star_fact_order_fills.parquet": {
+      "sha256": "7b1c8cb4af8d6606f96bd0c614d35528e90d630a4c7d8617498da11cc5371cb9",
+      "rows": 7000
+    },
+    "results/star_fact_order_lifecycle.parquet": {
+      "sha256": "3eacdf286fabe2610ea054109eaabfaaad8de02e52de63527069647bc22ee89a",
+      "rows": 9642
+    },
+    "results/star_fact_order_rejections.parquet": {
+      "sha256": "8bc7434094e7781940637a427f5fe70414af8fd7d66c0d3bd5371c61e306eda6",
+      "rows": 64
+    },
+    "results/star_fact_trades.parquet": {
+      "sha256": "5983f358964c9844900cc54ac9fa47cfe59bc8e80a0e60fce379e63ebd8e88c0",
+      "rows": 5552
+    },
+    "schema/events.json": {
+      "sha256": "d313da7b13bd1c796099ab9eab2658709678adbdc1ca619e02e93c88ea5494f3"
+    },
+    "schema/results.json": {
+      "sha256": "290d5e23388413dd6fdac99b4b87b91064824a5bb55091782c60056646f3ed75"
+    }
+  }
+}

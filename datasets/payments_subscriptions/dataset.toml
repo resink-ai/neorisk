@@ -1,0 +1,180 @@
+name = "payments_subscriptions"
+version = "v1"
+kind = "synthetic"
+
+[recipe]
+project = "examples/payments_subscriptions"
+profile = "sample"
+seed = 7
+overlay = []
+designs = ["star", "act", "an"]
+
+# event -> payload column whose value keys its messages: every event of a subscription's
+# life is keyed on its subscriber (the pack's owner of the subscription machine)
+[recipe.owners]
+subscription_started = "subscriber_id"
+trial_converted = "subscriber_id"
+invoice_paid = "subscriber_id"
+charge_failed = "subscriber_id"
+subscription_cancelled = "subscriber_id"
+
+# ---- star ----------------------------------------------------------------------------
+
+[[check]]
+table = "star_dim_subscribers"
+simkit = "subscribers"
+columns = { subscriber_id = "subscriber_id", plan = "plan", signup_channel = "signup_channel", created_at = "created_at" }
+
+[[check]]
+table = "star_fact_subscription_starts"
+simkit = "subscription_started"
+columns = { subscription_id = "event_id", subscriber_id = "subscriber_id", plan = "plan", price = "price", started_at = "event_time" }
+
+[[check]]
+table = "star_fact_trial_conversions"
+simkit = "trial_converted"
+columns = { subscriber_id = "subscriber_id", converted_at = "event_time" }
+
+[[check]]
+table = "star_fact_invoices"
+simkit = "invoice_paid"
+columns = { invoice_id = "event_id", subscriber_id = "subscriber_id", cycle = "cycle", attempt = "attempt", amount = "amount", paid_at = "event_time" }
+
+[[check]]
+table = "star_fact_charge_failures"
+simkit = "charge_failed"
+columns = { failure_id = "event_id", subscriber_id = "subscriber_id", cycle = "cycle", attempt = "attempt", amount = "amount", reason = "reason", failed_at = "event_time" }
+
+[[check]]
+table = "star_fact_cancellations"
+simkit = "subscription_cancelled"
+columns = { subscriber_id = "subscriber_id", reason = "reason", cycles_paid = "cycles_paid", cancelled_at = "event_time" }
+
+# ---- act: the customer table and the stream's keys per activity -----------------------
+
+[[check]]
+table = "act_subscriber"
+simkit = "subscribers"
+columns = { customer = "subscriber_id", plan = "plan", signup_channel = "signup_channel", created_at = "created_at" }
+
+[[check]]
+table = "act_subscriber_stream"
+simkit = "subscription_started"
+columns = { activity_id = "event_id", customer = "subscriber_id", ts = "event_time" }
+where = "activity = 'started_subscription'"
+
+[[check]]
+table = "act_subscriber_stream"
+simkit = "trial_converted"
+columns = { activity_id = "event_id", customer = "subscriber_id", ts = "event_time" }
+where = "activity = 'converted_trial'"
+
+[[check]]
+table = "act_subscriber_stream"
+simkit = "invoice_paid"
+columns = { activity_id = "event_id", customer = "subscriber_id", ts = "event_time", revenue_impact = "amount" }
+where = "activity = 'paid_invoice'"
+
+[[check]]
+table = "act_subscriber_stream"
+simkit = "charge_failed"
+columns = { activity_id = "event_id", customer = "subscriber_id", ts = "event_time", feature_3 = "reason" }
+where = "activity = 'failed_charge'"
+
+[[check]]
+table = "act_subscriber_stream"
+simkit = "subscription_cancelled"
+columns = { activity_id = "event_id", customer = "subscriber_id", ts = "event_time", feature_1 = "reason" }
+where = "activity = 'cancelled_subscription'"
+
+# ---- an: plain projections -------------------------------------------------------------
+
+[[check]]
+table = "an_subscribers"
+simkit = "subscribers"
+columns = { subscriber_id = "subscriber_id", created_at = "created_at" }
+
+[[check]]
+table = "an_subscribers_plan"
+simkit = "subscribers"
+columns = { subscriber_id = "subscriber_id", plan = "plan" }
+
+[[check]]
+table = "an_subscribers_signup_channel"
+simkit = "subscribers"
+columns = { subscriber_id = "subscriber_id", signup_channel = "signup_channel" }
+
+[[check]]
+table = "an_subscriptions"
+simkit = "subscription_started"
+columns = { subscription_id = "event_id", started_at = "event_time" }
+
+[[check]]
+table = "an_subscriptions_heldby_subscribers"
+simkit = "subscription_started"
+columns = { subscription_id = "event_id", subscriber_id = "subscriber_id" }
+
+[[check]]
+table = "an_subscriptions_plan"
+simkit = "subscription_started"
+columns = { subscription_id = "event_id", plan = "plan" }
+
+[[check]]
+table = "an_subscriptions_price"
+simkit = "subscription_started"
+columns = { subscription_id = "event_id", price = "price" }
+
+[[check]]
+table = "an_subscriptions_cancel_reason"
+simkit = "subscription_cancelled"
+columns = { cancel_reason = "reason", changed_at = "event_time" }
+
+[[check]]
+table = "an_subscriptions_cycles_paid"
+simkit = "subscription_cancelled"
+columns = { cycles_paid = "cycles_paid", changed_at = "event_time" }
+
+[[check]]
+table = "an_invoices"
+simkit = "invoice_paid"
+columns = { invoice_id = "event_id", paid_at = "event_time" }
+
+[[check]]
+table = "an_invoices_cycle"
+simkit = "invoice_paid"
+columns = { invoice_id = "event_id", cycle = "cycle" }
+
+[[check]]
+table = "an_invoices_attempt"
+simkit = "invoice_paid"
+columns = { invoice_id = "event_id", attempt = "attempt" }
+
+[[check]]
+table = "an_invoices_amount"
+simkit = "invoice_paid"
+columns = { invoice_id = "event_id", amount = "amount" }
+
+[[check]]
+table = "an_charge_failures"
+simkit = "charge_failed"
+columns = { failure_id = "event_id", failed_at = "event_time" }
+
+[[check]]
+table = "an_charge_failures_cycle"
+simkit = "charge_failed"
+columns = { failure_id = "event_id", cycle = "cycle" }
+
+[[check]]
+table = "an_charge_failures_attempt"
+simkit = "charge_failed"
+columns = { failure_id = "event_id", attempt = "attempt" }
+
+[[check]]
+table = "an_charge_failures_amount"
+simkit = "charge_failed"
+columns = { failure_id = "event_id", amount = "amount" }
+
+[[check]]
+table = "an_charge_failures_reason"
+simkit = "charge_failed"
+columns = { failure_id = "event_id", reason = "reason" }

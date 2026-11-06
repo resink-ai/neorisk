@@ -16,7 +16,7 @@ uv run dataset resolve olist/v1/log  # where a data name lives under the root
 |---|---|
 | `dataset.toml` | Name, version, kind (`spider2` or `synthetic`), recipe, the mixed columns, the float columns compared bit for bit |
 | `CONTEXT.md` | What the raw data is, how the log was made, the expected output, how to regenerate and extend it |
-| `specs/` | Spider2: `pack.py`, `source.toml`, `ingest.sql`, `build.sql` (the reference build), `queries/` |
+| `specs/` | Spider2: `pack.py`, `source.toml`, `ingest.sql`, `build.sql` (the reference build), `queries/`. Synthetic: `<design>.sql` for each of three designs, and `questions/<id>/` (`oracle.sql` plus one answer per design) |
 | `<version>.lock.json` | Every file's sha256 and rows, the recipe and source sha256 and the writer libraries. Every Spider2 dataset has a committed `v1.lock.json`; a build that differs fails, so changed output needs a new version |
 
 | On the data root, `<name>/<version>/` | Holds |
@@ -25,9 +25,44 @@ uv run dataset resolve olist/v1/log  # where a data name lives under the root
 | `schema/events.json` | Every event type and its payload fields, with types |
 | `results/<table>.parquet` | The expected tables |
 | `expected/queries/<id>.parquet` | Spider2: the saved questions' answers on the source |
+| `expected/questions/<id>.parquet`, `labels.parquet`, `cases.parquet`, `check.json` | Synthetic: each question's answer from simkit's own tables, the run's ground truth (never in the log) and its laws and expectations report |
 | `schema/results.json`, `manifest.json` | The results' DDL, keys and types; every file's sha256 and rows |
 
 Entities enter the log as events. Each entity row is a creation event, `<entity>_created`, or a domain name given with `-- entity: <name> event=<event_name>` (for example `employee_hired`). Columns known only as of the extract (prices, addresses, statuses, stamps, current names) leave the creation event. They travel in one `<entity>_snapshot` event per row at the dataset's snapshot time N. The build checks that every snapshot is keyed by its entity, that there is one per key, and that all of them share one N that no other event follows. Each dataset's `CONTEXT.md` lists every entity column's verdict (creation or snapshot) with its reason; `uv run dataset context <name>` prints the counted tables.
+
+The suffix `_snapshot` is reserved: an event named `<entity>_snapshot` must follow the snapshot rule above, and no other event may end in `_snapshot`.
+
+### Synthetic datasets
+
+A synthetic dataset's `dataset.toml` names its `datagen` project and run under `[recipe]` (`project`, `profile = "sample"`, `seed = 7`, `overlay = []`) and its three `designs`. `[recipe.owners]` says which payload column keys each event's messages. `dataset build` runs the pack, writes the log, runs each `specs/<design>.sql` over the log alone, and then grades the results twice without trusting them:
+
+- **Against simkit:** every `[[check]]` maps a results table's columns (optionally filtered) to a simkit table's columns, and they must be equal as multisets. Every star dimension and every star fact except the `*_lifecycle` snapshots has one.
+- **Across designs:** every question's `oracle.sql` answers it from simkit's own tables, and every design must give the same answer from its own tables only.
+
+`dataset verify` rebuilds every design from the log and checks the tables and all the answers again.
+
+## Table designs
+
+Each synthetic dataset is modeled three ways, picked from the designs compared in the *Beyond Facts & Dimensions* atlas, so one dataset tests a processor on three shapes of output. Every table's name starts with its design id.
+
+| Id | Design | Tables | History |
+|---|---|---|---|
+| `star` | Star schema (Kimball) | `star_dim_<entity>`, `star_fact_<process>`, `star_fact_<grain>_lifecycle` | SCD2 (`<entity>_sk`, `valid_from`, `valid_to`, `is_current`) where the log changes an attribute; facts carry the version in force at event time; an accumulating snapshot where a lifecycle exists |
+| `dv` | Data Vault 2.0 | `dv_hub_<entity>`, `dv_link_<relation>`, `dv_sat_<parent>_<group>` | `md5` hash keys, insert-only, a satellite row only when its `hashdiff` changes, load time = event time |
+| `an` | Anchor modeling | `an_<entity>`, `an_<entity>_<attribute>`, `an_<e1>_<role>_<e2>` | one row per attribute change, with `changed_at` |
+| `act` | Activity schema | `act_<entity>_stream`, `act_<entity>` | one row per activity: `activity_id, ts, customer, activity, feature_1..3, revenue_impact, link, activity_occurrence, activity_repeated_at` |
+| `obt` | One big table | `obt_<grain>` | one wide row per grain, every attribute bound as of the fact's time |
+
+| Dataset | Designs |
+|---|---|
+| `ecommerce` | `star`, `dv`, `an` |
+| `payments` | `star`, `dv`, `obt` |
+| `payments_subscriptions` | `star`, `act`, `an` |
+| `crypto_exchange` | `star`, `dv`, `obt` |
+| `layer1` | `star`, `act`, `obt` |
+| `social` | `star`, `dv`, `act` |
+
+Results columns are int32, int64, float64, string, bool, date or timestamp(µs, UTC); a `sum()` must be cast, because DuckDB's HUGEINT fails the build. A new design is a new `specs/<design>.sql` plus an answer to every question, and it makes a new version.
 
 **Extending a dataset:** changing its log, schema or results makes a new version. Copy the recipe to `version = "v2"` in `dataset.toml`, change the specs, then run `dataset build <name> --record`. Editing `CONTEXT.md` needs no new version.
 
@@ -80,5 +115,11 @@ Data files never go into git. They are named `<dataset>/<version>/<path>` and re
 | [`entertainment`](entertainment/CONTEXT.md) | spider2 | EntertainmentAgency | course data | unstated | 476 | 13 | 1,654 | 3 | 0 | duckdb |
 | [`school`](school/CONTEXT.md) | spider2 | school_scheduling | course data | unstated | 1,119 | 15 | 811 | 1 | 0 | duckdb |
 | [`music`](music/CONTEXT.md) | spider2 | music | real catalogue, generated sales | MIT | 19,177 | 11 | 15,607 | 1 | 0 | duckdb |
+| [`ecommerce`](ecommerce/CONTEXT.md) | synthetic | `examples/ecommerce` (sample, seed 7) | simulated | generated | 15,090 | 63 | 76,717 | 3 | 0 | duckdb |
+| [`payments`](payments/CONTEXT.md) | synthetic | `examples/payments` (sample, seed 7) | simulated | generated | 28,917 | 40 | 56,838 | 3 | 0 | duckdb |
+| [`payments_subscriptions`](payments_subscriptions/CONTEXT.md) | synthetic | `examples/payments_subscriptions` (sample, seed 7) | simulated | generated | 2,452 | 30 | 15,422 | 3 | 0 | duckdb |
+| [`crypto_exchange`](crypto_exchange/CONTEXT.md) | synthetic | `examples/crypto_exchange` (sample, seed 7) | simulated | generated | 24,055 | 21 | 108,018 | 3 | 0 | duckdb |
+| [`layer1`](layer1/CONTEXT.md) | synthetic | `examples/layer1` (sample, seed 7) | simulated | generated | 11,003 | 13 | 30,048 | 3 | 0 | duckdb |
+| [`social`](social/CONTEXT.md) | synthetic | `examples/social` (sample, seed 7) | simulated | generated | 25,892 | 18 | 80,174 | 3 | 0 | duckdb |
 
-The synthetic datasets (from the `datagen` examples) arrive in PR 3, and the Spark and Flink engines in PR 4.
+The Spark and Flink engines arrive in PR 4.

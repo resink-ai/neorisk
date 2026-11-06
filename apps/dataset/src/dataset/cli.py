@@ -83,8 +83,14 @@ def _build(args) -> int:
         cfg = _load(args.name)
     except (FileNotFoundError, ValueError) as e:
         return _err(str(e))
-    if cfg.kind != "spider2":
-        return _err(f"{cfg.name}: synthetic datasets arrive in PR 3")
+    if cfg.kind == "synthetic":
+        from dataset.synthetic import build_synthetic
+        try:
+            m = build_synthetic(cfg, record=args.record)
+        except BuildError as e:
+            return _err(str(e), 1)
+        print(json.dumps({"name": cfg.name, "version": cfg.version, "counts": m["counts"]}))
+        return 0
     if args.db:
         db = Path(args.db)
     else:
@@ -103,23 +109,25 @@ def _build(args) -> int:
 
 def _verify(args) -> int:
     from dataset.spider2 import verify
+    from dataset.synthetic import verify_synthetic
     try:
         cfg = _load(args.name)
-        rep = verify(cfg)
+        rep = verify_synthetic(cfg) if cfg.kind == "synthetic" else verify(cfg)
     except (FileNotFoundError, ValueError) as e:
         return _err(str(e))
-    results = [rep["recipe"], *rep["tables"], *rep["queries"]]
+    asked = "questions" if cfg.kind == "synthetic" else "queries"
+    results = [rep["recipe"], *rep["tables"], *rep[asked]]
     if args.json:
         Path(args.json).write_text(json.dumps(
             {"ok": rep["ok"], "recipe": rep["recipe"].to_json(),
              "tables": [t.to_json() for t in rep["tables"]],
-             "queries": [q.to_json() for q in rep["queries"]]}, indent=2) + "\n")
+             asked: [q.to_json() for q in rep[asked]]}, indent=2) + "\n")
     for r in results:
         if not r.ok:
             print(f"dataset: {r.name}: {r.detail}; expected {r.rows_expected} rows, got "
                   f"{r.rows_got}; missing {r.missing[:2]}, extra {r.extra[:2]}", file=sys.stderr)
     print(json.dumps({"name": cfg.name, "tables": len(rep["tables"]),
-                      "queries": len(rep["queries"]),
+                      asked: len(rep[asked]),
                       "failed": [r.name for r in results if not r.ok]}))
     return 0 if rep["ok"] else 1
 

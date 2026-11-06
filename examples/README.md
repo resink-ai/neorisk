@@ -18,4 +18,4 @@ uv run datagen check examples/payments/out/sample-s7+card_testing
 
 ## Reference datasets
 
-The Spider 2.0 reference datasets moved to [`datasets/`](../datasets/README.md).
+The Spider 2.0 reference datasets moved to [`datasets/`](../datasets/README.md). Each project here is also a synthetic dataset there, `datasets/<project>/` (profile `sample`, seed 7, no overlay), modeled in three table designs: `uv run dataset build <project>`.

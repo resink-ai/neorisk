@@ -1,0 +1,118 @@
+{
+  "name": "social",
+  "version": "v1",
+  "kind": "synthetic",
+  "writer": {
+    "polars": "2.0.0",
+    "pyarrow": "26.0.0"
+  },
+  "recipe_sha256": "7b44c9c6d1529861733ce77c39438f03d9209bff86ff849c6a746999f8af6da2",
+  "source_sha256": "9d61f07c5e91caf975622f1f6267f25184ac468bae1083fd068fbea357764740",
+  "files": {
+    "expected/cases.parquet": {
+      "sha256": "245a874cf603d78e48e905673dda385b192245c2cb483b77cfc08b4f754508d0",
+      "rows": 806
+    },
+    "expected/check.json": {
+      "sha256": "657a2f00b22c519f001ccbb77b8fd296c9002e78bf815c34eadad782c0e93f40"
+    },
+    "expected/labels.parquet": {
+      "sha256": "90cf2b9fdf15b122d1547d77749132ff3297939efc4ff81bda1623db063b2554",
+      "rows": 0
+    },
+    "expected/questions/q1_engagement_by_tier.parquet": {
+      "sha256": "ea9aa5ff377d96e496a175763240b0c4083cfb90a6d9d60628f35c4e0635431d",
+      "rows": 2
+    },
+    "expected/questions/q2_cascade_depth.parquet": {
+      "sha256": "b1d50d98d6b01c8e7fa2d83fc1cfe30df044808863bdcf1e8bbf1e2b571a3c84",
+      "rows": 8
+    },
+    "expected/questions/q3_follower_buckets.parquet": {
+      "sha256": "579f493d792049ddd0389b01523bf2d3a281f45cd346dab3ec7ad6d8a3b7f6a1",
+      "rows": 8
+    },
+    "log/part-00000.parquet": {
+      "sha256": "5ffa5ab928695d506f83eb5e72d12eb86864435c710d8b8ccfb3d492ca7c5a38",
+      "rows": 25892
+    },
+    "results/act_user.parquet": {
+      "sha256": "9da87e40dcdb967df81f3c02d7de7852ce94a50ffe5006c36153251709dbc4ce",
+      "rows": 500
+    },
+    "results/act_user_stream.parquet": {
+      "sha256": "dd5fdfeaff3cc1712ec0bcd395c73ea2013d2529355e02f143d195e83fb13068",
+      "rows": 25392
+    },
+    "results/dv_hub_posts.parquet": {
+      "sha256": "aed6f037d31757c378632488e6d37be950300dded6ee32140bd0b2ee36856cbb",
+      "rows": 768
+    },
+    "results/dv_hub_users.parquet": {
+      "sha256": "bc8d48d9e32ab5abf470bce819b26ec8d016c4344ba22d543186ef065d6d1700",
+      "rows": 500
+    },
+    "results/dv_link_follow.parquet": {
+      "sha256": "f4cadf6425e95ccffa8216c0f3c345bfe755c21ab674ee93f5eb08f2b1d49213",
+      "rows": 15364
+    },
+    "results/dv_link_like.parquet": {
+      "sha256": "ff948f12104b1f8bccccb04511828a53ba93d3b4c73626a3fed50774b3443c19",
+      "rows": 1184
+    },
+    "results/dv_link_post_author.parquet": {
+      "sha256": "ac169cd0192eda98fb24765197fe5c255db659b266646767eb5eb27a8c915e29",
+      "rows": 768
+    },
+    "results/dv_link_repost.parquet": {
+      "sha256": "8c92bcf2fce93c86f293ced9a2174123eeb604c6ff0bdd9e0a9a79dbdc33d28d",
+      "rows": 462
+    },
+    "results/dv_link_view.parquet": {
+      "sha256": "816882704bcf338e6b6998a5450a7f27a5d6c79ab5a71e57f6ee55aa08ea89dc",
+      "rows": 8076
+    },
+    "results/dv_sat_repost_details.parquet": {
+      "sha256": "dd1e7bc1209a7d06631d69b3865fba1ec246c924a021d8d50d8cf5af68ef9124",
+      "rows": 462
+    },
+    "results/dv_sat_users_profile.parquet": {
+      "sha256": "03fa0ed46c5ebc9d5ff254721e2eebaa5db8acffdc296c976bfa920b6c7c65b7",
+      "rows": 500
+    },
+    "results/star_dim_users.parquet": {
+      "sha256": "3fd134aef71c954df627a9d2ad2452471b17a3d1e6b181d9045651f8e624f526",
+      "rows": 500
+    },
+    "results/star_fact_cascade_lifecycle.parquet": {
+      "sha256": "b677521aef0256494d0c78876aa230b7f9715ac9e162ccc2a45efe24f8b3412e",
+      "rows": 306
+    },
+    "results/star_fact_follows.parquet": {
+      "sha256": "c21aa97e83148a40e7ad0a6e81e79aaa68c83a51d2d5bbd89ba2146b9f7533c8",
+      "rows": 15364
+    },
+    "results/star_fact_likes.parquet": {
+      "sha256": "d3bf484fe4f2e1a2cce1ba4642ea82941d14ce14d642c2e674a39e9dd1ddbe40",
+      "rows": 1184
+    },
+    "results/star_fact_posts.parquet": {
+      "sha256": "d7ea928b20fdac7e707a07aec9904e74acdff5797cb97383fa34dedb2d615b9e",
+      "rows": 306
+    },
+    "results/star_fact_reposts.parquet": {
+      "sha256": "6df1b2bbf839c36591ce077fbdafdf98a3a9b0679274a1885a67ab608e277dc0",
+      "rows": 462
+    },
+    "results/star_fact_views.parquet": {
+      "sha256": "013801f61132f4ed67369f10c52605b736ef403f41d68ddf1c9e64c12b839a7a",
+      "rows": 8076
+    },
+    "schema/events.json": {
+      "sha256": "221ae88c1724d3ba61a94455f4838bc8170948a7e0c1d5069756f9217bdc1019"
+    },
+    "schema/results.json": {
+      "sha256": "fcc990ce32345cf967691b1a903121591abfd6b0c5581be472d1e43a6fc6cdb5"
+    }
+  }
+}

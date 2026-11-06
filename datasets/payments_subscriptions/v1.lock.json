@@ -1,0 +1,166 @@
+{
+  "name": "payments_subscriptions",
+  "version": "v1",
+  "kind": "synthetic",
+  "writer": {
+    "polars": "2.0.0",
+    "pyarrow": "26.0.0"
+  },
+  "recipe_sha256": "ae13570136d277aaff23c265dc1188d43542812f6913dee5b5d49bbffb97b0a2",
+  "source_sha256": "fa913e2f67999268ef375ef09471a9c3601ffd55734382173a191a784b3ed33d",
+  "files": {
+    "expected/cases.parquet": {
+      "sha256": "2e2d864468c5cc2abd4bfe2b0a2d622dbbb9d24daac6b61ce5794a8ab01557cc",
+      "rows": 501
+    },
+    "expected/check.json": {
+      "sha256": "37162364d4a5c5d14da5db0dc33503256905ba02471332c9502997a06ad4f8b0"
+    },
+    "expected/labels.parquet": {
+      "sha256": "90cf2b9fdf15b122d1547d77749132ff3297939efc4ff81bda1623db063b2554",
+      "rows": 0
+    },
+    "expected/questions/q1_active_at_end_by_plan.parquet": {
+      "sha256": "a5371790a6ee7c135c8a37fbab26e113f8617158c32f326aa34d9ef25dd2b271",
+      "rows": 3
+    },
+    "expected/questions/q2_paid_by_plan_cycle.parquet": {
+      "sha256": "3338254db0cdbd22da3bf572dff49fdbac95140ace9802549fe867dce7bdbcc5",
+      "rows": 9
+    },
+    "expected/questions/q3_churn_by_reason.parquet": {
+      "sha256": "82f6f8060913cf7801bee91e19ff767a4f2d009787fd44f10e0deabadc0af116",
+      "rows": 6
+    },
+    "log/part-00000.parquet": {
+      "sha256": "ebe9ec37b13b806d97ed65585ac0f70abdb8f45d3f3743813f43b01109efeff4",
+      "rows": 2452
+    },
+    "results/act_subscriber.parquet": {
+      "sha256": "3bb8ab669bed1aae00875511c2f6ae5bb82bed8e69fc05e8631f1dbbe9dbbf17",
+      "rows": 500
+    },
+    "results/act_subscriber_stream.parquet": {
+      "sha256": "43b91689f35aa7f4d2bea108b29cbdcdf2e8f0ebc099ab151bec8995b2e91083",
+      "rows": 1952
+    },
+    "results/an_charge_failures.parquet": {
+      "sha256": "77bb6fc2bc97df01d1c7a14d5e16c9bbf1e41f2009fcd810eb5fdcd9c8e7b1d1",
+      "rows": 85
+    },
+    "results/an_charge_failures_amount.parquet": {
+      "sha256": "2b72ea61a8e486fdab802565ea5218c808e368712edb142262da66b74b0777b7",
+      "rows": 85
+    },
+    "results/an_charge_failures_attempt.parquet": {
+      "sha256": "a8a1a8fc3c90bc426a62bebf4e631d24405e1e7ff5e27e0f9424e5aa7d7e819c",
+      "rows": 85
+    },
+    "results/an_charge_failures_cycle.parquet": {
+      "sha256": "de563f35030b0bf85b1706cc8d13859655b7e2c2f69182ba6391e1e0abb21af0",
+      "rows": 85
+    },
+    "results/an_charge_failures_for_subscriptions.parquet": {
+      "sha256": "1f1995b7de9e4dd45f36e3636e35a0a9197eaf8128978acc6dfcff3c30a83fc3",
+      "rows": 85
+    },
+    "results/an_charge_failures_reason.parquet": {
+      "sha256": "094a6ab3fe310e09aa644f209fbdf71c58db48b1f7f5cd29c73d7a2455848982",
+      "rows": 85
+    },
+    "results/an_invoices.parquet": {
+      "sha256": "408ee1ff8f64e1eb5045d65adace6fce13552f17bd82784a5e67f21739a3b3ee",
+      "rows": 835
+    },
+    "results/an_invoices_amount.parquet": {
+      "sha256": "4b81fdaeddeadcec11920142e1c3b181303e90504e1f1f99ee195b561376ce38",
+      "rows": 835
+    },
+    "results/an_invoices_attempt.parquet": {
+      "sha256": "712d922a27ca1522c7f9f6394d393e02ddcea36f7c0a685c2e38725a8c9876ce",
+      "rows": 835
+    },
+    "results/an_invoices_cycle.parquet": {
+      "sha256": "1df92170f71f27237a8d045fb57728659dd8f9fd92a6978a42554355c16d2e83",
+      "rows": 835
+    },
+    "results/an_invoices_for_subscriptions.parquet": {
+      "sha256": "0ceb4fa91b68995b095a1e3694bd2556399d3c4af50f1162010dedcfab642e11",
+      "rows": 835
+    },
+    "results/an_subscribers.parquet": {
+      "sha256": "82624d72f80f1b82c2cf25e35a43a73b4683b28e8914ba6efe66220423aa1452",
+      "rows": 500
+    },
+    "results/an_subscribers_plan.parquet": {
+      "sha256": "5e678cd64cc919ce331756c598d5b4b6269374b3084c5a6f19f3a55c2fb51495",
+      "rows": 500
+    },
+    "results/an_subscribers_signup_channel.parquet": {
+      "sha256": "ab955871ded0ea7417e405db9552646be61499e222903c984a170694473c6b25",
+      "rows": 500
+    },
+    "results/an_subscriptions.parquet": {
+      "sha256": "268c792f163c395381285d1add6b2db994db4618e6ff8ed089e8c1a65f2a637c",
+      "rows": 500
+    },
+    "results/an_subscriptions_cancel_reason.parquet": {
+      "sha256": "1ad35ad1eb8b9641e871be71e13ef33e5cf076464867adaf692c3e8eebe51bb7",
+      "rows": 156
+    },
+    "results/an_subscriptions_cycles_paid.parquet": {
+      "sha256": "7370b9ef4f02dc5c10561a413016c6688db5ffa691b848d1d41859abaab150ac",
+      "rows": 156
+    },
+    "results/an_subscriptions_heldby_subscribers.parquet": {
+      "sha256": "7474238a10bb8ea86aa68e14a8808056d872289ec8900fb1427550dc151bfbf7",
+      "rows": 500
+    },
+    "results/an_subscriptions_plan.parquet": {
+      "sha256": "06b1aa8a348302485e2c5f3128f21ca417a5af6655471cd1b3466cd7a5cb6f88",
+      "rows": 500
+    },
+    "results/an_subscriptions_price.parquet": {
+      "sha256": "ee0cd34f2872b92846b1ff02bb56f5c2af0e43cb6044e8f378bfbf4c27d3bb42",
+      "rows": 500
+    },
+    "results/an_subscriptions_status.parquet": {
+      "sha256": "c71182335719552e8c3a572df8b847f06faac2e7bf55c5e6b8df1c5711d9a836",
+      "rows": 1521
+    },
+    "results/star_dim_subscribers.parquet": {
+      "sha256": "dd787c6e58af067087e0f7eb015b055a4a12b29279c011eaaace17b8031b0e79",
+      "rows": 500
+    },
+    "results/star_fact_cancellations.parquet": {
+      "sha256": "2a449b452d8a544f8b39a1e36aa12362979fc42c80ef7cfea7dda82badbfce8d",
+      "rows": 156
+    },
+    "results/star_fact_charge_failures.parquet": {
+      "sha256": "c75d961c6f8b5222c5b9e2675456b4a1a03e6375321fd0e126c78459727357de",
+      "rows": 85
+    },
+    "results/star_fact_invoices.parquet": {
+      "sha256": "5d5db01e6f4e67024114126240cd36933c291aac9c29a6d9d67c69d1d98ac87a",
+      "rows": 835
+    },
+    "results/star_fact_subscription_lifecycle.parquet": {
+      "sha256": "2ca9413b7538a3abe2782ee4271cac405f76eb72bfd93e72e14c99d1276c1d7f",
+      "rows": 500
+    },
+    "results/star_fact_subscription_starts.parquet": {
+      "sha256": "9fe184fa29e7839c5bbf7a5df4e24082e1f79e63d8006488a9a9ca80cf3f9e28",
+      "rows": 500
+    },
+    "results/star_fact_trial_conversions.parquet": {
+      "sha256": "96c583d85ed496174938d03e6f2958f16ad955e601629cd93eacc26cf8ced1e6",
+      "rows": 376
+    },
+    "schema/events.json": {
+      "sha256": "ad6fc037030ee8ef54d9a1aebf1f93ef66987e453e7a9a71e2df315ac1997b07"
+    },
+    "schema/results.json": {
+      "sha256": "9693ac3913ac8e1565aee0676fd06c05d93564ba048eab5ba6db73ceee45869c"
+    }
+  }
+}

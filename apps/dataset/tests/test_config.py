@@ -39,3 +39,52 @@ def test_exact_columns_load(tmp_path):
     (d / "dataset.toml").write_text('name = "x"\nversion = "v1"\nkind = "spider2"\n'
                                     '[results.exact]\nt = ["a", "b"]\n')
     assert load(d).exact == {"t": ["a", "b"]}
+
+
+SYNTH = '''name = "ecommerce"
+version = "v1"
+kind = "synthetic"
+
+[recipe]
+project = "examples/ecommerce"
+profile = "sample"
+seed = 7
+overlay = []
+designs = ["star", "dv", "an"]
+
+[recipe.owners]
+order_placed = "user_id"
+
+[[check]]
+table = "star_dim_sku"
+simkit = "skus"
+columns = { sku_id = "sku_id", category = "category", price = "price" }
+'''
+
+
+def test_synthetic_config_loads(tmp_path):
+    cfg = load(_write(tmp_path / "ecommerce", SYNTH))
+    assert cfg.designs == ["star", "dv", "an"]
+    assert cfg.owners == {"order_placed": "user_id"}
+    assert cfg.checks[0]["columns"]["price"] == "price"
+    assert cfg.checks[0]["where"] == "" and cfg.checks[0]["simkit_where"] == ""
+    assert cfg.recipe["seed"] == 7
+
+
+@pytest.mark.parametrize(("old", "new", "field"), [
+    ('designs = ["star", "dv", "an"]', 'designs = ["star", "dv", "snow"]', "snow"),
+    ('designs = ["star", "dv", "an"]', 'designs = ["star", "dv"]', "designs"),
+    ('project = "examples/ecommerce"\n', "", "project"),
+    ('profile = "sample"\n', "", "profile"),
+    ("seed = 7\n", "", "seed"),
+    ('table = "star_dim_sku"\n', "", "table"),
+])
+def test_synthetic_config_refuses(tmp_path, old, new, field):
+    d = _write(tmp_path / "ecommerce", SYNTH.replace(old, new))
+    with pytest.raises(ValueError, match=field):
+        load(d)
+
+
+def test_spider2_config_has_no_designs(tmp_path):
+    cfg = load(_write(tmp_path / "shop", 'name = "shop"\nversion = "v1"\nkind = "spider2"\n'))
+    assert cfg.designs == [] and cfg.checks == [] and cfg.owners == {}

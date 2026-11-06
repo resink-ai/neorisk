@@ -137,9 +137,10 @@ So the results' dimension tables are built from creation and snapshot events, ex
   - **Column types:** each results column has one Parquet type, taken from the column's declared SQLite affinity: INTEGER → int64, REAL/NUMERIC/DECIMAL → float64, and the rest → string.
   - **Mixed columns:** a column whose stored values don't fit that type is written as **string**, holding SQLite's `CAST(x AS TEXT)`, with NULL kept as null. Examples are `''` in an INTEGER column, or a text value in a DECIMAL column. Such a column is listed as `mixed` in `dataset.toml` and in `CONTEXT.md`, and `build.sql` must produce the same text.
   - **Mixed integer and real values:** a DECIMAL column holding 62 and 62.7 fits float64 and is not mixed. *(My call.)*
-- **Synthetic:** `results/` holds the dimension and fact tables defined by the dataset's reference build. `expected/` holds:
+- **Synthetic:** `results/` holds the tables of the dataset's three designs (see [Synthetic table designs](#synthetic-table-designs)). `expected/` holds:
   - the ground truth from `datagen`: `labels.parquet`, the golden features where the pack has them, and the cases;
-  - `check.json`, the `datagen check` report on the run.
+  - `check.json`, the `datagen check` report on the run;
+  - `questions/<id>.parquet`, each question's answer from simkit's own tables.
 
   Labels and golden data are never in the log, because they are what a model should not see.
 - **Partitioned tables:** a results table may be partitioned (hive style, e.g. `results/fact_payments/event_date=2026-01-03/…`), and `dataset.toml` says so.
@@ -159,7 +160,7 @@ datasets/
     dataset.toml               name, version, kind (spider2 | synthetic), recipe, results tables, partitioning
     CONTEXT.md                 raw data, how made, expected output, regenerate, extend
     specs/                     Spider2: pack.py, source.toml, ingest.sql, build.sql, queries/
-                               synthetic: build.sql (the dimension and fact tables)
+                               synthetic: <design>.sql (three designs), questions/
     engines/<engine>/          ports of build.sql, for the datasets that have them (spark/, flink/)
 examples/<project>/            the six synthetic projects stay here; their dataset folders point at them
 ```
@@ -266,8 +267,9 @@ There is one design, delivered as four pull requests in order. Each leaves `main
 
    By the user's decision of 2026-11-05, this covers all 43 Spider2 datasets: the 13 of PR 1 plus batches 2 and 3. Domain names use an `event=` option on `-- entity:` blocks. The build checks the snapshot rule: one `<entity>_snapshot` per key, keyed by its entity, all at one time N that no other event follows.
 3. **Synthetic datasets:**
-   - dimension and fact table designs and `build.sql` for the six projects;
+   - three table designs per project, each a reference build over the log (see [Synthetic table designs](#synthetic-table-designs));
    - the independent check against simkit's tables;
+   - questions every design must answer the same way as an oracle over simkit's tables;
    - expected labels and the check report;
    - a `CONTEXT.md` for each.
 4. **Engines and benchmark:**
@@ -275,6 +277,34 @@ There is one design, delivered as four pull requests in order. Each leaves `main
    - the compose file;
    - ports for the four datasets;
    - `dataset run` and `dataset bench`, and the report.
+
+## Synthetic table designs
+
+By the user's decision of 2026-11-06, each synthetic dataset is modeled **three ways**, picked from the designs compared in the *Beyond Facts & Dimensions* atlas (2026-10-19). Each design is a separate reference build over the same log, so one dataset tests a processor on three shapes of output. A star schema stays in every dataset, because it is the Kimball design this spec asked for and the one the simkit check grades directly.
+
+| Dataset | Designs | Why these |
+|---|---|---|
+| `ecommerce` | `star`, `dv`, `an` | Users move region: SCD2, satellites and per-attribute history all have work to do |
+| `payments` | `star`, `dv`, `obt` | An auditable money lifecycle; one wide payment row is the ML-feature shape |
+| `payments_subscriptions` | `star`, `act`, `an` | A subscriber's lifecycle is a customer journey, the activity schema's home ground |
+| `crypto_exchange` | `star`, `dv`, `obt` | A trade links two orders and two traders; a wide trade row is the analyst shape |
+| `layer1` | `star`, `act`, `obt` | Accounts form an activity stream; a wide transaction row joins receipt and inclusion |
+| `social` | `star`, `dv`, `act` | The follow graph is links; engagement is a stream |
+
+The design ids and their rules:
+
+| Id | Design | Tables | History |
+|---|---|---|---|
+| `star` | Star schema (Kimball) | `star_dim_<entity>`, `star_fact_<process>` (no calendar dimension: every star dimension is checked against a simkit table, so dates stay columns) | SCD2 (`<entity>_sk`, `valid_from`, `valid_to`, `is_current`) for entities whose attributes change in the log; facts point at the version in force at event time. An accumulating snapshot fact where a lifecycle exists |
+| `dv` | Data Vault 2.0 | `dv_hub_<entity>`, `dv_link_<relation>`, `dv_sat_<parent>_<group>` | Hash keys are `md5` of the business key as text; insert-only; a satellite row only when its `hashdiff` changes; load time is the event time |
+| `an` | Anchor modeling | `an_<entity>` (identity), `an_<entity>_<attribute>`, `an_<e1>_<role>_<e2>` (ties) | One row per attribute change, with `changed_at` |
+| `act` | Activity schema | `act_<entity>_stream`, optionally `act_<entity>` | One row per activity: `activity_id`, `ts`, `customer`, `activity`, `feature_1..3`, `revenue_impact`, `link`, `activity_occurrence`, `activity_repeated_at` |
+| `obt` | One big table | `obt_<grain>` | One wide row per fact grain, every attribute bound as of the fact's time |
+
+- **Layout:** `specs/<design>.sql` holds one design's `-- table:` blocks, and every table name starts with `<design>_`. *(This replaces the single `build.sql` for synthetic datasets, so each design is one engine port.)*
+- **Column types:** int32, int64, float64, string, bool, date and timestamp(µs, UTC). Anything else, such as DuckDB's HUGEINT from a `sum`, fails the build.
+- **Questions:** each dataset has three, in `specs/questions/<id>/`. `oracle.sql` answers it from simkit's own tables, never the log, and its answer is `expected/questions/<id>.parquet`. Every design answers it from its own tables only, in `<design>.sql`, and must give the oracle's answer. At least one question per dataset depends on history or lifecycle.
+- **The simkit check:** `[[check]]` entries in `dataset.toml` map a results table's columns (optionally filtered) to a simkit table's columns. Every star dimension and transaction fact has at least one entry. The check runs at build time, when the simkit run is at hand.
 
 ## Batch 3
 
@@ -323,6 +353,7 @@ These are as stated in the conversation of 2026-11-01 to 2026-11-03:
 - Everything is events: entities come from creation events. The input is a single ordered log like a Kafka topic, with the payload as a JSON string.
 - The engine runners and the benchmark (part 4) are part of this effort, and everything runs locally.
 - The plan proposed on 2026-11-03 was accepted: Flink streaming over Redpanda as the stream processor, exact comparison, and four datasets on every engine.
+- 2026-11-06: each synthetic dataset gets three table designs from the *Beyond Facts & Dimensions* atlas, with SQL that builds their tables from the log. Which three is my call (see [Synthetic table designs](#synthetic-table-designs)).
 
 ## My calls (please check)
 

@@ -1,0 +1,206 @@
+{
+  "name": "payments",
+  "version": "v1",
+  "kind": "synthetic",
+  "writer": {
+    "polars": "2.0.0",
+    "pyarrow": "26.0.0"
+  },
+  "recipe_sha256": "ffcab001712061bde928229c03e5d462205e0cf6cb218c904bca41a76d9589ea",
+  "source_sha256": "ed557fbc132ed5800106d26367695f1680ae74749e0cc5c13e29d4de7dd91b08",
+  "files": {
+    "expected/cases.parquet": {
+      "sha256": "6c56f90ed6df92c5d525071fb482c4cfacbde0cb8eaaa4a7e3d6e27693173d1f",
+      "rows": 5283
+    },
+    "expected/check.json": {
+      "sha256": "032eea50ec6f36969de153b3ad22f19e28567b11191ea5e53cdfa8ccdae393c1"
+    },
+    "expected/labels.parquet": {
+      "sha256": "be3f3c7f786caf9dd2e116f232d0ca0eeca79fe8dc382f574d32285f6b032788",
+      "rows": 22
+    },
+    "expected/questions/q1_money_by_mcc.parquet": {
+      "sha256": "169966e6fbc5d82b31ae79daa00d920e28bb4abf27b3e78bf29233aa5d9a5ecd",
+      "rows": 6
+    },
+    "expected/questions/q2_final_status_by_brand.parquet": {
+      "sha256": "a0e18eab74be8f1d93bfc19cd6e4d6b350703df296a58f9fd7e38ef09ff863e1",
+      "rows": 16
+    },
+    "expected/questions/q3_settlement_by_country.parquet": {
+      "sha256": "e95c0e07420157e7765695f7f52466dd1f9c4828d4c918d1f06b8ae916593be8",
+      "rows": 302
+    },
+    "log/part-00000.parquet": {
+      "sha256": "1fec7560dff3be132bcc344a9fdc444d7ae16a1173dc4df692bd380a1bcb0c08",
+      "rows": 28917
+    },
+    "results/dv_hub_cards.parquet": {
+      "sha256": "29b2567cbd12025d22337a497a8edf91d8281769f7810f16d97f4bb2c68bb9f4",
+      "rows": 400
+    },
+    "results/dv_hub_customers.parquet": {
+      "sha256": "d3ae9aa93b0198e83200b6fa2892536916542b7eb130262b0ac97362c01ecda2",
+      "rows": 400
+    },
+    "results/dv_hub_merchants.parquet": {
+      "sha256": "4b6f88a3cf6afa7908d776de47010a98bc6290360467d5e937326369e71d1171",
+      "rows": 120
+    },
+    "results/dv_hub_payments.parquet": {
+      "sha256": "f56d6e9127464e3eee6e64376af86a0a720cdb9641dbf40361fdf92dd875f09c",
+      "rows": 4761
+    },
+    "results/dv_link_card_customer.parquet": {
+      "sha256": "f66f5ba358ee96f1c98701e2f05a1be9a2cfce9a1275f8fcf679c635f812e947",
+      "rows": 400
+    },
+    "results/dv_link_decline.parquet": {
+      "sha256": "d28588e17b5f120ebbdcdc5d21027c40f37fdd621e9bdcc5fb039f848ce8e345",
+      "rows": 109
+    },
+    "results/dv_link_payment.parquet": {
+      "sha256": "fae5acfa5f8297ed3056e86dd2d2ceb41df2459d49d63aed28ac1d7058bb3193",
+      "rows": 4761
+    },
+    "results/dv_link_refund.parquet": {
+      "sha256": "17703751d55965447907288b1a40ebd5456d8ee2939c1cc3f1bc26e7225d4222",
+      "rows": 448
+    },
+    "results/dv_link_settlement.parquet": {
+      "sha256": "d1e6f4215dba8c24f3a4f26dab7160ab9c980b5ed14a44cd96af649bc618d243",
+      "rows": 1974
+    },
+    "results/dv_sat_cards_details.parquet": {
+      "sha256": "1008889a7a4ec049ae334a7d3a9c0db0e443852bb2a2f4d5f3a2b8a69260006e",
+      "rows": 400
+    },
+    "results/dv_sat_customers_profile.parquet": {
+      "sha256": "3cfad6afc61ad3b88371172a5add02fd5d7844c37585614b74d8e13670292ffd",
+      "rows": 400
+    },
+    "results/dv_sat_customers_statement.parquet": {
+      "sha256": "05932ae9604da350793110daa5f9e6cb7060a921ed33e3e7a41c98f1b2f8b6a4",
+      "rows": 399
+    },
+    "results/dv_sat_decline_details.parquet": {
+      "sha256": "2b952ddecf20125e3bb150ba8c1daad9b6e749eb0bba1bb6c257b1b681f07ee6",
+      "rows": 109
+    },
+    "results/dv_sat_merchants_details.parquet": {
+      "sha256": "8173f7a7659029feb89c11d713692f758889a1d47be9dde25172fb4e1c629358",
+      "rows": 120
+    },
+    "results/dv_sat_payments_authorization.parquet": {
+      "sha256": "732c8f702f6b60895dfef7d334ae13cbce0bc86c2fd2dbae5ffa71d27293ca80",
+      "rows": 4662
+    },
+    "results/dv_sat_payments_capture.parquet": {
+      "sha256": "e6acb40242cf9c1be063097c24edfb3bf6de362413f0d8433a22673763f053c4",
+      "rows": 4335
+    },
+    "results/dv_sat_payments_details.parquet": {
+      "sha256": "c4e26e62ae496150a5f1ce630d9f2c2d86133c8a473915012e0c5545a97cb3fd",
+      "rows": 4761
+    },
+    "results/dv_sat_payments_dispute.parquet": {
+      "sha256": "a99f3865089c22c50ff7f16d798d03cd2f1bb723c7fe1bd33350efb5ab1588e5",
+      "rows": 18
+    },
+    "results/dv_sat_payments_expiry.parquet": {
+      "sha256": "8ea25909f325b4da02eb9cd36b04f521d40139a235a8dd6f860ee333e7b7d9ce",
+      "rows": 265
+    },
+    "results/dv_sat_payments_replay.parquet": {
+      "sha256": "bb1ff35d628e73cb43b3d9ab05d0ea0ba66edce0a3c7bde0676625d9d4acd4ba",
+      "rows": 220
+    },
+    "results/dv_sat_refund_details.parquet": {
+      "sha256": "49bab74e3b2369f9be808a02214a7a9be6e2a9b34529aa27f9e499bad1609b6f",
+      "rows": 448
+    },
+    "results/dv_sat_settlement_amounts.parquet": {
+      "sha256": "101c883741e11096877b7aaed9bfd3e8eaff078fcf66caf03e41aff0ddf85a83",
+      "rows": 1974
+    },
+    "results/obt_declines.parquet": {
+      "sha256": "8f4c2d4cce1db0c20a16d6b5af9576f882a635acbaf50f6a677cde173c32c72e",
+      "rows": 109
+    },
+    "results/obt_payments.parquet": {
+      "sha256": "fa7cede89821368ea64df77669b6323cb5926a25755c619cc8f270f613529838",
+      "rows": 4761
+    },
+    "results/obt_settlements.parquet": {
+      "sha256": "df86d0e6fcf9bea331235216c2b46d6c4e71ca7a0b7ac5d87ed7e7ec56f05671",
+      "rows": 1974
+    },
+    "results/obt_statements.parquet": {
+      "sha256": "59a2bb82b4423971c01c477a634fd5c0ca9b3b07fb5dc30a816c9537e630faca",
+      "rows": 399
+    },
+    "results/star_dim_cards.parquet": {
+      "sha256": "1042bc07c2639b62bf0a3752c7b6fa6f2baeb5a32d7328d456710cc06a75add0",
+      "rows": 400
+    },
+    "results/star_dim_customers.parquet": {
+      "sha256": "011397b4af2f0cf53743a194f77b4e42c36a9d83f690ba41a8e915c0a97ccfab",
+      "rows": 400
+    },
+    "results/star_dim_merchants.parquet": {
+      "sha256": "13ce8ceda7a7dc652244034a012877b494acbed921d7c4642d9a09a880095cab",
+      "rows": 120
+    },
+    "results/star_fact_authorizations.parquet": {
+      "sha256": "a7b5cece2a34eff29279b62eb0c4525cb257ca28003a7f642cde32211eea729d",
+      "rows": 4662
+    },
+    "results/star_fact_capture_replays.parquet": {
+      "sha256": "e88cecb3b94b557ffe22e5c44027d4cc0732dfe1858a4f71c48ea9c9d7172e16",
+      "rows": 220
+    },
+    "results/star_fact_captures.parquet": {
+      "sha256": "99787e0c8b517474f9ad20f15bbefbc8bca464d552b55348fcc6472f55f874a0",
+      "rows": 4335
+    },
+    "results/star_fact_declines.parquet": {
+      "sha256": "0ec25600e59550a37b095e452aefe62c43d71813ca04470a7f42833b432bdf53",
+      "rows": 109
+    },
+    "results/star_fact_disputes_opened.parquet": {
+      "sha256": "e0ecb379e06f080606811e4d28e96e2ddb3277f49c891d451702faed0bba5e30",
+      "rows": 16
+    },
+    "results/star_fact_disputes_resolved.parquet": {
+      "sha256": "ab6d8afd890a3ec21381b26c462b474ddc32b3401dd9e25a56d73e4775da6f34",
+      "rows": 2
+    },
+    "results/star_fact_expirations.parquet": {
+      "sha256": "c40c91aa43ac0a3bdf827777a8e1e16ffb55d87af191f68a7dbb1bbbfaeb0f6c",
+      "rows": 265
+    },
+    "results/star_fact_payment_lifecycle.parquet": {
+      "sha256": "c5d9f0b3d37dec768d1f3e27f6c7b36758ba16b169f4d2d7cc890963e60c3193",
+      "rows": 4761
+    },
+    "results/star_fact_refunds.parquet": {
+      "sha256": "d8138093dfe649916aff8898937b74777e7c11202d94a04aca5949378e5b93da",
+      "rows": 448
+    },
+    "results/star_fact_settlements.parquet": {
+      "sha256": "7e7fd3bf28e0198f7e8e2a9f851305ada7ea747e6dbeb6a4cd42acbecbe15ef8",
+      "rows": 1974
+    },
+    "results/star_fact_statements.parquet": {
+      "sha256": "77083536063969e63e880eb163cb0176ca7c7afe2e42b8d00ed7cafaab1a2924",
+      "rows": 399
+    },
+    "schema/events.json": {
+      "sha256": "a0dd6faac6ab1f4eeee803e0e0acdf1eac2f37234c92131bf73ab11d13dd8eea"
+    },
+    "schema/results.json": {
+      "sha256": "1d447790f4840e0107eb038124d4428976ab1543111483e4cced797a766c2a4e"
+    }
+  }
+}

@@ -1,0 +1,173 @@
+name = "payments"
+version = "v1"
+kind = "synthetic"
+
+[recipe]
+project = "examples/payments"
+profile = "sample"
+seed = 7
+overlay = []
+designs = ["star", "dv", "obt"]
+
+# event -> payload column whose value keys its messages. A payment's events are keyed on
+# payment_id (the pack's payment owner); payment_declined on customer_id, because an
+# over_limit decline has no payment. The hold_* events of std.holds keep the default
+# partition owner.
+[recipe.owners]
+credit_line_opened = "customer_id"
+statement_paid = "customer_id"
+payment_declined = "customer_id"
+payment_authorized = "payment_id"
+payment_captured = "payment_id"
+capture_replayed = "payment_id"
+payment_expired = "payment_id"
+refund_issued = "payment_id"
+refund_failed = "payment_id"
+refund_refused = "payment_id"
+dispute_opened = "payment_id"
+dispute_resolved = "payment_id"
+settlement_posted = "merchant_id"
+
+# ---- star ----------------------------------------------------------------------------
+
+[[check]]
+table = "star_dim_customers"
+simkit = "customers"
+columns = { customer_id = "customer_id", segment = "segment", country = "country", credit_limit = "credit_limit", created_at = "created_at" }
+
+[[check]]
+table = "star_dim_cards"
+simkit = "cards"
+columns = { card_id = "card_id", customer_id = "customer_id", brand = "brand", created_at = "created_at" }
+
+[[check]]
+table = "star_dim_merchants"
+simkit = "merchants"
+columns = { merchant_id = "merchant_id", mcc = "mcc", country = "country", created_at = "created_at" }
+
+[[check]]
+table = "star_fact_authorizations"
+simkit = "payment_authorized"
+columns = { payment_id = "payment_id", customer_id = "customer_id", card_id = "card_id", merchant_id = "merchant_id", amount = "amount", authorized_at = "event_time" }
+
+[[check]]
+table = "star_fact_declines"
+simkit = "payment_declined"
+columns = { decline_id = "event_id", payment_id = "payment_id", customer_id = "customer_id", merchant_id = "merchant_id", amount = "amount", reason = "reason", declined_at = "event_time" }
+
+[[check]]
+table = "star_fact_captures"
+simkit = "payment_captured"
+columns = { payment_id = "payment_id", customer_id = "customer_id", merchant_id = "merchant_id", amount = "amount", idempotency_key = "idempotency_key", captured_at = "event_time" }
+
+[[check]]
+table = "star_fact_capture_replays"
+simkit = "capture_replayed"
+columns = { replay_id = "event_id", payment_id = "payment_id", customer_id = "customer_id", merchant_id = "merchant_id", idempotency_key = "idempotency_key", replayed_at = "event_time" }
+
+[[check]]
+table = "star_fact_expirations"
+simkit = "payment_expired"
+columns = { payment_id = "payment_id", customer_id = "customer_id", merchant_id = "merchant_id", amount = "amount", expired_at = "event_time" }
+
+[[check]]
+table = "star_fact_refunds"
+simkit = "refund_issued"
+columns = { refund_id = "event_id", payment_id = "payment_id", customer_id = "customer_id", merchant_id = "merchant_id", amount = "amount", decided_at = "event_time" }
+where = "outcome = 'issued'"
+
+[[check]]
+table = "star_fact_refunds"
+simkit = "refund_failed"
+columns = { refund_id = "event_id", payment_id = "payment_id", customer_id = "customer_id", merchant_id = "merchant_id", amount = "amount", decided_at = "event_time" }
+where = "outcome = 'failed'"
+
+[[check]]
+table = "star_fact_refunds"
+simkit = "refund_refused"
+columns = { refund_id = "event_id", payment_id = "payment_id", customer_id = "customer_id", merchant_id = "merchant_id", reason = "reason", decided_at = "event_time" }
+where = "outcome = 'refused'"
+
+[[check]]
+table = "star_fact_disputes_opened"
+simkit = "dispute_opened"
+columns = { payment_id = "payment_id", customer_id = "customer_id", merchant_id = "merchant_id", reason = "reason", opened_at = "event_time" }
+
+[[check]]
+table = "star_fact_disputes_resolved"
+simkit = "dispute_resolved"
+columns = { payment_id = "payment_id", customer_id = "customer_id", merchant_id = "merchant_id", outcome = "outcome", chargeback = "chargeback", resolved_at = "event_time" }
+
+[[check]]
+table = "star_fact_settlements"
+simkit = "settlement_posted"
+columns = { settlement_id = "event_id", merchant_id = "merchant_id", gross = "gross", refunds = "refunds", chargebacks = "chargebacks", fees = "fees", net = "net", posted_at = "event_time" }
+
+[[check]]
+table = "star_fact_statements"
+simkit = "statement_paid"
+columns = { statement_id = "event_id", customer_id = "customer_id", amount = "amount", paid_at = "event_time" }
+
+# ---- dv: hub key sets and plain projections --------------------------------------------
+
+[[check]]
+table = "dv_hub_customers"
+simkit = "customers"
+columns = { customer_id = "customer_id", load_dts = "created_at" }
+
+[[check]]
+table = "dv_hub_cards"
+simkit = "cards"
+columns = { card_id = "card_id", load_dts = "created_at" }
+
+[[check]]
+table = "dv_hub_merchants"
+simkit = "merchants"
+columns = { merchant_id = "merchant_id", load_dts = "created_at" }
+
+[[check]]
+table = "dv_hub_payments"
+simkit = "payments"
+columns = { payment_id = "payment_id", load_dts = "created_at" }
+
+[[check]]
+table = "dv_link_settlement"
+simkit = "settlement_posted"
+columns = { settlement_id = "event_id", load_dts = "event_time" }
+
+[[check]]
+table = "dv_sat_settlement_amounts"
+simkit = "settlement_posted"
+columns = { gross = "gross", refunds = "refunds", chargebacks = "chargebacks", fees = "fees", net = "net", load_dts = "event_time" }
+
+[[check]]
+table = "dv_sat_customers_statement"
+simkit = "statement_paid"
+columns = { amount = "amount", load_dts = "event_time" }
+
+[[check]]
+table = "dv_sat_decline_details"
+simkit = "payment_declined"
+columns = { payment_id = "payment_id", amount = "amount", reason = "reason", load_dts = "event_time" }
+
+# ---- obt: plain projections ------------------------------------------------------------
+
+[[check]]
+table = "obt_payments"
+simkit = "payments"
+columns = { payment_id = "payment_id", customer_id = "customer_id", card_id = "card_id", merchant_id = "merchant_id", amount = "amount", created_at = "created_at" }
+
+[[check]]
+table = "obt_declines"
+simkit = "payment_declined"
+columns = { decline_id = "event_id", payment_id = "payment_id", customer_id = "customer_id", merchant_id = "merchant_id", amount = "amount", reason = "reason", declined_at = "event_time" }
+
+[[check]]
+table = "obt_settlements"
+simkit = "settlement_posted"
+columns = { settlement_id = "event_id", merchant_id = "merchant_id", gross = "gross", refunds = "refunds", chargebacks = "chargebacks", fees = "fees", net = "net", posted_at = "event_time" }
+
+[[check]]
+table = "obt_statements"
+simkit = "statement_paid"
+columns = { statement_id = "event_id", customer_id = "customer_id", amount = "amount", paid_at = "event_time" }

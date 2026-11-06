@@ -1,0 +1,294 @@
+name = "ecommerce"
+version = "v1"
+kind = "synthetic"
+
+[recipe]
+project = "examples/ecommerce"
+profile = "sample"
+seed = 7
+overlay = []
+designs = ["star", "dv", "an"]
+
+# event -> payload column whose value keys its messages (the reservation_* events of
+# std.reservations keep the default partition owner)
+[recipe.owners]
+user_signed_up = "user_id"
+verification_failed = "user_id"
+session_started = "user_id"
+product_viewed = "user_id"
+order_placed = "user_id"
+checkout_failed = "user_id"
+order_returned = "user_id"
+address_changed = "user_id"
+referral_bonus_paid = "user_id"
+referral_bonus_rejected = "user_id"
+stock_restocked = "sku_id"
+
+# ---- star ----------------------------------------------------------------------------
+
+[[check]]
+table = "star_dim_users"
+simkit = "users"
+columns = { user_id = "user_id", age_band = "age_band", region = "region", acquisition = "acquisition", invited_by = "invited_by", valid_from = "created_at" }
+where = "users_sk IN (SELECT min(users_sk) FROM star_dim_users GROUP BY user_id)"
+
+[[check]]
+table = "star_dim_users"
+simkit = "address_changed"
+columns = { user_id = "user_id", region = "region", valid_from = "event_time" }
+where = "users_sk NOT IN (SELECT min(users_sk) FROM star_dim_users GROUP BY user_id)"
+
+[[check]]
+table = "star_dim_devices"
+simkit = "devices"
+columns = { device_id = "device_id", user_id = "user_id", os = "os", kind = "kind", created_at = "created_at" }
+
+[[check]]
+table = "star_dim_skus"
+simkit = "skus"
+columns = { sku_id = "sku_id", category = "category", price = "price", created_at = "created_at" }
+
+[[check]]
+table = "star_fact_orders"
+simkit = "order_placed"
+columns = { order_id = "order_id", user_id = "user_id", device_id = "device_id", first_sku_id = "sku_id", first_quantity = "quantity", amount = "amount", ordered_at = "event_time" }
+
+[[check]]
+table = "star_fact_orders"
+simkit = "orders"
+columns = { order_id = "order_id", user_id = "user_id", lines = "lines", amount = "amount", ordered_at = "created_at" }
+
+[[check]]
+table = "star_fact_order_lines"
+simkit = "order_lines"
+columns = { line_id = "line_id", order_id = "order_id", sku_id = "sku_id", quantity = "quantity", amount = "amount", ordered_at = "created_at" }
+
+[[check]]
+table = "star_fact_sessions"
+simkit = "session_started"
+columns = { session_id = "session_id", user_id = "user_id", device_id = "device_id", started_at = "event_time" }
+
+[[check]]
+table = "star_fact_product_views"
+simkit = "product_viewed"
+columns = { view_id = "event_id", session_id = "session_id", user_id = "user_id", device_id = "device_id", sku_id = "sku_id", viewed_at = "event_time" }
+
+[[check]]
+table = "star_fact_returns"
+simkit = "order_returned"
+columns = { return_id = "event_id", order_id = "order_id", user_id = "user_id", amount = "amount", returned_at = "event_time" }
+
+[[check]]
+table = "star_fact_referral_bonus"
+simkit = "referral_bonus_paid"
+columns = { bonus_id = "event_id", inviter_id = "user_id", invitee_id = "invitee_id", amount = "amount", decided_at = "event_time" }
+where = "outcome = 'paid'"
+
+[[check]]
+table = "star_fact_referral_bonus"
+simkit = "referral_bonus_rejected"
+columns = { bonus_id = "event_id", inviter_id = "user_id", invitee_id = "invitee_id", decided_at = "event_time" }
+where = "outcome = 'rejected'"
+
+# ---- dv: hub key sets ------------------------------------------------------------------
+
+[[check]]
+table = "dv_hub_users"
+simkit = "users"
+columns = { user_id = "user_id", load_dts = "created_at" }
+
+[[check]]
+table = "dv_hub_devices"
+simkit = "devices"
+columns = { device_id = "device_id", load_dts = "created_at" }
+
+[[check]]
+table = "dv_hub_skus"
+simkit = "skus"
+columns = { sku_id = "sku_id", load_dts = "created_at" }
+
+[[check]]
+table = "dv_hub_orders"
+simkit = "orders"
+columns = { order_id = "order_id", load_dts = "created_at" }
+
+[[check]]
+table = "dv_hub_sessions"
+simkit = "session_started"
+columns = { session_id = "session_id", load_dts = "event_time" }
+
+[[check]]
+table = "dv_sat_skus_details"
+simkit = "skus"
+columns = { category = "category", price = "price", load_dts = "created_at" }
+
+[[check]]
+table = "dv_sat_order_line_details"
+simkit = "order_lines"
+columns = { quantity = "quantity", amount = "amount", load_dts = "created_at" }
+
+# ---- an: plain projections -------------------------------------------------------------
+
+[[check]]
+table = "an_users"
+simkit = "users"
+columns = { user_id = "user_id", created_at = "created_at" }
+
+[[check]]
+table = "an_users_age_band"
+simkit = "users"
+columns = { user_id = "user_id", age_band = "age_band" }
+
+[[check]]
+table = "an_users_acquisition"
+simkit = "users"
+columns = { user_id = "user_id", acquisition = "acquisition" }
+
+[[check]]
+table = "an_users_invitedby_users"
+simkit = "users"
+columns = { user_id = "user_id", inviter_id = "invited_by" }
+simkit_where = "invited_by IS NOT NULL"
+
+[[check]]
+table = "an_devices"
+simkit = "devices"
+columns = { device_id = "device_id", created_at = "created_at" }
+
+[[check]]
+table = "an_devices_os"
+simkit = "devices"
+columns = { device_id = "device_id", os = "os" }
+
+[[check]]
+table = "an_devices_kind"
+simkit = "devices"
+columns = { device_id = "device_id", kind = "kind" }
+
+[[check]]
+table = "an_devices_ownedby_users"
+simkit = "devices"
+columns = { device_id = "device_id", user_id = "user_id" }
+
+[[check]]
+table = "an_skus"
+simkit = "skus"
+columns = { sku_id = "sku_id", created_at = "created_at" }
+
+[[check]]
+table = "an_skus_category"
+simkit = "skus"
+columns = { sku_id = "sku_id", category = "category" }
+
+[[check]]
+table = "an_skus_price"
+simkit = "skus"
+columns = { sku_id = "sku_id", price = "price" }
+
+[[check]]
+table = "an_orders"
+simkit = "order_placed"
+columns = { order_id = "order_id", placed_at = "event_time" }
+
+[[check]]
+table = "an_orders_amount"
+simkit = "orders"
+columns = { order_id = "order_id", amount = "amount" }
+
+[[check]]
+table = "an_orders_lines"
+simkit = "orders"
+columns = { order_id = "order_id", lines = "lines" }
+
+[[check]]
+table = "an_orders_return_amount"
+simkit = "order_returned"
+columns = { order_id = "order_id", return_amount = "amount", changed_at = "event_time" }
+
+[[check]]
+table = "an_orders_placedby_users"
+simkit = "order_placed"
+columns = { order_id = "order_id", user_id = "user_id" }
+
+[[check]]
+table = "an_orders_placedon_devices"
+simkit = "order_placed"
+columns = { order_id = "order_id", device_id = "device_id" }
+
+[[check]]
+table = "an_order_lines"
+simkit = "order_lines"
+columns = { line_id = "line_id", created_at = "created_at" }
+
+[[check]]
+table = "an_order_lines_quantity"
+simkit = "order_lines"
+columns = { line_id = "line_id", quantity = "quantity" }
+
+[[check]]
+table = "an_order_lines_amount"
+simkit = "order_lines"
+columns = { line_id = "line_id", amount = "amount" }
+
+[[check]]
+table = "an_order_lines_partof_orders"
+simkit = "order_lines"
+columns = { line_id = "line_id", order_id = "order_id" }
+
+[[check]]
+table = "an_order_lines_for_skus"
+simkit = "order_lines"
+columns = { line_id = "line_id", sku_id = "sku_id" }
+
+[[check]]
+table = "an_sessions"
+simkit = "session_started"
+columns = { session_id = "session_id", started_at = "event_time" }
+
+[[check]]
+table = "an_sessions_by_users"
+simkit = "session_started"
+columns = { session_id = "session_id", user_id = "user_id" }
+
+[[check]]
+table = "an_sessions_on_devices"
+simkit = "session_started"
+columns = { session_id = "session_id", device_id = "device_id" }
+
+[[check]]
+table = "an_product_views"
+simkit = "product_viewed"
+columns = { view_id = "event_id", viewed_at = "event_time" }
+
+[[check]]
+table = "an_product_views_in_sessions"
+simkit = "product_viewed"
+columns = { view_id = "event_id", session_id = "session_id" }
+
+[[check]]
+table = "an_product_views_of_skus"
+simkit = "product_viewed"
+columns = { view_id = "event_id", sku_id = "sku_id" }
+
+[[check]]
+table = "an_referral_bonus_amount"
+simkit = "referral_bonus_paid"
+columns = { bonus_id = "event_id", amount = "amount" }
+
+[[check]]
+table = "an_referral_bonus_to_users"
+simkit = "referral_bonus_paid"
+columns = { bonus_id = "event_id", inviter_id = "user_id" }
+where = "bonus_id IN (SELECT bonus_id FROM an_referral_bonus_outcome WHERE outcome = 'paid')"
+
+[[check]]
+table = "an_referral_bonus_for_users"
+simkit = "referral_bonus_paid"
+columns = { bonus_id = "event_id", invitee_id = "invitee_id" }
+where = "bonus_id IN (SELECT bonus_id FROM an_referral_bonus_outcome WHERE outcome = 'paid')"
+
+[[check]]
+table = "an_referral_bonus_outcome"
+simkit = "referral_bonus_rejected"
+columns = { bonus_id = "event_id" }
+where = "outcome = 'rejected'"

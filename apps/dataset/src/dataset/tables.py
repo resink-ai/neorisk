@@ -183,21 +183,29 @@ def _sample(rows: list[tuple]) -> list[tuple]:
     return sorted(rows, key=repr)[:SAMPLE]
 
 
+def _contract(t: pa.DataType, extended: bool) -> bool:
+    if (pa.types.is_integer(t) or pa.types.is_floating(t) or pa.types.is_string(t)
+            or pa.types.is_large_string(t) or pa.types.is_null(t)):
+        return True
+    return extended and (pa.types.is_boolean(t) or pa.types.is_date32(t)
+                         or (pa.types.is_timestamp(t) and t.unit == "us" and t.tz == "UTC"))
+
+
 def compare_tables(name: str, expected: pa.Table, got: pa.Table, *,
-                   ordered: bool = False, exact: set[str] | frozenset = frozenset()) -> TableResult:
+                   ordered: bool = False, exact: set[str] | frozenset = frozenset(),
+                   extended: bool = False) -> TableResult:
+    """`extended` (synthetic results) also admits bool, date32 and timestamp(us, UTC)."""
     want, have = expected.column_names, got.column_names
     ne, ng = expected.num_rows, got.num_rows
     if sorted(want) != sorted(have):
         return TableResult(name, False, ne, ng, detail=(
             f"columns differ: missing {sorted(set(want) - set(have))}, "
             f"extra {sorted(set(have) - set(want))}"))
-    bad = [f"{f.name}: {f.type}" for f in got.schema
-           if not (pa.types.is_integer(f.type) or pa.types.is_floating(f.type)
-                   or pa.types.is_string(f.type) or pa.types.is_large_string(f.type)
-                   or pa.types.is_null(f.type))]
+    bad = [f"{f.name}: {f.type}" for f in got.schema if not _contract(f.type, extended)]
     if bad:
+        allowed = "int, float, string" + (", bool, date, timestamp[us, UTC]" if extended else "")
         return TableResult(name, False, ne, ng, detail=(
-            f"column types outside the contract (int, float, string): {bad}"))
+            f"column types outside the contract ({allowed}): {bad}"))
     got = got.select(want)
     floats = [pa.types.is_floating(f.type) and f.name not in exact for f in expected.schema]
     a, b = _rows(expected), _rows(got)

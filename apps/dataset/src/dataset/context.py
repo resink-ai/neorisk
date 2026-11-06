@@ -63,19 +63,70 @@ def _intro(version: str, kind: str, events: int, tables: int, queries: int) -> s
     return text + "."
 
 
-def render(cfg: DatasetConfig, root: Path) -> str:
-    events = json.loads((root / "schema" / "events.json").read_text())["events"]
-    results = json.loads((root / "schema" / "results.json").read_text())
-    manifest = json.loads((root / "manifest.json").read_text())
-    counts = _log_counts(root)
-    tables, queries = results["tables"], sorted(results["queries"])
-    out = [_intro(cfg.version, cfg.kind, manifest["counts"]["log"], len(tables), len(queries)), "",
-           "## Event catalogue", "", "| Event | Kind | Rows | Payload fields |", "|---|---|---:|---|"]
+def _catalogue(events: list[dict], counts: dict[str, int]) -> list[str]:
+    out = ["## Event catalogue", "", "| Event | Kind | Rows | Payload fields |", "|---|---|---:|---|"]
     for e in events:
         kind = "entity" if e["kind"] == "entity_created" else "business"
         fields = [f["name"] for f in e["fields"] if kind == "entity" or f["name"] not in ENVELOPE]
         out.append(f"| `{e['name']}` | {kind} | {counts.get(e['name'], 0):,} | "
                    + ", ".join(f"`{f}`" for f in fields) + " |")
+    return out
+
+
+def _rows(path: Path) -> int:
+    import pyarrow.parquet as pq
+    return pq.ParquetFile(path).metadata.num_rows if path.exists() else 0
+
+
+def _render_synthetic(cfg: DatasetConfig, root: Path) -> str:
+    events = json.loads((root / "schema" / "events.json").read_text())["events"]
+    results = json.loads((root / "schema" / "results.json").read_text())
+    manifest = json.loads((root / "manifest.json").read_text())
+    counts, r = _log_counts(root), cfg.recipe
+    designs = ", ".join(f"`{d}`" for d in cfg.designs)
+    qs = results["questions"]
+    out = [(f"Version `{cfg.version}`, kind `synthetic`, from `{r['project']}` (profile "
+           f"`{r['profile']}`, seed {r['seed']}). The input is one ordered event log of "
+           f"{manifest['counts']['log']:,} events; the output is {len(results['tables'])} tables "
+           f"in three designs ({designs}), and the answers to {len(qs)} questions."), ""]
+    out += _catalogue(events, counts)
+    out += _snapshots(events, counts, root)
+    out += ["", "## Expected output"]
+    for d in cfg.designs:
+        out += ["", f"### `{d}`", "", "| Table | Rows | Columns |", "|---|---:|---:|"]
+        for t in results["designs"].get(d, []):
+            out.append(f"| `{t}` | {manifest['counts'][f'results/{t}']:,} | "
+                       f"{len(results['tables'][t]['columns'])} |")
+    out += ["", "## Questions", "",
+            ("Each question is answered by `oracle.sql` from simkit's own tables, never the log; "
+            "every design answers it from its own tables only, and the answers must agree."), ""]
+    out += [f"- `{q}`: {_rows(root / 'expected' / 'questions' / f'{q}.parquet'):,} rows"
+            for q in qs]
+    check = json.loads((root / "expected" / "check.json").read_text())
+    failed = ", ".join(f"`{n}`" for n in check["failed"]) or "none"
+    out += ["", "## Ground truth", "",
+            "In `expected/`, never in the log:", "",
+            f"- `labels.parquet`: {_rows(root / 'expected' / 'labels.parquet'):,} rows",
+            f"- `cases.parquet`: {_rows(root / 'expected' / 'cases.parquet'):,} rows",
+            f"- `check.json`: {check['checks']} checks on the run; failed: {failed}"]
+    out += ["", "## Regenerate", "", "```bash",
+            (f"uv run dataset build {cfg.name}             # → $NEORISK_DATA_ROOT/{cfg.name}/"
+             f"{cfg.version}/ (default data/datasets/)"),
+            f"uv run dataset verify {cfg.name}            # exit 0 = every table and answer matches",
+            "```", ""]
+    return "\n".join(out)
+
+
+def render(cfg: DatasetConfig, root: Path) -> str:
+    if cfg.kind == "synthetic":
+        return _render_synthetic(cfg, root)
+    events = json.loads((root / "schema" / "events.json").read_text())["events"]
+    results = json.loads((root / "schema" / "results.json").read_text())
+    manifest = json.loads((root / "manifest.json").read_text())
+    counts = _log_counts(root)
+    tables, queries = results["tables"], sorted(results["queries"])
+    out = [_intro(cfg.version, cfg.kind, manifest["counts"]["log"], len(tables), len(queries)), ""]
+    out += _catalogue(events, counts)
     out += _snapshots(events, counts, root)
     out += ["", "## Expected output", "",
             "| Table | Rows | Columns | Mixed columns |", "|---|---:|---:|---|"]

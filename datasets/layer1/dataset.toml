@@ -1,0 +1,135 @@
+name = "layer1"
+version = "v1"
+kind = "synthetic"
+
+[recipe]
+project = "examples/layer1"
+profile = "sample"
+seed = 7
+overlay = []
+designs = ["star", "act", "obt"]
+
+# event -> payload column whose value keys its messages. Every transaction event is keyed on
+# its sender, from_account: the nonce is per sender, so a consumer checking nonces or
+# rebuilding a sender's balance needs the sender's receipts, inclusions, drops and transfer
+# logs in one ordered partition (block would split a sender's history across blocks, and a
+# transfer's receiver gets the credit from the same row). Genesis allocations are keyed on
+# the funded account. block_produced has no account and keeps the default partition owner:
+# the one chain shard that builds every block, so blocks stay in one ordered partition.
+[recipe.owners]
+genesis_allocated = "account_id"
+tx_received = "from_account"
+tx_included = "from_account"
+tx_dropped = "from_account"
+transfer_log = "from_account"
+
+# ---- star ----------------------------------------------------------------------------
+
+[[check]]
+table = "star_dim_accounts"
+simkit = "accounts"
+columns = { account_id = "account_id", kind = "kind", created_at = "created_at" }
+
+[[check]]
+table = "star_fact_genesis_allocations"
+simkit = "genesis_allocated"
+columns = { allocation_id = "event_id", account_id = "account_id", amount = "amount", allocated_at = "event_time" }
+
+[[check]]
+table = "star_fact_tx_receipts"
+simkit = "tx_received"
+columns = { tx_id = "tx_id", from_account = "from_account", to_account = "to_account", nonce = "nonce", value = "value", gas_limit = "gas_limit", kind = "kind", received_at = "event_time" }
+
+[[check]]
+table = "star_fact_tx_inclusions"
+simkit = "tx_included"
+columns = { tx_id = "tx_id", block = "block", from_account = "from_account", nonce = "nonce", gas_used = "gas_used", fee = "fee", status = "status", included_at = "event_time" }
+
+[[check]]
+table = "star_fact_tx_drops"
+simkit = "tx_dropped"
+columns = { tx_id = "tx_id", block = "block", from_account = "from_account", reason = "reason", dropped_at = "event_time" }
+
+[[check]]
+table = "star_fact_transfers"
+simkit = "transfer_log"
+columns = { tx_id = "tx_id", from_account = "from_account", to_account = "to_account", value = "value", transferred_at = "event_time" }
+
+[[check]]
+table = "star_fact_blocks"
+simkit = "block_produced"
+columns = { block = "block", txs = "txs", gas_used = "gas_used", produced_at = "event_time" }
+
+# ---- act: the customer table and the stream's keys per activity -----------------------
+
+[[check]]
+table = "act_account"
+simkit = "accounts"
+columns = { customer = "account_id", kind = "kind", created_at = "created_at" }
+
+[[check]]
+table = "act_account_stream"
+simkit = "genesis_allocated"
+columns = { activity_id = "event_id", customer = "account_id", ts = "event_time", revenue_impact = "amount" }
+where = "activity = 'received_genesis'"
+
+[[check]]
+table = "act_account_stream"
+simkit = "tx_received"
+columns = { activity_id = "event_id", customer = "from_account", ts = "event_time", feature_2 = "kind" }
+where = "activity = 'submitted_tx'"
+
+[[check]]
+table = "act_account_stream"
+simkit = "tx_included"
+columns = { activity_id = "event_id", customer = "from_account", ts = "event_time" }
+where = "activity = 'included_tx'"
+simkit_where = "status = 'success'"
+
+[[check]]
+table = "act_account_stream"
+simkit = "tx_included"
+columns = { activity_id = "event_id", customer = "from_account", ts = "event_time" }
+where = "activity = 'reverted_tx'"
+simkit_where = "status = 'reverted'"
+
+[[check]]
+table = "act_account_stream"
+simkit = "tx_dropped"
+columns = { activity_id = "event_id", customer = "from_account", ts = "event_time", feature_3 = "reason" }
+where = "activity = 'dropped_tx'"
+
+[[check]]
+table = "act_account_stream"
+simkit = "transfer_log"
+columns = { activity_id = "event_id", customer = "from_account", ts = "event_time" }
+where = "activity = 'sent_value'"
+
+[[check]]
+table = "act_account_stream"
+simkit = "transfer_log"
+columns = { activity_id = "event_id", customer = "to_account", ts = "event_time", revenue_impact = "value" }
+where = "activity = 'received_value'"
+
+# ---- obt: plain projections ------------------------------------------------------------
+
+[[check]]
+table = "obt_accounts"
+simkit = "accounts"
+columns = { account_id = "account_id", kind = "kind", created_at = "created_at" }
+
+[[check]]
+table = "obt_accounts"
+simkit = "genesis_allocated"
+columns = { account_id = "account_id", genesis_amount = "amount", genesis_at = "event_time" }
+where = "genesis_amount IS NOT NULL"
+
+[[check]]
+table = "obt_transactions"
+simkit = "tx_received"
+columns = { tx_id = "tx_id", from_account = "from_account", to_account = "to_account", nonce = "nonce", value = "value", gas_limit = "gas_limit", kind = "kind", received_at = "event_time" }
+
+[[check]]
+table = "obt_blocks"
+simkit = "block_produced"
+columns = { block = "block", txs = "txs", gas_used = "gas_used", produced_at = "event_time" }
