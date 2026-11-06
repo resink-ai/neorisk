@@ -111,3 +111,31 @@ def test_context_snapshot_keeps_self_refs(tmp_path):
     finally:
         ctx._snapshot_times = ctx_times
     assert "| `salary`, `supervisor_id` |" in out
+
+
+def test_cli_builds_and_verifies_synthetic(tiny_synthetic, tmp_path, capsys):
+    assert cli.main(["build", "tiny"]) == 0
+    out = tmp_path / "verify.json"
+    assert cli.main(["verify", "tiny", "--json", str(out)]) == 0
+    rep = json.loads(out.read_text())
+    assert rep["ok"] and len(rep["questions"]) == 3 and len(rep["tables"]) == 8
+
+
+def test_list_shows_synthetic(tiny_synthetic, capsys):
+    assert cli.main(["build", "tiny"]) == 0
+    capsys.readouterr()
+    assert cli.main(["list", "--json"]) == 0
+    rows = json.loads(capsys.readouterr().out)
+    assert rows == [{"name": "tiny", "kind": "synthetic", "version": "v1", "built": "unrecorded"}]
+
+
+def test_context_synthetic(tiny_synthetic, capsys):
+    assert cli.main(["build", "tiny"]) == 0
+    capsys.readouterr()
+    assert cli.main(["context", "tiny"]) == 0
+    text = capsys.readouterr().out
+    for want in ("kind `synthetic`", "from `examples/tiny`", "### `star`", "| `star_dim_users` |",
+                 "## Questions", "`q1`", "## Ground truth", "None: every entity attribute",
+                 "uv run dataset build tiny"):
+        assert want in text, want
+    assert "refdata fetch" not in text
