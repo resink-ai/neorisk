@@ -1,0 +1,135 @@
+name = "social"
+version = "v1"
+kind = "synthetic"
+
+[recipe]
+project = "examples/social"
+profile = "sample"
+seed = 7
+overlay = []
+designs = ["star", "dv", "act"]
+
+# event -> payload column whose value keys its messages. Every post event is keyed on the
+# cascade's root post, post_id: the pack's cascade owner (one per root post) emits every
+# view, like and repost of the cascade, and a consumer rebuilding a cascade (its reach, its
+# depth, the one-view-per-user dedup) needs the post, its views, likes and reposts in one
+# ordered partition (user_id would split a cascade across its viewers). A repost's own id
+# (repost_id) is not a partition: its views and reposts are still the root's cascade.
+[recipe.owners]
+post_created = "post_id"
+post_viewed = "post_id"
+post_liked = "post_id"
+post_reposted = "post_id"
+
+# ---- star ----------------------------------------------------------------------------
+
+[[check]]
+table = "star_dim_users"
+simkit = "users"
+columns = { user_id = "user_id", tier = "tier", created_at = "created_at" }
+
+[[check]]
+table = "star_fact_follows"
+simkit = "follows"
+columns = { follow_id = "follow_id", follower_id = "follower_id", followee_id = "followee_id", followed_at = "created_at" }
+
+[[check]]
+table = "star_fact_posts"
+simkit = "post_created"
+columns = { post_id = "post_id", user_id = "user_id", posted_at = "event_time" }
+
+[[check]]
+table = "star_fact_views"
+simkit = "post_viewed"
+columns = { view_id = "event_id", post_id = "post_id", user_id = "user_id", via_post = "via_post", viewed_at = "event_time" }
+
+[[check]]
+table = "star_fact_likes"
+simkit = "post_liked"
+columns = { like_id = "event_id", post_id = "post_id", user_id = "user_id", liked_at = "event_time" }
+
+[[check]]
+table = "star_fact_reposts"
+simkit = "post_reposted"
+columns = { repost_id = "repost_id", post_id = "post_id", user_id = "user_id", parent_id = "parent_id", parent_user = "parent_user", depth = "depth", reposted_at = "event_time" }
+
+# ---- dv: hub key sets and plain projections --------------------------------------------
+
+[[check]]
+table = "dv_hub_users"
+simkit = "users"
+columns = { user_id = "user_id", load_dts = "created_at" }
+
+[[check]]
+table = "dv_hub_posts"
+simkit = "post_created"
+columns = { post_id = "post_id", load_dts = "event_time" }
+where = "record_source = 'post_created'"
+
+[[check]]
+table = "dv_hub_posts"
+simkit = "post_reposted"
+columns = { post_id = "repost_id", load_dts = "event_time" }
+where = "record_source = 'post_reposted'"
+
+[[check]]
+table = "dv_sat_users_profile"
+simkit = "users"
+columns = { tier = "tier", load_dts = "created_at" }
+
+[[check]]
+table = "dv_link_follow"
+simkit = "follows"
+columns = { follow_id = "follow_id", load_dts = "created_at" }
+
+[[check]]
+table = "dv_link_view"
+simkit = "post_viewed"
+columns = { view_id = "event_id", load_dts = "event_time" }
+
+[[check]]
+table = "dv_link_like"
+simkit = "post_liked"
+columns = { like_id = "event_id", load_dts = "event_time" }
+
+[[check]]
+table = "dv_sat_repost_details"
+simkit = "post_reposted"
+columns = { depth = "depth", load_dts = "event_time" }
+
+# ---- act: the customer table and the stream's keys per activity -----------------------
+
+[[check]]
+table = "act_user"
+simkit = "users"
+columns = { customer = "user_id", tier = "tier", created_at = "created_at" }
+
+[[check]]
+table = "act_user_stream"
+simkit = "follows"
+columns = { activity_id = "follow_id", customer = "follower_id", ts = "created_at" }
+where = "activity = 'followed_user'"
+
+[[check]]
+table = "act_user_stream"
+simkit = "post_created"
+columns = { activity_id = "event_id", customer = "user_id", ts = "event_time" }
+where = "activity = 'created_post'"
+
+[[check]]
+table = "act_user_stream"
+simkit = "post_viewed"
+columns = { activity_id = "event_id", customer = "user_id", ts = "event_time" }
+where = "activity = 'viewed_post'"
+
+[[check]]
+table = "act_user_stream"
+simkit = "post_liked"
+columns = { activity_id = "event_id", customer = "user_id", ts = "event_time" }
+where = "activity = 'liked_post'"
+
+[[check]]
+table = "act_user_stream"
+simkit = "post_reposted"
+columns = { activity_id = "event_id", customer = "user_id", ts = "event_time" }
+where = "activity = 'reposted_post'"
