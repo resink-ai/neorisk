@@ -295,7 +295,7 @@ The design ids and their rules:
 
 | Id | Design | Tables | History |
 |---|---|---|---|
-| `star` | Star schema (Kimball) | `star_dim_<entity>`, `star_fact_<process>`, `star_dim_date` | SCD2 (`<entity>_sk`, `valid_from`, `valid_to`, `is_current`) for entities whose attributes change in the log; facts point at the version in force at event time. An accumulating snapshot fact where a lifecycle exists |
+| `star` | Star schema (Kimball) | `star_dim_<entity>`, `star_fact_<process>` (no calendar dimension: every star dimension is checked against a simkit table, so dates stay columns) | SCD2 (`<entity>_sk`, `valid_from`, `valid_to`, `is_current`) for entities whose attributes change in the log; facts point at the version in force at event time. An accumulating snapshot fact where a lifecycle exists |
 | `dv` | Data Vault 2.0 | `dv_hub_<entity>`, `dv_link_<relation>`, `dv_sat_<parent>_<group>` | Hash keys are `md5` of the business key as text; insert-only; a satellite row only when its `hashdiff` changes; load time is the event time |
 | `an` | Anchor modeling | `an_<entity>` (identity), `an_<entity>_<attribute>`, `an_<e1>_<role>_<e2>` (ties) | One row per attribute change, with `changed_at` |
 | `act` | Activity schema | `act_<entity>_stream`, optionally `act_<entity>` | One row per activity: `activity_id`, `ts`, `customer`, `activity`, `feature_1..3`, `revenue_impact`, `link`, `activity_occurrence`, `activity_repeated_at` |
