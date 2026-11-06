@@ -265,3 +265,23 @@ def tiny_synthetic(tmp_path, monkeypatch):
     monkeypatch.setattr(names, "REPO", tmp_path)
     monkeypatch.setattr(config, "DATASETS", tmp_path / "datasets")
     return make_tiny(tmp_path)
+
+
+@pytest.fixture
+def built_synthetic(tmp_path, monkeypatch):
+    """Build a real synthetic dataset into tmp_path; its committed lock must exist and match.
+    Returns (manifest, verify report, {event_type: rows} of the log)."""
+    import duckdb
+
+    from dataset.synthetic import build_synthetic, verify_synthetic
+
+    def run(name: str):
+        monkeypatch.setenv("NEORISK_DATA_ROOT", str(tmp_path / "root"))
+        cfg = load(name)
+        assert (cfg.dir / f"{cfg.version}.lock.json").exists(), "record the lock first"
+        manifest = build_synthetic(cfg)
+        log = tmp_path / "root" / name / cfg.version / "log" / "*.parquet"
+        types = dict(duckdb.sql(f"SELECT event_type, count(*) FROM read_parquet('{log}') "
+                                "GROUP BY 1").fetchall())
+        return manifest, verify_synthetic(cfg), types
+    return run
