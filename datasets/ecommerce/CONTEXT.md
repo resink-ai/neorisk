@@ -19,7 +19,7 @@ The designs read the log alone. Simkit's own tables are used only to grade them 
 Two quirks of the pack show in the log and the designs handle them on purpose:
 
 - A user's first session can run at the instant of signup, so 6 `address_changed` events share `event_time` with their user's creation, and 2 change the region to the one it already was.
-- The pack picks an inviter from the users already *inserted*, not already *created*, so an inviter can be created after the invitee; 2 of the 20 bonuses are paid to an inviter whose account starts later.
+- The pack picks an inviter from the users already *inserted*, not already *created*, so an inviter can be created after the invitee: 93 of the 181 invitations (`users.invited_by`) name a user whose `users_created` comes later in the log, and 2 of the 20 bonuses are paid to an inviter whose account starts later. The vault's invitation link is therefore loaded before the inviter's hub row in those 93 cases, and a stream join from a signup to its inviter's state at that time finds nothing. This is the pack's behavior, kept as is in v1; a fixed pack makes v2.
 
 ## Event catalogue
 
