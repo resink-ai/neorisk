@@ -1,0 +1,123 @@
+name = "crypto_exchange"
+version = "v1"
+kind = "synthetic"
+
+[recipe]
+project = "examples/crypto_exchange"
+profile = "sample"
+seed = 7
+overlay = []
+designs = ["star", "dv", "obt"]
+
+# event -> payload column whose value keys its messages. Every order event and every trade is
+# keyed on symbol: the book (one shard per symbol) emits them, and a consumer rebuilding a
+# book needs an order's acceptance, its trades and its fill or cancellation in one ordered
+# partition (a trade touches two traders' orders, so trader_id would split it). Deposits are
+# keyed on the depositing trader.
+[recipe.owners]
+funds_deposited = "trader_id"
+order_accepted = "symbol"
+order_rejected = "symbol"
+trade = "symbol"
+order_filled = "symbol"
+order_cancelled = "symbol"
+
+# ---- star ----------------------------------------------------------------------------
+
+[[check]]
+table = "star_dim_traders"
+simkit = "traders"
+columns = { trader_id = "trader_id", segment = "segment", created_at = "created_at" }
+
+[[check]]
+table = "star_fact_deposits"
+simkit = "funds_deposited"
+columns = { deposit_id = "event_id", trader_id = "trader_id", symbol = "symbol", asset = "asset", amount = "amount", deposited_at = "event_time" }
+
+[[check]]
+table = "star_fact_order_acceptances"
+simkit = "order_accepted"
+columns = { order_id = "order_id", trader_id = "trader_id", symbol = "symbol", side = "side", type = "type", price = "price", qty = "qty", accepted_at = "event_time" }
+
+[[check]]
+table = "star_fact_order_rejections"
+simkit = "order_rejected"
+columns = { order_id = "order_id", trader_id = "trader_id", symbol = "symbol", side = "side", type = "type", price = "price", qty = "qty", reason = "reason", rejected_at = "event_time" }
+
+[[check]]
+table = "star_fact_trades"
+simkit = "trade"
+columns = { trade_id = "trade_id", symbol = "symbol", maker_order_id = "maker_order", taker_order_id = "taker_order", buyer_id = "buyer_id", seller_id = "seller_id", taker_side = "taker_side", price = "price", qty = "qty", traded_at = "event_time" }
+
+[[check]]
+table = "star_fact_order_fills"
+simkit = "order_filled"
+columns = { order_id = "order_id", trader_id = "trader_id", symbol = "symbol", filled_at = "event_time" }
+
+[[check]]
+table = "star_fact_order_cancellations"
+simkit = "order_cancelled"
+columns = { order_id = "order_id", trader_id = "trader_id", symbol = "symbol", qty_left = "qty_left", reason = "reason", cancelled_at = "event_time" }
+
+# ---- dv: hub key sets and plain projections --------------------------------------------
+
+[[check]]
+table = "dv_hub_traders"
+simkit = "traders"
+columns = { trader_id = "trader_id", load_dts = "created_at" }
+
+[[check]]
+table = "dv_hub_orders"
+simkit = "order_accepted"
+columns = { order_id = "order_id", load_dts = "event_time" }
+where = "record_source = 'order_accepted'"
+
+[[check]]
+table = "dv_hub_orders"
+simkit = "order_rejected"
+columns = { order_id = "order_id", load_dts = "event_time" }
+where = "record_source = 'order_rejected'"
+
+[[check]]
+table = "dv_link_trade"
+simkit = "trade"
+columns = { trade_id = "trade_id", load_dts = "event_time" }
+
+[[check]]
+table = "dv_sat_trade_details"
+simkit = "trade"
+columns = { symbol = "symbol", taker_side = "taker_side", price = "price", qty = "qty", load_dts = "event_time" }
+
+[[check]]
+table = "dv_link_deposit"
+simkit = "funds_deposited"
+columns = { deposit_id = "event_id", load_dts = "event_time" }
+
+[[check]]
+table = "dv_sat_deposit_details"
+simkit = "funds_deposited"
+columns = { symbol = "symbol", asset = "asset", amount = "amount", load_dts = "event_time" }
+
+# ---- obt: plain projections ------------------------------------------------------------
+
+[[check]]
+table = "obt_trades"
+simkit = "trade"
+columns = { trade_id = "trade_id", symbol = "symbol", maker_order_id = "maker_order", taker_order_id = "taker_order", buyer_id = "buyer_id", seller_id = "seller_id", taker_side = "taker_side", price = "price", qty = "qty", traded_at = "event_time" }
+
+[[check]]
+table = "obt_orders"
+simkit = "order_accepted"
+columns = { order_id = "order_id", trader_id = "trader_id", symbol = "symbol", side = "side", type = "type", price = "price", qty = "qty", submitted_at = "event_time" }
+where = "outcome <> 'rejected'"
+
+[[check]]
+table = "obt_orders"
+simkit = "order_rejected"
+columns = { order_id = "order_id", trader_id = "trader_id", symbol = "symbol", side = "side", type = "type", price = "price", qty = "qty", reject_reason = "reason", submitted_at = "event_time" }
+where = "outcome = 'rejected'"
+
+[[check]]
+table = "obt_deposits"
+simkit = "funds_deposited"
+columns = { deposit_id = "event_id", trader_id = "trader_id", symbol = "symbol", asset = "asset", amount = "amount", deposited_at = "event_time" }
