@@ -73,6 +73,17 @@ None: every entity attribute travels in its creation event.
 
 `expected/queries/` holds the answers of the saved questions (`local065`, `local066`, `local073`), computed on the source. `dataset verify` runs `specs/build.sql` over the log, loads the tables into SQLite with the source's DDL, and compares them and the answers exactly: rows as multisets, numbers by value, text byte for byte.
 
+## Engines
+
+Ported to every engine: `engines/spark/build.sql` (Spark SQL) and `engines/flink/build.sql` (Flink SQL, run by both `flink` and `flink-stream`). All 10 tables pass on each.
+
+- **Flink:** no OVER windows. `row_id` is the number of distinct toppings of the order first seen no later, a self-join, so the streaming planner accepts it too. Tokens come from `UNNEST(SPLIT(...)) WITH ORDINALITY`.
+- **Spark:** tokens from `posexplode(split(...))`; `regexp_extract` returns `''` on no match, so the cleaner wraps it in `nullif` before `try_cast`.
+
+```bash
+uv run dataset run pizzarunner --engine spark          # flink, flink-stream: the cluster must be up
+```
+
 ## Regenerate
 
 ```bash
