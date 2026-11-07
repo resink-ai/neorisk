@@ -19,6 +19,7 @@ members = [
     "ethcollect",
     "ethmodel",
     "hello",
+    "nds",
     "neorisk",
     "neorisk-core",
     "neorisk-simkit",
@@ -518,6 +519,17 @@ sdist = { url = "https://files.pythonhosted.org/packages/bf/21/f64d6b2dbea7bf3f8
 wheels = [
     { url = "https://files.pythonhosted.org/packages/d1/89/5d4c86da1130d9059681e5b6cd7645df5c10279a6a079c5c37dcb2cc6f3f/narwhals-2.27.1-py3-none-any.whl", hash = "sha256:d057df13f5852b8e157596e82eb5e955fad267425df5e420e0ee9863da483b31", size = 483211, upload-time = "2026-10-10T06:52:16.32Z" },
 ]
+
+[[package]]
+name = "nds"
+version = "0.1.0"
+source = { editable = "apps/nds" }
+dependencies = [
+    { name = "pyyaml" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "pyyaml", specifier = ">=6" }]
 
 [[package]]
 name = "neorisk"
