@@ -229,7 +229,13 @@ All of these run on the laptop (macOS, 14 cores, 36 GB, Java 17, Docker).
 
 - **The Redpanda topic** is filled with the existing Kafka sink of `datagen replay`, or a thin variant of it. The message key is `entity_key` and the value is the envelope plus payload.
 - **Streaming results:** the job keeps the result tables up to date as a changelog. When the topic is drained, the harness folds the changelog into final tables and compares them.
-- **Docker:** one `docker compose` file brings up Redpanda and Flink for local runs.
+- **Docker:** one `docker compose` file (`apps/dataset/docker/compose.yaml`) brings up Redpanda, a Flink session cluster and its SQL Gateway for local runs, with memory caps. `dataset` never starts or stops it; a Flink run with the cluster down exits 2 with the command. *(Decided in PR 4.)*
+- **As built in PR 4:**
+  - Versions: PySpark 4.2.0, Flink 2.2.1 (flink-sql-parquet 2.2.1, flink-sql-connector-kafka 5.0.0-2.2, hadoop-client 3.4.2, zstd-jni 1.5.7-3), Redpanda v25.2.1.
+  - One Flink port, `engines/flink/`, serves both `flink` and `flink-stream`. A table the streaming planner rejects fails on `flink-stream` with the planner's reason.
+  - Statements go through the SQL Gateway one at a time: each block is a view whose columns are checked against the results table, so a block that does not plan fails only its table. The blocks that plan run as one statement set.
+  - The topic's message value is the envelope as JSON with `payload` kept as its JSON text, and `event_time` as `YYYY-MM-DD HH:MM:SS.ffffffZ`. The job's Kafka source is bounded at the latest offset, so the streaming job ends when the topic is drained. Each table's sink is a `debezium-json` topic, which the harness folds as a multiset.
+  - The grader casts an engine's column to the expected type only when the value survives (integer widths, decimals, float32, a naive timestamp read as UTC); a change of kind, such as text for a number, fails the table.
 - **Metrics per run:**
   - wall time, split into load, build and write where the engine allows;
   - peak memory;

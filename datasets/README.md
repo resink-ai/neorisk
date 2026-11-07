@@ -122,4 +122,25 @@ Data files never go into git. They are named `<dataset>/<version>/<path>` and re
 | [`layer1`](layer1/CONTEXT.md) | synthetic | `examples/layer1` (sample, seed 7) | simulated | generated | 11,003 | 13 | 30,048 | 3 | 0 | duckdb |
 | [`social`](social/CONTEXT.md) | synthetic | `examples/social` (sample, seed 7) | simulated | generated | 25,892 | 18 | 80,174 | 3 | 0 | duckdb |
 
-The Spark and Flink engines arrive in PR 4.
+## Engines
+
+Every dataset runs on `duckdb`, the reference. `pizzarunner`, `sakila`, `olist` and `payments` are also ported to Spark and Flink. An engine reads only the log, writes one Parquet table per results table into a run folder, and is graded against `results/` with the same comparator as `dataset verify`.
+
+| Engine | How | Reads | Port |
+|---|---|---|---|
+| `duckdb` | in-process, 4 threads | log Parquet | `specs/` (the reference) |
+| `spark` | PySpark 4.2.0, `local[4]`, 3 GB driver | log Parquet; payload by `from_json` | `engines/spark/` |
+| `flink` | Flink 2.2.1 SQL, batch, Docker | log Parquet; payload by `JSON_VALUE` | `engines/flink/` |
+| `flink-stream` | Flink 2.2.1 SQL, streaming, Docker | the log replayed into one Redpanda topic in `seq` order; each table's changelog folded | `engines/flink/` (the same port) |
+
+```bash
+uv sync --all-packages --extra engines          # pyspark and confluent-kafka (never --package: it uninstalls the rest)
+NEORISK_DATA_ROOT=$PWD/data/datasets docker compose -f apps/dataset/docker/compose.yaml up -d   # Redpanda, Flink, its SQL gateway (~8 GB caps)
+uv run dataset run sakila --engine flink-stream # one run → $NEORISK_DATA_ROOT/_runs/sakila/v1/flink-stream/<run-id>/run.json
+uv run dataset bench pizzarunner sakila olist payments   # every engine, one at a time → _runs/bench/<run-id>/report.html
+docker compose -f apps/dataset/docker/compose.yaml down    # when done
+```
+
+`dataset` never starts or stops Docker; a Flink run with the cluster down exits 2 and prints the command above. The containers mount the data root at the same path, so a run's data root must be the one the cluster was started with. Each run records its wall time (split into load, build and write where the engine allows), peak memory (the process tree plus the engine's containers), events per second, and for each table pass or fail, the row counts and a sample of differing rows. `dataset list` shows the engines whose latest run passed.
+
+**Add an engine port:** copy `specs/build.sql` (or each `specs/<design>.sql`) to `engines/spark/` or `engines/flink/` and translate each `-- table:` block, keeping its name and columns. The views are the same on every engine. Row order never matters, so drop `ORDER BY`. For Flink, avoid OVER windows that do not order by time (ranks, SCD2 `valid_to`): write them as self-joins, and the same port then passes `flink-stream` too. Add `apps/dataset/tests/test_engines_<name>.py` (see pizzarunner's) and an `## Engines` section to the dataset's `CONTEXT.md`, with every table an engine cannot build and why. Ports are outside the recipe hash, so they never change a version.
