@@ -2,6 +2,7 @@
 port blocks and the not-ready message."""
 
 import json
+import typing
 from types import SimpleNamespace
 
 import pyarrow as pa
@@ -19,7 +20,7 @@ def _job(tmp_path, blocks, columns):
 
 
 class FakeGateway:
-    statements: list = []
+    statements: typing.ClassVar[list] = []
 
     def __init__(self, *a, **k):
         pass
