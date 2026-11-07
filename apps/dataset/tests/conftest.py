@@ -285,3 +285,27 @@ def built_synthetic(tmp_path, monkeypatch):
                                 "GROUP BY 1").fetchall())
         return manifest, verify_synthetic(cfg), types
     return run
+
+
+@pytest.fixture
+def engine_run():
+    """Run a ported dataset, built under the real data root, on one engine. Spark skips
+    without pyspark; the Flink engines need the local cluster and NEORISK_DOCKER=1."""
+    import os
+
+    from dataset import engines
+    from dataset.names import resolve
+
+    def run(name: str, engine: str) -> dict:
+        if engine == "spark":
+            pytest.importorskip("pyspark")
+        elif engine.startswith("flink") and os.environ.get("NEORISK_DOCKER") != "1":
+            pytest.skip("needs the local Flink cluster (NEORISK_DOCKER=1)")
+        cfg = load(name)
+        if not (resolve(f"{name}/{cfg.version}") / "manifest.json").exists():
+            pytest.skip(f"{name} is not built here (uv run dataset build {name})")
+        rep = engines.run(cfg, engine)
+        assert rep["ok"], [(t["name"], t["detail"], t["missing"][:2], t["extra"][:2])
+                           for t in rep["tables"] if not t["ok"]]
+        return rep
+    return run

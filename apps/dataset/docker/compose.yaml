@@ -1,0 +1,60 @@
+# Local engines for `dataset run --engine flink|flink-stream`: Redpanda and a Flink session
+# cluster. The data root is mounted at the same path inside the containers, so a path the
+# harness writes is a path Flink reads. Memory is capped so a run never takes the laptop.
+#
+#   NEORISK_DATA_ROOT=$PWD/data/datasets docker compose -f apps/dataset/docker/compose.yaml up -d
+name: neorisk-engines
+
+x-flink: &flink
+  build:
+    context: .
+    dockerfile: flink.Dockerfile
+  image: neorisk-flink:2.2.1
+  volumes:
+    - ${NEORISK_DATA_ROOT:?set NEORISK_DATA_ROOT}:${NEORISK_DATA_ROOT}
+
+services:
+  redpanda:
+    image: redpandadata/redpanda:v25.2.1
+    command: >
+      redpanda start --mode dev-container --smp 1 --memory 1G --overprovisioned
+      --kafka-addr internal://0.0.0.0:9092,external://0.0.0.0:19092
+      --advertise-kafka-addr internal://redpanda:9092,external://localhost:19092
+    ports: ["19092:19092"]
+    mem_limit: 1536m
+
+  jobmanager:
+    <<: *flink
+    command: jobmanager
+    ports: ["18081:8081"]
+    environment:
+      FLINK_PROPERTIES: |
+        jobmanager.rpc.address: jobmanager
+        jobmanager.memory.process.size: 1200m
+        table.local-time-zone: UTC
+    mem_limit: 1536m
+
+  taskmanager:
+    <<: *flink
+    command: taskmanager
+    depends_on: [jobmanager]
+    environment:
+      FLINK_PROPERTIES: |
+        jobmanager.rpc.address: jobmanager
+        taskmanager.memory.process.size: 3500m
+        taskmanager.numberOfTaskSlots: 4
+        # a 40-table statement set needs ~512 network buffers at once
+        taskmanager.memory.network.min: 512mb
+        taskmanager.memory.network.max: 512mb
+        table.local-time-zone: UTC
+    mem_limit: 4g
+
+  sql-gateway:
+    <<: *flink
+    command: >
+      bin/sql-gateway.sh start-foreground
+      -Dsql-gateway.endpoint.rest.address=0.0.0.0 -Drest.address=jobmanager -Drest.port=8081
+      -Djobmanager.rpc.address=jobmanager -Dtable.local-time-zone=UTC
+    depends_on: [jobmanager]
+    ports: ["18083:8083"]
+    mem_limit: 1g

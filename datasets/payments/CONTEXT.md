@@ -126,6 +126,19 @@ In `expected/`, never in the log:
 
 Every law of the pack and every rate expectation of the brief holds. The labels are the pack's own fraud labels (about 0.5% of payments), decided at authorization even without an overlay; they never enter the log.
 
+## Engines
+
+Ported to every engine: `engines/spark/{star,dv,obt}.sql` (Spark SQL) and `engines/flink/{star,dv,obt}.sql` (Flink SQL, run by both `flink` and `flink-stream`). All 40 tables pass on each.
+
+- **Both:** every join is `ON`, not `USING`: the views share `customer_id` and `merchant_id` across events. `count(*) FILTER (...)` is a `sum(CASE ...)` cast to BIGINT. Hashes need no NULL handling: every argument of `||` is already coalesced or a hash, and a BIGINT cast to text prints the same on every engine, so `md5`/`MD5` give DuckDB's lowercase hex.
+- **Spark:** `QUALIFY lag(hashdiff) ... IS DISTINCT FROM hashdiff` is a filter over a subquery with `lag()`.
+- **Flink:** the streaming planner rejects `LAG` ordered by `(load_dts, seq)`, so the three deduplicated satellites (`customers_statement`, `payments_replay`, `payments_dispute`) use a self-join instead. `ord` is `load_dts` and `seq` as sortable text, the previous row is the one at `MAX` of the earlier `ord` of the same parent, and a row is kept when that row's hashdiff differs or there is no earlier row. Both Flink modes give the same result. Text literals in `UNION ALL` branches are cast to STRING so that `'issued'` is not padded to `CHAR(7)`.
+- **Batch Flink:** all 40 inserts run as one job. It once failed with "Insufficient number of network buffers" right after other jobs, and passed when run again.
+
+```bash
+uv run dataset run payments --engine spark          # flink, flink-stream: the cluster must be up
+```
+
 ## Regenerate
 
 ```bash

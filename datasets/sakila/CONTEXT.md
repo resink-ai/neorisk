@@ -146,6 +146,17 @@ No domain name: no entity has a source creation time (all are created at the log
 
 `expected/queries/` holds the answers of the saved questions (`local038`, `local039`, `local056`, `local193`, `local194`, `local195`, `local196`, `local197`, `local199`), computed on the source. `dataset verify` runs `specs/build.sql` over the log, loads the tables into SQLite with the source's DDL, and compares them and the answers exactly: rows as multisets, numbers by value, text byte for byte.
 
+## Engines
+
+Ported to every engine: `engines/spark/build.sql` (Spark SQL) and `engines/flink/build.sql` (Flink SQL, run by both `flink` and `flink-stream`). All 16 tables pass on each.
+
+- **Both:** every join is `ON`, not `USING`: the views share key names (`customer_id`, `staff_id`) across events. Cent amounts are cast to DOUBLE before `/ 100`, since a decimal literal gives a DECIMAL in Spark and Flink but a DOUBLE in DuckDB. Times are `DATE_FORMAT(..., 'yyyy-MM-dd HH:mm:ss') || '.000'` in UTC.
+- **Flink:** `language` is reserved, so it is quoted; `staff.picture` is a NULL STRING (the result column holds only NULLs); the empty `film_text` selects from `(VALUES (1)) WHERE FALSE`.
+
+```bash
+uv run dataset run sakila --engine spark          # flink, flink-stream: the cluster must be up
+```
+
 ## Regenerate
 
 ```bash

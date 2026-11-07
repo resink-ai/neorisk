@@ -4,7 +4,12 @@ version = "0.1.0"
 description = "Validation datasets: one ordered event log in, expected tables out"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = ["neorisk-simkit", "refdata", "polars>=1.0", "pyarrow>=17", "duckdb>=1.1"]
+dependencies = ["neorisk-simkit", "refdata", "polars>=1.0", "pyarrow>=17", "duckdb>=1.1",
+                "psutil>=5.9"]
+
+[project.optional-dependencies]
+# the Spark and Flink-streaming engines: uv sync --extra engines
+engines = ["pyspark==4.2.0", "confluent-kafka>=2.3"]
 
 [project.scripts]
 dataset = "dataset.cli:main"

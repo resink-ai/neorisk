@@ -126,7 +126,8 @@ def test_list_shows_synthetic(tiny_synthetic, capsys):
     capsys.readouterr()
     assert cli.main(["list", "--json"]) == 0
     rows = json.loads(capsys.readouterr().out)
-    assert rows == [{"name": "tiny", "kind": "synthetic", "version": "v1", "built": "unrecorded"}]
+    assert rows == [{"name": "tiny", "kind": "synthetic", "version": "v1", "built": "unrecorded",
+                     "engines": []}]
 
 
 def test_context_synthetic(tiny_synthetic, capsys):
