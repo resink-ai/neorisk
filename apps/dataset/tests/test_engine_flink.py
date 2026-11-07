@@ -170,3 +170,16 @@ def test_flink_unknown_column_fails_its_table(shop):
     t = {t["name"]: t for t in engines.run(shop, "flink")["tables"]}
     assert not t["orders"]["ok"] and "nope" in t["orders"]["detail"]
     assert t["customers"]["ok"]
+
+
+@DOCKER
+def test_flink_empty_table_is_zero_rows(shop):
+    # Flink's batch filesystem sink writes no file for zero rows; the engine must still
+    # leave an empty table, and the grader then fails it only on the row count
+    f = shop.dir / "engines" / "flink" / "build.sql"
+    f.write_text(f.read_text().replace("SELECT ext_id AS cid, city FROM customers",
+                                       "SELECT ext_id AS cid, city FROM customers WHERE FALSE"))
+    t = {t["name"]: t for t in engines.run(shop, "flink")["tables"]}
+    assert not t["customers"]["ok"] and t["customers"]["rows_got"] == 0
+    assert "2 rows missing" in t["customers"]["detail"]
+    assert t["orders"]["ok"]

@@ -20,6 +20,7 @@ import urllib.request
 from pathlib import Path
 
 import pyarrow as pa
+import pyarrow.parquet as pq
 
 from dataset.engines import Built, Job, Timings
 from dataset.engines.views import flink_views
@@ -190,7 +191,17 @@ class Flink:
                 f"'format' = 'parquet'")
 
     def collect(self, job: Job, tables: list[str], errors: dict[str, str]) -> float | None:
-        """Turn the sinks into `tables/<t>/` Parquet; the seconds it took, or None."""
+        """Turn the sinks into `tables/<t>/` Parquet; the seconds it took, or None. The batch
+        filesystem sink writes no file for zero rows, so a finished table without one is
+        written empty, with the expected columns."""
+        from dataset.engines.grade import data_files
+        for t in tables:
+            try:
+                data_files(job.table_dir(t))
+            except FileNotFoundError:
+                job.table_dir(t).mkdir(parents=True, exist_ok=True)
+                schema = pa.schema([(c, ty) for c, ty in job.columns[t]])
+                pq.write_table(schema.empty_table(), job.table_dir(t) / "part-0.parquet")
         return None
 
     # --------------------------------------------------------------------------------------

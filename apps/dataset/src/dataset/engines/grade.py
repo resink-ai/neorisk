@@ -40,7 +40,7 @@ def _kind(t: pa.DataType) -> str:
     return str(t)
 
 
-def _files(d: Path) -> list[str]:
+def data_files(d: Path) -> list[str]:
     """The data files under an engine's table folder (engines leave `.staging`, `_SUCCESS`
     and `.crc` files beside them)."""
     files = sorted(str(p) for p in d.rglob("*") if p.is_file()
@@ -52,7 +52,7 @@ def _files(d: Path) -> list[str]:
 
 
 def read_output(d: Path) -> pa.Table:
-    return pa.concat_tables([pq.read_table(f) for f in _files(d)], promote_options="default")
+    return pa.concat_tables([pq.read_table(f) for f in data_files(d)], promote_options="default")
 
 
 def _conform(col: pa.ChunkedArray, want: pa.DataType) -> pa.ChunkedArray:
@@ -98,7 +98,7 @@ def sqlite_graded(name: str, expected: pa.Table, out: Path, m: dict, exact: set[
                   mem: sqlite3.Connection, duck: duckdb.DuckDBPyConnection) -> TableResult:
     """A Spider2 table: the engine's output loaded with the source DDL, then compared."""
     try:
-        files = _files(out)
+        files = data_files(out)
     except FileNotFoundError as e:
         return _failed(name, str(e), expected.num_rows)
     gen = set(m.get("generated", []))
