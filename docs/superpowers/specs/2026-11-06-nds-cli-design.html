@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NDS CLI Design</title>
+<style>
+:root{--bg:#fafaf7;--fg:#1d1d1b;--mut:#6b6b66;--card:#fff;--line:#e3e2dc;--acc:#2f5fd0;--ok:#1f8a4c;--warn:#b7791f;--bad:#c0392b;--code:#f1f0ea}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#15161a;--fg:#e8e8e3;--mut:#9a9a93;--card:#1d1f24;--line:#2d3038;--acc:#7aa2ff;--ok:#4cc17e;--warn:#e0a84a;--bad:#ef6b5c;--code:#262930}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+main{max-width:860px;margin:0 auto;padding:32px 16px 80px}
+h1{font-size:2rem;margin:0 0 4px}
+h2{font-size:1.35rem;margin:44px 0 12px;padding-top:8px;border-top:1px solid var(--line)}
+h3{font-size:1.05rem;margin:20px 0 6px}
+p{margin:8px 0}
+.sub{color:var(--mut);margin:0 0 20px}
+code,pre{font-family:ui-monospace,Menlo,monospace;font-size:.88em}
+code{background:var(--code);padding:1px 5px;border-radius:4px}
+pre{background:var(--code);padding:14px;border-radius:8px;overflow-x:auto;line-height:1.5;margin:10px 0}
+pre code{background:none;padding:0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin:10px 0}
+.tldr{border-left:4px solid var(--acc)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.tag{display:inline-block;font-size:.72rem;font-weight:600;padding:2px 8px;border-radius:99px;margin-right:4px;vertical-align:middle}
+.mvp{background:color-mix(in srgb,var(--ok) 18%,transparent);color:var(--ok)}
+.later{background:color-mix(in srgb,var(--mut) 20%,transparent);color:var(--mut)}
+.risk{background:color-mix(in srgb,var(--warn) 20%,transparent);color:var(--warn)}
+table{width:100%;border-collapse:collapse;margin:10px 0;font-size:.93rem}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--mut);font-weight:600;font-size:.8rem;text-transform:uppercase;letter-spacing:.04em}
+.tw{overflow-x:auto}
+svg{max-width:100%;height:auto}
+svg text{fill:var(--fg);font:13px -apple-system,sans-serif}
+svg .b{fill:var(--card);stroke:var(--line);stroke-width:1.5}
+svg .a{fill:color-mix(in srgb,var(--acc) 14%,var(--card));stroke:var(--acc);stroke-width:1.5}
+svg .l{stroke:var(--mut);stroke-width:1.5;fill:none}
+svg .d{stroke:var(--mut);stroke-width:1.5;fill:none;stroke-dasharray:5 4}
+svg .m{fill:var(--mut);font-size:11.5px}
+ul{padding-left:20px;margin:6px 0}
+li{margin:3px 0}
+.q li{margin:8px 0}
+</style>
+</head>
+<body>
+<main>
+
+<h1>nds: NeoRisk Data Storage</h1>
+<p class="sub">MVP design for a small, Git-like CLI that stores large datasets outside Git and keeps them reachable from the repo. 2026-11-06 · draft for review</p>
+
+<div class="card tldr">
+<b>In one paragraph.</b> Each dataset folder gets an <code>nds.yaml</code>. It names one or more <b>remotes</b> and says which files to <b>include/exclude</b>.
+<code>nds push</code> walks the folder, fingerprints each file cheaply, moves it to the remote, and leaves a <b>symlink</b> in its place. Nothing in your code or notebooks changes.
+If the remote already has the same path with different content, nds <b>stops and asks</b>. The MVP ships the <b>local-folder remote</b> only. S3, SSH/rsync and MCP slot in later behind the same interface.
+</div>
+
+<h2>1. Why</h2>
+<p>The repo's <code>data/</code> folder is already <b>6.2 GB</b> and is git-ignored (Spider2, eth, refdata, …). Those files are expensive to rebuild, but today they exist in exactly one place: this laptop. We want a cheap way to park them somewhere safe, such as <code>~/data</code> now and the desktop or S3 later, without losing the ability to open them from the repo path.</p>
+
+<h2>2. How it works</h2>
+<svg viewBox="0 0 820 230" role="img" aria-label="Push moves files to the remote and leaves symlinks">
+  <rect class="b" x="10" y="20" width="250" height="170" rx="10"/>
+  <text x="24" y="44" font-weight="600">Before push (repo)</text>
+  <text class="m" x="24" y="72">data/spider2/</text>
+  <text class="m" x="40" y="94">orders.parquet   (2 GB, real file)</text>
+  <text class="m" x="40" y="116">events.duckdb    (3 GB, real file)</text>
+  <text class="m" x="40" y="138">cache/tmp.bin    (excluded)</text>
+  <text class="m" x="24" y="170">nds.yaml</text>
+
+  <rect class="a" x="300" y="70" width="110" height="70" rx="10"/>
+  <text x="330" y="100" font-weight="600">nds push</text>
+  <text class="m" x="318" y="120">hash · move · link</text>
+  <path class="l" d="M262 105 H298"/><path class="l" d="M412 105 H448"/>
+
+  <rect class="b" x="450" y="20" width="360" height="170" rx="10"/>
+  <text x="464" y="44" font-weight="600">After push</text>
+  <text class="m" x="464" y="68">repo: data/spider2/orders.parquet  →  (symlink)</text>
+  <text class="m" x="464" y="90">repo: data/spider2/events.duckdb   →  (symlink)</text>
+  <text class="m" x="464" y="112">repo: data/spider2/cache/tmp.bin   (untouched)</text>
+  <path class="d" d="M560 125 V145"/>
+  <rect class="a" x="464" y="145" width="332" height="36" rx="6"/>
+  <text x="476" y="168">~/data/spider2/ holds the real files + manifest</text>
+</svg>
+
+<h2>3. MVP features</h2>
+<p>Only what is needed to park, find and get back data. Everything else is deferred (section 8).</p>
+<div class="tw"><table>
+<tr><th>Command</th><th>What it does</th><th></th></tr>
+<tr><td><code>nds init</code></td><td>Create <code>nds.yaml</code> in the current dataset folder with a default local remote.</td><td><span class="tag mvp">MVP</span></td></tr>
+<tr><td><code>nds remote add/ls/rm</code></td><td>Manage named remotes, like <code>git remote</code>. Edits the YAML.</td><td><span class="tag mvp">MVP</span></td></tr>
+<tr><td><code>nds status</code></td><td>Per file: <i>new</i>, <i>stored</i> (symlinked, unchanged), <i>modified</i>, <i>excluded</i>, <i>conflict</i>. Read-only dry run.</td><td><span class="tag mvp">MVP</span></td></tr>
+<tr><td><code>nds push [remote]</code></td><td>Find files by include/exclude, fingerprint, check conflicts, move to remote, symlink back.</td><td><span class="tag mvp">MVP</span></td></tr>
+<tr><td><code>nds ls-remote [remote]</code></td><td>List what the remote holds for this dataset (path, size, fingerprint). Your "ls remote".</td><td><span class="tag mvp">MVP</span></td></tr>
+<tr><td><code>nds pull [remote]</code></td><td>Recreate symlinks (local remote) on a fresh checkout, or copy files back. Needed to be able to restore at all.</td><td><span class="tag mvp">MVP-lite</span></td></tr>
+<tr><td>include / exclude globs</td><td>In YAML and as <code>--include/--exclude</code> flags. Exclude wins over include.</td><td><span class="tag mvp">MVP</span></td></tr>
+<tr><td>conflict check</td><td>Same path, different content on remote → prompt; <code>--force</code> / <code>--no-clobber</code> for scripts.</td><td><span class="tag mvp">MVP</span></td></tr>
+<tr><td>S3, SSH/rsync, MCP remotes</td><td>Same interface, new backends.</td><td><span class="tag later">LATER</span></td></tr>
+</table></div>
+
+<h2>4. The config file</h2>
+<p>One <code>nds.yaml</code> per dataset folder. Plain YAML, easy to review in a PR (the data is ignored by Git, but this file is committed).</p>
+<pre><code># data/spider2/nds.yaml
+dataset: spider2              # name used as the folder on the remote
+default_remote: home
+
+remotes:
+  home:
+    type: local
+    path: ~/data              # files land in ~/data/spider2/...
+  # later:
+  # lake:
+  #   type: s3
+  #   url: s3://neorisk-data/datasets
+  # desktop:
+  #   type: ssh
+  #   host: lsj-desktop
+  #   path: /home/lsj/data
+
+include: ["**/*"]
+exclude:
+  - "cache/**"
+  - "**/*.tmp"
+  - "splits/**"               # derived, rebuildable
+  - "nds.yaml"</code></pre>
+
+<div class="card"><span class="tag mvp">ADDED</span> <b>Many datasets, one file.</b> An <code>nds.yaml</code> may carry a <code>datasets:</code> map (<code>name → path, include, exclude</code>). Each dataset gets its own remote folder and manifest. Use <code>nds push &lt;name&gt;</code> or <code>nds push --all</code>; the remote is chosen with <code>-r</code>. See <code>apps/nds/README.md</code>.</div>
+
+<h2>5. Fast fingerprint (no full read)</h2>
+<p>You asked for a quick hash that avoids reading the whole file. Options:</p>
+<div class="tw"><table>
+<tr><th>Option</th><th>Cost on a 5 GB file</th><th>Catches</th><th>Notes</th></tr>
+<tr><td>size + mtime only</td><td>~0</td><td>Most edits</td><td>mtime changes on copy, so it is useless across machines.</td></tr>
+<tr><td><b>size + sampled hash</b><br>(head, middle, tail 1 MiB, blake2b)</td><td>~3 MB read, milliseconds</td><td>Size changes, edits to the sampled regions</td><td><b>Recommended.</b> Stdlib only, same value on any machine.</td></tr>
+<tr><td>Full xxHash / MD5</td><td>Full read, seconds to minutes</td><td>Everything</td><td>Offered as <code>--full</code> when you want certainty.</td></tr>
+</table></div>
+<div class="card"><span class="tag risk">TRADE-OFF</span> A same-size edit that lands only between the sampled regions is not detected by the default fingerprint. For immutable datasets this is fine. <code>--full</code> is the escape hatch, and the fingerprint records which mode produced it.</div>
+
+<h2>6. Push, step by step</h2>
+<svg viewBox="0 0 820 150" role="img" aria-label="Push flow">
+  <rect class="b" x="5" y="40" width="120" height="60" rx="8"/><text x="22" y="66" font-weight="600">1. Walk</text><text class="m" x="16" y="86">include/exclude</text>
+  <rect class="b" x="170" y="40" width="120" height="60" rx="8"/><text x="182" y="66" font-weight="600">2. Fingerprint</text><text class="m" x="190" y="86">size + sample</text>
+  <rect class="a" x="335" y="40" width="120" height="60" rx="8"/><text x="357" y="66" font-weight="600">3. Compare</text><text class="m" x="345" y="86">vs remote manifest</text>
+  <rect class="b" x="500" y="40" width="120" height="60" rx="8"/><text x="520" y="66" font-weight="600">4. Move</text><text class="m" x="513" y="86">copy → verify size</text>
+  <rect class="b" x="665" y="40" width="140" height="60" rx="8"/><text x="683" y="66" font-weight="600">5. Symlink</text><text class="m" x="680" y="86">atomic swap, then</text><text class="m" x="680" y="99">update manifest</text>
+  <path class="l" d="M127 70 H168"/><path class="l" d="M292 70 H333"/><path class="l" d="M457 70 H498"/><path class="l" d="M622 70 H663"/>
+</svg>
+
+<h3>Step 3 outcomes</h3>
+<div class="grid">
+  <div class="card"><b>Not on remote</b><br>Move it.</div>
+  <div class="card"><b>On remote, same fingerprint</b><br>Skip the transfer. Just replace the local file with a symlink.</div>
+  <div class="card"><b>On remote, different fingerprint</b><br><span class="tag risk">CONFLICT</span> Prompt <code>[o]verwrite / [s]kip / [a]bort</code>. Non-interactive runs abort unless <code>--force</code> or <code>--no-clobber</code>.</div>
+</div>
+<p><b>Safety rule:</b> the local original is replaced by the symlink only after the copy exists on the remote at the right size. A crash mid-push leaves either the original or a verified copy, never neither. Re-running push is safe.</p>
+
+<h2>7. Remote interface (so S3 / SSH fit later)</h2>
+<p>Every backend implements four calls. The MVP implements them for a local folder; the rest of the CLI never knows the difference.</p>
+<pre><code>class Remote(Protocol):
+    def list(self, dataset) -> dict[path, Entry]   # path, size, fingerprint
+    def stat(self, dataset, path) -> Entry | None
+    def put(self, local_file, dataset, path) -> None
+    def get(self, dataset, path, local_file) -> None</code></pre>
+<p>The remote keeps a small <code>.nds-manifest.json</code> beside the data, so <code>ls-remote</code> and conflict checks never have to re-read files.</p>
+<div class="card"><b>Local vs. real remotes.</b> A local remote <i>moves</i> and symlinks, since it is the same machine. S3 and SSH remotes <i>copy</i> and leave the local files in place, because a symlink to S3 is not possible. The YAML <code>type</code> decides which behaviour applies.</div>
+
+<h3>Gotcha worth knowing: symlinks write through</h3>
+<p>After a push, writing to <code>data/spider2/orders.parquet</code> edits the stored copy directly. Nothing is "staged". <code>nds status</code> therefore compares each symlinked file against the manifest and reports <i>modified</i> when they differ. For read-mostly datasets this is acceptable; making stored files read-only (<code>chmod a-w</code>) is a cheap option if you want protection.</p>
+
+<h2>8. Deliberately out of the MVP</h2>
+<ul>
+  <li>S3, SSH/rsync and MCP backends (interface is ready; add one per PR).</li>
+  <li>Versions or history: a push replaces, there is no <code>log</code> or rollback.</li>
+  <li>Dedup across datasets, compression, encryption.</li>
+  <li>Parallel transfers and resumable uploads.</li>
+  <li>Locking for two machines pushing at once.</li>
+  <li><code>gc</code> for orphaned files on the remote.</li>
+</ul>
+
+<h2>9. Proposed build</h2>
+<ul>
+  <li>New app <code>apps/nds</code>, Python 3.12, console script <code>nds</code>, joining the uv workspace like <code>apps/dataset</code>.</li>
+  <li>Dependencies: <code>pyyaml</code> (already in the lockfile) plus stdlib <code>argparse</code>, <code>hashlib</code>, <code>fnmatch</code>/<code>pathlib</code>. No new third-party packages for the MVP.</li>
+  <li>Tests with pytest on <code>tmp_path</code>: push/skip/conflict/crash-safety/exclude/pull.</li>
+  <li>Size: roughly 400 lines of source. Local backend, fingerprint, config, six commands.</li>
+</ul>
+
+<h2>10. Questions for you</h2>
+<ul class="q">
+  <li><b>Symlink granularity.</b> I propose one symlink per file, so exclude patterns and partial pushes work. The alternative is one symlink per folder, which is simpler but cannot exclude inside it. OK with per-file?</li>
+  <li><b>Fingerprint.</b> Is the sampled blake2b default fine, with <code>--full</code> as the opt-in?</li>
+  <li><b>Pull in MVP?</b> You did not mention it, but without it a fresh clone cannot get its links back. I included a minimal version.</li>
+  <li><b>Remote location.</b> Default <code>~/data</code>, as you described. Should <code>nds init</code> create it if it is missing?</li>
+  <li><b>First target.</b> Should the first real use be the 6.2 GB under <code>data/</code> (spider2, eth, ref)?</li>
+</ul>
+
+</main>
+</body>
+</html>
