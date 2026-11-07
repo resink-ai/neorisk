@@ -5,6 +5,7 @@
     dataset verify NAME [--json FILE]
     dataset resolve NAME/VERSION[/PATH]
     dataset context NAME
+    dataset run NAME --engine duckdb|spark|flink|flink-stream [--json FILE]
 
 Exit codes: 0 success, 1 a difference (or a build that differs from its lock), 2 a usage
 error, an unknown name, a missing source or input.
@@ -40,6 +41,11 @@ def build_parser() -> argparse.ArgumentParser:
     r.add_argument("name")
     c = sub.add_parser("context", help="CONTEXT.md's counted sections, from the built version")
     c.add_argument("name")
+    from dataset.engines import ENGINES
+    rn = sub.add_parser("run", help="one engine builds the results from the log; graded")
+    rn.add_argument("name")
+    rn.add_argument("--engine", required=True, choices=ENGINES)
+    rn.add_argument("--json", default=None, help="write the full run report here")
     return parser
 
 
@@ -62,13 +68,16 @@ def _state(cfg) -> str:
 
 def _list(args) -> int:
     from dataset.config import all_configs
-    rows = [{"name": c.name, "kind": c.kind, "version": c.version, "built": _state(c)}
+    from dataset.engines import latest_runs
+    rows = [{"name": c.name, "kind": c.kind, "version": c.version, "built": _state(c),
+             "engines": [e for e, r in latest_runs(c).items() if r["ok"]]}
             for c in all_configs()]
     if args.json:
         print(json.dumps(rows, indent=2))
     else:
         for r in rows:
-            print(f"{r['name']:<24} {r['kind']:<10} {r['version']:<4} {r['built']}")
+            print(f"{r['name']:<24} {r['kind']:<10} {r['version']:<4} {r['built']:<10} "
+                  f"{','.join(r['engines']) or '-'}")
     return 0
 
 
@@ -155,10 +164,30 @@ def _context(args) -> int:
     return 0
 
 
+def _run(args) -> int:
+    from dataset import engines
+    try:
+        cfg = _load(args.name)
+        rep = engines.run(cfg, args.engine)
+    except (FileNotFoundError, ValueError, engines.EngineNotReady) as e:
+        return _err(str(e))
+    if args.json:
+        Path(args.json).write_text(json.dumps(rep, indent=2) + "\n")
+    failed = [t for t in rep["tables"] if not t["ok"]]
+    for t in failed:
+        print(f"dataset: {t['name']}: {t['detail']}; expected {t['rows_expected']} rows, got "
+              f"{t['rows_got']}; missing {t['missing'][:2]}, extra {t['extra'][:2]}",
+              file=sys.stderr)
+    print(json.dumps({k: rep[k] for k in ("name", "engine", "run_id", "ok", "wall_s",
+                                          "peak_rss_mb", "events_per_s")}
+                     | {"failed": [t["name"] for t in failed]}))
+    return 0 if rep["ok"] else 1
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     return {"list": _list, "build": _build, "verify": _verify,
-            "resolve": _resolve, "context": _context}[args.cmd](args)
+            "resolve": _resolve, "context": _context, "run": _run}[args.cmd](args)
 
 
 if __name__ == "__main__":
