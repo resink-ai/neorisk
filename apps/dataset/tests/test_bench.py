@@ -64,18 +64,18 @@ def _fake(monkeypatch, **by_name):
 
 
 def test_bench_duckdb_two_datasets(two):
-    path = bench(["shop", "tiny"], ["duckdb"])
+    path = bench(["shop", "tiny"], ["duckdb"], isolate=False)
     rep = json.loads((path / "report.json").read_text())
     assert [(r["name"], r["engine"], r["status"]) for r in rep["runs"]] == [
         ("shop", "duckdb", "pass"), ("tiny", "duckdb", "pass")]
     for r in rep["runs"]:
         assert r["wall_s"] >= 0 and r["peak_rss_mb"] > 0 and r["events_per_s"] > 0
-        assert set(r["timings"]) == {"load", "build", "write"}
+        assert set(r["timings"]) == {"load", "plan", "build", "write"}
     assert rep["ok"]
 
 
 def test_bench_engine_without_port_is_not_ported(two):
-    rep = json.loads((bench(["tiny"], ["duckdb", "spark"]) / "report.json").read_text())
+    rep = json.loads((bench(["tiny"], ["duckdb", "spark"], isolate=False) / "report.json").read_text())
     assert [r["status"] for r in rep["runs"]] == ["pass", "not ported"]
     assert rep["ok"]
 
@@ -84,7 +84,7 @@ def test_bench_skips_engine_not_ready(two, monkeypatch):
     shop, _ = two
     _port(shop, "flink")
     _fake(monkeypatch, flink=Down)
-    rep = json.loads((bench(["shop"], ["flink", "duckdb"]) / "report.json").read_text())
+    rep = json.loads((bench(["shop"], ["flink", "duckdb"], isolate=False) / "report.json").read_text())
     by = {r["engine"]: r for r in rep["runs"]}
     assert by["flink"]["status"] == "not run" and "not running" in by["flink"]["reason"]
     assert by["duckdb"]["status"] == "pass"
@@ -96,7 +96,7 @@ def test_bench_cross_engine_agreement(two, monkeypatch):
     _port(shop, "spark")
     _port(shop, "flink")
     _fake(monkeypatch, spark=OffByOne, flink=OffByOne)
-    rep = json.loads((bench(["shop"], ["duckdb", "spark", "flink"]) / "report.json")
+    rep = json.loads((bench(["shop"], ["duckdb", "spark", "flink"], isolate=False) / "report.json")
                      .read_text())
     by = {r["engine"]: r for r in rep["runs"]}
     assert by["spark"]["status"] == "fail" and by["spark"]["failed"][0]["name"] == "customers"
@@ -105,8 +105,19 @@ def test_bench_cross_engine_agreement(two, monkeypatch):
     assert "orders" not in rep["agreement"]["shop"]
 
 
+def test_bench_isolated_runs_in_their_own_process(two, monkeypatch):
+    # each run is a `dataset run` subprocess, so its peak memory is its own, not what an
+    # earlier run (a Spark JVM, DuckDB's heap) left in the bench process
+    def no(*a, **k):
+        raise AssertionError("ran in the bench process")
+    monkeypatch.setattr(engines, "run", no)
+    rep = json.loads((bench(["shop", "tiny"], ["duckdb"]) / "report.json").read_text())
+    assert [r["status"] for r in rep["runs"]] == ["pass", "pass"]
+    assert all(r["peak_rss_mb"] > 0 for r in rep["runs"])
+
+
 def test_report_html_is_self_contained(two):
-    html = (bench(["shop"], ["duckdb"]) / "report.html").read_text()
+    html = (bench(["shop"], ["duckdb"], isolate=False) / "report.html").read_text()
     assert "<table" in html and "shop" in html and "duckdb" in html
     assert not re.search(r"""(src|href)=["']?https?://""", html)
 

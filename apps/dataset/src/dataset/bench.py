@@ -10,6 +10,9 @@ from __future__ import annotations
 
 import html
 import json
+import subprocess
+import sys
+import tempfile
 from itertools import combinations
 from pathlib import Path
 
@@ -46,7 +49,24 @@ def _agreement(cfg, reps: dict[str, dict]) -> dict[str, dict[str, list[str]]]:
     return out
 
 
-def bench(names: list[str], engine_names: list[str]) -> Path:
+RUN_TIMEOUT = 1800
+
+
+def _isolated(cfg, engine: str) -> dict:
+    """One `dataset run` in its own process, so its peak memory is its own."""
+    with tempfile.TemporaryDirectory() as d:
+        out = Path(d) / "run.json"
+        p = subprocess.run([sys.executable, "-m", "dataset.cli", "run", str(cfg.dir),
+                            "--engine", engine, "--json", str(out)],
+                           capture_output=True, text=True, timeout=RUN_TIMEOUT, check=False)
+        if p.returncode == 2 or not out.exists():
+            raise engines.EngineNotReady(p.stderr.strip().removeprefix("dataset: ")
+                                         or f"dataset run exited {p.returncode}")
+        return json.loads(out.read_text())
+
+
+def bench(names: list[str], engine_names: list[str], *, isolate: bool = True) -> Path:
+    """`isolate` runs each engine run as a subprocess (the CLI does); False runs them here."""
     run_id = engines._run_id()
     out = data_root() / "_runs" / "bench" / run_id
     out.mkdir(parents=True, exist_ok=True)
@@ -65,8 +85,9 @@ def bench(names: list[str], engine_names: list[str]) -> Path:
                 runs.append(_entry(name, e, "not run", reason=ready[e]))
                 continue
             try:
-                rep = engines.run(cfg, e)
-            except (FileNotFoundError, engines.EngineNotReady) as err:
+                rep = _isolated(cfg, e) if isolate else engines.run(cfg, e)
+            except (FileNotFoundError, engines.EngineNotReady,
+                    subprocess.TimeoutExpired) as err:
                 runs.append(_entry(name, e, "not run", reason=str(err)))
                 continue
             reps[e] = rep
@@ -144,6 +165,7 @@ def render_html(rep: dict) -> str:
             f'<td class="{CLASS[r["status"]]}">{e(r["status"])}</td>'
             f'<td class="num">{r["events"]:,}</td><td class="num">{_num(r["wall_s"], "{:.2f}")}</td>'
             f'<td class="num">{_num(t["load"], "{:.2f}")}</td>'
+            f'<td class="num">{_num(t.get("plan"), "{:.2f}")}</td>'
             f'<td class="num">{_num(t["build"], "{:.2f}")}</td>'
             f'<td class="num">{_num(t["write"], "{:.2f}")}</td>'
             f'<td class="num">{_num(r["peak_rss_mb"], "{:,.0f}")}</td>'
@@ -172,10 +194,12 @@ def render_html(rep: dict) -> str:
 <h2>Results</h2><div class="scroll"><table><tr><th>dataset</th>{head}</tr>
 {''.join(matrix)}</table></div>
 {f"<h2>Not run</h2><ul>{''.join(notes)}</ul>" if notes else ""}
-<h2>Metrics</h2><p class="meta">seconds; peak memory in MB, including the engine's containers;
-events per second over the whole run.</p>
+<h2>Metrics</h2><p class="meta">Seconds. Load: making the log readable (the replay into
+Redpanda); plan: declaring and planning the blocks; build: the queries or the job; write: the
+fold or the Parquet writes. Peak memory in MB: the run's own process tree plus the engine's
+containers (an idle Flink cluster holds about 2.5 GB). Events per second over the whole run.</p>
 <div class="scroll"><table><tr><th>dataset</th><th>engine</th><th>status</th><th>events</th>
-<th>wall</th><th>load</th><th>build</th><th>write</th><th>peak MB</th><th>events/s</th></tr>
+<th>wall</th><th>load</th><th>plan</th><th>build</th><th>write</th><th>peak MB</th><th>events/s</th></tr>
 {''.join(metrics)}</table></div>
 {f'''<h2>Failing tables</h2><p class="meta">"agrees with" lists the engines whose output
 of the table equals this engine's.</p><div class="scroll"><table><tr><th>dataset</th>

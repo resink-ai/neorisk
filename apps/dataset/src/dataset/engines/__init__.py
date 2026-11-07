@@ -36,7 +36,8 @@ class EngineNotReady(RuntimeError):
 @dataclass
 class Timings:
     build: float
-    load: float | None = None
+    load: float | None = None       # making the log readable (a replay into Redpanda)
+    plan: float | None = None       # declaring, checking and planning the blocks (Flink)
     write: float | None = None
 
 

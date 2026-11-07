@@ -144,6 +144,7 @@ def test_flink_run_shop(shop):
     assert rep["ok"], [(t["name"], t["detail"], t["missing"][:2], t["extra"][:2])
                        for t in rep["tables"] if not t["ok"]]
     assert rep["peak_rss_mb"] > 500          # the containers are counted
+    assert rep["timings"]["plan"] > 0 and rep["timings"]["build"] > 0
 
 
 @DOCKER

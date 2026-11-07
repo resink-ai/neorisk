@@ -217,6 +217,7 @@ class Flink:
         errors: dict[str, str] = {}
         inserts: list[tuple[str, str]] = []
         build = 0.0
+        t_plan = time.perf_counter()
         gw = Gateway(self.properties(job))
         try:
             try:
@@ -249,6 +250,7 @@ class Flink:
                         errors[table] = f"the block fails: {e}"
                         continue
                     inserts.append((table, ins))
+            plan = time.perf_counter() - t_plan
             if inserts:
                 t0 = time.perf_counter()
                 try:
@@ -266,4 +268,4 @@ class Flink:
         finally:
             gw.close()
         write = self.collect(job, [t for t, _ in inserts if t not in errors], errors)
-        return Built(Timings(build=build, load=load, write=write), errors)
+        return Built(Timings(build=build, load=load, plan=plan, write=write), errors)

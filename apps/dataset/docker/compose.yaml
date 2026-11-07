@@ -43,6 +43,9 @@ services:
         jobmanager.rpc.address: jobmanager
         taskmanager.memory.process.size: 3500m
         taskmanager.numberOfTaskSlots: 4
+        # a 40-table statement set needs ~512 network buffers at once
+        taskmanager.memory.network.min: 512mb
+        taskmanager.memory.network.max: 512mb
         table.local-time-zone: UTC
     mem_limit: 4g
 
