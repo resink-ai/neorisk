@@ -230,6 +230,8 @@ class Flink:
             synthetic = job.cfg.kind == "synthetic"
             for blocks in job.blocks.values():
                 for table, sql in blocks.items():
+                    if table not in job.columns:    # graded as a block not in the results
+                        continue
                     view = table if synthetic else f"__port__{table}"   # Spider2 names clash
                     want = [c for c, _ in job.columns[table]]
                     try:

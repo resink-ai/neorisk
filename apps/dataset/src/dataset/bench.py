@@ -19,6 +19,7 @@ from pathlib import Path
 from dataset import engines
 from dataset.config import load
 from dataset.engines import grade
+from dataset.engines.flink import JOB_TIMEOUT
 from dataset.names import data_root
 
 
@@ -49,7 +50,8 @@ def _agreement(cfg, reps: dict[str, dict]) -> dict[str, dict[str, list[str]]]:
     return out
 
 
-RUN_TIMEOUT = 1800
+# longer than a Flink job may run, so the run itself cancels its job before it is killed
+RUN_TIMEOUT = JOB_TIMEOUT + 600
 
 
 def _isolated(cfg, engine: str) -> dict:

@@ -24,8 +24,8 @@ import pyarrow as pa
 import pyarrow.compute as pc
 import pyarrow.parquet as pq
 
-from dataset.engines import Job
-from dataset.engines.flink import CONTAINERS, Flink, lit
+from dataset.engines import Built, Job
+from dataset.engines.flink import CONTAINERS, Flink, lit, up_command
 
 BROKERS = "localhost:19092"          # from the host
 INSIDE = "redpanda:9092"             # from the Flink containers
@@ -158,7 +158,7 @@ class FlinkStream(Flink):
         try:
             _admin().list_topics(timeout=5)
         except Exception:  # noqa: BLE001 — KafkaException, or a timeout
-            return f"Redpanda does not answer at {BROKERS}; start it with the cluster"
+            return f"Redpanda does not answer at {BROKERS}; start it: {up_command()}"
         return None
 
     def _topic(self, job: Job, table: str | None = None) -> str:
@@ -186,16 +186,21 @@ class FlinkStream(Flink):
 
     def collect(self, job: Job, tables: list[str], errors: dict[str, str]) -> float:
         t0 = time.perf_counter()
+        for t in tables:
+            try:
+                folded = fold(read_topic(self._topic(job, t)), job.columns[t])
+            except (FoldError, RuntimeError, ValueError) as e:
+                errors[t] = str(e)
+                continue
+            d = job.table_dir(t)
+            d.mkdir(parents=True, exist_ok=True)
+            pq.write_table(folded, d / "part-0.parquet")
+        return time.perf_counter() - t0
+
+    def build(self, job: Job) -> Built:
+        """The Flink build, then the run's topics deleted however it ended: each holds a
+        copy of the log, in a Redpanda capped at 1 GB."""
         try:
-            for t in tables:
-                try:
-                    folded = fold(read_topic(self._topic(job, t)), job.columns[t])
-                except (FoldError, RuntimeError, ValueError) as e:
-                    errors[t] = str(e)
-                    continue
-                d = job.table_dir(t)
-                d.mkdir(parents=True, exist_ok=True)
-                pq.write_table(folded, d / "part-0.parquet")
+            return super().build(job)
         finally:
             delete_topics([self._topic(job), *(self._topic(job, t) for t in job.columns)])
-        return time.perf_counter() - t0
