@@ -51,7 +51,7 @@ def _files(d: Path) -> list[str]:
     return files
 
 
-def _read(d: Path) -> pa.Table:
+def read_output(d: Path) -> pa.Table:
     return pa.concat_tables([pq.read_table(f) for f in _files(d)], promote_options="default")
 
 
@@ -73,7 +73,7 @@ def _conform(col: pa.ChunkedArray, want: pa.DataType) -> pa.ChunkedArray:
 def typed(name: str, expected: pa.Table, out: Path) -> TableResult:
     """A synthetic table: the engine's output conformed to the expected types, compared."""
     try:
-        got = _read(out)
+        got = read_output(out)
     except (FileNotFoundError, pa.ArrowException) as e:
         return _failed(name, str(e), expected.num_rows)
     have = set(got.column_names)

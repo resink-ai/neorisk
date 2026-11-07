@@ -6,6 +6,7 @@
     dataset resolve NAME/VERSION[/PATH]
     dataset context NAME
     dataset run NAME --engine duckdb|spark|flink|flink-stream [--json FILE]
+    dataset bench [NAME...] [--engines duckdb,spark,flink,flink-stream]
 
 Exit codes: 0 success, 1 a difference (or a build that differs from its lock), 2 a usage
 error, an unknown name, a missing source or input.
@@ -46,6 +47,9 @@ def build_parser() -> argparse.ArgumentParser:
     rn.add_argument("name")
     rn.add_argument("--engine", required=True, choices=ENGINES)
     rn.add_argument("--json", default=None, help="write the full run report here")
+    bn = sub.add_parser("bench", help="engines x datasets, one at a time; one report")
+    bn.add_argument("names", nargs="*", help="default: every dataset")
+    bn.add_argument("--engines", default=",".join(ENGINES), help="comma list")
     return parser
 
 
@@ -184,10 +188,37 @@ def _run(args) -> int:
     return 0 if rep["ok"] else 1
 
 
+def _bench(args) -> int:
+    from dataset.bench import bench
+    from dataset.config import all_configs
+    from dataset.engines import ENGINES
+    names = args.names or [c.name for c in all_configs()]
+    engs = [e.strip() for e in args.engines.split(",") if e.strip()]
+    unknown = [e for e in engs if e not in ENGINES]
+    if unknown:
+        return _err(f"unknown engines {unknown}; one of {', '.join(ENGINES)}")
+    try:
+        for n in names:
+            _load(n)
+        out = bench(names, engs)
+    except (FileNotFoundError, ValueError) as e:
+        return _err(str(e))
+    rep = json.loads((out / "report.json").read_text())
+    for r in rep["runs"]:
+        if r["status"] in ("fail", "not run"):
+            why = r.get("reason") or ", ".join(t["name"] for t in r["failed"])
+            print(f"dataset: {r['name']} on {r['engine']}: {r['status']}: {why}",
+                  file=sys.stderr)
+    print(json.dumps({"ok": rep["ok"], "runs": len(rep["runs"]),
+                      "report": str(out / "report.html")}))
+    return 0 if rep["ok"] else 1
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     return {"list": _list, "build": _build, "verify": _verify,
-            "resolve": _resolve, "context": _context, "run": _run}[args.cmd](args)
+            "resolve": _resolve, "context": _context, "run": _run,
+            "bench": _bench}[args.cmd](args)
 
 
 if __name__ == "__main__":
