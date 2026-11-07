@@ -92,6 +92,17 @@ No domain name: the source shows no sign-up or listing time for sellers or produ
 
 `expected/queries/` holds the answers of the saved questions (`local002`, `local003`, `local004`, `local028`, `local029`, `local030`, `local031`, `local032`, `local034`, `local035`, `local037`, `local286`), computed on the source. `dataset verify` runs `specs/build.sql` over the log, loads the tables into SQLite with the source's DDL, and compares them and the answers exactly: rows as multisets, numbers by value, text byte for byte.
 
+## Engines
+
+Ported to every engine: `engines/spark/build.sql` (Spark SQL) and `engines/flink/build.sql` (Flink SQL, run by both `flink` and `flink-stream`). All 11 tables pass on each.
+
+- **Both:** every join is `ON`, not `USING`: the views share key names (`order_id`, `seller_key`, `product_key`) across events. Cent amounts are cast to DOUBLE before `/ 100`, since a decimal literal gives a DECIMAL in Spark and Flink but a DOUBLE in DuckDB. Times are `DATE_FORMAT(..., 'yyyy-MM-dd HH:mm:ss')` in UTC (`yyyy-MM-dd` for `first_contact_date`); categories are cast to STRING.
+- **Size:** the largest log ported so far (1,990,875 events, half of them `geolocation_created`). On one laptop run, Spark took 12 s, batch Flink 20 s and `flink-stream` 63 s (most of it replaying the log into Redpanda); the TaskManager peaked at 2.3 GiB of its 4 GiB, with no restart. The streaming joins are plain equi-joins, so their state stays within the cap.
+
+```bash
+uv run dataset run olist --engine spark          # flink, flink-stream: the cluster must be up
+```
+
 ## Regenerate
 
 ```bash
