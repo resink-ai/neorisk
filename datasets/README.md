@@ -74,13 +74,13 @@ Data files never go into git. They are named `<dataset>/<version>/<path>` and re
 |---|---|---|---|---|---:|---:|---:|---:|---:|---|
 | [`databank`](databank/CONTEXT.md) | spider2 | bank_sales_trading | synthetic course data | course material | 9,873 | 3 | 9,373 | 6 | 0 | duckdb |
 | [`cliquebait`](cliquebait/CONTEXT.md) | spider2 | bank_sales_trading | synthetic course data | course material | 34,537 | 5 | 34,537 | 1 | 0 | duckdb |
-| [`olist`](olist/CONTEXT.md) | spider2 | E_commerce | real, anonymised | CC BY-NC-SA 4.0 | 1,990,875 | 11 | 1,559,764 | 12 | 0 | duckdb |
+| [`olist`](olist/CONTEXT.md) | spider2 | E_commerce | real, anonymised | CC BY-NC-SA 4.0 | 1,990,875 | 11 | 1,559,764 | 12 | 0 | duckdb, spark, flink, flink-stream |
 | [`delivery_center`](delivery_center/CONTEXT.md) | spider2 | delivery_center | real, anonymised | "© original authors" | 3,955,707 | 7 | 1,154,523 | 3 | 0 | duckdb |
 | [`airlines`](airlines/CONTEXT.md) | spider2 | Airlines | generated | demo database | 2,340,773 | 8 | 2,289,506 | 2 | 0 | duckdb |
-| [`sakila`](sakila/CONTEXT.md) | spider2 | sqlite-sakila | generated sample | BSD | 74,314 | 16 | 46,273 | 9 | 0 | duckdb |
+| [`sakila`](sakila/CONTEXT.md) | spider2 | sqlite-sakila | generated sample | BSD | 74,314 | 16 | 46,273 | 9 | 0 | duckdb, spark, flink, flink-stream |
 | [`bitcoin`](bitcoin/CONTEXT.md) | spider2 | bank_sales_trading | generated trades, real prices | course material | 26,352 | 3 | 26,336 | 2 | 0 | duckdb |
 | [`weblog`](weblog/CONTEXT.md) | spider2 | log | textbook sample | book sample data | 868 | 19 | 854 | 5 | 0 | duckdb |
-| [`pizzarunner`](pizzarunner/CONTEXT.md) | spider2 | modern_data | synthetic course data | course material | 55 | 10 | 78 | 3 | 0 | duckdb |
+| [`pizzarunner`](pizzarunner/CONTEXT.md) | spider2 | modern_data | synthetic course data | course material | 55 | 10 | 78 | 3 | 0 | duckdb, spark, flink, flink-stream |
 | [`chinook`](chinook/CONTEXT.md) | spider2 | chinook | generated sample | MIT | 19,177 | 11 | 15,607 | 3 | 0 | duckdb |
 | [`northwind`](northwind/CONTEXT.md) | spider2 | northwind | generated sample | MIT (Microsoft) | 4,387 | 15 | 3,366 | 2 | 0 | duckdb |
 | [`oraclesh`](oraclesh/CONTEXT.md) | spider2 | complex_oracle | generated sample | MIT (Oracle) | 1,123,926 | 10 | 1,064,608 | 6 | 0 | duckdb |
@@ -116,7 +116,7 @@ Data files never go into git. They are named `<dataset>/<version>/<path>` and re
 | [`school`](school/CONTEXT.md) | spider2 | school_scheduling | course data | unstated | 1,119 | 15 | 811 | 1 | 0 | duckdb |
 | [`music`](music/CONTEXT.md) | spider2 | music | real catalogue, generated sales | MIT | 19,177 | 11 | 15,607 | 1 | 0 | duckdb |
 | [`ecommerce`](ecommerce/CONTEXT.md) | synthetic | `examples/ecommerce` (sample, seed 7) | simulated | generated | 15,090 | 63 | 76,717 | 3 | 0 | duckdb |
-| [`payments`](payments/CONTEXT.md) | synthetic | `examples/payments` (sample, seed 7) | simulated | generated | 28,917 | 40 | 56,838 | 3 | 0 | duckdb |
+| [`payments`](payments/CONTEXT.md) | synthetic | `examples/payments` (sample, seed 7) | simulated | generated | 28,917 | 40 | 56,838 | 3 | 0 | duckdb, spark, flink, flink-stream |
 | [`payments_subscriptions`](payments_subscriptions/CONTEXT.md) | synthetic | `examples/payments_subscriptions` (sample, seed 7) | simulated | generated | 2,452 | 30 | 15,422 | 3 | 0 | duckdb |
 | [`crypto_exchange`](crypto_exchange/CONTEXT.md) | synthetic | `examples/crypto_exchange` (sample, seed 7) | simulated | generated | 24,055 | 21 | 108,018 | 3 | 0 | duckdb |
 | [`layer1`](layer1/CONTEXT.md) | synthetic | `examples/layer1` (sample, seed 7) | simulated | generated | 11,003 | 13 | 30,048 | 3 | 0 | duckdb |
@@ -142,5 +142,28 @@ docker compose -f apps/dataset/docker/compose.yaml down    # when done
 ```
 
 `dataset` never starts or stops Docker; a Flink run with the cluster down exits 2 and prints the command above. The containers mount the data root at the same path, so a run's data root must be the one the cluster was started with. Each run records its wall time (split into load, build and write where the engine allows), peak memory (the process tree plus the engine's containers), events per second, and for each table pass or fail, the row counts and a sample of differing rows. `dataset list` shows the engines whose latest run passed.
+
+**Benchmark** (`dataset bench pizzarunner sakila olist payments`, run `20261107T040255Z`, this laptop: macOS, 14 cores, 36 GB; each run in its own process). Every run passes every table. Seconds; load is the replay into Redpanda, plan the Flink gateway declaring and planning the blocks, build the queries or the job, write the fold or the Parquet writes (blank where the engine does not split it). Peak MB is the run's process tree plus the engine's containers; an idle Flink cluster holds about 2.5 GB, and Spark's wall time includes starting the JVM (about 3 s).
+
+| Dataset | Events | Engine | Wall | Load | Plan | Build | Write | Peak MB | Events/s |
+|---|---:|---|---:|---:|---:|---:|---:|---:|---:|
+| pizzarunner | 55 | duckdb | 0.02 | 0.01 | | 0.01 | 0.00 | 92 | 2,479 |
+| | | spark | 6.36 | | | 3.06 | | 1,357 | 8 |
+| | | flink | 14.47 | | 10.78 | 3.68 | | 3,938 | 3 |
+| | | flink-stream | 16.92 | 2.40 | 10.82 | 3.50 | 0.20 | 4,890 | 3 |
+| sakila | 74,314 | duckdb | 0.17 | 0.01 | | 0.15 | 0.02 | 129 | 430,478 |
+| | | spark | 7.65 | | | 4.36 | | 1,601 | 9,709 |
+| | | flink | 24.04 | | 19.78 | 4.10 | | 4,066 | 3,091 |
+| | | flink-stream | 31.00 | 3.84 | 20.13 | 6.57 | 0.46 | 5,034 | 2,397 |
+| olist | 1,990,875 | duckdb | 1.37 | 0.01 | | 1.14 | 0.22 | 406 | 1,450,634 |
+| | | spark | 12.04 | | | 8.66 | | 2,326 | 165,294 |
+| | | flink | 20.89 | | 13.91 | 6.97 | | 4,137 | 95,307 |
+| | | flink-stream | 62.80 | 7.86 | 14.03 | 24.92 | 15.99 | 5,459 | 31,703 |
+| payments | 28,917 | duckdb | 0.37 | 0.03 | | 0.31 | 0.03 | 242 | 78,027 |
+| | | spark | 11.86 | | | 8.35 | | 2,226 | 2,437 |
+| | | flink | 45.87 | | 40.06 | 5.80 | | 4,013 | 630 |
+| | | flink-stream | 57.25 | 8.83 | 40.51 | 7.30 | 0.61 | 5,036 | 505 |
+
+At these sizes the fixed costs dominate: Flink spends most of a run planning one view per event type and block through the gateway (payments has 40 tables), so the ranking says little about throughput on large logs.
 
 **Add an engine port:** copy `specs/build.sql` (or each `specs/<design>.sql`) to `engines/spark/` or `engines/flink/` and translate each `-- table:` block, keeping its name and columns. The views are the same on every engine. Row order never matters, so drop `ORDER BY`. For Flink, avoid OVER windows that do not order by time (ranks, SCD2 `valid_to`): write them as self-joins, and the same port then passes `flink-stream` too. Add `apps/dataset/tests/test_engines_<name>.py` (see pizzarunner's) and an `## Engines` section to the dataset's `CONTEXT.md`, with every table an engine cannot build and why. Ports are outside the recipe hash, so they never change a version.
