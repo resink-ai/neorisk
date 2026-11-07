@@ -90,13 +90,15 @@ def test_spark_views_match_duckdb(tiny, spark, tmp_path):
 
 def test_spark_run_shop(shop):
     rep = engines.run(shop, "spark")
-    assert rep["ok"], [t for t in rep["tables"] if not t["ok"]]
+    assert rep["ok"], [(t["name"], t["detail"], t["missing"][:2], t["extra"][:2])
+                       for t in rep["tables"] if not t["ok"]]
     assert rep["peak_rss_mb"] > 200          # the JVM is counted
 
 
 def test_spark_run_tiny(tiny):
     rep = engines.run(tiny, "spark")
-    assert rep["ok"], [t for t in rep["tables"] if not t["ok"]]
+    assert rep["ok"], [(t["name"], t["detail"], t["missing"][:2], t["extra"][:2])
+                       for t in rep["tables"] if not t["ok"]]
 
 
 def test_spark_block_error_fails_table(shop):

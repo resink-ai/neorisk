@@ -45,7 +45,8 @@ def test_duckdb_run_passes_spider2(shop):
 
 def test_duckdb_run_passes_synthetic(tiny):
     rep = engines.run(tiny, "duckdb")
-    assert rep["ok"], [t for t in rep["tables"] if not t["ok"]]
+    assert rep["ok"], [(t["name"], t["detail"], t["missing"][:2], t["extra"][:2])
+                       for t in rep["tables"] if not t["ok"]]
     assert len(rep["tables"]) == 8
 
 

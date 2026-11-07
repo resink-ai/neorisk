@@ -27,15 +27,15 @@ def _lit(text: str) -> str:
     return "'" + text.replace("\\", "\\\\").replace("'", "\\'") + "'"
 
 
-def _select(e: dict, col, q) -> list[str]:
-    """The view's select list; `col(field)` is the engine's expression for a payload field
-    and `q(name)` quotes an identifier."""
+def _select(e: dict, col, q, time: str = "event_time") -> list[str]:
+    """The view's select list; `col(field)` is the engine's expression for a payload field,
+    `q(name)` quotes an identifier and `time` is the expression for the event time."""
     if e["kind"] == "entity_created":
         key = e["key"]
-        sel = [f"CAST(entity_key AS BIGINT) AS {q(key)}", "event_time AS created_at"]
+        sel = [f"CAST(entity_key AS BIGINT) AS {q(key)}", f"{time} AS created_at"]
         return sel + [f"{col(f)} AS {q(f['name'])}" for f in e["fields"] if f["name"] != key]
     by = {f["name"]: f for f in e["fields"]}
-    sel = [f"{col(by['event_id'])} AS event_id", "event_type", "event_time",
+    sel = [f"{col(by['event_id'])} AS event_id", "event_type", f"{time} AS event_time",
            f"{col(by['sim_seq'])} AS seq", f"{col(by['partition_id'])} AS partition_id",
            f"{col(by['cause_id'])} AS cause_id", f"{col(by['action_id'])} AS action_id"]
     return sel + [f"{col(f)} AS {q(f['name'])}" for f in e["fields"]
@@ -59,4 +59,34 @@ def spark_views(schema: dict) -> list[tuple[str, str]]:
                     (f"SELECT {', '.join(sel)} FROM (SELECT entity_key, event_type, event_time, "
                     f"from_json(payload, {_lit(struct)}) AS p FROM log "
                     f"WHERE event_type = {_lit(e['name'])})")))
+    return out
+
+
+FLINK_TYPE = {"i32": "INT", "i64": "BIGINT", "ref": "BIGINT", "amount": "BIGINT",
+              "f64": "DOUBLE", "bool": "BOOLEAN", "text": "STRING", "cat": "STRING"}
+
+
+def _flink_lit(text: str) -> str:
+    return "'" + text.replace("'", "''") + "'"
+
+
+def _flink_col(f: dict) -> str:
+    name = f["name"]
+    path = f"$.{name}" if name.isidentifier() else "$['" + name.replace("'", "\\'") + "']"
+    v = f"JSON_VALUE(payload, {_flink_lit(path)})"
+    if f["type"] == "ts":        # ISO text, `2016-10-20T00:00:00.000000Z`, in UTC
+        return f"CAST(REPLACE(REPLACE({v}, 'T', ' '), 'Z', '') AS TIMESTAMP(6))"
+    return f"CAST({v} AS {FLINK_TYPE[f['type']]})"
+
+
+def flink_views(schema: dict) -> list[tuple[str, str]]:
+    """(view, Flink SQL over a `log` table) for every event type; each payload field is
+    read with `JSON_VALUE` (the payload is the same JSON text in batch and streaming).
+    Times are TIMESTAMP(6) in UTC, not TIMESTAMP_LTZ, which Flink's LEAD/LAG reject."""
+    out = []
+    for e in schema["events"]:
+        sel = _select(e, _flink_col, lambda n: "`" + n.replace("`", "``") + "`",
+                      "CAST(event_time AS TIMESTAMP(6))")
+        out.append((view_name(e), (f"SELECT {', '.join(sel)} FROM log "
+                                  f"WHERE event_type = {_flink_lit(e['name'])}")))
     return out
