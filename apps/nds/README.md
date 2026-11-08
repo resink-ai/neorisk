@@ -39,3 +39,17 @@ nds push -r lake ...     # pick a remote with -r
 Each dataset gets its own folder and manifest on the remote (`~/data/spider2/...`). Dataset paths
 must be relative, inside the config's folder, and must not overlap. A folder with its own
 `nds.yaml` is left alone. Without `datasets:` the file describes just its own folder.
+
+## Remotes
+
+```yaml
+remotes:
+  home:    {type: local, path: ~/data}    # moves files, leaves a symlink in their place
+  desktop: {type: ssh, host: lsj-desktop, path: /home/lsj/Data}   # rsync copy, local files stay
+```
+
+Push to `desktop` first if you want a second copy before any file is moved. Bring a dataset back with
+`nds pull <name> -r <remote>`. Conflicts abort a non-interactive run unless `--force` / `--no-clobber`.
+
+Each remote keeps `.nds-manifest.jsonl` (one JSON line per file, later lines win) in the dataset folder.
+Writing through a symlink edits the stored copy; `nds status` shows such files as `modified`.
