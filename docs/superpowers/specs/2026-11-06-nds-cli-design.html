@@ -46,12 +46,12 @@ li{margin:3px 0}
 <main>
 
 <h1>nds: NeoRisk Data Storage</h1>
-<p class="sub">MVP design for a small, Git-like CLI that stores large datasets outside Git and keeps them reachable from the repo. 2026-11-06 · draft for review</p>
+<p class="sub">MVP design for a small, Git-like CLI that stores large datasets outside Git and keeps them reachable from the repo. 2026-11-06 · shipped in PR #21 (local and ssh remotes, multi-dataset config)</p>
 
 <div class="card tldr">
 <b>In one paragraph.</b> Each dataset folder gets an <code>nds.yaml</code>. It names one or more <b>remotes</b> and says which files to <b>include/exclude</b>.
 <code>nds push</code> walks the folder, fingerprints each file cheaply, moves it to the remote, and leaves a <b>symlink</b> in its place. Nothing in your code or notebooks changes.
-If the remote already has the same path with different content, nds <b>stops and asks</b>. The MVP ships the <b>local-folder remote</b> only. S3, SSH/rsync and MCP slot in later behind the same interface.
+If the remote already has the same path with different content, nds <b>stops and asks</b>. Two remotes ship: <b>local folder</b> (move + symlink) and <b>ssh</b> (one batched rsync per dataset, local files kept). S3 and MCP slot in later behind the same interface.
 </div>
 
 <h2>1. Why</h2>
@@ -94,7 +94,9 @@ If the remote already has the same path with different content, nds <b>stops and
 <tr><td><code>nds pull [remote]</code></td><td>Recreate symlinks (local remote) on a fresh checkout, or copy files back. Needed to be able to restore at all.</td><td><span class="tag mvp">MVP-lite</span></td></tr>
 <tr><td>include / exclude globs</td><td>In YAML and as <code>--include/--exclude</code> flags. Exclude wins over include.</td><td><span class="tag mvp">MVP</span></td></tr>
 <tr><td>conflict check</td><td>Same path, different content on remote → prompt; <code>--force</code> / <code>--no-clobber</code> for scripts.</td><td><span class="tag mvp">MVP</span></td></tr>
-<tr><td>S3, SSH/rsync, MCP remotes</td><td>Same interface, new backends.</td><td><span class="tag later">LATER</span></td></tr>
+<tr><td>ssh remote (rsync)</td><td>Copies to <code>host:path/dataset/</code>; local files stay, symlinks are followed.</td><td><span class="tag mvp">MVP</span></td></tr>
+<tr><td><code>nds dataset add/rm/ls</code></td><td>Edit the <code>datasets:</code> map of a multi-dataset config.</td><td><span class="tag mvp">MVP</span></td></tr>
+<tr><td>S3, MCP remotes</td><td>Same interface, new backends.</td><td><span class="tag later">LATER</span></td></tr>
 </table></div>
 
 <h2>4. The config file</h2>
@@ -160,7 +162,7 @@ exclude:
     def stat(self, dataset, path) -> Entry | None
     def put(self, local_file, dataset, path) -> None
     def get(self, dataset, path, local_file) -> None</code></pre>
-<p>The remote keeps a small <code>.nds-manifest.json</code> beside the data, so <code>ls-remote</code> and conflict checks never have to re-read files.</p>
+<p>The remote keeps an append-only <code>.nds-manifest.jsonl</code> (one line per file, later lines win) beside the data, so <code>ls-remote</code> and conflict checks never re-read files. Appending, not rewriting, keeps a 174k-file dataset fast, and the local remote writes the line before it makes the symlink, so a crash never loses a moved file. The ssh remote keeps the manifest in memory and writes it once, atomically, at the end of a push.</p>
 <div class="card"><b>Local vs. real remotes.</b> A local remote <i>moves</i> and symlinks, since it is the same machine. S3 and SSH remotes <i>copy</i> and leave the local files in place, because a symlink to S3 is not possible. The YAML <code>type</code> decides which behaviour applies.</div>
 
 <h3>Gotcha worth knowing: symlinks write through</h3>
@@ -168,7 +170,7 @@ exclude:
 
 <h2>8. Deliberately out of the MVP</h2>
 <ul>
-  <li>S3, SSH/rsync and MCP backends (interface is ready; add one per PR).</li>
+  <li>S3 and MCP backends (interface is ready; add one per PR).</li>
   <li>Versions or history: a push replaces, there is no <code>log</code> or rollback.</li>
   <li>Dedup across datasets, compression, encryption.</li>
   <li>Parallel transfers and resumable uploads.</li>
@@ -176,12 +178,12 @@ exclude:
   <li><code>gc</code> for orphaned files on the remote.</li>
 </ul>
 
-<h2>9. Proposed build</h2>
+<h2>9. Build</h2>
 <ul>
   <li>New app <code>apps/nds</code>, Python 3.12, console script <code>nds</code>, joining the uv workspace like <code>apps/dataset</code>.</li>
   <li>Dependencies: <code>pyyaml</code> (already in the lockfile) plus stdlib <code>argparse</code>, <code>hashlib</code>, <code>fnmatch</code>/<code>pathlib</code>. No new third-party packages for the MVP.</li>
   <li>Tests with pytest on <code>tmp_path</code>: push/skip/conflict/crash-safety/exclude/pull.</li>
-  <li>Size: roughly 400 lines of source. Local backend, fingerprint, config, six commands.</li>
+  <li>Size: roughly 800 lines of source with the ssh remote and multi-dataset config. Real run: <code>data/</code>, 175,293 files (about 5 GB), pushed to <code>~/data</code> and to a desktop over ssh in a few minutes.</li>
 </ul>
 
 <h2>10. Questions for you</h2>

@@ -87,3 +87,11 @@ uv run ethmodel expand                              # recall on held-out labels 
 
 A small transformer pre-trained on transfers, a positive-unlabeled head and label expansion,
 in [`apps/ethmodel`](apps/ethmodel/README.md). It reads the toy sample above.
+
+## Large data storage (nds)
+
+`data/` is git-ignored and holds gigabytes that are costly to rebuild. [`nds`](apps/nds/README.md) parks
+it on a local folder (`~/data`) or another machine over ssh, and leaves symlinks so the repo paths keep
+working: `uv run --package nds nds -C data push --all -r desktop`. One `data/nds.yaml` can manage many
+datasets, each with its own include/exclude globs. Design:
+[`docs/superpowers/specs/2026-11-06-nds-cli-design.html`](docs/superpowers/specs/2026-11-06-nds-cli-design.html).
