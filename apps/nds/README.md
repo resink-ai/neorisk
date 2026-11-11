@@ -45,7 +45,7 @@ must be relative, inside the config's folder, and must not overlap. A folder wit
 ```yaml
 remotes:
   home:    {type: local, path: ~/data}    # moves files, leaves a symlink in their place
-  desktop: {type: ssh, host: lsj-desktop, path: /home/lsj/Data}   # rsync copy, local files stay
+  desktop: {type: ssh, host: my-desktop, path: /data/neorisk}   # rsync copy, local files stay
 ```
 
 Push to `desktop` first if you want a second copy before any file is moved. Bring a dataset back with

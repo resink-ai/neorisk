@@ -95,3 +95,7 @@ it on a local folder (`~/data`) or another machine over ssh, and leaves symlinks
 working: `uv run --package nds nds -C data push --all -r desktop`. One `data/nds.yaml` can manage many
 datasets, each with its own include/exclude globs. Design:
 [`docs/superpowers/specs/2026-11-06-nds-cli-design.html`](docs/superpowers/specs/2026-11-06-nds-cli-design.html).
+
+## Licence
+
+MIT, see [LICENSE](LICENSE). Spider 2.0 databases and gold answers are not redistributed here; they are fetched from the Spider2 project and keep their own terms (`uv run refdata fetch`).

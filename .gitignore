@@ -21,3 +21,7 @@ modelcraft/
 .credentials/
 
 target/
+
+# Spider2 evaluation gold answers: third-party content, fetched from the Spider2 repo, not redistributed
+docs/research/spider2/scripts/*/gold/*.csv
+docs/research/spider2/scripts/*/gold/*.sql
