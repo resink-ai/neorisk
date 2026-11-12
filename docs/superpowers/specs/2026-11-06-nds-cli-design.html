@@ -46,16 +46,17 @@ li{margin:3px 0}
 <main>
 
 <h1>nds: NeoRisk Data Storage</h1>
-<p class="sub">MVP design for a small, Git-like CLI that stores large datasets outside Git and keeps them reachable from the repo. 2026-11-06 · shipped in PR #21 (local and ssh remotes, multi-dataset config)</p>
+<p class="sub">A small, Git-like CLI that stores large datasets outside Git and keeps them reachable from the repo. Final build, as merged in PRs #21–#23 (2026-11-06 to 2026-11-10).</p>
 
 <div class="card tldr">
-<b>In one paragraph.</b> Each dataset folder gets an <code>nds.yaml</code>. It names one or more <b>remotes</b> and says which files to <b>include/exclude</b>.
-<code>nds push</code> walks the folder, fingerprints each file cheaply, moves it to the remote, and leaves a <b>symlink</b> in its place. Nothing in your code or notebooks changes.
-If the remote already has the same path with different content, nds <b>stops and asks</b>. Two remotes ship: <b>local folder</b> (move + symlink) and <b>ssh</b> (one batched rsync per dataset, local files kept). S3 and MCP slot in later behind the same interface.
+<b>In one paragraph.</b> One <code>nds.yaml</code> (in <code>data/</code>, or one per dataset folder) names <b>remotes</b> and says which files to <b>include/exclude</b>, and may list many <b>datasets</b>.
+<code>nds push</code> walks a dataset, fingerprints each file cheaply, and sends it to the remote. For a <b>local</b> remote it moves the file and leaves a <b>symlink</b> in its place, so nothing in your code changes. For an <b>ssh</b> remote it copies with one batched rsync and leaves the local files alone.
+If the remote already has the same path with different content, nds <b>stops and asks</b>. Re-running is safe. S3 and MCP remotes are not built; they slot in behind the same remote interface.
 </div>
 
 <h2>1. Why</h2>
-<p>The repo's <code>data/</code> folder is already <b>6.2 GB</b> and is git-ignored (Spider2, eth, refdata, …). Those files are expensive to rebuild, but today they exist in exactly one place: this laptop. We want a cheap way to park them somewhere safe, such as <code>~/data</code> now and the desktop or S3 later, without losing the ability to open them from the repo path.</p>
+<p>The repo's <code>data/</code> folder is already <b>6.2 GB</b> and is git-ignored (Spider2, eth, refdata, …). Those files are expensive to rebuild, but they used to exist in exactly one place: this laptop. nds parks them somewhere safe (<code>~/data</code> and a second machine over ssh) without losing the ability to open them from the repo path.</p>
+<div class="card"><span class="tag mvp">RESULT</span> First real run: 5 datasets under <code>data/</code> (<code>eth</code>, <code>datasets</code>, <code>ref</code>, <code>spider2</code>, <code>spider2-meta</code>), <b>175,293 files, about 5 GB</b>. Pushed to the desktop over ssh in about 2 minutes, then moved into <code>~/data</code> in about 100 seconds. <code>status</code> shows every file stored on both remotes, and a full SHA-256 of the largest file matched on both machines. <code>datasets/_runs</code> (benchmark scratch) was excluded.</div>
 
 <h2>2. How it works</h2>
 <svg viewBox="0 0 820 230" role="img" aria-label="Push moves files to the remote and leaves symlinks">
@@ -86,46 +87,41 @@ If the remote already has the same path with different content, nds <b>stops and
 <p>Only what is needed to park, find and get back data. Everything else is deferred (section 8).</p>
 <div class="tw"><table>
 <tr><th>Command</th><th>What it does</th><th></th></tr>
-<tr><td><code>nds init</code></td><td>Create <code>nds.yaml</code> in the current dataset folder with a default local remote.</td><td><span class="tag mvp">MVP</span></td></tr>
+<tr><td><code>nds init [--path P]</code></td><td>Create <code>nds.yaml</code> with a local remote <code>home</code> (default <code>~/data</code>); creates that folder if missing.</td><td><span class="tag mvp">MVP</span></td></tr>
 <tr><td><code>nds remote add/ls/rm</code></td><td>Manage named remotes, like <code>git remote</code>. Edits the YAML.</td><td><span class="tag mvp">MVP</span></td></tr>
-<tr><td><code>nds status</code></td><td>Per file: <i>new</i>, <i>stored</i> (symlinked, unchanged), <i>modified</i>, <i>excluded</i>, <i>conflict</i>. Read-only dry run.</td><td><span class="tag mvp">MVP</span></td></tr>
-<tr><td><code>nds push [remote]</code></td><td>Find files by include/exclude, fingerprint, check conflicts, move to remote, symlink back.</td><td><span class="tag mvp">MVP</span></td></tr>
-<tr><td><code>nds ls-remote [remote]</code></td><td>List what the remote holds for this dataset (path, size, fingerprint). Your "ls remote".</td><td><span class="tag mvp">MVP</span></td></tr>
-<tr><td><code>nds pull [remote]</code></td><td>Recreate symlinks (local remote) on a fresh checkout, or copy files back. Needed to be able to restore at all.</td><td><span class="tag mvp">MVP-lite</span></td></tr>
+<tr><td><code>nds status</code></td><td>Per file: <i>new</i>, <i>stored</i>, <i>modified</i> (edited through a symlink), <i>conflict</i>, <i>skipped</i> (a symlink nds did not make). Read-only dry run.</td><td><span class="tag mvp">MVP</span></td></tr>
+<tr><td><code>nds push [datasets…] [--all] [-r remote]</code></td><td>Find files by include/exclude, fingerprint, check conflicts, send to the remote (local: move + symlink back; ssh: copy). A multi-dataset config needs a name or <code>--all</code>.</td><td><span class="tag mvp">MVP</span></td></tr>
+<tr><td><code>nds ls-remote [datasets…] [-r remote]</code></td><td>List what the remote holds (size, fingerprint, path), per dataset.</td><td><span class="tag mvp">MVP</span></td></tr>
+<tr><td><code>nds pull [datasets…] [-r remote]</code></td><td>Local remote: recreate the symlinks on a fresh checkout. ssh remote: copy the files back with one rsync.</td><td><span class="tag mvp">MVP</span></td></tr>
 <tr><td>include / exclude globs</td><td>In YAML and as <code>--include/--exclude</code> flags. Exclude wins over include.</td><td><span class="tag mvp">MVP</span></td></tr>
-<tr><td>conflict check</td><td>Same path, different content on remote → prompt; <code>--force</code> / <code>--no-clobber</code> for scripts.</td><td><span class="tag mvp">MVP</span></td></tr>
-<tr><td>ssh remote (rsync)</td><td>Copies to <code>host:path/dataset/</code>; local files stay, symlinks are followed.</td><td><span class="tag mvp">MVP</span></td></tr>
+<tr><td>conflict check</td><td>Same path, different content on remote → prompt; <code>--force</code> / <code>--no-clobber</code> for scripts; with neither, a non-interactive run aborts.</td><td><span class="tag mvp">MVP</span></td></tr>
+<tr><td>ssh remote (rsync)</td><td>Copies to <code>host:path/dataset/</code>; local files stay, symlinks are followed, so a file already parked in a local remote can be copied on.</td><td><span class="tag mvp">MVP</span></td></tr>
 <tr><td><code>nds dataset add/rm/ls</code></td><td>Edit the <code>datasets:</code> map of a multi-dataset config.</td><td><span class="tag mvp">MVP</span></td></tr>
+<tr><td><code>--full</code></td><td>Hash whole files instead of samples.</td><td><span class="tag mvp">MVP</span></td></tr>
 <tr><td>S3, MCP remotes</td><td>Same interface, new backends.</td><td><span class="tag later">LATER</span></td></tr>
 </table></div>
 
 <h2>4. The config file</h2>
-<p>One <code>nds.yaml</code> per dataset folder. Plain YAML, easy to review in a PR (the data is ignored by Git, but this file is committed).</p>
-<pre><code># data/spider2/nds.yaml
-dataset: spider2              # name used as the folder on the remote
-default_remote: home
-
+<p>One <code>nds.yaml</code> can manage many datasets. This is the real <code>data/nds.yaml</code> (host and paths shown as placeholders). The file lives in <code>data/</code>, which is git-ignored, so it is not committed; keep a copy if you want it under version control.</p>
+<pre><code>default_remote: home
 remotes:
-  home:
-    type: local
-    path: ~/data              # files land in ~/data/spider2/...
-  # later:
-  # lake:
-  #   type: s3
-  #   url: s3://neorisk-data/datasets
-  # desktop:
-  #   type: ssh
-  #   host: my-desktop
-  #   path: /data/data
-
-include: ["**/*"]
-exclude:
-  - "cache/**"
-  - "**/*.tmp"
-  - "splits/**"               # derived, rebuildable
-  - "nds.yaml"</code></pre>
-
-<div class="card"><span class="tag mvp">ADDED</span> <b>Many datasets, one file.</b> An <code>nds.yaml</code> may carry a <code>datasets:</code> map (<code>name → path, include, exclude</code>). Each dataset gets its own remote folder and manifest. Use <code>nds push &lt;name&gt;</code> or <code>nds push --all</code>; the remote is chosen with <code>-r</code>. See <code>apps/nds/README.md</code>.</div>
+  home:    {type: local, path: ~/data}                          # move + symlink back
+  desktop: {type: ssh, host: my-desktop, path: /data/neorisk}   # rsync copy, local files stay
+exclude: ["**/.DS_Store", "*.tmp", "*.lock", "*.wal", "*-journal"]   # shared by every dataset
+datasets:
+  spider2-meta: {path: spider2-meta}
+  ref:          {path: ref}
+  spider2:      {path: spider2}
+  eth:          {path: eth}
+  datasets:     {path: datasets, exclude: ["_runs/**"]}   # adds to the shared excludes</code></pre>
+<ul>
+  <li>Each dataset gets its own remote folder (<code>~/data/spider2/...</code>) and its own manifest.</li>
+  <li>A dataset's <code>include</code> replaces the shared one; its <code>exclude</code> adds to the shared one. Exclude wins. A pattern with no <code>/</code> matches the file name anywhere, like <code>.gitignore</code>.</li>
+  <li>Dataset paths must be relative, inside the config's folder, and must not overlap.</li>
+  <li>A folder with its own <code>nds.yaml</code> is a separate dataset and is skipped by a parent-level run.</li>
+  <li>Without a <code>datasets:</code> section the file describes just its own folder (<code>dataset:</code> names it; default is the folder name), and <code>nds push</code> needs no name.</li>
+  <li>The remote is chosen with <code>-r</code> (default <code>default_remote</code>).</li>
+</ul>
 
 <h2>5. Fast fingerprint (no full read)</h2>
 <p>You asked for a quick hash that avoids reading the whole file. Options:</p>
@@ -135,65 +131,80 @@ exclude:
 <tr><td><b>size + sampled hash</b><br>(head, middle, tail 1 MiB, blake2b)</td><td>~3 MB read, milliseconds</td><td>Size changes, edits to the sampled regions</td><td><b>Recommended.</b> Stdlib only, same value on any machine.</td></tr>
 <tr><td>Full xxHash / MD5</td><td>Full read, seconds to minutes</td><td>Everything</td><td>Offered as <code>--full</code> when you want certainty.</td></tr>
 </table></div>
-<div class="card"><span class="tag risk">TRADE-OFF</span> A same-size edit that lands only between the sampled regions is not detected by the default fingerprint. For immutable datasets this is fine. <code>--full</code> is the escape hatch, and the fingerprint records which mode produced it.</div>
+<div class="card"><span class="tag risk">TRADE-OFF</span> A same-size edit that lands only between the sampled regions is not detected by the default fingerprint (a test shows <code>--full</code> catches it). Files up to 3 MiB are read in full either way. The fingerprint records its mode (<code>s:</code> or <code>f:</code>), and a comparison uses the mode the manifest was written in, so mixed runs still agree.</div>
 
 <h2>6. Push, step by step</h2>
 <svg viewBox="0 0 820 150" role="img" aria-label="Push flow">
   <rect class="b" x="5" y="40" width="120" height="60" rx="8"/><text x="22" y="66" font-weight="600">1. Walk</text><text class="m" x="16" y="86">include/exclude</text>
   <rect class="b" x="170" y="40" width="120" height="60" rx="8"/><text x="182" y="66" font-weight="600">2. Fingerprint</text><text class="m" x="190" y="86">size + sample</text>
   <rect class="a" x="335" y="40" width="120" height="60" rx="8"/><text x="357" y="66" font-weight="600">3. Compare</text><text class="m" x="345" y="86">vs remote manifest</text>
-  <rect class="b" x="500" y="40" width="120" height="60" rx="8"/><text x="520" y="66" font-weight="600">4. Move</text><text class="m" x="513" y="86">copy → verify size</text>
-  <rect class="b" x="665" y="40" width="140" height="60" rx="8"/><text x="683" y="66" font-weight="600">5. Symlink</text><text class="m" x="680" y="86">atomic swap, then</text><text class="m" x="680" y="99">update manifest</text>
+  <rect class="b" x="500" y="40" width="120" height="60" rx="8"/><text x="520" y="66" font-weight="600">4. Move</text><text class="m" x="513" y="86">rename, or copy + size</text>
+  <rect class="b" x="665" y="40" width="140" height="60" rx="8"/><text x="683" y="66" font-weight="600">5. Symlink</text><text class="m" x="680" y="86">atomic swap (local</text><text class="m" x="680" y="99">remote only)</text>
   <path class="l" d="M127 70 H168"/><path class="l" d="M292 70 H333"/><path class="l" d="M457 70 H498"/><path class="l" d="M622 70 H663"/>
 </svg>
 
 <h3>Step 3 outcomes</h3>
 <div class="grid">
-  <div class="card"><b>Not on remote</b><br>Move it.</div>
-  <div class="card"><b>On remote, same fingerprint</b><br>Skip the transfer. Just replace the local file with a symlink.</div>
+  <div class="card"><b>Not on remote</b><br>Send it.</div>
+  <div class="card"><b>On remote, same fingerprint</b><br>Skip the transfer. Local remote: replace the local file with a symlink (after checking the remote copy has the same size).</div>
   <div class="card"><b>On remote, different fingerprint</b><br><span class="tag risk">CONFLICT</span> Prompt <code>[o]verwrite / [s]kip / [a]bort</code>. Non-interactive runs abort unless <code>--force</code> or <code>--no-clobber</code>.</div>
 </div>
-<p><b>Safety rule:</b> the local original is replaced by the symlink only after the copy exists on the remote at the right size. A crash mid-push leaves either the original or a verified copy, never neither. Re-running push is safe.</p>
+<h3>Two kinds of remote</h3>
+<div class="tw"><table>
+<tr><th></th><th>local</th><th>ssh</th></tr>
+<tr><td>Transfer</td><td>Rename into the store (same disk, instant), else copy and check the size. A file only appears at its final name once complete.</td><td>One <code>rsync -aL --files-from</code> per dataset. rsync writes each file under a temporary name and renames it when complete.</td></tr>
+<tr><td>Local file afterwards</td><td>A symlink to the stored copy, swapped in atomically.</td><td>Untouched. Symlinks are followed, so a file already parked locally is copied from its store.</td></tr>
+<tr><td>Manifest</td><td>One line appended per file, <b>before</b> the symlink is made.</td><td>Held in memory and written once, atomically, at the end of the push.</td></tr>
+<tr><td>Re-run</td><td>Stored files are skipped; a changed local copy is a conflict.</td><td>Same. A crash before the manifest is written just means those files are re-checked.</td></tr>
+</table></div>
+<p><b>Crash safety, honestly:</b> nothing is ever deleted before a copy exists at the remote. On a local remote a file is renamed into the store, then recorded, then linked, so a crash in that short window can leave a file stored but not yet linked back (or stored but not yet recorded). The data is safe in the store; <code>nds pull</code> restores the link when it was recorded. Making that window self-healing is future work.</p>
 
-<h2>7. Remote interface (so S3 / SSH fit later)</h2>
-<p>Every backend implements four calls. The MVP implements them for a local folder; the rest of the CLI never knows the difference.</p>
-<pre><code>class Remote(Protocol):
-    def list(self, dataset) -> dict[path, Entry]   # path, size, fingerprint
-    def stat(self, dataset, path) -> Entry | None
-    def put(self, local_file, dataset, path) -> None
-    def get(self, dataset, path, local_file) -> None</code></pre>
-<p>The remote keeps an append-only <code>.nds-manifest.jsonl</code> (one line per file, later lines win) beside the data, so <code>ls-remote</code> and conflict checks never re-read files. Appending, not rewriting, keeps a 174k-file dataset fast, and the local remote writes the line before it makes the symlink, so a crash never loses a moved file. The ssh remote keeps the manifest in memory and writes it once, atomically, at the end of a push.</p>
-<div class="card"><b>Local vs. real remotes.</b> A local remote <i>moves</i> and symlinks, since it is the same machine. S3 and SSH remotes <i>copy</i> and leave the local files in place, because a symlink to S3 is not possible. The YAML <code>type</code> decides which behaviour applies.</div>
+<h2>7. Remote interface (so S3 fits later)</h2>
+<p>A remote is a small class. The CLI only talks to this surface, and a <code>links_back</code> flag says whether push moves and symlinks (local) or copies (ssh).</p>
+<pre><code>class LocalRemote:   links_back = True
+    list() -> dict[rel, Entry]      # size + fingerprint, from the manifest
+    record(rel, entry)              # append one manifest line
+    flush()                         # no-op
+    put(local, rel)                 # move into the store
+
+class SshRemote:     links_back = False
+    list() / record() / flush()     # manifest cached in memory, written once at flush
+    put_many(root, rels)            # one batched rsync
+    get_many(root, rels)            # one batched rsync back (pull)</code></pre>
+<p>Each dataset folder on the remote holds an append-only <code>.nds-manifest.jsonl</code>: one JSON line per file (<code>rel</code>, <code>size</code>, <code>fp</code>), later lines win, and a torn last line from a crash is ignored. Appending instead of rewriting keeps a 174k-file dataset fast (the first design rewrote the whole manifest per file). Because the manifest has everything, <code>ls-remote</code> and conflict checks never re-read the data.</p>
 
 <h3>Gotcha worth knowing: symlinks write through</h3>
 <p>After a push, writing to <code>data/spider2/orders.parquet</code> edits the stored copy directly. Nothing is "staged". <code>nds status</code> therefore compares each symlinked file against the manifest and reports <i>modified</i> when they differ. For read-mostly datasets this is acceptable; making stored files read-only (<code>chmod a-w</code>) is a cheap option if you want protection.</p>
 
 <h2>8. Deliberately out of the MVP</h2>
 <ul>
-  <li>S3 and MCP backends (interface is ready; add one per PR).</li>
+  <li>S3 and MCP backends (the remote classes are the extension point; add one per PR).</li>
   <li>Versions or history: a push replaces, there is no <code>log</code> or rollback.</li>
   <li>Dedup across datasets, compression, encryption.</li>
   <li>Parallel transfers and resumable uploads.</li>
   <li>Locking for two machines pushing at once.</li>
   <li><code>gc</code> for orphaned files on the remote.</li>
+  <li>Self-healing for the crash window on a local push (section 6), and a per-file hash check after an ssh copy beyond what rsync does.</li>
+  <li>Keeping <code>nds.yaml</code> under version control when it lives in a git-ignored folder.</li>
 </ul>
 
 <h2>9. Build</h2>
 <ul>
-  <li>New app <code>apps/nds</code>, Python 3.12, console script <code>nds</code>, joining the uv workspace like <code>apps/dataset</code>.</li>
-  <li>Dependencies: <code>pyyaml</code> (already in the lockfile) plus stdlib <code>argparse</code>, <code>hashlib</code>, <code>fnmatch</code>/<code>pathlib</code>. No new third-party packages for the MVP.</li>
-  <li>Tests with pytest on <code>tmp_path</code>: push/skip/conflict/crash-safety/exclude/pull.</li>
-  <li>Size: roughly 800 lines of source with the ssh remote and multi-dataset config. Real run: <code>data/</code>, 175,293 files (about 5 GB), pushed to <code>~/data</code> and to a desktop over ssh in a few minutes.</li>
+  <li><code>apps/nds</code>, Python 3.12, console script <code>nds</code>, a member of the uv workspace. Run it with <code>uv run --package nds nds -C data push --all -r desktop</code>.</li>
+  <li>Dependencies: <code>pyyaml</code> (already in the lockfile) plus the standard library. It shells out to <code>ssh</code> and <code>rsync</code> for the ssh remote.</li>
+  <li>About 730 lines of source (<code>cli</code>, <code>config</code>, <code>fingerprint</code>, <code>ops</code>, <code>remote</code>) and 17 pytest tests on <code>tmp_path</code>. They cover push, idempotence, conflicts, edits through a symlink, pull, include/exclude, the sampled-vs-full fingerprint, nested datasets, multi-dataset config, and an ssh round trip through a fake <code>ssh</code>.</li>
 </ul>
 
-<h2>10. Questions for you</h2>
-<ul class="q">
-  <li><b>Symlink granularity.</b> I propose one symlink per file, so exclude patterns and partial pushes work. The alternative is one symlink per folder, which is simpler but cannot exclude inside it. OK with per-file?</li>
-  <li><b>Fingerprint.</b> Is the sampled blake2b default fine, with <code>--full</code> as the opt-in?</li>
-  <li><b>Pull in MVP?</b> You did not mention it, but without it a fresh clone cannot get its links back. I included a minimal version.</li>
-  <li><b>Remote location.</b> Default <code>~/data</code>, as you described. Should <code>nds init</code> create it if it is missing?</li>
-  <li><b>First target.</b> Should the first real use be the 6.2 GB under <code>data/</code> (spider2, eth, ref)?</li>
-</ul>
+<h2>10. Decisions taken</h2>
+<div class="tw"><table>
+<tr><th>Question</th><th>Decision</th></tr>
+<tr><td>Symlink granularity</td><td>One per file, so excludes and partial pushes work.</td></tr>
+<tr><td>Fingerprint</td><td>Size + sampled blake2b by default, <code>--full</code> opt-in.</td></tr>
+<tr><td>Pull in the MVP</td><td>Yes, for both remote kinds.</td></tr>
+<tr><td><code>nds init</code> and a missing <code>~/data</code></td><td>It creates the folder.</td></tr>
+<tr><td>First real use</td><td>The 6.2 GB <code>data/</code> folder, as five datasets in one config. Done.</td></tr>
+<tr><td>One config for many folders</td><td>A <code>datasets:</code> map, each dataset with its own remote folder and manifest.</td></tr>
+</table></div>
 
 </main>
 </body>
